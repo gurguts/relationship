@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="ua">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock</title>
+
+    <link rel="stylesheet" href="/css/stock.css">
+    <link rel="stylesheet" href="/css/common.css">
+
+    <link rel="icon" type="image/png" href="/favicon/favicon-96x96.png" sizes="96x96"/>
+    <link rel="icon" type="image/svg+xml" href="/favicon/favicon.svg"/>
+    <link rel="shortcut icon" href="/favicon/favicon.ico"/>
+    <link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png"/>
+    <meta name="apple-mobile-web-app-title" content="Vinteh"/>
+    <link rel="manifest" href="/favicon/site.webmanifest"/>
+</head>
+<body>
+<label class="hamburger">
+    <input id="hamburger" type="checkbox">
+    <svg viewBox="0 0 32 32">
+        <path class="line line-top-bottom"
+              d="M27 10 13 10C10.8 10 9 8.2 9 6 9 3.5 10.8 2 13 2 15.2 2 17 3.8 17 6L17 26C17 28.2 18.8 30 21 30 23.2 30 25 28.2 25 26 25 23.8 23.2 22 21 22L7 22"></path>
+        <path class="line" d="M7 16 27 16"></path>
+    </svg>
+</label>
+
+<header>
+    <div class="user-info">
+        <span id="userName">Не вказано</span><br>
+        <span id="userBalance">0</span>
+    </div>
+    <nav>
+        <ul>
+            <li id="nav-clients"><a href="/clients">
+                Клієнти
+            </a></li>
+            <li id="nav-routes"><a href="/routes">
+                Маршрути
+            </a></li>
+            <li id="nav-purchase"><a href="/purchase">
+                Закупівлі
+            </a></li>
+            <li id="nav-sale"><a href="/sale">
+                Продажі
+            </a></li>
+            <li id="nav-containers"><a href="/containers">
+                Тари
+            </a></li>
+            <li id="nav-inventory"><a href="/inventory">
+                Баланс тари
+            </a></li>
+            <li id="nav-balance"><a href="/balance">
+                Баланс грошовий
+            </a></li>
+            <li id="nav-warehouse"><a href="/warehouse">
+                Склад
+            </a></li>
+            <li id="nav-stock"><a class="selected-nav" href="/warehouse">
+                Баланс складу
+            </a></li>
+            <li id="nav-analytics"><a href="/analytics">
+                Аналітика
+            </a></li>
+            <li id="nav-settings"><a href="/settings" class="setting-icon-block">
+                Налаштування
+            </a></li>
+            <li>
+                <a href="#" id="logout">
+                    Вихід
+                </a>
+            </li>
+        </ul>
+    </nav>
+</header>
+
+<h1>Баланс Складу</h1>
+
+<div class="container">
+    <div id="balance-container"></div>
+    <button class="button" id="withdraw-btn">Списати баланс</button>
+    <button class="button" id="history-btn">Переглянути історію списань</button>
+
+    <div id="withdraw-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">×</span>
+            <h3>Списання балансу</h3>
+            <form id="withdraw-form">
+                <label style="display: none" for="withdrawal-date"></label>
+                <input type="date" id="withdrawal-date" required>
+                <label style="display: none" for="reason-type"></label>
+                <select id="reason-type" required>
+                    <option value="">Оберіть причину</option>
+                    <option value="SHIPMENT">Відгрузка машини</option>
+                    <option value="WASTE">Залишок сміття</option>
+                </select>
+                <label style="display: none" for="product-id"></label>
+                <select id="product-id" required>
+                    <option value="">Оберіть продукт</option>
+                </select>
+                <label style="display: none" for="quantity"></label>
+                <input type="number" id="quantity" step="0.01" min="0" placeholder="Кількість (кг)" required>
+                <label style="display: none" for="description"></label>
+                <textarea id="description" placeholder="Додатковий опис"></textarea>
+                <button type="submit" class="button">Списати</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="edit-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">×</span>
+            <h3>Редагувати списання</h3>
+            <form id="edit-form">
+                <input type="hidden" id="edit-id">
+                <label style="display: none" for="edit-withdrawal-date"></label>
+                <input type="date" id="edit-withdrawal-date" required>
+                <label style="display: none" for="edit-reason-type"></label>
+                <select id="edit-reason-type" required>
+                    <option value="">Оберіть причину</option>
+                    <option value="SHIPMENT">Відгрузка машини</option>
+                    <option value="WASTE">Залишок сміття</option>
+                </select>
+                <label style="display: none" for="edit-product-id"></label>
+                <select id="edit-product-id" required>
+                    <option value="">Оберіть продукт</option>
+                </select>
+                <label style="display: none" for="edit-quantity"></label>
+                <input type="number" id="edit-quantity" step="0.01" min="0" placeholder="Кількість (кг)" required>
+                <label style="display: none" for="edit-description"></label>
+                <textarea id="edit-description" placeholder="Додатковий опис"></textarea>
+                <button type="submit" class="button">Зберегти</button>
+                <button type="button" class="button delete-button" id="delete-btn">Видалити</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="history-container" class="history-container">
+        <h3>Історія списань</h3>
+        <div id="filters-container" class="filters-container">
+            <form id="history-filters-form">
+                <div class="filters">
+                    <div class="filter-group">
+                        <div class="filter-block">
+                            <label for="withdrawal-date-from-filter">Дата списання від:</label>
+                            <input type="date" id="withdrawal-date-from-filter" name="withdrawal_date_from">
+                        </div>
+                        <div class="filter-block">
+                            <label for="withdrawal-date-to-filter">Дата списання до:</label>
+                            <input type="date" id="withdrawal-date-to-filter" name="withdrawal_date_to">
+                        </div>
+                        <div class="select-section-items">
+                            <div class="select-section-item">
+                                <label for="product-id-filter">Продукт:</label>
+                                <select id="product-id-filter" name="product_id" multiple></select>
+                            </div>
+                            <div class="select-section-item">
+                                <label for="reason-type-filter">Причина:</label>
+                                <select id="reason-type-filter" name="reason_type" multiple>
+                                    <option value="SHIPMENT">Відгрузка машини</option>
+                                    <option value="WASTE">Залишок сміття</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="filter-actions">
+                        <button type="button" id="apply-filters" class="apply-btn">Застосувати</button>
+                        <span id="filter-counter" class="filter-counter"><span id="filter-count">0</span></span>
+                        <button type="button" id="clear-filters" class="button">Очистити</button>
+                        <button type="button" id="export-excel-withdrawal" class="excel-export">Експорт в Excel</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <table class="history-table" id="history-table">
+            <thead>
+            <tr>
+                <th>Продукт</th>
+                <th>Причина</th>
+                <th>Кількість</th>
+                <th>Дата списання</th>
+                <th>Опис</th>
+                <th>Створено</th>
+            </tr>
+            </thead>
+            <tbody id="history-content"></tbody>
+        </table>
+        <div class="pagination">
+            <button id="prev-page" disabled>Попередня</button>
+            <span id="page-info">Сторінка 1 з 1</span>
+            <button id="next-page" disabled>Наступна</button>
+        </div>
+    </div>
+</div>
+
+<div id="loader-backdrop" class="loader-backdrop" style="display: none;">
+    <div id="loader" class="loader"></div>
+</div>
+
+<script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="/js/stock.js"></script>
+<script src="/js/common.js"></script>
+<script src="/js/error.js"></script>
+
+</body>
+</html>

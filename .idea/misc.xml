@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ExternalStorageConfigurationManager" enabled="true" />
+  <component name="MavenProjectsManager">
+    <option name="originalFiles">
+      <list>
+        <option value="$PROJECT_DIR$/pom.xml" />
+        <option value="$PROJECT_DIR$/api-gateway/pom.xml" />
+        <option value="$PROJECT_DIR$/user-service/pom.xml" />
+        <option value="$PROJECT_DIR$/web-app/pom.xml" />
+        <option value="$PROJECT_DIR$/auth-service/pom.xml" />
+        <option value="$PROJECT_DIR$/client-service/pom.xml" />
+        <option value="$PROJECT_DIR$/balance-servcie/pom.xml" />
+        <option value="$PROJECT_DIR$/balance-service/pom.xml" />
+        <option value="$PROJECT_DIR$/keepincrm-service/pom.xml" />
+        <option value="$PROJECT_DIR$/business-service/pom.xml" />
+        <option value="$PROJECT_DIR$/region-service/pom.xml" />
+        <option value="$PROJECT_DIR$/route-service/pom.xml" />
+        <option value="$PROJECT_DIR$/source-service/pom.xml" />
+        <option value="$PROJECT_DIR$/status-service/pom.xml" />
+        <option value="$PROJECT_DIR$/status-client-service/pom.xml" />
+        <option value="$PROJECT_DIR$/product-service/pom.xml" />
+        <option value="$PROJECT_DIR$/purchase-service/pom.xml" />
+        <option value="$PROJECT_DIR$/transaction-service/pom.xml" />
+        <option value="$PROJECT_DIR$/container-service/pom.xml" />
+        <option value="$PROJECT_DIR$/salse-service/pom.xml" />
+        <option value="$PROJECT_DIR$/sale-service/pom.xml" />
+        <option value="$PROJECT_DIR$/warehouse-service/pom.xml" />
+      </list>
+    </option>
+    <option name="ignoredFiles">
+      <set>
+        <option value="$PROJECT_DIR$/barrel-service/pom.xml" />
+        <option value="$PROJECT_DIR$/keepincrm-service/pom.xml" />
+        <option value="$PROJECT_DIR$/status-service/pom.xml" />
+      </set>
+    </option>
+  </component>
+  <component name="ProjectRootManager" version="2" languageLevel="JDK_X" default="true" project-jdk-name="openjdk-23 (2)" project-jdk-type="JavaSDK">
+    <output url="file://$PROJECT_DIR$/out" />
+  </component>
+</project>

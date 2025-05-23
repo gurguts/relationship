@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="ua">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings</title>
+
+    <link rel="stylesheet" href="/css/common.css">
+    <link rel="stylesheet" href="/css/settings.css">
+
+    <link rel="icon" type="image/png" href="/favicon/favicon-96x96.png" sizes="96x96"/>
+    <link rel="icon" type="image/svg+xml" href="/favicon/favicon.svg"/>
+    <link rel="shortcut icon" href="/favicon/favicon.ico"/>
+    <link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png"/>
+    <meta name="apple-mobile-web-app-title" content="Vinteh"/>
+    <link rel="manifest" href="/favicon/site.webmanifest"/>
+</head>
+<body>
+<label class="hamburger">
+    <input id="hamburger" type="checkbox">
+    <svg viewBox="0 0 32 32">
+        <path class="line line-top-bottom"
+              d="M27 10 13 10C10.8 10 9 8.2 9 6 9 3.5 10.8 2 13 2 15.2 2 17 3.8 17 6L17 26C17 28.2 18.8 30 21 30 23.2 30 25 28.2 25 26 25 23.8 23.2 22 21 22L7 22"></path>
+        <path class="line" d="M7 16 27 16"></path>
+    </svg>
+</label>
+
+<header>
+    <div class="user-info">
+        <span id="userName">Не вказано</span><br>
+        <span id="userBalance">0</span>
+    </div>
+    <nav>
+        <ul>
+            <li id="nav-clients"><a href="/clients">
+                Клієнти
+            </a></li>
+            <li id="nav-routes"><a href="/routes">
+                Маршрути
+            </a></li>
+            <li id="nav-purchase"><a href="/purchase">
+                Закупівлі
+            </a></li>
+            <li id="nav-sale"><a href="/sale">
+                Продажі
+            </a></li>
+            <li id="nav-containers"><a href="/containers">
+                Тари
+            </a></li>
+            <li id="nav-inventory"><a href="/inventory">
+                Баланс тари
+            </a></li>
+            <li id="nav-balance"><a href="/balance">
+                Баланс грошовий
+            </a></li>
+            <li id="nav-warehouse"><a href="/warehouse">
+                Склад
+            </a></li>
+            <li id="nav-stock"><a href="/stock">
+                Баланс складу
+            </a></li>
+            <li id="nav-analytics"><a href="/analytics">
+                Аналітика
+            </a></li>
+            <li id="nav-settings"><a class="selected-nav" href="/settings">
+                Налаштування
+            </a></li>
+            <li>
+                <a href="#" id="logout">
+                    Вихід
+                </a>
+            </li>
+        </ul>
+    </nav>
+</header>
+
+<h1>Settings</h1>
+
+<div>
+    <button id="showUsersBtn">Користувачі</button>
+    <button id="showSourcesBtn">Залучення</button>
+    <button id="showRoutesBtn">Маршрути</button>
+    <button id="showOilTypesBtn">Товар</button>
+    <button id="showBusinessesBtn">Бізнес</button>
+    <button id="showRegionsBtn">Області</button>
+    <button id="showContainersBtn">Тара</button>
+    <button id="showStoragesBtn">Склади</button>
+    <button id="showStatusesBtn">Статуси клієнтів</button>
+    <button id="show-products">Продукты</button>
+    <!--<button onclick="syncClients()">Синхронізувати клієнтів</button>
+    <button onclick="syncAgreements()">Синхронізувати угоди</button>
+    <button id="deleteAllClientsBtn">Видалити всіх клієнтів</button>-->
+</div>
+
+<!--user-->
+
+<div id="userListContainer" style="display: none;">
+    <h3>Список користувачів</h3>
+    <ul id="userList"></ul>
+    <button id="addUserBtn">Додати користувача</button>
+</div>
+
+<div id="addUserContainer" style="display: none;">
+    <h3>Створити нового користувача</h3>
+    <div class="form-field">
+        <label for="newFullName">ПІБ:</label>
+        <input type="text" id="newFullName" required>
+    </div>
+    <div class="form-field">
+        <label for="newLogin">Логін:</label>
+        <input type="text" id="newLogin" required>
+    </div>
+    <div class="form-field">
+        <label for="newPassword">Пароль:</label>
+        <input type="password" id="newPassword" required>
+    </div>
+    <div class="form-field">
+        <label for="newRole">Роль:</label>
+        <select id="newRole">
+            <option value="MANAGER">Менеджер</option>
+            <option value="DRIVER">Водій</option>
+            <option value="STOREKEEPER">Комірник</option>
+            <option value="LEADER">Керівник</option>
+            <option value="ACCOUNTANT">Бухгалтер</option>
+        </select>
+    </div>
+    <button id="createUserBtn">Створити користувача</button>
+</div>
+
+<div id="userPermissionsModal" class="userPermissionsModal" style="display: none;">
+    <div class="modal-content-user-permission">
+        <span class="close-permissions">×</span>
+        <h2>Редагувати дозволи користувача</h2>
+        <div id="permissionsList">
+            <!-- Чекбоксы будут добавлены через JS -->
+        </div>
+        <button id="savePermissionsButton">Зберегти</button>
+    </div>
+</div>
+
+<!--source-->
+
+<div id="sourceListContainer" style="display: none;">
+    <h3>Список залучень</h3>
+    <ul id="sourceList"></ul>
+    <!--<button id="addSourceBtn">Додати нове залучення</button>-->
+</div>
+
+<div id="addSourceContainer" style="display: none;">
+    <h3>Створити нове залучення</h3>
+    <!--    <div class="form-field">
+            <label>Id:</label>
+            <input type="number" id="newSourceId" required>
+        </div>-->
+    <div class="form-field">
+        <label for="newSourceName">Назва:</label>
+        <input type="text" id="newSourceName" required>
+    </div>
+    <!--    <div class="form-field">
+            <label>Колір:</label>
+            <input type="color" id="newSourceColor" value="#ffffff">
+        </div>-->
+    <button id="createSourceBtn">Створити залучення</button>
+</div>
+
+<div id="editSourceModal" style="display: none;">
+    <h3>Редагувати джерело</h3>
+    <div class="form-field">
+        <label for="editSourceName">Назва:</label>
+        <input type="text" id="editSourceName" required>
+    </div>
+    <!--    <div class="form-field">
+            <label>Колір:</label>
+            <input type="color" id="editSourceColor">
+        </div>-->
+    <button id="saveSourceBtn">Зберегти</button>
+    <button id="cancelEditSourceBtn">Скасувати</button>
+</div>
+
+<!--routes-->
+
+<div id="routeListContainer" style="display: none;">
+    <h3>Список маршрутів</h3>
+    <ul id="routeList"></ul>
+    <!--<button id="addSourceBtn">Додати нове залучення</button>-->
+</div>
+
+<div id="addRouteContainer" style="display: none;">
+    <h3>Створити новий маршрут</h3>
+    <div class="form-field">
+        <label for="newRouteName">Назва:</label>
+        <input type="text" id="newRouteName" required>
+    </div>
+    <button id="createRouteBtn">Створити маршрут</button>
+</div>
+
+<!--oilType-->
+
+<div id="oilTypeListContainer" style="display: none;">
+    <h3>Список типів товару</h3>
+    <ul id="oilTypeList"></ul>
+</div>
+
+<div id="addOilTypeContainer" style="display: none;">
+    <h3>Створити новий товар</h3>
+    <div class="form-field">
+        <label for="newOilTypeName">Назва:</label>
+        <input type="text" id="newOilTypeName" required>
+    </div>
+    <button id="createOilTypeBtn">Додати товар</button>
+</div>
+
+<!--business-->
+
+<div id="businessListContainer" style="display: none;">
+    <h3>Список типів бізнесу</h3>
+    <ul id="businessList"></ul>
+    <!--<button id="addSourceBtn">Додати нове залучення</button>-->
+</div>
+
+<div id="addBusinessContainer" style="display: none;">
+    <h3>Створити новий тип бізнесу</h3>
+    <div class="form-field">
+        <label for="newBusinessName">Назва:</label>
+        <input type="text" id="newBusinessName" required>
+    </div>
+    <button id="createBusinessBtn">Створити тип бізнесу</button>
+</div>
+
+<!--regions-->
+
+<div id="regionListContainer" style="display: none;">
+    <h3>Список областей</h3>
+    <ul id="regionList"></ul>
+</div>
+
+<div id="addRegionContainer" style="display: none;">
+    <h3>Створити нову область</h3>
+    <div class="form-field">
+        <label for="newRegionName">Назва:</label>
+        <input type="text" id="newRegionName" required>
+    </div>
+    <button id="createRegionBtn">Додати область</button>
+</div>
+
+<!--barrelType-->
+
+<div id="containerListContainer" style="display: none;">
+    <h3>Список типів тар</h3>
+    <ul id="barrelTypeList"></ul>
+</div>
+
+<div id="addContainerContainer" style="display: none;">
+    <h3>Створити новий тип тари</h3>
+    <div class="form-field">
+        <label for="newBarrelTypeName">Назва:</label>
+        <input type="text" id="newBarrelTypeName" required>
+    </div>
+    <button id="createBarrelTypeBtn">Додати тип тари</button>
+</div>
+
+
+<!--Storage-->
+
+<div id="storageListContainer" style="display: none;">
+    <h3>Список cкладів</h3>
+    <ul id="storageList"></ul>
+</div>
+
+<div id="addStorageContainer" style="display: none;">
+    <h3>Створити новий cклад</h3>
+    <div class="form-field">
+        <label for="newStorageName">Назва:</label>
+        <input type="text" id="newStorageName" required>
+    </div>
+    <div class="form-field">
+        <label for="newStorageLocation">Локація:</label>
+        <input type="text" id="newStorageLocation" required>
+    </div>
+    <button id="createStorageBtn">Створити cклад</button>
+</div>
+
+
+<!--statusClient-->
+
+<div id="statusListContainer" style="display: none;">
+    <h3>Список cтатусів клієнтів</h3>
+    <ul id="statusList"></ul>
+    <!--<button id="addSourceBtn">Додати нове залучення</button>-->
+</div>
+
+<div id="addStatusContainer" style="display: none;">
+    <h3>Створити новий статус</h3>
+    <div class="form-field">
+        <label for="newStatusId">Id:</label>
+        <input type="number" id="newStatusId" required>
+    </div>
+    <div class="form-field">
+        <label for="newStatusName">Назва:</label>
+        <input type="text" id="newStatusName" required>
+    </div>
+    <button id="createStatusBtn">Створити статус</button>
+</div>
+
+<!--product-->
+
+<div id="product-list" class="product-list" style="display: none;">
+    <h2>Список продуктов</h2>
+    <table>
+        <thead>
+        <tr>
+            <th>ID</th>
+            <th>Название</th>
+            <th>Использование</th>
+            <th>Действия</th>
+        </tr>
+        </thead>
+        <tbody id="products-table-body"></tbody>
+    </table>
+</div>
+
+<!-- Форма создания продукта -->
+<div id="create-product" class="create-product" style="display: none;">
+    <h2>Создать новый продукт</h2>
+    <form id="create-product-form">
+        <div class="form-group">
+            <label for="create-name">Название:</label>
+            <input type="text" id="create-name" name="name" required>
+        </div>
+        <div class="form-group">
+            <label for="create-usage">Использование:</label>
+            <select id="create-usage" name="usage" required>
+                <option value="SALE_ONLY">Только для продажи</option>
+                <option value="PROCUREMENT_ONLY">Только для закупки</option>
+                <option value="BOTH">Оба</option>
+            </select>
+        </div>
+        <button type="submit">Создать</button>
+    </form>
+</div>
+
+<!-- Форма редактирования продукта (скрыта по умолчанию) -->
+<div id="edit-product-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <h2>Редактировать продукт</h2>
+        <form id="edit-product-form">
+            <input type="hidden" id="edit-id" name="id">
+            <div class="form-group">
+                <label for="edit-name">Название:</label>
+                <input type="text" id="edit-name" name="name" required>
+            </div>
+            <div class="form-group">
+                <label for="edit-usage">Использование:</label>
+                <select id="edit-usage" name="usage" required>
+                    <option value="SALE_ONLY">Только для продажи</option>
+                    <option value="PROCUREMENT_ONLY">Только для закупки</option>
+                    <option value="BOTH">Оба</option>
+                </select>
+            </div>
+            <button type="submit">Сохранить</button>
+            <button type="button" id="cancel-edit">Отмена</button>
+        </form>
+    </div>
+</div>
+
+
+<div id="loader-backdrop" class="loader-backdrop" style="display: none;">
+    <div id="loader" class="loader"></div>
+</div>
+
+<script src="/js/settings.js"></script>
+<script src="/js/common.js"></script>
+<script src="/js/error.js"></script>
+
+</body>
+</html>

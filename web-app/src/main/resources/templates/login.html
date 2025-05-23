@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ua">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+
+    <link rel="stylesheet" href="/css/login.css">
+
+    <link rel="icon" type="image/png" href="/favicon/favicon-96x96.png" sizes="96x96"/>
+    <link rel="icon" type="image/svg+xml" href="/favicon/favicon.svg"/>
+    <link rel="shortcut icon" href="/favicon/favicon.ico"/>
+    <link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png"/>
+    <meta name="apple-mobile-web-app-title" content="Vinteh"/>
+    <link rel="manifest" href="/favicon/site.webmanifest"/>
+</head>
+<body>
+<img src="/favicon/favicon.svg" alt="Vinteh">
+<form id="loginForm">
+    <label for="login">Логін:</label>
+    <input type="text" id="login" name="login" required><br><br>
+
+    <label for="password">Пароль:</label>
+    <input type="password" id="password" name="password" required><br><br>
+
+    <button type="submit">Увійти</button>
+</form>
+
+<div id="error-message" style="color: red; margin-top: 10px;"></div>
+
+<script src="/js/login.js"></script>
+</body>
+</html>

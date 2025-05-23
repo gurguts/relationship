@@ -1,0 +1,466 @@
+package org.example.purchaseservice.services.purchase;
+
+import jakarta.persistence.criteria.Predicate;
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.example.purchaseservice.clients.*;
+import org.example.purchaseservice.models.Product;
+import org.example.purchaseservice.models.Purchase;
+import org.example.purchaseservice.models.PaymentMethod;
+import org.example.purchaseservice.models.WarehouseEntry;
+import org.example.purchaseservice.models.dto.client.ClientDTO;
+import org.example.purchaseservice.models.dto.client.ClientSearchRequest;
+import org.example.purchaseservice.models.dto.fields.*;
+import org.example.purchaseservice.models.dto.impl.IdNameDTO;
+import org.example.purchaseservice.models.dto.purchase.PurchaseReportDTO;
+import org.example.purchaseservice.models.dto.user.UserDTO;
+import org.example.purchaseservice.repositories.PurchaseRepository;
+import org.example.purchaseservice.services.impl.IProductService;
+import org.example.purchaseservice.services.impl.IPurchaseSpecialOperationsService;
+import org.example.purchaseservice.services.impl.IWarehouseEntryService;
+import org.example.purchaseservice.spec.PurchaseSpecification;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.stereotype.Service;
+
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.*;
+import java.util.stream.Collectors;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperationsService {
+
+    private final PurchaseRepository purchaseRepository;
+    private final ClientApiClient clientApiClient;
+    private final UserClient userClient;
+    private final IProductService productService;
+    private final IWarehouseEntryService warehouseEntryService;
+
+    @Override
+    public void generateExcelFile(
+            Sort.Direction sortDirection,
+            String sortProperty,
+            String query,
+            Map<String, List<String>> filterParams,
+            HttpServletResponse response,
+            List<String> selectedFields) throws IOException {
+
+        Sort sort = createSort(sortDirection, sortProperty);
+        List<ClientDTO> clients = fetchClientIds(query, filterParams);
+        FilterIds filterIds = createFilterIds(clients);
+
+        if (clients.isEmpty()) {
+            log.info("No clients found for the given filters, returning empty workbook");
+            Workbook workbook = new XSSFWorkbook();
+            sendExcelFileResponse(workbook, response);
+            return;
+        }
+
+        List<Purchase> purchaseList = fetchPurchases(
+                query, filterParams, clients.stream().map(ClientDTO::getId).toList(), filterIds.sourceIds(), sort);
+        Map<Long, ClientDTO> clientMap = fetchClientMap(clients);
+
+        Workbook workbook = generateWorkbook(purchaseList, selectedFields, filterIds, clientMap);
+        sendExcelFileResponse(workbook, response);
+    }
+
+    private record FilterIds(
+            List<SourceDTO> sourceDTOs, List<Long> sourceIds,
+            List<StatusDTO> statusDTOs, List<Long> statusIds,
+            List<RouteDTO> routeDTOs, List<Long> routeIds,
+            List<RegionDTO> regionDTOs, List<Long> regionIds,
+            List<BusinessDTO> businessDTOs, List<Long> businessIds,
+            List<Product> productDTOs, List<Long> productIds,
+            List<UserDTO> userDTOs, List<Long> userIds
+    ) {
+    }
+
+    private Sort createSort(Sort.Direction sortDirection, String sortProperty) {
+        return Sort.by(sortDirection, sortProperty);
+    }
+
+    private FilterIds createFilterIds(List<ClientDTO> clients) {
+        // Extract DTOs from clients
+        List<SourceDTO> sourceDTOs = clients.stream()
+                .map(ClientDTO::getSource)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        List<Long> sourceIds = sourceDTOs.stream().map(SourceDTO::getId).toList();
+
+        List<StatusDTO> statusDTOs = clients.stream()
+                .map(ClientDTO::getStatus)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        List<Long> statusIds = statusDTOs.stream().map(StatusDTO::getId).toList();
+
+        List<RouteDTO> routeDTOs = clients.stream()
+                .map(ClientDTO::getRoute)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        List<Long> routeIds = routeDTOs.stream().map(RouteDTO::getId).toList();
+
+        List<RegionDTO> regionDTOs = clients.stream()
+                .map(ClientDTO::getRegion)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        List<Long> regionIds = regionDTOs.stream().map(RegionDTO::getId).toList();
+
+        List<BusinessDTO> businessDTOs = clients.stream()
+                .map(ClientDTO::getBusiness)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        List<Long> businessIds = businessDTOs.stream().map(BusinessDTO::getId).toList();
+
+        // Fetch ProductDTO and UserDTO as they are not in ClientDTO
+        List<Product> products = productService.getAllProducts("all");
+        List<Long> productIds = products.stream().map(Product::getId).toList();
+
+        List<UserDTO> userDTOs = userClient.getAllUsers();
+        List<Long> userIds = userDTOs.stream().map(UserDTO::getId).toList();
+
+        return new FilterIds(
+                sourceDTOs, sourceIds,
+                statusDTOs, statusIds,
+                routeDTOs, routeIds,
+                regionDTOs, regionIds,
+                businessDTOs, businessIds,
+                products, productIds,
+                userDTOs, userIds);
+    }
+
+    private List<ClientDTO> fetchClientIds(String query, Map<String, List<String>> filterParams) {
+        Map<String, List<String>> filteredParams = filterParams.entrySet().stream()
+                .filter(entry -> {
+                    String key = entry.getKey();
+                    return key.equals("status") || key.equals("business") ||
+                            key.equals("route") || key.equals("region") || key.equals("source-client");
+                })
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+        ClientSearchRequest clientRequest = new ClientSearchRequest(query, filteredParams);
+        return clientApiClient.searchClients(clientRequest);
+    }
+
+    private Map<Long, ClientDTO> fetchClientMap(List<ClientDTO> clients) {
+        return clients.stream().collect(Collectors.toMap(ClientDTO::getId, client -> client));
+    }
+
+    private List<Purchase> fetchPurchases(String query, Map<String, List<String>> filterParams, List<Long> clientIds,
+                                          List<Long> sourceIds, Sort sort) {
+        Specification<Purchase> spec = (root, querySpec, criteriaBuilder) -> {
+            List<Predicate> predicates = new ArrayList<>();
+
+            if (!clientIds.isEmpty()) {
+                predicates.add(root.get("client").in(clientIds));
+            } else {
+                return criteriaBuilder.disjunction();
+            }
+
+            Specification<Purchase> purchaseSpec = new PurchaseSpecification(query, filterParams, clientIds, sourceIds);
+            predicates.add(purchaseSpec.toPredicate(root, querySpec, criteriaBuilder));
+
+            return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
+        };
+
+        return purchaseRepository.findAll(spec, sort);
+    }
+
+    private Workbook generateWorkbook(List<Purchase> purchaseList, List<String> selectedFields, FilterIds filterIds,
+                                      Map<Long, ClientDTO> clientMap) {
+        Workbook workbook = new XSSFWorkbook();
+        Sheet sheet = workbook.createSheet("Purchase Data");
+
+        Map<String, String> fieldToHeader = createFieldToHeaderMap();
+        createHeaderRow(sheet, selectedFields, fieldToHeader);
+        fillDataRows(sheet, purchaseList, selectedFields, filterIds, clientMap);
+
+        return workbook;
+    }
+
+    private Map<String, String> createFieldToHeaderMap() {
+        return Map.ofEntries(
+                Map.entry("id-client", "Id (клієнта)"),
+                Map.entry("company-client", "Компанія (клієнта)"),
+                Map.entry("person-client", "Контактна особа (клієнта)"),
+                Map.entry("phoneNumbers-client", "Номери телефонів (клієнта)"),
+                Map.entry("createdAt-client", "Дата створення (клієнта)"),
+                Map.entry("updatedAt-client", "Дата оновлення (клієнта)"),
+                Map.entry("status-client", "Статус (клієнта)"),
+                Map.entry("source-client", "Залучення (клієнта)"),
+                Map.entry("location-client", "Адреса (клієнта)"),
+                Map.entry("pricePurchase-client", "Ціна закупівлі (клієнта)"),
+                Map.entry("priceSale-client", "Ціна продажі (клієнта)"),
+                Map.entry("volumeMonth-client", "Орієнтований об'єм на місяць (клієнта)"),
+                Map.entry("route-client", "Маршрут (клієнта)"),
+                Map.entry("region-client", "Область (клієнта)"),
+                Map.entry("business-client", "Тип бізнесу (клієнта)"),
+                Map.entry("edrpou-client", "ЄДРПОУ (клієнта)"),
+                Map.entry("enterpriseName-client", "Назва підприємства (клієнта)"),
+                Map.entry("vat-client", "ПДВ (клієнта)"),
+                Map.entry("comment-client", "Коментар (клієнта)"),
+                Map.entry("id", "Id"),
+                Map.entry("user", "Водій"),
+                Map.entry("source", "Залучення"),
+                Map.entry("product", "Товар"),
+                Map.entry("quantity", "Кількість"),
+                Map.entry("unitPrice", "Ціна за од"),
+                Map.entry("totalPrice", "Повна ціна"),
+                Map.entry("paymentMethod", "Метод оплати"),
+                Map.entry("currency", "Валюта"),
+                Map.entry("transaction", "Id транзакції"),
+                Map.entry("createdAt", "Дата створення"),
+                Map.entry("updatedAt", "Дата оновлення")
+        );
+    }
+
+    private void createHeaderRow(Sheet sheet, List<String> selectedFields, Map<String, String> fieldToHeader) {
+        Row headerRow = sheet.createRow(0);
+        int colIndex = 0;
+        for (String field : selectedFields) {
+            headerRow.createCell(colIndex++).setCellValue(fieldToHeader.get(field));
+        }
+    }
+
+    private void fillDataRows(Sheet sheet, List<Purchase> purchaseList, List<String> selectedFields, FilterIds filterIds,
+                              Map<Long, ClientDTO> clientMap) {
+        int rowIndex = 1;
+        for (Purchase purchase : purchaseList) {
+            Row row = sheet.createRow(rowIndex++);
+            int colIndex = 0;
+            ClientDTO client = clientMap.get(purchase.getClient());
+            for (String field : selectedFields) {
+                row.createCell(colIndex++).setCellValue(getFieldValue(purchase, client, field, filterIds));
+            }
+        }
+    }
+
+    private String getFieldValue(Purchase purchase, ClientDTO client, String field, FilterIds filterIds) {
+        if (field.endsWith("-client") && client != null) {
+            return switch (field) {
+                case "id-client" -> client.getId() != null ? String.valueOf(client.getId()) : "";
+                case "company-client" -> client.getCompany() != null ? client.getCompany() : "";
+                case "person-client" -> client.getPerson() != null ? client.getPerson() : "";
+                case "phoneNumbers-client" -> client.getPhoneNumbers() != null
+                        ? String.join(", ", client.getPhoneNumbers()) : "";
+                case "createdAt-client" -> client.getCreatedAt() != null ? client.getCreatedAt() : "";
+                case "updatedAt-client" -> client.getUpdatedAt() != null ? client.getUpdatedAt() : "";
+                case "status-client" -> client.getStatus() != null ? client.getStatus().getName() : "";
+                case "source-client" -> client.getSource() != null ? client.getSource().getName() : "";
+                case "location-client" -> client.getLocation() != null ? client.getLocation() : "";
+                case "pricePurchase-client" -> client.getPricePurchase() != null ? client.getPricePurchase() : "";
+                case "priceSale-client" -> client.getPriceSale() != null ? client.getPriceSale() : "";
+                case "volumeMonth-client" -> client.getVolumeMonth() != null ? client.getVolumeMonth() : "";
+                case "route-client" -> client.getRoute() != null ? client.getRoute().getName() : "";
+                case "region-client" -> client.getRegion() != null ? client.getRegion().getName() : "";
+                case "business-client" -> client.getBusiness() != null ? client.getBusiness().getName() : "";
+                case "edrpou-client" -> client.getEdrpou() != null ? client.getEdrpou() : "";
+                case "enterpriseName-client" -> client.getEnterpriseName() != null ? client.getEnterpriseName() : "";
+                case "vat-client" -> Boolean.TRUE.equals(client.getVat()) ? "так" : "";
+                case "comment-client" -> client.getComment() != null ? client.getComment() : "";
+                default -> "";
+            };
+        } else {
+            return switch (field) {
+                case "idHEX0x20id" -> purchase.getId() != null ? String.valueOf(purchase.getId()) : "";
+                case "user" -> getNameFromDTOList(filterIds.userDTOs(), purchase.getUser());
+                case "source" -> getNameFromDTOList(filterIds.sourceDTOs(), purchase.getSource());
+                case "product" -> filterIds.productDTOs().stream()
+                        .filter(product -> product.getId().equals(purchase.getProduct()))
+                        .findFirst()
+                        .map(Product::getName)
+                        .orElse("");
+                case "quantity" -> purchase.getQuantity() != null ? purchase.getQuantity().toString() : "";
+                case "unitPrice" -> purchase.getUnitPrice() != null ? purchase.getUnitPrice().toString() : "";
+                case "totalPrice" -> purchase.getTotalPrice() != null ? purchase.getTotalPrice().toString() : "";
+                case "paymentMethod" -> purchase.getPaymentMethod() != null
+                        ? (purchase.getPaymentMethod() == PaymentMethod.CASH ? "2" : "1") : "";
+                case "currency" -> purchase.getCurrency() != null ? purchase.getCurrency() : "";
+                case "transaction" -> purchase.getTransaction() != null ? purchase.getTransaction().toString() : "";
+                case "createdAt" -> purchase.getCreatedAt() != null ? purchase.getCreatedAt().toString() : "";
+                case "updatedAt" -> purchase.getUpdatedAt() != null ? purchase.getUpdatedAt().toString() : "";
+                default -> "";
+            };
+        }
+    }
+
+    private <T extends IdNameDTO> String getNameFromDTOList(List<T> dtoList, Long id) {
+        if (id == null) return "";
+        return dtoList.stream()
+                .filter(dto -> dto.getId().equals(id))
+                .findFirst()
+                .map(IdNameDTO::getName)
+                .orElse("");
+    }
+
+    private void sendExcelFileResponse(Workbook workbook, HttpServletResponse response) throws IOException {
+        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        response.setHeader("Content-Disposition", "attachment; filename=purchase_data.xlsx");
+        workbook.write(response.getOutputStream());
+        workbook.close();
+    }
+
+    @Override
+    public PurchaseReportDTO generateReport(String query, Map<String, List<String>> filterParams) {
+        List<ClientDTO> clients = fetchClientIds(query, filterParams);
+        FilterIds filterIds = createFilterIds(clients);
+
+        List<Purchase> purchaseList = fetchPurchases(
+                query, filterParams, clients.stream().map(ClientDTO::getId).toList(),
+                filterIds.sourceIds(), Sort.by("id"));
+
+        Map<String, List<String>> warehouseFilters = new HashMap<>();
+        Map<String, String> filterKeyMapping = new HashMap<>();
+        filterKeyMapping.put("user", "user_id");
+        filterKeyMapping.put("product", "product_id");
+        filterKeyMapping.put("createdAtFrom", "entry_date_from");
+        filterKeyMapping.put("createdAtTo", "entry_date_to");
+
+        for (Map.Entry<String, String> entry : filterKeyMapping.entrySet()) {
+            String frontendKey = entry.getKey();
+            String warehouseKey = entry.getValue();
+            if (filterParams.containsKey(frontendKey)) {
+                warehouseFilters.put(warehouseKey, filterParams.get(frontendKey));
+            }
+        }
+
+        List<WarehouseEntry> warehouseEntries = warehouseEntryService.findWarehouseEntriesByFilters(warehouseFilters);
+
+        Map<Long, Double> totalCollectedByProduct = purchaseList.stream()
+                .filter(p -> p.getProduct() != null && p.getQuantity() != null)
+                .collect(Collectors.groupingBy(
+                        Purchase::getProduct,
+                        Collectors.reducing(
+                                BigDecimal.ZERO,
+                                Purchase::getQuantity,
+                                BigDecimal::add
+                        )
+                )).entrySet().stream()
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        e -> e.getValue().doubleValue()
+                ));
+
+        Map<Long, Double> totalDeliveredByProduct = warehouseEntries.stream()
+                .filter(e -> e.getProductId() != null && e.getQuantity() != null)
+                .collect(Collectors.groupingBy(
+                        WarehouseEntry::getProductId,
+                        Collectors.reducing(
+                                BigDecimal.ZERO,
+                                WarehouseEntry::getQuantity,
+                                BigDecimal::add
+                        )
+                )).entrySet().stream()
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        e -> e.getValue().doubleValue()
+                ));
+
+        Map<String, Map<Long, Double>> byDrivers = purchaseList.stream()
+                .filter(p -> p.getUser() != null && p.getProduct() != null && p.getQuantity() != null)
+                .collect(Collectors.groupingBy(
+                        purchase -> getNameFromDTOList(filterIds.userDTOs(), purchase.getUser()),
+                        Collectors.groupingBy(
+                                Purchase::getProduct,
+                                Collectors.reducing(
+                                        BigDecimal.ZERO,
+                                        Purchase::getQuantity,
+                                        BigDecimal::add
+                                )
+                        )
+                )).entrySet().stream()
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        e -> e.getValue().entrySet().stream()
+                                .collect(Collectors.toMap(
+                                        Map.Entry::getKey,
+                                        v -> v.getValue().doubleValue()
+                                ))
+                ));
+
+        Map<String, Map<Long, Double>> byAttractors = purchaseList.stream()
+                .filter(p -> p.getSource() != null && p.getProduct() != null && p.getQuantity() != null)
+                .collect(Collectors.groupingBy(
+                        purchase -> getNameFromDTOList(filterIds.sourceDTOs(), purchase.getSource()),
+                        Collectors.groupingBy(
+                                Purchase::getProduct,
+                                Collectors.reducing(
+                                        BigDecimal.ZERO,
+                                        Purchase::getQuantity,
+                                        BigDecimal::add
+                                )
+                        )
+                )).entrySet().stream()
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        e -> e.getValue().entrySet().stream()
+                                .collect(Collectors.toMap(
+                                        Map.Entry::getKey,
+                                        v -> v.getValue().doubleValue()
+                                ))
+                ));
+
+        // Total spent by currency
+        Map<String, Double> totalSpentByCurrency = purchaseList.stream()
+                .filter(p -> p.getCurrency() != null && p.getTotalPrice() != null)
+                .collect(Collectors.groupingBy(
+                        Purchase::getCurrency,
+                        Collectors.reducing(
+                                BigDecimal.ZERO,
+                                Purchase::getTotalPrice,
+                                BigDecimal::add
+                        )
+                )).entrySet().stream()
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        e -> e.getValue().doubleValue()
+                ));
+
+        Map<String, Double> averagePriceByCurrency = purchaseList.stream()
+                .filter(p -> p.getCurrency() != null && p.getTotalPrice() != null && p.getQuantity() != null)
+                .collect(Collectors.groupingBy(
+                        Purchase::getCurrency,
+                        Collectors.collectingAndThen(
+                                Collectors.averagingDouble(p ->
+                                        p.getQuantity().compareTo(BigDecimal.ZERO) > 0
+                                                ? p.getTotalPrice().divide(p.getQuantity(), 2,
+                                                RoundingMode.HALF_UP).doubleValue()
+                                                : 0.0
+                                ),
+                                avg -> avg
+                        )
+                ));
+
+        Map<Long, Double> averageCollectedPerTimeByProduct = purchaseList.stream()
+                .filter(p -> p.getProduct() != null && p.getQuantity() != null)
+                .collect(Collectors.groupingBy(
+                        Purchase::getProduct,
+                        Collectors.collectingAndThen(
+                                Collectors.averagingDouble(p -> p.getQuantity().doubleValue()),
+                                avg -> avg
+                        )
+                ));
+
+        return PurchaseReportDTO.builder()
+                .totalCollectedByProduct(totalCollectedByProduct)
+                .totalDeliveredByProduct(totalDeliveredByProduct)
+                .byDrivers(byDrivers)
+                .byAttractors(byAttractors)
+                .totalSpentByCurrency(totalSpentByCurrency)
+                .averagePriceByCurrency(averagePriceByCurrency)
+                .averageCollectedPerTimeByProduct(averageCollectedPerTimeByProduct)
+                .build();
+    }
+}
