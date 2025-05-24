@@ -7,6 +7,8 @@ import org.example.purchaseservice.models.Product;
 import org.example.purchaseservice.models.ProductUsage;
 import org.example.purchaseservice.repositories.ProductRepository;
 import org.example.purchaseservice.services.impl.IProductService;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,31 +24,41 @@ public class ProductService implements IProductService {
     private final ProductRepository productRepository;
 
     @Override
+    @Transactional
+    @CacheEvict(value = {"products"}, allEntries = true)
     public Product createProduct(Product product) {
         return productRepository.save(product);
     }
 
     @Override
+    @Transactional
+    @CacheEvict(value = {"products"}, allEntries = true)
     public Product updateProduct(Long id, Product product) {
-        Product existingProduct = getProductById(id);
+        Product existingProduct = productRepository.findById(id)
+                .orElseThrow(() -> new ProductNotFoundException(String.format("Product with ID %d not found", id)));
         existingProduct.setName(product.getName());
         existingProduct.setUsage(product.getUsage());
         return productRepository.save(existingProduct);
     }
 
     @Override
+    @Transactional
+    @CacheEvict(value = {"products"}, allEntries = true)
     public void deleteProduct(Long id) {
-        Product product = getProductById(id);
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new ProductNotFoundException(String.format("Product with ID %d not found", id)));
         productRepository.delete(product);
     }
 
     @Override
+    @Cacheable(value = "products", key = "#id")
     public Product getProductById(Long id) {
         return productRepository.findById(id)
                 .orElseThrow(() -> new ProductNotFoundException(String.format("Product with ID %d not found", id)));
     }
 
     @Override
+    @Cacheable(value = "products", key = "#name")
     public List<Product> findProductsByName(String name) {
         return StreamSupport.stream(productRepository.findAll().spliterator(), false)
                 .filter(product -> product.getName().toLowerCase().contains(name.toLowerCase()))
@@ -54,6 +66,7 @@ public class ProductService implements IProductService {
     }
 
     @Override
+    @Cacheable(value = "products", key = "#usage")
     public List<Product> getAllProducts(String usage) {
 
         if ("all".equalsIgnoreCase(usage)) {
@@ -82,6 +95,7 @@ public class ProductService implements IProductService {
     }
 
     @Override
+    @Cacheable(value = "products", key = "#usage")
     public List<Product> findProductsByUsage(ProductUsage usage) {
         return StreamSupport.stream(productRepository.findAll().spliterator(), false)
                 .filter(product -> product.getUsage() == usage)

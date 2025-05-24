@@ -15,12 +15,10 @@ public interface ClientRepository extends JpaRepository<Client, Long>, JpaSpecif
     @Query("UPDATE Client c SET c.isActive = false WHERE c.id = :clientId")
     void deactivateClientById(@Param("clientId") Long clientId);
 
-    @EntityGraph(attributePaths = {"phoneNumbers"})
     @NonNull
     Page<Client> findAll(Specification<Client> spec, @NonNull Pageable pageable);
 
     @NonNull
-    @EntityGraph(attributePaths = {"phoneNumbers"})
     List<Client> findAll(Specification<Client> spec);
 
     @Modifying

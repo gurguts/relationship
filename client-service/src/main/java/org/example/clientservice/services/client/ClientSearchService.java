@@ -4,8 +4,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.clientservice.exceptions.client.ClientException;
 import org.example.clientservice.models.client.Client;
+import org.example.clientservice.models.client.PhoneNumber;
 import org.example.clientservice.models.field.*;
 import org.example.clientservice.repositories.ClientRepository;
+import org.example.clientservice.repositories.PhoneNumberRepository;
 import org.example.clientservice.services.impl.*;
 import org.example.clientservice.models.client.FilterIds;
 import org.example.clientservice.spec.ClientSpecification;
@@ -27,6 +29,7 @@ public class ClientSearchService implements IClientSearchService {
     private final IRouteService routeService;
     private final ISourceService sourceService;
     private final IStatusClientService statusClientService;
+    private final PhoneNumberRepository phoneNumberRepository;
 
     @Override
     public Page<Client> searchClients(String query, Pageable pageable, Map<String, List<String>> filterParams,
@@ -127,7 +130,7 @@ public class ClientSearchService implements IClientSearchService {
 
     private Page<Client> fetchClients(String query, Map<String, List<String>> filterParams, FilterIds filterIds,
                                       List<Long> excludeStatusIds, Pageable pageable) {
-        return clientRepository.findAll(new ClientSpecification(
+        Page<Client> clientPage = clientRepository.findAll(new ClientSpecification(
                 query,
                 filterParams,
                 filterIds != null ? filterIds.statusIds() : null,
@@ -137,10 +140,27 @@ public class ClientSearchService implements IClientSearchService {
                 filterIds != null ? filterIds.businessIds() : null,
                 excludeStatusIds
         ), pageable);
+
+        if (!clientPage.getContent().isEmpty()) {
+            List<Long> clientIds = clientPage.getContent().stream()
+                    .map(Client::getId)
+                    .collect(Collectors.toList());
+            List<PhoneNumber> phoneNumbers = phoneNumberRepository.findByClientIdIn(clientIds);
+
+            Map<Long, List<PhoneNumber>> phoneNumbersByClientId = phoneNumbers.stream()
+                    .collect(Collectors.groupingBy(phoneNumber -> phoneNumber.getClient().getId()));
+
+            clientPage.getContent().forEach(client -> {
+                List<PhoneNumber> clientPhoneNumbers = phoneNumbersByClientId.getOrDefault(client.getId(), new ArrayList<>());
+                client.setPhoneNumbers(clientPhoneNumbers);
+            });
+        }
+
+        return clientPage;
     }
 
     private List<Client> fetchClients(String query, Map<String, List<String>> filterParams, FilterIds filterIds) {
-        return clientRepository.findAll(new ClientSpecification(
+        List<Client> clients = clientRepository.findAll(new ClientSpecification(
                 query,
                 filterParams,
                 filterIds != null ? filterIds.statusIds() : null,
@@ -150,5 +170,22 @@ public class ClientSearchService implements IClientSearchService {
                 filterIds != null ? filterIds.businessIds() : null,
                 null
         ));
+
+        if (!clients.isEmpty()) {
+            List<Long> clientIds = clients.stream()
+                    .map(Client::getId)
+                    .collect(Collectors.toList());
+            List<PhoneNumber> phoneNumbers = phoneNumberRepository.findByClientIdIn(clientIds);
+
+            Map<Long, List<PhoneNumber>> phoneNumbersByClientId = phoneNumbers.stream()
+                    .collect(Collectors.groupingBy(phoneNumber -> phoneNumber.getClient().getId()));
+
+            clients.forEach(client -> {
+                List<PhoneNumber> clientPhoneNumbers = phoneNumbersByClientId.getOrDefault(client.getId(), new ArrayList<>());
+                client.setPhoneNumbers(clientPhoneNumbers);
+            });
+        }
+
+        return clients;
     }
 }

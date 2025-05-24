@@ -1,6 +1,7 @@
 package org.example.purchaseservice.mappers;
 
 import org.example.purchaseservice.models.Product;
+import org.example.purchaseservice.models.ProductUsage;
 import org.example.purchaseservice.models.dto.product.ProductCreateDTO;
 import org.example.purchaseservice.models.dto.product.ProductDTO;
 import org.example.purchaseservice.models.dto.product.ProductUpdateDTO;
@@ -35,7 +36,7 @@ public class ProductMapper {
     public Product productCreateDTOToProduct(ProductCreateDTO dto) {
         Product product = new Product();
         product.setName(dto.getName());
-        product.setUsage(dto.getUsage());
+        product.setUsage(ProductUsage.valueOf(dto.getUsage()));
         return product;
     }
 
