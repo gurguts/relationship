@@ -6,6 +6,7 @@ import org.example.userservice.exceptions.balance.BalanceNotFoundException;
 import org.example.userservice.models.balance.Balance;
 import org.example.userservice.repositories.BalanceRepository;
 import org.example.userservice.services.impl.IBalanceService;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,6 +29,7 @@ public class BalanceService implements IBalanceService {
 
     @Override
     @Transactional
+    @CacheEvict(value = {"usersBalance"}, allEntries = true)
     public void updateBalance(Long balanceId, BigDecimal balanceDifference, String currency) {
         Balance balance = balanceRepository.findById(balanceId)
                 .orElseThrow(() -> new BalanceNotFoundException(
@@ -38,6 +40,7 @@ public class BalanceService implements IBalanceService {
     }
 
     @Override
+    @CacheEvict(value = {"usersBalance"}, allEntries = true)
     public void updateUserBalance(Long userId, BigDecimal balanceDifference, String currency) {
         Balance balance = balanceRepository.findByUserId(userId)
                 .orElseThrow(() -> new BalanceNotFoundException(
