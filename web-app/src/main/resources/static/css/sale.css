@@ -345,6 +345,10 @@
     color: #6c757d;
 }
 
+input.custom-select-placeholder {
+    width: 100%;
+}
+
 .custom-select-dropdown {
     position: absolute;
     top: 100%;

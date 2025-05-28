@@ -341,6 +341,10 @@
     color: #6c757d;
 }
 
+input.custom-select-placeholder {
+    width: 100%;
+}
+
 .custom-select-dropdown {
     position: absolute;
     top: 100%;
@@ -749,6 +753,10 @@
 #createClientModal input::placeholder {
     color: var(--main-grey);
     font-style: italic;
+}
+
+#createClientModal input.custom-select-placeholder {
+    color: black;
 }
 
 #createClientModal select {

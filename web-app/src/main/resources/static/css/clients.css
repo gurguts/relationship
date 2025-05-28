@@ -832,6 +832,10 @@ input.custom-select-placeholder {
     font-style: italic;
 }
 
+#createClientModal input.custom-select-placeholder {
+    color: black;
+}
+
 #createClientModal select {
     cursor: pointer;
     font-size: var(--base-text-size);
