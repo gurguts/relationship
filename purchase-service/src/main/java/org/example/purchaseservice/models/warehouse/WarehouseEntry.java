@@ -1,4 +1,4 @@
-package org.example.purchaseservice.models;
+package org.example.purchaseservice.models.warehouse;
 
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -26,6 +26,9 @@ public class WarehouseEntry {
 
     @Column(name = "product_id", nullable = false)
     private Long productId;
+
+    @Column(name = "warehouse_id", nullable = false)
+    private Long warehouseId;
 
     @Column(name = "quantity", nullable = false, precision = 20, scale = 2)
     private BigDecimal quantity;

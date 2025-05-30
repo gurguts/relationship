@@ -1,18 +1,16 @@
 package org.example.purchaseservice.services.impl;
 
 import org.example.purchaseservice.models.PageResponse;
-import org.example.purchaseservice.models.WarehouseWithdrawal;
-import org.example.purchaseservice.models.dto.warehouse.WarehouseWithdrawalUpdateDTO;
+import org.example.purchaseservice.models.warehouse.WarehouseWithdrawal;
 import org.example.purchaseservice.models.dto.warehouse.WithdrawalDTO;
-import org.example.purchaseservice.models.dto.warehouse.WithdrawalRequestDTO;
 
 import java.util.List;
 import java.util.Map;
 
 public interface IWarehouseWithdrawService {
-    WarehouseWithdrawal createWithdrawal(WithdrawalRequestDTO request);
+    WarehouseWithdrawal createWithdrawal(WarehouseWithdrawal request);
 
-    WarehouseWithdrawal updateWithdrawal(Long id, WarehouseWithdrawalUpdateDTO request);
+    WarehouseWithdrawal updateWithdrawal(Long id, WarehouseWithdrawal request);
 
     void deleteWithdrawal(Long id);
 

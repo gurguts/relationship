@@ -5,16 +5,20 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.example.purchaseservice.mappers.WarehouseWithdrawalMapper;
 import org.example.purchaseservice.models.PageResponse;
-import org.example.purchaseservice.models.WarehouseWithdrawal;
+import org.example.purchaseservice.models.dto.warehouse.WarehouseWithdrawalDTO;
+import org.example.purchaseservice.models.warehouse.WarehouseWithdrawal;
 import org.example.purchaseservice.models.dto.warehouse.WarehouseWithdrawalUpdateDTO;
 import org.example.purchaseservice.models.dto.warehouse.WithdrawalDTO;
-import org.example.purchaseservice.models.dto.warehouse.WithdrawalRequestDTO;
+import org.example.purchaseservice.models.dto.warehouse.WithdrawalCreateDTO;
 import org.example.purchaseservice.services.impl.IWarehouseWithdrawService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import java.net.URI;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -24,26 +28,44 @@ import java.util.Map;
 @RequestMapping("/api/v1/warehouse")
 @RequiredArgsConstructor
 public class WarehouseWithdrawalController {
-    private final IWarehouseWithdrawService warehouseEntryService;
+    private final IWarehouseWithdrawService warehouseWithdrawService;
+    private final WarehouseWithdrawalMapper warehouseWithdrawalMapper;
 
     @PreAuthorize("hasAuthority('warehouse:withdraw')")
     @PostMapping("/withdraw")
-    public ResponseEntity<WarehouseWithdrawal> createWithdrawal(@RequestBody WithdrawalRequestDTO request) {
-        return ResponseEntity.ok(warehouseEntryService.createWithdrawal(request));
+    public ResponseEntity<WarehouseWithdrawalDTO> createWithdrawal(@RequestBody WithdrawalCreateDTO request) {
+        WarehouseWithdrawal warehouseWithdrawal =
+                warehouseWithdrawService.createWithdrawal(
+                        warehouseWithdrawalMapper.withdrawalCreateDTOToWarehouseWithdrawal(request));
+
+        WarehouseWithdrawalDTO warehouseWithdrawalDTO =
+                warehouseWithdrawalMapper.warehouseWithdrawalToWarehouseWithdrawalDTO(warehouseWithdrawal);
+
+        URI location = ServletUriComponentsBuilder.fromCurrentRequest()
+                .path("/{id}")
+                .buildAndExpand(warehouseWithdrawalDTO.getId())
+                .toUri();
+        return ResponseEntity.created(location).body(warehouseWithdrawalDTO);
     }
 
     @PreAuthorize("hasAuthority('warehouse:withdraw')")
     @PutMapping("/withdraw/{id}")
-    public ResponseEntity<WarehouseWithdrawal> updateWithdrawal(
+    public ResponseEntity<WarehouseWithdrawalDTO> updateWithdrawal(
             @PathVariable Long id,
-            @RequestBody WarehouseWithdrawalUpdateDTO request) {
-        return ResponseEntity.ok(warehouseEntryService.updateWithdrawal(id, request));
+            @RequestBody WarehouseWithdrawalUpdateDTO warehouseWithdrawalUpdateDTO) {
+
+        WarehouseWithdrawal request =
+                warehouseWithdrawalMapper.withdrawalUpdateDTOToWarehouseWithdrawal(warehouseWithdrawalUpdateDTO);
+
+        WarehouseWithdrawal updated = warehouseWithdrawService.updateWithdrawal(id, request);
+
+        return ResponseEntity.ok(warehouseWithdrawalMapper.warehouseWithdrawalToWarehouseWithdrawalDTO(updated));
     }
 
     @PreAuthorize("hasAuthority('warehouse:withdraw')")
     @DeleteMapping("/withdraw/{id}")
     public ResponseEntity<Void> deleteWithdrawal(@PathVariable Long id) {
-        warehouseEntryService.deleteWithdrawal(id);
+        warehouseWithdrawService.deleteWithdrawal(id);
         return ResponseEntity.noContent().build();
     }
 
@@ -61,7 +83,8 @@ public class WarehouseWithdrawalController {
                 : Collections.emptyMap();
 
         PageResponse<WithdrawalDTO> result =
-                warehouseEntryService.getWithdrawals(page, size, sort, direction, filterMap);
+                warehouseWithdrawService.getWithdrawals(page, size, sort, direction, filterMap);
+
         return ResponseEntity.ok(result);
     }
 }

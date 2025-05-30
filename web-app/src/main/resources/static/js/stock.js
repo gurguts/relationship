@@ -1,6 +1,7 @@
 let productMap = new Map();
+let warehouseMap = new Map();
 const customSelects = {};
-const pageSize = 10;
+const pageSize = 100;
 let currentPage = 0;
 let totalPages = 1;
 let filters = {
@@ -29,6 +30,24 @@ async function fetchProducts() {
     }
 }
 
+async function fetchWarehouses() {
+    try {
+        const response = await fetch('/api/v1/warehouse');
+        if (!response.ok) {
+            const errorData = await response.json();
+            handleError(new Error(errorData.message || 'Failed to fetch products'));
+            return;
+        }
+        const warehouses = await response.json();
+        warehouseMap = new Map(warehouses.map(warehouse => [warehouse.id, warehouse.name]));
+        populateSelect('warehouse-id-filter', warehouses);
+        populateSelect('warehouse-id', warehouses);
+    } catch (error) {
+        console.error('Error fetching products:', error);
+        handleError(error);
+    }
+}
+
 const findNameByIdFromMap = (map, id) => {
     const numericId = Number(id);
     return map.get(numericId) || '';
@@ -44,9 +63,13 @@ async function loadBalance() {
         const data = await response.json();
         const container = document.getElementById('balance-container');
         let html = '';
-        for (const [productId, quantity] of Object.entries(data.balanceByProduct)) {
-            const productName = findNameByIdFromMap(productMap, productId);
-            html += `<div class="balance-item">${productName}: ${quantity} кг</div>`;
+        for (const [warehouseId, products] of Object.entries(data.balanceByWarehouseAndProduct)) {
+            const warehouseName = findNameByIdFromMap(warehouseMap, warehouseId);
+            html += `<h3>Склад: ${warehouseName}</h3>`;
+            for (const [productId, quantity] of Object.entries(products)) {
+                const productName = findNameByIdFromMap(productMap, productId);
+                html += `<div class="balance-item">${productName}: ${quantity} кг</div>`;
+            }
         }
         container.innerHTML = html;
     } catch (error) {
@@ -87,6 +110,17 @@ function populateProducts(selectId) {
     }
 }
 
+function populateWarehouses(selectId) {
+    const select = document.getElementById(selectId);
+    select.innerHTML = '<option value="">Оберіть склад</option>';
+    for (const [id, name] of warehouseMap.entries()) {
+        const option = document.createElement('option');
+        option.value = id;
+        option.textContent = name;
+        select.appendChild(option);
+    }
+}
+
 async function loadWithdrawalHistory(page) {
     Object.keys(filters).forEach(key => {
         if (Array.isArray(filters[key]) && filters[key].length === 0) {
@@ -107,14 +141,16 @@ async function loadWithdrawalHistory(page) {
         let html = '';
         for (const withdrawal of data.content) {
             const productName = findNameByIdFromMap(productMap, withdrawal.productId);
+            const warehouseName = findNameByIdFromMap(warehouseMap, withdrawal.warehouseId);
             const reason = withdrawal.reasonType === 'SHIPMENT' ? 'Відгрузка машини' : 'Залишок сміття';
             html += `
                         <tr data-id="${withdrawal.id}">
+                            <td>${warehouseName}</td>
                             <td>${productName}</td>
                             <td>${reason}</td>
                             <td>${withdrawal.quantity} кг</td>
                             <td>${withdrawal.withdrawalDate}</td>
-                            <td>${withdrawal.description || 'Немає'}</td>
+                            <td>${withdrawal.description || ''}</td>
                             <td>${new Date(withdrawal.createdAt).toLocaleString()}</td>
                         </tr>`;
         }
@@ -143,6 +179,7 @@ document.getElementById('withdraw-form').addEventListener('submit',
     async (e) => {
         e.preventDefault();
         const withdrawal = {
+            warehouseId: Number(document.getElementById('warehouse-id').value),
             productId: Number(document.getElementById('product-id').value),
             reasonType: document.getElementById('reason-type').value,
             quantity: Number(document.getElementById('quantity').value),
@@ -539,6 +576,7 @@ const closeBtns = document.getElementsByClassName('close');
 
 withdrawBtn.addEventListener('click', () => {
     populateProducts('product-id');
+    populateWarehouses('warehouse-id');
     withdrawModal.style.display = 'flex';
     withdrawModal.classList.add('open');
 });
@@ -589,19 +627,23 @@ document.getElementById('clear-filters').addEventListener('click', () => {
 });
 
 async function initializeCustomSelects() {
-    const selects = document.querySelectorAll('#product-id-filter, #reason-type-filter');
+    const selects = document.querySelectorAll('#product-id-filter, #reason-type-filter, #warehouse-id-filter');
     selects.forEach(select => {
         if (!customSelects[select.id]) {
             customSelects[select.id] = createCustomSelect(select);
         }
     });
+
     try {
         await fetchProducts();
         const reasonTypes = [
             {id: 'SHIPMENT', name: 'Відгрузка машини'},
             {id: 'WASTE', name: 'Залишок сміття'}
         ];
+
         populateSelect('reason-type-filter', reasonTypes);
+        const warehouseArray = Array.from(warehouseMap, ([id, name]) => ({id, name}));
+        populateSelect('warehouse-id-filter', warehouseArray);
         updateSelectedFilters();
         loadWithdrawalHistory(currentPage);
     } catch (error) {
@@ -610,8 +652,13 @@ async function initializeCustomSelects() {
     }
 }
 
-loadBalance();
-fetchProducts();
+async function initialize() {
+    await fetchProducts();
+    await fetchWarehouses();
+    loadBalance();
+}
+
+initialize();
 
 function exportTableToExcel(tableId, filename = 'withdrawal_data') {
     const table = document.getElementById(tableId);

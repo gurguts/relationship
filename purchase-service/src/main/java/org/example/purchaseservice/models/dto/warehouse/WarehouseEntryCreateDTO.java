@@ -6,8 +6,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Data
-public class WarehouseEntryDTO {
-    private Long id;
+public class WarehouseEntryCreateDTO {
 
     private Long userId;
 

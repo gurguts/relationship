@@ -5,8 +5,9 @@ import lombok.Data;
 import java.time.LocalDate;
 
 @Data
-public class WithdrawalRequestDTO {
+public class WithdrawalCreateDTO {
     private Long productId;
+    private Long warehouseId;
     private String reasonType;
     private Double quantity;
     private String description;

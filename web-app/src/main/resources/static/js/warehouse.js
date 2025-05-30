@@ -1,6 +1,7 @@
 let filters = {};
 let userMap = new Map();
 let productMap = new Map();
+let warehouseMap = new Map();
 let currentPage = 0;
 let totalPages = 0;
 let pageSize = 200;
@@ -74,6 +75,7 @@ document.getElementById('entryForm').addEventListener('submit',
     const entry = {
         entryDate: formData.get('entry_date'),
         userId: formData.get('user_id'),
+        warehouseId: formData.get('warehouse_id'),
         productId: formData.get('product_id'),
         quantity: parseFloat(formData.get('quantity'))
     };
@@ -94,6 +96,7 @@ document.getElementById('entryForm').addEventListener('submit',
         event.target.reset();
         document.getElementById('entry-date').value = new Date().toISOString().split('T')[0];
         customSelects['user-id'].reset();
+        customSelects['warehouse-id'].reset();
         customSelects['product-id'].reset();
         document.getElementById('entryModal').classList.remove('open');
         loadWarehouseEntries(currentPage);
@@ -142,6 +145,7 @@ function renderWarehouseEntries(entries) {
         const row = document.createElement('tr');
         row.dataset.id = entry.id;
         row.innerHTML = `
+            <td>${warehouseMap.get(Number(entry.warehouseId)) || ''}</td>
             <td>${entry.entryDate}</td>
             <td>${userMap.get(Number(entry.userId)) || entry.userId}</td>
             <td>${productMap.get(Number(entry.productId)) || entry.productId}</td>
@@ -164,9 +168,9 @@ function renderWarehouseEntries(entries) {
 
         const rows = tbody.querySelectorAll('tr');
         rows.forEach((row,) => {
-            const quantityCell = row.cells[3];
-            const purchasedCell = row.cells[4];
-            const differenceCell = row.cells[5];
+            const quantityCell = row.cells[4];
+            const purchasedCell = row.cells[5];
+            const differenceCell = row.cells[6];
 
             const quantity = parseFloat(quantityCell.textContent) || 0;
             const purchased = parseFloat(purchasedCell.textContent) || 0;
@@ -182,7 +186,7 @@ function renderWarehouseEntries(entries) {
         const summaryRow = document.createElement('tr');
         summaryRow.classList.add('summary-row');
         summaryRow.innerHTML = `
-            <td colspan="3"><strong>Сума</strong></td>
+            <td colspan="4"><strong>Сума</strong></td>
             <td><strong>${totalQuantity.toFixed(2)}</strong></td>
             <td><strong>${totalPurchased.toFixed(2)}</strong></td>
             <td><strong>${totalDifference.toFixed(2)}</strong></td>
@@ -563,6 +567,7 @@ async function initializeCustomSelects() {
     try {
         await fetchUsers();
         await fetchProducts();
+        await fetchWarehouses();
         setDefaultDates();
         updateSelectedFilters();
         await loadWarehouseEntries(0);
@@ -625,6 +630,24 @@ async function fetchProducts() {
         populateSelect('product-id', products);
     } catch (error) {
         console.error('Ошибка:', error);
+        handleError(error);
+    }
+}
+
+async function fetchWarehouses() {
+    try {
+        const response = await fetch('/api/v1/warehouse');
+        if (!response.ok) {
+            const errorData = await response.json();
+            handleError(new Error(errorData.message || 'Failed to fetch products'));
+            return;
+        }
+        const warehouses = await response.json();
+        warehouseMap = new Map(warehouses.map(warehouse => [warehouse.id, warehouse.name]));
+        populateSelect('warehouse-id-filter', warehouses);
+        populateSelect('warehouse-id', warehouses);
+    } catch (error) {
+        console.error('Error fetching products:', error);
         handleError(error);
     }
 }

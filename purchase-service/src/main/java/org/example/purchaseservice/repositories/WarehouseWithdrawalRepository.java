@@ -1,6 +1,6 @@
 package org.example.purchaseservice.repositories;
 
-import org.example.purchaseservice.models.WarehouseWithdrawal;
+import org.example.purchaseservice.models.warehouse.WarehouseWithdrawal;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;

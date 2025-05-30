@@ -12,7 +12,7 @@ import org.example.purchaseservice.clients.*;
 import org.example.purchaseservice.models.Product;
 import org.example.purchaseservice.models.Purchase;
 import org.example.purchaseservice.models.PaymentMethod;
-import org.example.purchaseservice.models.WarehouseEntry;
+import org.example.purchaseservice.models.warehouse.WarehouseEntry;
 import org.example.purchaseservice.models.dto.client.ClientDTO;
 import org.example.purchaseservice.models.dto.client.ClientSearchRequest;
 import org.example.purchaseservice.models.dto.fields.*;
@@ -89,7 +89,7 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
     }
 
     private FilterIds createFilterIds(List<ClientDTO> clients) {
-        // Extract DTOs from clients
+
         List<SourceDTO> sourceDTOs = clients.stream()
                 .map(ClientDTO::getSource)
                 .filter(Objects::nonNull)
@@ -125,7 +125,6 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
                 .toList();
         List<Long> businessIds = businessDTOs.stream().map(BusinessDTO::getId).toList();
 
-        // Fetch ProductDTO and UserDTO as they are not in ClientDTO
         List<Product> products = productService.getAllProducts("all");
         List<Long> productIds = products.stream().map(Product::getId).toList();
 
@@ -314,13 +313,43 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
 
     @Override
     public PurchaseReportDTO generateReport(String query, Map<String, List<String>> filterParams) {
+
         List<ClientDTO> clients = fetchClientIds(query, filterParams);
         FilterIds filterIds = createFilterIds(clients);
+        List<Purchase> purchaseList = fetchPurchases(query, filterParams, clients, filterIds);
+        List<WarehouseEntry> warehouseEntries = fetchWarehouseEntries(filterParams);
 
-        List<Purchase> purchaseList = fetchPurchases(
-                query, filterParams, clients.stream().map(ClientDTO::getId).toList(),
-                filterIds.sourceIds(), Sort.by("id"));
+        Map<Long, Double> totalCollectedByProduct = calculateTotalCollectedByProduct(purchaseList);
+        Map<Long, Double> totalDeliveredByProduct = calculateTotalDeliveredByProduct(warehouseEntries);
+        Map<String, Map<Long, Double>> byDrivers = calculateByDrivers(purchaseList, filterIds);
+        Map<String, Map<Long, Double>> byAttractors = calculateByAttractors(purchaseList, filterIds);
+        Map<String, Double> totalSpentByCurrency = calculateTotalSpentByCurrency(purchaseList);
+        Map<String, Double> averagePriceByCurrency = calculateAveragePriceByCurrency(purchaseList);
+        Map<Long, Double> averageCollectedPerTimeByProduct = calculateAverageCollectedPerTimeByProduct(purchaseList);
 
+        return buildReport(
+                totalCollectedByProduct,
+                totalDeliveredByProduct,
+                byDrivers,
+                byAttractors,
+                totalSpentByCurrency,
+                averagePriceByCurrency,
+                averageCollectedPerTimeByProduct
+        );
+    }
+
+    private List<Purchase> fetchPurchases(String query, Map<String, List<String>> filterParams,
+                                          List<ClientDTO> clients, FilterIds filterIds) {
+        return fetchPurchases(
+                query,
+                filterParams,
+                clients.stream().map(ClientDTO::getId).toList(),
+                filterIds.sourceIds(),
+                Sort.by("id")
+        );
+    }
+
+    private List<WarehouseEntry> fetchWarehouseEntries(Map<String, List<String>> filterParams) {
         Map<String, List<String>> warehouseFilters = new HashMap<>();
         Map<String, String> filterKeyMapping = new HashMap<>();
         filterKeyMapping.put("user", "user_id");
@@ -336,9 +365,11 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
             }
         }
 
-        List<WarehouseEntry> warehouseEntries = warehouseEntryService.findWarehouseEntriesByFilters(warehouseFilters);
+        return warehouseEntryService.findWarehouseEntriesByFilters(warehouseFilters);
+    }
 
-        Map<Long, Double> totalCollectedByProduct = purchaseList.stream()
+    private Map<Long, Double> calculateTotalCollectedByProduct(List<Purchase> purchaseList) {
+        return purchaseList.stream()
                 .filter(p -> p.getProduct() != null && p.getQuantity() != null)
                 .collect(Collectors.groupingBy(
                         Purchase::getProduct,
@@ -352,8 +383,10 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
                         Map.Entry::getKey,
                         e -> e.getValue().doubleValue()
                 ));
+    }
 
-        Map<Long, Double> totalDeliveredByProduct = warehouseEntries.stream()
+    private Map<Long, Double> calculateTotalDeliveredByProduct(List<WarehouseEntry> warehouseEntries) {
+        return warehouseEntries.stream()
                 .filter(e -> e.getProductId() != null && e.getQuantity() != null)
                 .collect(Collectors.groupingBy(
                         WarehouseEntry::getProductId,
@@ -367,8 +400,10 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
                         Map.Entry::getKey,
                         e -> e.getValue().doubleValue()
                 ));
+    }
 
-        Map<String, Map<Long, Double>> byDrivers = purchaseList.stream()
+    private Map<String, Map<Long, Double>> calculateByDrivers(List<Purchase> purchaseList, FilterIds filterIds) {
+        return purchaseList.stream()
                 .filter(p -> p.getUser() != null && p.getProduct() != null && p.getQuantity() != null)
                 .collect(Collectors.groupingBy(
                         purchase -> getNameFromDTOList(filterIds.userDTOs(), purchase.getUser()),
@@ -389,8 +424,10 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
                                         v -> v.getValue().doubleValue()
                                 ))
                 ));
+    }
 
-        Map<String, Map<Long, Double>> byAttractors = purchaseList.stream()
+    private Map<String, Map<Long, Double>> calculateByAttractors(List<Purchase> purchaseList, FilterIds filterIds) {
+        return purchaseList.stream()
                 .filter(p -> p.getSource() != null && p.getProduct() != null && p.getQuantity() != null)
                 .collect(Collectors.groupingBy(
                         purchase -> getNameFromDTOList(filterIds.sourceDTOs(), purchase.getSource()),
@@ -411,9 +448,10 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
                                         v -> v.getValue().doubleValue()
                                 ))
                 ));
+    }
 
-        // Total spent by currency
-        Map<String, Double> totalSpentByCurrency = purchaseList.stream()
+    private Map<String, Double> calculateTotalSpentByCurrency(List<Purchase> purchaseList) {
+        return purchaseList.stream()
                 .filter(p -> p.getCurrency() != null && p.getTotalPrice() != null)
                 .collect(Collectors.groupingBy(
                         Purchase::getCurrency,
@@ -427,23 +465,26 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
                         Map.Entry::getKey,
                         e -> e.getValue().doubleValue()
                 ));
+    }
 
-        Map<String, Double> averagePriceByCurrency = purchaseList.stream()
+    private Map<String, Double> calculateAveragePriceByCurrency(List<Purchase> purchaseList) {
+        return purchaseList.stream()
                 .filter(p -> p.getCurrency() != null && p.getTotalPrice() != null && p.getQuantity() != null)
                 .collect(Collectors.groupingBy(
                         Purchase::getCurrency,
                         Collectors.collectingAndThen(
                                 Collectors.averagingDouble(p ->
                                         p.getQuantity().compareTo(BigDecimal.ZERO) > 0
-                                                ? p.getTotalPrice().divide(p.getQuantity(), 2,
-                                                RoundingMode.HALF_UP).doubleValue()
+                                                ? p.getTotalPrice().divide(p.getQuantity(), 2, RoundingMode.HALF_UP).doubleValue()
                                                 : 0.0
                                 ),
                                 avg -> avg
                         )
                 ));
+    }
 
-        Map<Long, Double> averageCollectedPerTimeByProduct = purchaseList.stream()
+    private Map<Long, Double> calculateAverageCollectedPerTimeByProduct(List<Purchase> purchaseList) {
+        return purchaseList.stream()
                 .filter(p -> p.getProduct() != null && p.getQuantity() != null)
                 .collect(Collectors.groupingBy(
                         Purchase::getProduct,
@@ -452,7 +493,17 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
                                 avg -> avg
                         )
                 ));
+    }
 
+    private PurchaseReportDTO buildReport(
+            Map<Long, Double> totalCollectedByProduct,
+            Map<Long, Double> totalDeliveredByProduct,
+            Map<String, Map<Long, Double>> byDrivers,
+            Map<String, Map<Long, Double>> byAttractors,
+            Map<String, Double> totalSpentByCurrency,
+            Map<String, Double> averagePriceByCurrency,
+            Map<Long, Double> averageCollectedPerTimeByProduct
+    ) {
         return PurchaseReportDTO.builder()
                 .totalCollectedByProduct(totalCollectedByProduct)
                 .totalDeliveredByProduct(totalDeliveredByProduct)

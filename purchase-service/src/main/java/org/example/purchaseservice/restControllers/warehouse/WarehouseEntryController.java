@@ -5,14 +5,17 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.example.purchaseservice.mappers.WarehouseEntryMapper;
 import org.example.purchaseservice.models.PageResponse;
 import org.example.purchaseservice.models.dto.warehouse.*;
+import org.example.purchaseservice.models.warehouse.WarehouseEntry;
 import org.example.purchaseservice.services.impl.IWarehouseEntryService;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import java.net.URI;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -23,6 +26,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class WarehouseEntryController {
     private final IWarehouseEntryService warehouseEntryService;
+    private final WarehouseEntryMapper warehouseEntryMapper;
 
     @PreAuthorize("hasAuthority('warehouse:view')")
     @GetMapping("/entries")
@@ -44,9 +48,19 @@ public class WarehouseEntryController {
 
     @PreAuthorize("hasAuthority('warehouse:create')")
     @PostMapping("/entries")
-    public ResponseEntity<WarehouseEntryDTO> createWarehouseEntry(@RequestBody WarehouseEntryDTO dto) {
-        WarehouseEntryDTO result = warehouseEntryService.createWarehouseEntry(dto);
-        return ResponseEntity.status(HttpStatus.CREATED).body(result);
+    public ResponseEntity<WarehouseEntryDTO> createWarehouseEntry(@RequestBody WarehouseEntryCreateDTO dto) {
+        WarehouseEntry result =
+                warehouseEntryService.createWarehouseEntry(
+                        warehouseEntryMapper.warehouseEntryCreateDTOToWarehouseEntry(dto));
+
+        WarehouseEntryDTO warehouseEntryDTO = warehouseEntryMapper.warehouseEntryToWarehouseEntryDTO(result);
+
+
+        URI location = ServletUriComponentsBuilder.fromCurrentRequest()
+                .path("/{id}")
+                .buildAndExpand(warehouseEntryDTO.getId())
+                .toUri();
+        return ResponseEntity.created(location).body(warehouseEntryDTO);
     }
 
     @PreAuthorize("hasAuthority('warehouse:edit')")
@@ -60,7 +74,14 @@ public class WarehouseEntryController {
     @PreAuthorize("hasAuthority('warehouse:view')")
     @GetMapping("/balance")
     public ResponseEntity<BalanceWarehouseDTO> getBalance() {
-        return ResponseEntity.ok(warehouseEntryService.getWarehouseBalance());
+
+        Map<Long, Map<Long, Double>> balanceByWarehouseAndProduct = warehouseEntryService.getWarehouseBalance();
+
+        BalanceWarehouseDTO balanceWarehouseDTO = BalanceWarehouseDTO.builder()
+                .balanceByWarehouseAndProduct(balanceByWarehouseAndProduct)
+                .build();
+
+        return ResponseEntity.ok(balanceWarehouseDTO);
     }
 }
 

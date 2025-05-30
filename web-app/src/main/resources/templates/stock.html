@@ -98,6 +98,10 @@
                 <select id="product-id" required>
                     <option value="">Оберіть продукт</option>
                 </select>
+                <label style="display: none" for="warehouse-id"></label>
+                <select id="warehouse-id" required>
+                    <option value="">Оберіть cклад</option>
+                </select>
                 <label style="display: none" for="quantity"></label>
                 <input type="number" id="quantity" step="0.01" min="0" placeholder="Кількість (кг)" required>
                 <label style="display: none" for="description"></label>
@@ -155,6 +159,10 @@
                                 <select id="product-id-filter" name="product_id" multiple></select>
                             </div>
                             <div class="select-section-item">
+                                <label for="warehouse-id-filter">Склад:</label>
+                                <select id="warehouse-id-filter" name="warehouse_id" multiple></select>
+                            </div>
+                            <div class="select-section-item">
                                 <label for="reason-type-filter">Причина:</label>
                                 <select id="reason-type-filter" name="reason_type" multiple>
                                     <option value="SHIPMENT">Відгрузка машини</option>
@@ -175,6 +183,7 @@
         <table class="history-table" id="history-table">
             <thead>
             <tr>
+                <th>Склад</th>
                 <th>Продукт</th>
                 <th>Причина</th>
                 <th>Кількість</th>

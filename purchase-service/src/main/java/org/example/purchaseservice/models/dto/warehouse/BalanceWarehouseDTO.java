@@ -8,5 +8,5 @@ import java.util.Map;
 @Data
 @Builder
 public class BalanceWarehouseDTO {
-    private Map<Long, Double> balanceByProduct;
+    private Map<Long, Map<Long, Double>> balanceByWarehouseAndProduct;
 }

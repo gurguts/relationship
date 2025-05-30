@@ -3,10 +3,8 @@ package org.example.purchaseservice.services.warehouse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.purchaseservice.models.PageResponse;
-import org.example.purchaseservice.models.WarehouseWithdrawal;
-import org.example.purchaseservice.models.dto.warehouse.WarehouseWithdrawalUpdateDTO;
+import org.example.purchaseservice.models.warehouse.WarehouseWithdrawal;
 import org.example.purchaseservice.models.dto.warehouse.WithdrawalDTO;
-import org.example.purchaseservice.models.dto.warehouse.WithdrawalRequestDTO;
 import org.example.purchaseservice.repositories.WarehouseWithdrawalRepository;
 import org.example.purchaseservice.services.impl.IWarehouseWithdrawService;
 import org.example.purchaseservice.spec.WarehouseWithdrawalSpecification;
@@ -19,7 +17,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -33,29 +30,23 @@ public class WarehouseWithdrawService implements IWarehouseWithdrawService {
 
     @Override
     @Transactional
-    public WarehouseWithdrawal createWithdrawal(WithdrawalRequestDTO request) {
+    public WarehouseWithdrawal createWithdrawal(WarehouseWithdrawal warehouseWithdrawal) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         Long userId = (Long) authentication.getDetails();
 
-        WarehouseWithdrawal withdrawal = new WarehouseWithdrawal();
-        withdrawal.setProductId(request.getProductId());
-        withdrawal.setUserId(userId);
-        withdrawal.setReasonType(WarehouseWithdrawal.WithdrawalReason.valueOf(request.getReasonType()));
-        withdrawal.setQuantity(BigDecimal.valueOf(request.getQuantity()));
-        withdrawal.setDescription(request.getDescription());
-        withdrawal.setWithdrawalDate(request.getWithdrawalDate());
+        warehouseWithdrawal.setUserId(userId);
 
-        return warehouseWithdrawalRepository.save(withdrawal);
+        return warehouseWithdrawalRepository.save(warehouseWithdrawal);
     }
 
     @Override
     @Transactional
-    public WarehouseWithdrawal updateWithdrawal(Long id, WarehouseWithdrawalUpdateDTO request) {
+    public WarehouseWithdrawal updateWithdrawal(Long id, WarehouseWithdrawal request) {
         WarehouseWithdrawal withdrawal = warehouseWithdrawalRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Withdrawal not found"));
 
-        withdrawal.setReasonType(WarehouseWithdrawal.WithdrawalReason.valueOf(request.getReasonType()));
-        withdrawal.setQuantity(BigDecimal.valueOf(request.getQuantity()));
+        withdrawal.setReasonType(request.getReasonType());
+        withdrawal.setQuantity(request.getQuantity());
         withdrawal.setDescription(request.getDescription());
         withdrawal.setWithdrawalDate(request.getWithdrawalDate());
 
@@ -80,6 +71,7 @@ public class WarehouseWithdrawService implements IWarehouseWithdrawService {
                 .map(w -> WithdrawalDTO.builder()
                         .id(w.getId())
                         .productId(w.getProductId())
+                        .warehouseId(w.getWarehouseId())
                         .userId(w.getUserId())
                         .reasonType(w.getReasonType().name())
                         .quantity(w.getQuantity().doubleValue())

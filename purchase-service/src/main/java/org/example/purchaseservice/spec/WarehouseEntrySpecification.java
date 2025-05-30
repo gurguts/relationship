@@ -5,7 +5,7 @@ import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 import org.example.purchaseservice.exceptions.WarehouseException;
-import org.example.purchaseservice.models.WarehouseEntry;
+import org.example.purchaseservice.models.warehouse.WarehouseEntry;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.data.jpa.domain.Specification;
 
@@ -36,6 +36,11 @@ public class WarehouseEntrySpecification implements Specification<WarehouseEntry
             if (filters.containsKey("product_id")) {
                 List<Long> productIds = filters.get("product_id").stream().map(Long::parseLong).toList();
                 predicates.add(root.get("productId").in(productIds));
+            }
+
+            if (filters.containsKey("warehouse_id")) {
+                List<Long> warehouseIds = filters.get("warehouse_id").stream().map(Long::parseLong).toList();
+                predicates.add(root.get("warehouseId").in(warehouseIds));
             }
 
             if (filters.containsKey("entry_date_from")) {

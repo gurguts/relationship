@@ -619,7 +619,6 @@ function updateSelectedFilters() {
     const filterForm = document.getElementById('filterForm');
     const formData = new FormData(filterForm);
 
-    // Обработка дат
     const createdAtFrom = formData.get('createdAtFrom');
     const createdAtTo = formData.get('createdAtTo');
     if (createdAtFrom) selectedFilters['createdAtFrom'] = [createdAtFrom];

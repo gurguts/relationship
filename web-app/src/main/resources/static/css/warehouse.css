@@ -460,7 +460,7 @@ th {
     display: block;
     font-size: 1em;
     color: #374151;
-    margin-bottom: 8px;
+    margin-bottom: 2px;
     font-weight: 500;
 }
 
@@ -481,7 +481,7 @@ th {
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
-.modal-content button {
+.modal-content button:not(.custom-select-tag-remove) {
     padding: 12px;
     background: linear-gradient(135deg, var(--bright-blue, #42A5F5), var(--dark-blue, #1976D2),
     var(--bright-blue, #42A5F5));
@@ -497,12 +497,12 @@ th {
     width: 100%;
 }
 
-.modal-content button:hover {
+.modal-content button:not(.custom-select-tag-remove):hover {
     background-position: 100% 50%;
     transform: scale(1.05);
 }
 
-.modal-content button:active {
+.modal-content button:not(.custom-select-tag-remove):active {
     transform: scale(0.95);
 }
 

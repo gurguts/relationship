@@ -1,4 +1,4 @@
-package org.example.purchaseservice.models;
+package org.example.purchaseservice.models.warehouse;
 
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -24,6 +24,9 @@ public class WarehouseWithdrawal {
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
+    @Column(name = "warehouse_id", nullable = false)
+    private Long warehouseId;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "reason_type", nullable = false)
     private WithdrawalReason reasonType;
@@ -40,8 +43,4 @@ public class WarehouseWithdrawal {
     @CreationTimestamp
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
-
-    public enum WithdrawalReason {
-        SHIPMENT, WASTE
-    }
 }

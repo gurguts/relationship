@@ -1149,7 +1149,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     async function loadStorages() {
         try {
-            const response = await fetch('/api/v1/storage');
+            const response = await fetch('/api/v1/warehouse');
             if (!response.ok) new Error('Error fetching storages');
             const storages = await response.json();
             const storageList = document.getElementById('storageList');
@@ -1161,7 +1161,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 listItem.setAttribute('data-storage-id', storage.id);
 
                 const storageText = document.createElement('span');
-                storageText.textContent = `${storage.id} - ${storage.name} - ${storage.location}`;
+                storageText.textContent = `${storage.id} - ${storage.name} - ${storage.description}`;
                 listItem.appendChild(storageText);
 
                 const editButton = document.createElement('button');
@@ -1182,21 +1182,21 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function editStorage(storage) {
-        const newName = prompt('Введіть нове ім’я типу тари:', storage.name);
-        const newLocation = prompt('Введіть нову локацію:', storage.location);
-        if (newName !== null && newLocation !== null) {
-            updateStorage(storage.id, newName, newLocation);
+        const newName = prompt('Введіть нове ім’я складу:', storage.name);
+        const newDescription = prompt('Введіть новий опис складу:', storage.description);
+        if (newName !== null && newDescription !== null) {
+            updateStorage(storage.id, newName, newDescription);
         }
     }
 
-    async function updateStorage(id, name, location) {
+    async function updateStorage(id, name, description) {
         try {
-            const response = await fetch(`/api/v1/storage`, {
+            const response = await fetch(`/api/v1/warehouse/${id}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({id, name, location})
+                body: JSON.stringify({id, name, description})
             });
 
             if (!response.ok) new Error('Error updating storage');
@@ -1209,7 +1209,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     async function deleteStorage(id) {
         try {
-            const response = await fetch(`/api/v1/storage/${id}`, {
+            const response = await fetch(`/api/v1/warehouse/${id}`, {
                 method: 'DELETE'
             });
 
@@ -1224,26 +1224,26 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('createStorageBtn').addEventListener('click',
         async function () {
         const name = document.getElementById('newStorageName').value;
-        const location = document.getElementById('newStorageLocation').value;
+        const description = document.getElementById('newStorageDescription').value;
 
-        if (!name || !location) {
-            alert('Будь ласка, введіть всі дані для створення cкладу.');
+        if (!name) {
+            alert('Будь ласка, введіть ім\'я для створення складу.');
             return;
         }
 
         try {
-            const response = await fetch('/api/v1/storage', {
+            const response = await fetch('/api/v1/warehouse', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({name, location})
+                body: JSON.stringify({name, description})
             });
 
             if (!response.ok) new Error('Error creating storage');
             alert('Склад створено!');
             document.getElementById('newStorageName').value = '';
-            document.getElementById('newStorageLocation').value = '';
+            document.getElementById('newStorageDescription').value = '';
             /*document.getElementById('newRouteId').value = '';*/
             loadStorages();
         } catch (error) {
