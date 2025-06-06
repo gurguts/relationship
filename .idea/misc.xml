@@ -30,9 +30,19 @@
     </option>
     <option name="ignoredFiles">
       <set>
+        <option value="$PROJECT_DIR$/auth-service/pom.xml" />
+        <option value="$PROJECT_DIR$/balance-service/pom.xml" />
         <option value="$PROJECT_DIR$/barrel-service/pom.xml" />
+        <option value="$PROJECT_DIR$/business-service/pom.xml" />
         <option value="$PROJECT_DIR$/keepincrm-service/pom.xml" />
+        <option value="$PROJECT_DIR$/product-service/pom.xml" />
+        <option value="$PROJECT_DIR$/region-service/pom.xml" />
+        <option value="$PROJECT_DIR$/route-service/pom.xml" />
+        <option value="$PROJECT_DIR$/source-service/pom.xml" />
+        <option value="$PROJECT_DIR$/status-client-service/pom.xml" />
         <option value="$PROJECT_DIR$/status-service/pom.xml" />
+        <option value="$PROJECT_DIR$/transaction-service/pom.xml" />
+        <option value="$PROJECT_DIR$/warehouse-service/pom.xml" />
       </set>
     </option>
   </component>
