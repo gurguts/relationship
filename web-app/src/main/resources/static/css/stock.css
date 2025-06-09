@@ -480,3 +480,13 @@ h1 {
 .pagination span {
     align-self: center;
 }
+
+@media (max-width: 1024px) {
+    .history-container {
+        padding: 1px;
+    }
+
+    .history-table th, .history-table td {
+        padding: 4px;
+    }
+}

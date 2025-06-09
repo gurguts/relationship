@@ -543,3 +543,18 @@ tr:hover {
         opacity: 1;
     }
 }
+
+@media (max-width: 1024px) {
+    #warehouse-container{
+        padding: 1px;
+    }
+
+/*    table {
+        width: 90%;
+        border-collapse: collapse;
+    }*/
+
+    th, td {
+        padding: 4px;
+    }
+}
