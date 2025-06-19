@@ -112,6 +112,8 @@ public class PurchaseCrudService implements IPurchaseCrudService {
             existingPurchase.setSource(updatedPurchase.getSource());
         }
 
+        existingPurchase.setExchangeRate(updatedPurchase.getExchangeRate());
+
         return purchaseRepository.save(existingPurchase);
     }
 

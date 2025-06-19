@@ -29,6 +29,7 @@ public class PurchaseMapper {
         dto.setTotalPrice(purchase.getTotalPrice());
         dto.setPaymentMethod(purchase.getPaymentMethod());
         dto.setCurrency(purchase.getCurrency());
+        dto.setExchangeRate(purchase.getExchangeRate());
         dto.setTransactionId(purchase.getTransaction());
         dto.setCreatedAt(purchase.getCreatedAt());
         dto.setUpdatedAt(purchase.getUpdatedAt());
@@ -44,6 +45,7 @@ public class PurchaseMapper {
         purchase.setProduct(purchaseDto.getProductId());
         purchase.setQuantity(purchaseDto.getQuantity());
         purchase.setTotalPrice(purchaseDto.getTotalPrice());
+        purchase.setExchangeRate(purchaseDto.getExchangeRate());
         purchase.setCreatedAt(parseCreatedAt(purchaseDto.getCreatedAt()));
 
         return purchase;
@@ -73,6 +75,7 @@ public class PurchaseMapper {
         purchase.setTotalPrice(dto.getTotalPrice());
         purchase.setPaymentMethod(dto.getPaymentMethod());
         purchase.setCurrency(dto.getCurrency());
+        purchase.setExchangeRate(dto.getExchangeRate());
         return purchase;
     }
 
@@ -105,6 +108,7 @@ public class PurchaseMapper {
         dto.setTotalPrice(purchase.getTotalPrice());
         dto.setPaymentMethod(purchase.getPaymentMethod());
         dto.setCurrency(purchase.getCurrency());
+        dto.setExchangeRate(purchase.getExchangeRate());
         dto.setCreatedAt(purchase.getCreatedAt());
         return dto;
     }

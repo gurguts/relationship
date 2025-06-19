@@ -219,6 +219,7 @@ public class SaleSpecialOperationsService implements ISaleSpecialOperationsServi
                 Map.entry("totalPrice", "Повна ціна"),
                 Map.entry("paymentMethod", "Метод оплати"),
                 Map.entry("currency", "Валюта"),
+                Map.entry("exchangeRate", "Курс"),
                 Map.entry("transaction", "Id транзакції"),
                 Map.entry("createdAt", "Дата створення"),
                 Map.entry("updatedAt", "Дата оновлення")
@@ -287,6 +288,7 @@ public class SaleSpecialOperationsService implements ISaleSpecialOperationsServi
                 case "paymentMethod" -> sale.getPaymentMethod() != null
                         ? (sale.getPaymentMethod() == PaymentMethod.CASH ? "2" : "1") : "";
                 case "currency" -> sale.getCurrency() != null ? sale.getCurrency() : "";
+                case "exchangeRate" -> sale.getExchangeRate() != null ? String.valueOf(sale.getExchangeRate()) : "";
                 case "transaction" -> sale.getTransaction() != null ? sale.getTransaction().toString() : "";
                 case "createdAt" -> sale.getCreatedAt() != null ? sale.getCreatedAt().toString() : "";
                 case "updatedAt" -> sale.getUpdatedAt() != null ? sale.getUpdatedAt().toString() : "";

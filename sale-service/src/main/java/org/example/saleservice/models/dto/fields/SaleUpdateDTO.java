@@ -21,5 +21,8 @@ public class SaleUpdateDTO {
     @DecimalMin(value = "0.00", message = "{validation.sale.totalPrice.negative}")
     private BigDecimal totalPrice;
 
+    @DecimalMin(value = "0.000001", message = "{validation.sale.exchangeRate.invalid}")
+    private BigDecimal exchangeRate;
+
     private String createdAt;
 }

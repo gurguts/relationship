@@ -1,5 +1,6 @@
 package org.example.saleservice.models.dto.fields;
 
+import jakarta.validation.constraints.DecimalMin;
 import lombok.Data;
 import org.example.saleservice.models.PaymentMethod;
 
@@ -25,6 +26,8 @@ public class SaleModalDTO {
     private PaymentMethod paymentMethod;
 
     private String currency;
+
+    private BigDecimal exchangeRate;
 
     private LocalDateTime createdAt;
 }

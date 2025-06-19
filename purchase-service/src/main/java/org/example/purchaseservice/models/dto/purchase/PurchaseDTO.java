@@ -28,6 +28,8 @@ public class PurchaseDTO {
 
     private String currency;
 
+    private BigDecimal exchangeRate;
+
     private Long transactionId;
 
     private LocalDateTime createdAt;

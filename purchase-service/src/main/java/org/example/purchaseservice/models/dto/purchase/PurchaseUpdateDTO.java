@@ -22,5 +22,8 @@ public class PurchaseUpdateDTO {
     @DecimalMin(value = "0.00", message = "{validation.purchase.totalPrice.negative}")
     private BigDecimal totalPrice;
 
+    @DecimalMin(value = "0.000001", message = "{validation.purchase.exchangeRate.invalid}")
+    private BigDecimal exchangeRate;
+
     private String createdAt;
 }

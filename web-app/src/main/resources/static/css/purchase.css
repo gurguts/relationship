@@ -645,13 +645,18 @@ input.custom-select-placeholder {
     width: 5%;
 }
 
-/*data*/
+/*exchangeRate*/
 #purchase-list th:nth-child(10) {
+    width: 5%;
+}
+
+/*data*/
+#purchase-list th:nth-child(11) {
     width: 10%;
 }
 
 /*actions*/
-#purchase-list th:nth-child(11) {
+#purchase-list th:nth-child(12) {
     width: 5%;
 }
 

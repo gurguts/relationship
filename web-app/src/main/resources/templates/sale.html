@@ -282,6 +282,7 @@
             <label><input type="checkbox" name="fields" value="totalPrice" checked> Повна ціна</label><br>
             <label><input type="checkbox" name="fields" value="paymentMethod" checked> Метод оплати</label><br>
             <label><input type="checkbox" name="fields" value="currency" checked>Валюта</label><br>
+            <label><input type="checkbox" name="fields" value="exchangeRate" checked> Курс</label><br>
             <label><input type="checkbox" name="fields" value="transaction" checked> Id транзакції</label><br>
             <label><input type="checkbox" name="fields" value="createdAt" checked> Дата створення</label><br>
             <label><input type="checkbox" name="fields" value="updatedAt" checked> Дата оновлення</label><br>
@@ -304,6 +305,7 @@
             <th data-sort="unitPrice">Ціна за кг</th>
             <th data-sort="type">Форма</th>
             <th data-sort="currency">Валюта</th>
+            <th data-sort="exchangeRate">Курс</th>
             <th data-sort="createdAt">Дата</th>
             <th>Дії</th>
         </tr>
@@ -328,6 +330,9 @@
             </label>
             <label>Дата:
                 <input type="date" name="createdAt" required>
+            </label>
+            <label>Курс:
+                <input type="number" name="exchangeRate" step="0.000001" min="0" required>
             </label>
             <label class="edit-source" style="display: none;">Залучення:
                 <select name="sourceId" class="edit-source"></select>

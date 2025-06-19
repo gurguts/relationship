@@ -30,4 +30,7 @@ public class PurchaseCreateDTO {
 
     @NotNull(message = "{validation.purchase.currency.null}")
     private String currency;
+
+    @DecimalMin(value = "0.000001", message = "{validation.purchase.exchangeRate.invalid}")
+    private BigDecimal exchangeRate;
 }

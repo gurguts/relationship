@@ -31,6 +31,7 @@ public class SaleMapper {
         dto.setTotalPrice(sale.getTotalPrice());
         dto.setPaymentMethod(sale.getPaymentMethod());
         dto.setCurrency(sale.getCurrency());
+        dto.setExchangeRate(sale.getExchangeRate());
         dto.setTransactionId(sale.getTransaction());
         dto.setCreatedAt(sale.getCreatedAt());
         dto.setUpdatedAt(sale.getUpdatedAt());
@@ -46,6 +47,7 @@ public class SaleMapper {
         sale.setProduct(saleUpdateDTO.getProductId());
         sale.setQuantity(saleUpdateDTO.getQuantity());
         sale.setTotalPrice(saleUpdateDTO.getTotalPrice());
+        sale.setExchangeRate(saleUpdateDTO.getExchangeRate());
         sale.setCreatedAt(parseCreatedAt(saleUpdateDTO.getCreatedAt()));
 
         return sale;
@@ -75,6 +77,7 @@ public class SaleMapper {
         sale.setTotalPrice(dto.getTotalPrice());
         sale.setPaymentMethod(dto.getPaymentMethod());
         sale.setCurrency(dto.getCurrency());
+        sale.setExchangeRate(dto.getExchangeRate());
         return sale;
     }
 
@@ -93,6 +96,7 @@ public class SaleMapper {
         dto.setTotalPrice(sale.getTotalPrice());
         dto.setPaymentMethod(sale.getPaymentMethod());
         dto.setCurrency(sale.getCurrency());
+        dto.setExchangeRate(sale.getExchangeRate());
         dto.setCreatedAt(sale.getCreatedAt());
         return dto;
     }

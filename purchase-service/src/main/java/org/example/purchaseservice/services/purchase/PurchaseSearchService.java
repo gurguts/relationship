@@ -97,6 +97,7 @@ public class PurchaseSearchService implements IPurchaseSearchService {
         dto.setTotalPrice(purchase.getTotalPrice());
         dto.setPaymentMethod(purchase.getPaymentMethod());
         dto.setCurrency(purchase.getCurrency());
+        dto.setExchangeRate(purchase.getExchangeRate());
         dto.setTransactionId(purchase.getTransaction());
         dto.setCreatedAt(purchase.getCreatedAt());
         dto.setUpdatedAt(purchase.getUpdatedAt());

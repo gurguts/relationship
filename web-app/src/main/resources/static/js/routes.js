@@ -117,6 +117,9 @@ const saleModal = document.getElementById('saleModal');
 const closeButtonSale = saleModal.querySelector('.close-sale-modal');
 const saleForm = document.getElementById('saleForm');
 const productSelectSale = document.getElementById('productSale');
+const currencySelectSale = document.getElementById('currencySale');
+const exchangeRateInputSale = document.getElementById('exchangeRateSale');
+const exchangeRateLabelSale = document.getElementById('exchangeRateSaleLabel');
 let availableProductsSale = [];
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -131,7 +134,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 productSelectSale.appendChild(option);
             });
         });
+    toggleExchangeRateFieldSale();
+    currencySelectSale.addEventListener('change', toggleExchangeRateFieldSale);
 });
+
+function toggleExchangeRateFieldSale() {
+    if (currencySelectSale.value === 'UAH') {
+        exchangeRateInputSale.style.display = 'none';
+        exchangeRateLabelSale.style.display = 'none';
+        exchangeRateInputSale.value = ''; // Очистить значение
+        exchangeRateInputSale.removeAttribute('required');
+    } else {
+        exchangeRateInputSale.style.display = 'block';
+        exchangeRateLabelSale.style.display = 'block';
+        exchangeRateInputSale.setAttribute('required', 'required');
+    }
+}
 
 function openSaleModal(clientId, sourceId) {
     saleModal.classList.remove('hide');
@@ -171,6 +189,7 @@ saleForm.addEventListener('submit', async (event) => {
     const totalPrice = document.getElementById('totalPriceSale').value;
     const paymentMethod = document.getElementById('paymentMethodSale').value;
     const currency = document.getElementById('currencySale').value;
+    const exchangeRate = currency !== 'UAH' && exchangeRateInputSale.value ? exchangeRateInputSale.value : null;
 
     try {
         const response = await fetch(`/api/v1/sale`, {
@@ -178,7 +197,7 @@ saleForm.addEventListener('submit', async (event) => {
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({clientId, sourceId, productId, quantity, totalPrice, paymentMethod, currency})
+            body: JSON.stringify({clientId, sourceId, productId, quantity, totalPrice, paymentMethod, currency, exchangeRate})
         });
 
         if (!response.ok) {
@@ -205,6 +224,9 @@ const purchaseModal = document.getElementById('purchaseModal');
 const closeButton = purchaseModal.querySelector('.close-purchase-modal');
 const purchaseForm = document.getElementById('purchaseForm');
 const productSelect = document.getElementById('product');
+const currencySelect = document.getElementById('currencyPurchase');
+const exchangeRateInput = document.getElementById('exchangeRatePurchase');
+const exchangeRateLabel = document.getElementById('exchangeRatePurchaseLabel');
 let availableProducts = [];
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -219,7 +241,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 productSelect.appendChild(option);
             });
         });
+    toggleExchangeRateField();
+    currencySelect.addEventListener('change', toggleExchangeRateField);
 });
+
+function toggleExchangeRateField() {
+    if (currencySelect.value === 'UAH') {
+        exchangeRateInput.style.display = 'none';
+        exchangeRateLabel.style.display = 'none';
+        exchangeRateInput.value = ''; // Очистить значение
+        exchangeRateInput.removeAttribute('required');
+    } else {
+        exchangeRateInput.style.display = 'block';
+        exchangeRateLabel.style.display = 'block';
+        exchangeRateInput.setAttribute('required', 'required');
+    }
+}
 
 function openPurchaseModal(clientId, sourceId) {
     purchaseModal.classList.remove('hide');
@@ -229,6 +266,7 @@ function openPurchaseModal(clientId, sourceId) {
     }, 10);
     document.getElementById('clientIdPurchase').value = clientId;
     document.getElementById('sourceIdPurchase').value = sourceId;
+    toggleExchangeRateField();
 }
 
 function closeModalPurchase() {
@@ -237,6 +275,7 @@ function closeModalPurchase() {
     setTimeout(() => {
         purchaseModal.style.display = "none";
         purchaseForm.reset();
+        toggleExchangeRateField();
     }, 300);
 }
 
@@ -259,6 +298,7 @@ purchaseForm.addEventListener('submit', async (event) => {
     const totalPrice = document.getElementById('totalPrice').value;
     const paymentMethod = document.getElementById('paymentMethod').value;
     const currency = document.getElementById('currencyPurchase').value;
+    const exchangeRate = currency !== 'UAH' && exchangeRateInput.value ? exchangeRateInput.value : null;
 
     try {
         const response = await fetch(`/api/v1/purchase`, {
@@ -266,7 +306,7 @@ purchaseForm.addEventListener('submit', async (event) => {
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({clientId, sourceId, productId, quantity, totalPrice, paymentMethod, currency})
+            body: JSON.stringify({clientId, sourceId, productId, quantity, totalPrice, paymentMethod, currency, exchangeRate})
         });
 
         if (!response.ok) {

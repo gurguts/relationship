@@ -94,6 +94,7 @@ public class SaleSearchService implements ISaleSearchService {
         dto.setTotalPrice(sale.getTotalPrice());
         dto.setPaymentMethod(sale.getPaymentMethod());
         dto.setCurrency(sale.getCurrency());
+        dto.setExchangeRate(sale.getExchangeRate());
         dto.setTransactionId(sale.getTransaction());
         dto.setCreatedAt(sale.getCreatedAt());
         dto.setUpdatedAt(sale.getUpdatedAt());

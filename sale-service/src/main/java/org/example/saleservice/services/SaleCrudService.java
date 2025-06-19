@@ -65,10 +65,10 @@ public class SaleCrudService implements ISaleCrudService {
         String sourceName = sourceClient.getSourceName(existingSale.getSource()).getName();
 
         boolean canEditData = SecurityContextHolder.getContext().getAuthentication().getAuthorities().stream()
-                .anyMatch(auth -> "purchase:edit_strangers".equals(auth.getAuthority()));
+                .anyMatch(auth -> "sale:edit_strangers".equals(auth.getAuthority()));
 
 
-        if (!(fullName.equals(sourceName) || !canEditData)) {
+        if (!(fullName.equals(sourceName) || canEditData)) {
             throw new SaleException("ONLY_OWNER", "You cannot change someone else's purchase.");
         }
 
@@ -109,6 +109,8 @@ public class SaleCrudService implements ISaleCrudService {
             }
             existingSale.setSource(updatedSale.getSource());
         }
+
+        existingSale.setExchangeRate(updatedSale.getExchangeRate());
 
         return saleRepository.save(existingSale);
     }

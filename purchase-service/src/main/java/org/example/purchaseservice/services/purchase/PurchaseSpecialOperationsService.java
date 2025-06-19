@@ -219,6 +219,7 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
                 Map.entry("totalPrice", "Повна ціна"),
                 Map.entry("paymentMethod", "Метод оплати"),
                 Map.entry("currency", "Валюта"),
+                Map.entry("exchangeRate", "Курс"),
                 Map.entry("transaction", "Id транзакції"),
                 Map.entry("createdAt", "Дата створення"),
                 Map.entry("updatedAt", "Дата оновлення")
@@ -287,6 +288,7 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
                 case "paymentMethod" -> purchase.getPaymentMethod() != null
                         ? (purchase.getPaymentMethod() == PaymentMethod.CASH ? "2" : "1") : "";
                 case "currency" -> purchase.getCurrency() != null ? purchase.getCurrency() : "";
+                case "exchangeRate" -> purchase.getExchangeRate() != null ? String.valueOf(purchase.getExchangeRate()) : "";
                 case "transaction" -> purchase.getTransaction() != null ? purchase.getTransaction().toString() : "";
                 case "createdAt" -> purchase.getCreatedAt() != null ? purchase.getCreatedAt().toString() : "";
                 case "updatedAt" -> purchase.getUpdatedAt() != null ? purchase.getUpdatedAt().toString() : "";

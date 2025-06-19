@@ -127,6 +127,7 @@ function getRowHtml(purchase) {
         <td data-label="Ціна за кг">${purchase.unitPrice ? purchase.unitPrice : ''}</td>
         <td data-label="Форма">${({CASH: '2', BANKTRANSFER: '1'}[purchase.paymentMethod] || '')}</td>
         <td data-label="Валюта">${purchase.currency ? purchase.currency : ''}</td>
+        <td data-label="Курс">${purchase.exchangeRate ? purchase.exchangeRate : ''}</td>
         <td data-label="Забрано">${purchase.createdAt ? new Date(purchase.createdAt)
         .toLocaleDateString('ua-UA') : ''}</td>
         <td data-label="Дії">
@@ -162,12 +163,14 @@ function showEditModal(purchase) {
     const quantityInput = form.querySelector('input[name="quantity"]');
     const totalPriceInput = form.querySelector('input[name="totalPrice"]');
     const createdAtInput = form.querySelector('input[name="createdAt"]');
+    const exchangeRate = form.querySelector('input[name="exchangeRate"]');
     const sourceSelect = form.querySelector('select[name="sourceId"]');
 
     header.textContent = `ID: ${purchase.id}`;
     productSelect.innerHTML = generateProductOptions(purchase.productId);
     quantityInput.value = purchase.quantity || 0;
     totalPriceInput.value = purchase.totalPrice || 0;
+    exchangeRate.value = purchase.exchangeRate || '';
     createdAtInput.value = purchase.createdAt
         ? new Date(purchase.createdAt.replace(' ', 'T') + 'Z').toISOString().split('T')[0]
         : '';
@@ -183,7 +186,8 @@ function showEditModal(purchase) {
             quantity: parseFloat(quantityInput.value),
             totalPrice: parseFloat(totalPriceInput.value),
             createdAt: createdAtInput.value,
-            sourceId: sourceSelect.value
+            sourceId: sourceSelect.value,
+            exchangeRate: exchangeRate.value
         };
         await savePurchase(purchase, updatedData);
         modal.style.display = 'none';

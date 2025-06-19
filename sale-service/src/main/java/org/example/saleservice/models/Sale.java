@@ -49,6 +49,9 @@ public class Sale {
     @Column(name = "currency")
     private String currency;
 
+    @Column(name = "exchange_rate", precision = 20, scale = 6)
+    private BigDecimal exchangeRate;
+
     @Column(name = "transaction_id")
     private Long transaction;
 

@@ -29,6 +29,8 @@ public class PurchasePageDTO {
 
     private String currency;
 
+    private BigDecimal exchangeRate;
+
     private Long transactionId;
 
     private LocalDateTime createdAt;

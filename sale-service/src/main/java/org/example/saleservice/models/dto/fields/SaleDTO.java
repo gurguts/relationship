@@ -28,6 +28,8 @@ public class SaleDTO {
 
     private String currency;
 
+    private BigDecimal exchangeRate;
+
     private Long transactionId;
 
     private LocalDateTime createdAt;
