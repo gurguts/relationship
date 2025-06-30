@@ -1,4 +1,4 @@
-function createCustomSelect(selectElement) {
+function createCustomSelect(selectElement, isFilter = false) {
     const selectId = selectElement.id;
     const selectName = selectElement.name;
     const isMultiple = selectElement.multiple;
@@ -60,6 +60,7 @@ function createCustomSelect(selectElement) {
     }
 
     function updateFilterCounter() {
+        if (!isFilter) return; // Вызывается только для фильтров
         const counterElement = document.querySelector(`[data-counter-for="${selectId}"]`);
         if (counterElement) {
             counterElement.textContent = selectedValues.size;
@@ -69,7 +70,6 @@ function createCustomSelect(selectElement) {
     function updateSelection() {
         requestAnimationFrame(() => {
             tagsContainer.innerHTML = '';
-            // Keep placeholderInput visible at all times
             placeholderInput.style.display = 'block';
 
             if (isMultiple) {
@@ -95,7 +95,6 @@ function createCustomSelect(selectElement) {
                 if (value) {
                     const option = currentSelect.querySelector(`option[value="${value}"]`);
                     if (option) {
-                        // Display selected value in placeholderInput but allow editing
                         placeholderInput.value = option.textContent;
                     }
                 } else {
@@ -103,7 +102,7 @@ function createCustomSelect(selectElement) {
                     placeholderInput.placeholder = 'Параметр не задано';
                 }
             }
-            updateFilterCounter();
+            if (isFilter) updateFilterCounter();
         });
     }
 
@@ -114,11 +113,16 @@ function createCustomSelect(selectElement) {
     function populateDropdown(data, searchText = '') {
         const fragment = document.createDocumentFragment();
         const lowerSearch = searchText.toLowerCase().trim();
-        const availableOptions = data.filter(item =>
-            !selectedValues.has(String(item.id)) && item.nameLower.includes(lowerSearch));
+        // Для клиентских селектов показываем все опции, включая выбранные
+        const availableOptions = isFilter
+            ? data.filter(item => !selectedValues.has(String(item.id)) && item.nameLower.includes(lowerSearch))
+            : data.filter(item => item.nameLower.includes(lowerSearch));
         availableOptions.forEach(item => {
             const option = document.createElement('div');
             option.className = 'custom-select-option';
+            if (selectedValues.has(String(item.id))) {
+                option.classList.add('selected'); // Выделяем выбранные опции
+            }
             option.dataset.value = String(item.id);
             option.textContent = item.name;
             fragment.appendChild(option);
@@ -177,8 +181,11 @@ function createCustomSelect(selectElement) {
         dropdown.classList.toggle('open');
         if (dropdown.classList.contains('open')) {
             placeholderInput.focus();
-            placeholderInput.value = ''; // Clear placeholder input on open
-            populateDropdown(selectData); // Show all available options
+            // Не очищаем placeholderInput для одиночного выбора
+            if (isMultiple || isFilter) {
+                placeholderInput.value = '';
+            }
+            populateDropdown(selectData);
         }
     };
 
@@ -192,7 +199,7 @@ function createCustomSelect(selectElement) {
 
     const handlePlaceholderInput = debounce(() => {
         sortAndFilterOptions(placeholderInput.value);
-        dropdown.classList.add('open'); // Open dropdown when typing in placeholder
+        dropdown.classList.add('open');
     }, 200);
 
     const handleSearchKeydown = (e) => {
@@ -340,7 +347,7 @@ function populateSelect(selectId, data) {
 
     const customSelectId = selectId.endsWith('-filter') ? `${selectId}` : `${selectId}-custom`;
     if (!customSelects[customSelectId]) {
-        customSelects[customSelectId] = createCustomSelect(select);
+        customSelects[customSelectId] = createCustomSelect(select, selectId.endsWith('-filter'));
     }
     customSelects[customSelectId].populate(data);
 
