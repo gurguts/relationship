@@ -142,7 +142,8 @@ async function loadWithdrawalHistory(page) {
         for (const withdrawal of data.content) {
             const productName = findNameByIdFromMap(productMap, withdrawal.productId);
             const warehouseName = findNameByIdFromMap(warehouseMap, withdrawal.warehouseId);
-            const reason = withdrawal.reasonType === 'SHIPMENT' ? 'Відгрузка машини' : 'Залишок сміття';
+            console.log("withdrawal.reasonType = ",withdrawal.reasonType)
+            const reason = reasonTypes.find(type => type.id === withdrawal.reasonType)?.name || 'Невідома причина';
             html += `
                         <tr data-id="${withdrawal.id}">
                             <td>${warehouseName}</td>
@@ -626,6 +627,13 @@ document.getElementById('clear-filters').addEventListener('click', () => {
     clearFilters();
 });
 
+const reasonTypes = [
+    {id: 'SHIPMENT', name: 'Відгрузка машини'},
+    {id: 'WASTE', name: 'Залишок сміття'},
+    {id: 'FUSES', name: 'Фузи'},
+    {id: 'FERMENTATION', name: 'Ферментація'}
+];
+
 async function initializeCustomSelects() {
     const selects = document.querySelectorAll('#product-id-filter, #reason-type-filter, #warehouse-id-filter');
     selects.forEach(select => {
@@ -636,10 +644,6 @@ async function initializeCustomSelects() {
 
     try {
         await fetchProducts();
-        const reasonTypes = [
-            {id: 'SHIPMENT', name: 'Відгрузка машини'},
-            {id: 'WASTE', name: 'Залишок сміття'}
-        ];
 
         populateSelect('reason-type-filter', reasonTypes);
         const warehouseArray = Array.from(warehouseMap, ([id, name]) => ({id, name}));

@@ -1,5 +1,5 @@
 package org.example.purchaseservice.models.warehouse;
 
 public enum WithdrawalReason {
-    SHIPMENT, WASTE
+    SHIPMENT, WASTE, FUSES, FERMENTATION
 }
