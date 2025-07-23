@@ -172,7 +172,13 @@
                     <label class="select-label-style" for="source-filter">Залучення:</label>
                     <select id="source-filter" name="source" multiple>
                     </select>
+                </div>
 
+                <div class="select-section-item">
+                    <br>
+                    <label class="select-label-style" for="client-product-filter">Товар:</label>
+                    <select id="client-product-filter" name="clientProduct" multiple>
+                    </select>
                 </div>
             </div>
 
@@ -201,6 +207,7 @@
             <label><input type="checkbox" name="fields" value="route" checked> Маршрут</label><br>
             <label><input type="checkbox" name="fields" value="region" checked> Область</label><br>
             <label><input type="checkbox" name="fields" value="business" checked> Тип бізнесу</label><br>
+            <label><input type="checkbox" name="fields" value="clientProduct" checked> Товар</label><br>
             <label><input type="checkbox" name="fields" value="edrpou" checked> ЄДРПОУ</label><br>
             <label><input type="checkbox" name="fields" value="enterpriseName" checked> Назва підприємства</label><br>
             <label><input type="checkbox" name="fields" value="vat" checked> ПДВ</label><br>
@@ -345,6 +352,11 @@
             <span id="modal-client-source"></span>
             <i id="edit-source" class="edit-icon" onclick="enableSelect('source', availableSources)">✏️</i>
         </p>
+        <p class="modal-content-client-product">
+            <strong>Товар:</strong>
+            <span id="modal-client-clientProduct"></span>
+            <i id="edit-clientProduct" class="edit-icon" onclick="enableSelect('clientProduct', availableClientProducts)">✏️</i>
+        </p>
         <p>
             <strong>Коментар:</strong>
             <span id="modal-client-comment"></span>
@@ -397,6 +409,9 @@
             <select id="source" name="sourceId">
                 <option value="" disabled selected>Залучення</option>
             </select>
+            <select id="clientProduct" name="clientProductId">
+                <option value="" disabled selected>Товар</option>
+            </select>
             <select id="route" name="routeId">
                 <option value="" disabled selected>Маршрут</option>
             </select>
@@ -421,6 +436,7 @@
 <label style="display: none" for="route"></label>
 <label style="display: none" for="business"></label>
 <label style="display: none" for="volumeMonth"></label>
+<label style="display: none" for="clientProduct"></label>
 
 <div id="purchaseClientModal" class="modal-purchase-client" style="display: none;">
     <div class="modal-purchase-client-content">

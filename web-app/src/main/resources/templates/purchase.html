@@ -227,6 +227,13 @@
                     <select id="currencyType-filter" name="currencyType" multiple>
                     </select>
                 </div>
+
+                <div class="select-section-item">
+                    <br>
+                    <label class="select-label-style" for="client-product-filter">Товар клієнта:</label>
+                    <select id="client-product-filter" name="clientProduct" multiple>
+                    </select>
+                </div>
             </div>
 
         </form>
@@ -265,6 +272,7 @@
             <label><input type="checkbox" name="fields" value="region-client" checked> Область (клієнта)</label><br>
             <label><input type="checkbox" name="fields" value="business-client" checked> Тип бізнесу
                 (клієнта)</label><br>
+            <label><input type="checkbox" name="fields" value="clientProduct-client" checked> Товар (клієнта)</label><br>
             <label><input type="checkbox" name="fields" value="edrpou-client" checked> ЄДРПОУ (клієнта)</label><br>
             <label><input type="checkbox" name="fields" value="enterpriseName-client" checked> Назва підприємства
                 (клієнта)</label><br>
@@ -294,14 +302,14 @@
     <table>
         <thead>
         <tr>
-            <th data-sort="company">Компанія</th>
+            <th>Компанія</th>
             <th data-sort="product">Товар</th>
             <th data-sort="user">Водій</th>
             <th data-sort="source">Залучення</th>
             <th data-sort="quantity">Кількість</th>
             <th data-sort="totalPrice">Сплачено</th>
             <th data-sort="unitPrice">За од</th>
-            <th data-sort="type">Форма</th>
+            <th data-sort="paymentMethod">Форма</th>
             <th data-sort="currency">Валюта</th>
             <th data-sort="exchangeRate">Курс</th>
             <th data-sort="createdAt">Дата</th>
@@ -430,6 +438,11 @@
             <strong>Залучення:</strong>
             <span id="modal-client-source"></span>
             <i id="edit-source" class="edit-icon" onclick="enableSelect('source', availableSources)">✏️</i>
+        </p>
+        <p class="modal-content-client-product">
+            <strong>Товар:</strong>
+            <span id="modal-client-clientProduct"></span>
+            <i id="edit-clientProduct" class="edit-icon" onclick="enableSelect('clientProduct', availableClientProducts)">✏️</i>
         </p>
         <p>
             <strong>Коментар:</strong>

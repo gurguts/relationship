@@ -20,7 +20,7 @@ import java.util.stream.Collectors;
 public class ClientSpecification implements Specification<Client> {
     private static final Set<String> VALID_FILTER_KEYS = Set.of(
             "createdAtFrom", "createdAtTo", "updatedAtFrom", "updatedAtTo",
-            "business", "route", "region", "status", "source");
+            "business", "route", "region", "status", "source", "clientProduct");
 
     private final String query;
     private final Map<String, List<String>> filterParams;
@@ -29,12 +29,14 @@ public class ClientSpecification implements Specification<Client> {
     private final List<Long> routeIds;
     private final List<Long> regionIds;
     private final List<Long> businessIds;
+    private final List<Long> clientProductIds;
     private final List<Long> excludedStatusIds;
 
     public ClientSpecification(String query, Map<String, List<String>> filterParams,
                                List<Long> statusIds, List<Long> sourceIds,
                                List<Long> routeIds, List<Long> regionIds,
-                               List<Long> businessIds, List<Long> excludedStatusIds) {
+                               List<Long> businessIds, List<Long> clientProductIds,
+                               List<Long> excludedStatusIds) {
         this.query = query;
         this.filterParams = filterParams;
         this.statusIds = statusIds;
@@ -42,6 +44,7 @@ public class ClientSpecification implements Specification<Client> {
         this.routeIds = routeIds;
         this.regionIds = regionIds;
         this.businessIds = businessIds;
+        this.clientProductIds = clientProductIds;
         this.excludedStatusIds = excludedStatusIds;
     }
 
@@ -99,7 +102,8 @@ public class ClientSpecification implements Specification<Client> {
                 sourceIds != null ? root.get("source").in(sourceIds) : criteriaBuilder.conjunction(),
                 routeIds != null ? root.get("route").in(routeIds) : criteriaBuilder.conjunction(),
                 regionIds != null ? root.get("region").in(regionIds) : criteriaBuilder.conjunction(),
-                businessIds != null ? root.get("business").in(businessIds) : criteriaBuilder.conjunction()
+                businessIds != null ? root.get("business").in(businessIds) : criteriaBuilder.conjunction(),
+                clientProductIds != null ? root.get("clientProduct").in(clientProductIds) : criteriaBuilder.conjunction()
         );
     }
 
@@ -157,6 +161,7 @@ public class ClientSpecification implements Specification<Client> {
                 case "region" -> predicate = addIdFilter(predicate, root, criteriaBuilder, values, "region");
                 case "status" -> predicate = addIdFilter(predicate, root, criteriaBuilder, values, "status");
                 case "source" -> predicate = addIdFilter(predicate, root, criteriaBuilder, values, "source");
+                case "clientProduct" -> predicate = addIdFilter(predicate, root, criteriaBuilder, values, "clientProduct");
             }
         }
 

@@ -27,7 +27,7 @@ public class ClientDTO {
     private String regionId;
     private String statusId;
     private String sourceId;
-    private String sourceColor;
+    private String clientProductId;
 
     private List<String> phoneNumbers;
 }

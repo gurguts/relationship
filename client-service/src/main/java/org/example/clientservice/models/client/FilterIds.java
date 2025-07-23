@@ -9,6 +9,7 @@ public record FilterIds(
         List<Region> regionDTOs, List<Long> regionIds,
         List<Route> routeDTOs, List<Long> routeIds,
         List<Source> sourceDTOs, List<Long> sourceIds,
-        List<StatusClient> statusDTOs, List<Long> statusIds
+        List<StatusClient> statusDTOs, List<Long> statusIds,
+        List<ClientProduct> clientProductDTOs, List<Long> clientProductIds
 ) {
 }

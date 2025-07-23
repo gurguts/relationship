@@ -56,7 +56,7 @@ public class PurchaseSearchService implements IPurchaseSearchService {
                 .filter(entry -> {
                     String key = entry.getKey();
                     return key.equals("status") || key.equals("business") ||
-                            key.equals("route") || key.equals("region");
+                            key.equals("route") || key.equals("region") || key.equals("clientProduct");
                 })
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 

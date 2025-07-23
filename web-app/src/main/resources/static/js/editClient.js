@@ -98,6 +98,8 @@ async function saveClientChanges() {
             getSelectedId('modal-client-status', availableStatuses),
         sourceId: document.getElementById('edit-source')?.value ||
             getSelectedId('modal-client-source', availableSources),
+        clientProductId: document.getElementById('edit-clientProduct')?.value ||
+            getSelectedId('modal-client-clientProduct', availableClientProducts),
         comment: document.getElementById('edit-comment')?.value ||
             document.getElementById('modal-client-comment').innerText,
         vat: document.getElementById('edit-vat').checked

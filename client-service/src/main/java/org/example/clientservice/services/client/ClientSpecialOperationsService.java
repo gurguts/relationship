@@ -33,7 +33,7 @@ public class ClientSpecialOperationsService implements IClientSpecialOperationsS
     private static final Set<String> VALID_FIELDS = Set.of(
             "id", "company", "person", "phoneNumbers", "createdAt", "updatedAt", "status", "source",
             "location", "pricePurchase", "priceSale", "volumeMonth", "route", "region", "business",
-            "edrpou", "enterpriseName", "vat", "comment");
+            "edrpou", "enterpriseName", "vat", "comment", "clientProduct");
 
 
     private final ClientRepository clientRepository;
@@ -42,6 +42,7 @@ public class ClientSpecialOperationsService implements IClientSpecialOperationsS
     private final IRouteService routeService;
     private final ISourceService sourceService;
     private final IStatusClientService statusClientService;
+    private final IClientProductService clientProductService;
 
     @Override
     public byte[] generateExcelFile(
@@ -71,7 +72,7 @@ public class ClientSpecialOperationsService implements IClientSpecialOperationsS
         }
         if (filterParams != null) {
             Set<String> validKeys = Set.of("createdAtFrom", "createdAtTo", "updatedAtFrom", "updated pisAtTo",
-                    "business", "route", "region", "status", "source");
+                    "business", "route", "region", "status", "source", "clientProduct");
             for (String key : filterParams.keySet()) {
                 if (!validKeys.contains(key)) {
                     throw new ClientException("INVALID_FILTER", String.format("Invalid filter key: %s", key));
@@ -92,7 +93,8 @@ public class ClientSpecialOperationsService implements IClientSpecialOperationsS
             List<Region> regionDTOs, List<Long> regionIds,
             List<Route> routeDTOs, List<Long> routeIds,
             List<Source> sourceDTOs, List<Long> sourceIds,
-            List<StatusClient> statusDTOs, List<Long> statusIds
+            List<StatusClient> statusDTOs, List<Long> statusIds,
+            List<ClientProduct> clientProductDTOs, List<Long> clientProductIds
     ) {
     }
 
@@ -131,8 +133,11 @@ public class ClientSpecialOperationsService implements IClientSpecialOperationsS
         List<StatusClient> statusDTOs = statusClientService.getAllStatusClients();
         List<Long> statusIds = statusDTOs.stream().map(StatusClient::getId).toList();
 
+        List<ClientProduct> clientProductDTOs = clientProductService.getAllClientProducts();
+        List<Long> clientProductIds = clientProductDTOs.stream().map(ClientProduct::getId).toList();
+
         return new FilterIds(businessDTOs, businessIds, regionDTOs, regionIds, routeDTOs, routeIds,
-                sourceDTOs, sourceIds, statusDTOs, statusIds);
+                sourceDTOs, sourceIds, statusDTOs, statusIds, clientProductDTOs, clientProductIds);
     }
 
     private List<Client> fetchClients(String query, Map<String, List<String>> filterParams, FilterIds filterIds,
@@ -145,6 +150,7 @@ public class ClientSpecialOperationsService implements IClientSpecialOperationsS
                 filterIds.routeIds(),
                 filterIds.regionIds(),
                 filterIds.businessIds(),
+                filterIds.clientProductIds,
                 excludeStatusIds
         ), sort);
     }
@@ -177,6 +183,7 @@ public class ClientSpecialOperationsService implements IClientSpecialOperationsS
                 Map.entry("route", "Маршрут"),
                 Map.entry("region", "Область"),
                 Map.entry("business", "Тип бізнесу"),
+                Map.entry("clientProduct", "Товар"),
                 Map.entry("edrpou", "ЄДРПОУ"),
                 Map.entry("enterpriseName", "Назва підприємства"),
                 Map.entry("vat", "ПДВ"),
@@ -242,6 +249,11 @@ public class ClientSpecialOperationsService implements IClientSpecialOperationsS
                     .filter(region -> region.getId().equals(client.getRegion()))
                     .findFirst()
                     .map(Business::getName)
+                    .orElse("");
+            case "clientProduct" -> filterIds.clientProductDTOs().stream()
+                    .filter(clientProduct -> clientProduct.getId().equals(client.getClientProduct()))
+                    .findFirst()
+                    .map(ClientProduct::getName)
                     .orElse("");
             case "edrpou" -> client.getEdrpou() != null ? client.getEdrpou() : "";
             case "enterpriseName" -> client.getEnterpriseName() != null ? client.getEnterpriseName() : "";

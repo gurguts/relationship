@@ -87,6 +87,7 @@
     <button id="showStoragesBtn">Склади</button>
     <button id="showStatusesBtn">Статуси клієнтів</button>
     <button id="show-products">Продукты</button>
+    <button id="show-client-products">Продукты клиентов</button>
     <!--<button onclick="syncClients()">Синхронізувати клієнтів</button>
     <button onclick="syncAgreements()">Синхронізувати угоди</button>
     <button id="deleteAllClientsBtn">Видалити всіх клієнтів</button>-->
@@ -319,7 +320,6 @@
     </table>
 </div>
 
-<!-- Форма создания продукта -->
 <div id="create-product" class="create-product" style="display: none;">
     <h2>Создать новый продукт</h2>
     <form id="create-product-form">
@@ -339,7 +339,6 @@
     </form>
 </div>
 
-<!-- Форма редактирования продукта (скрыта по умолчанию) -->
 <div id="edit-product-modal" class="modal" style="display: none;">
     <div class="modal-content">
         <h2>Редактировать продукт</h2>
@@ -359,6 +358,48 @@
             </div>
             <button type="submit">Сохранить</button>
             <button type="button" id="cancel-edit">Отмена</button>
+        </form>
+    </div>
+</div>
+
+<!--client-product-->
+
+<div id="client-product-list" class="client-product-list" style="display: none;">
+    <h2>Список продуктов клиентов</h2>
+    <table>
+        <thead>
+        <tr>
+            <th>ID</th>
+            <th>Название</th>
+            <th>Действия</th>
+        </tr>
+        </thead>
+        <tbody id="client-products-table-body"></tbody>
+    </table>
+</div>
+
+<div id="client-create-product" class="client-create-product" style="display: none;">
+    <h2>Создать новый продукт клиента</h2>
+    <form id="client-create-product-form">
+        <div class="form-group">
+            <label for="client-create-name">Название:</label>
+            <input type="text" id="client-create-name" name="name" required>
+        </div>
+        <button type="submit">Создать</button>
+    </form>
+</div>
+
+<div id="client-edit-product-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <h2>Редактировать продукт</h2>
+        <form id="client-edit-product-form">
+            <input type="hidden" id="client-edit-id" name="id">
+            <div class="form-group">
+                <label for="client-edit-name">Название:</label>
+                <input type="text" id="client-edit-name" name="name" required>
+            </div>
+            <button type="submit">Сохранить</button>
+            <button type="button" id="client-cancel-edit">Отмена</button>
         </form>
     </div>
 </div>

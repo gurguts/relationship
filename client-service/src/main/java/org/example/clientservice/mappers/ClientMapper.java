@@ -62,6 +62,7 @@ public class ClientMapper {
         clientDTO.setRegionId(String.valueOf(client.getRegion()));
         clientDTO.setStatusId(String.valueOf(client.getStatus()));
         clientDTO.setSourceId(String.valueOf(client.getSource()));
+        clientDTO.setClientProductId(String.valueOf(client.getClientProduct()));
     }
 
     private String processTime(LocalDateTime time) {
@@ -109,6 +110,7 @@ public class ClientMapper {
         client.setStatus(clientCreateDTO.getStatusId());
         client.setSource(clientCreateDTO.getSourceId());
         client.setBusiness(clientCreateDTO.getBusinessId());
+        client.setClientProduct(clientCreateDTO.getClientProductId());
     }
 
     public Client clientUpdateDTOtoClient(ClientUpdateDTO clientUpdateDTO) {
@@ -149,6 +151,7 @@ public class ClientMapper {
         client.setStatus(clientUpdateDTO.getStatusId());
         client.setSource(clientUpdateDTO.getSourceId());
         client.setBusiness(clientUpdateDTO.getBusinessId());
+        client.setClientProduct(clientUpdateDTO.getClientProductId());
     }
 
     private void mapAdditionalFieldsFromUpdateDTO(ClientUpdateDTO clientUpdateDTO, Client client) {
@@ -219,6 +222,11 @@ public class ClientMapper {
         Source source = cache.getSourceMap().get(client.getSource());
         if (source != null) {
             clientDTO.setSource(new SourceDTO(source.getId(), source.getName()));
+        }
+
+        ClientProduct clientProduct = cache.getClientProductMap().get(client.getClientProduct());
+        if (clientProduct != null) {
+            clientDTO.setClientProduct(new ClientProductDTO(clientProduct.getId(), clientProduct.getName()));
         }
     }
 }

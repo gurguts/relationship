@@ -15,4 +15,5 @@ public class EntitiesDTO {
     private List<BusinessDTO> businesses;
     private List<UserDTO> users;
     private List<ProductDTO> products;
+    private List<ClientProductDTO> clientProducts;
 }

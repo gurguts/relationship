@@ -70,6 +70,9 @@ public class Client {
     @Column(name = "business_id")
     private Long business;
 
+    @Column(name = "client_product_id")
+    private Long clientProduct;
+
     @Column(name = "comment")
     private String comment;
 
