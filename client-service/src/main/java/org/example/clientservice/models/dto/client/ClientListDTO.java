@@ -28,6 +28,7 @@ public class ClientListDTO {
     private RegionDTO region;
     private StatusDTO status;
     private SourceDTO source;
+    private ClientProductDTO clientProduct;
 
     private List<String> phoneNumbers;
 }

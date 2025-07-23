@@ -42,4 +42,6 @@ public class ClientCreateDTO {
     private Long sourceId;
 
     private Long businessId;
+
+    private Long clientProductId;
 }

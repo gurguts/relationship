@@ -18,7 +18,8 @@ public class CacheConfig {
                 "businesses", "businessNames", "businessSearch",
                 "routes", "routeNames", "routeSearch",
                 "sources", "sourceNames", "sourceSearch",
-                "statusClients", "statusClientNames", "statusClientSearch"
+                "statusClients", "statusClientNames", "statusClientSearch",
+                "clientProducts", "clientProductNames", "clientProductSearch"
         );
         cacheManager.setCaffeine(caffeineCacheBuilder());
         return cacheManager;

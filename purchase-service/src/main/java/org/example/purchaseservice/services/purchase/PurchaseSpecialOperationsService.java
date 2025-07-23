@@ -79,6 +79,7 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
             List<RouteDTO> routeDTOs, List<Long> routeIds,
             List<RegionDTO> regionDTOs, List<Long> regionIds,
             List<BusinessDTO> businessDTOs, List<Long> businessIds,
+            List<ClientProductDTO> clientProductDTOs, List<Long> clientProductIds,
             List<Product> productDTOs, List<Long> productIds,
             List<UserDTO> userDTOs, List<Long> userIds
     ) {
@@ -125,6 +126,13 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
                 .toList();
         List<Long> businessIds = businessDTOs.stream().map(BusinessDTO::getId).toList();
 
+        List<ClientProductDTO> clientProductDTOs = clients.stream()
+                .map(ClientDTO::getClientProduct)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        List<Long> clientProductIds = clientProductDTOs.stream().map(ClientProductDTO::getId).toList();
+
         List<Product> products = productService.getAllProducts("all");
         List<Long> productIds = products.stream().map(Product::getId).toList();
 
@@ -137,6 +145,7 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
                 routeDTOs, routeIds,
                 regionDTOs, regionIds,
                 businessDTOs, businessIds,
+                clientProductDTOs, clientProductIds,
                 products, productIds,
                 userDTOs, userIds);
     }
@@ -146,7 +155,8 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
                 .filter(entry -> {
                     String key = entry.getKey();
                     return key.equals("status") || key.equals("business") ||
-                            key.equals("route") || key.equals("region") || key.equals("source-client");
+                            key.equals("route") || key.equals("region") || key.equals("source-client") ||
+                            key.equals("clientProduct");
                 })
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
         ClientSearchRequest clientRequest = new ClientSearchRequest(query, filteredParams);
@@ -206,6 +216,7 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
                 Map.entry("route-client", "Маршрут (клієнта)"),
                 Map.entry("region-client", "Область (клієнта)"),
                 Map.entry("business-client", "Тип бізнесу (клієнта)"),
+                Map.entry("clientProduct-client", "Товар (клієнта)"),
                 Map.entry("edrpou-client", "ЄДРПОУ (клієнта)"),
                 Map.entry("enterpriseName-client", "Назва підприємства (клієнта)"),
                 Map.entry("vat-client", "ПДВ (клієнта)"),
@@ -266,6 +277,7 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
                 case "route-client" -> client.getRoute() != null ? client.getRoute().getName() : "";
                 case "region-client" -> client.getRegion() != null ? client.getRegion().getName() : "";
                 case "business-client" -> client.getBusiness() != null ? client.getBusiness().getName() : "";
+                case "clientProduct-client" -> client.getClientProduct() != null ? client.getClientProduct().getName() : "";
                 case "edrpou-client" -> client.getEdrpou() != null ? client.getEdrpou() : "";
                 case "enterpriseName-client" -> client.getEnterpriseName() != null ? client.getEnterpriseName() : "";
                 case "vat-client" -> Boolean.TRUE.equals(client.getVat()) ? "так" : "";

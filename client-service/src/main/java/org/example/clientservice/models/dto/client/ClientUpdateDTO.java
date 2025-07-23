@@ -49,4 +49,6 @@ public class ClientUpdateDTO {
     private Long statusId;
 
     private Long sourceId;
+
+    private Long clientProductId;
 }

@@ -123,6 +123,9 @@ public class ClientCrudService implements IClientCrudService {
             if (updatedClient.getRoute() != null) {
                 existingClient.setRoute(updatedClient.getRoute());
             }
+            if (updatedClient.getClientProduct() != null) {
+                existingClient.setClientProduct(updatedClient.getClientProduct());
+            }
 
             if (updatedClient.getPhoneNumbers() != null) {
                 existingClient.getPhoneNumbers().clear();

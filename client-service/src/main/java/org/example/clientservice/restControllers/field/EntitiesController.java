@@ -32,6 +32,8 @@ public class EntitiesController {
     private final SourceMapper sourceMapper;
     private final RouteMapper routeMapper;
     private final BusinessMapper businessMapper;
+    private final ClientProductService clientProductService;
+    private final ClientProductMapper clientProductMapper;
 
     @GetMapping
     public ResponseEntity<EntitiesDTO> getAllEntities() {
@@ -50,6 +52,9 @@ public class EntitiesController {
                 .toList());
         entities.setBusinesses(businessService.getAllBusinesses().stream()
                 .map(businessMapper::businessToBusinessDTO)
+                .toList());
+        entities.setClientProducts(clientProductService.getAllClientProducts().stream()
+                .map(clientProductMapper::clientProductToClientProductDTO)
                 .toList());
         entities.setUsers(Objects.requireNonNull(userClient.getAllUsers().getBody()).stream()
                 .toList());

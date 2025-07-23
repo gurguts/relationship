@@ -13,11 +13,13 @@ let availableRegions = [];
 let availableSources = [];
 let availableRoutes = [];
 let availableBusiness = [];
+let availableClientProducts = [];
 
 let statusMap;
 let regionMap;
 let routeMap;
 let businessMap;
+let clientProductMap;
 let sourceMap;
 let userMap;
 let productMap;
@@ -175,6 +177,8 @@ function showClientModal(client) {
     document.getElementById('modal-client-enterpriseName').innerText = client.enterpriseName || '';
     document.getElementById('modal-client-business').innerText =
         findNameByIdFromMap(businessMap, client.businessId);
+    document.getElementById('modal-client-clientProduct').innerText =
+        findNameByIdFromMap(clientProductMap, client.clientProductId);
     document.getElementById('modal-client-route').innerText =
         findNameByIdFromMap(routeMap, client.routeId);
     document.getElementById('modal-client-region').innerText =
@@ -351,6 +355,7 @@ const defaultValues = {
     status: '24',
     route: '66',
     business: '1',
+    clientProduct: '1',
     source: () => {
         const userId = localStorage.getItem('userId');
         return userSourceMapping[userId] ? String(userSourceMapping[userId]) : '';
@@ -703,12 +708,14 @@ document.addEventListener('DOMContentLoaded', () => {
             availableBusiness = data.businesses || [];
             availableUsers = data.users || [];
             availableProducts = data.products || [];
+            availableClientProducts = data.clientProducts || [];
 
             statusMap = new Map(availableStatuses.map(item => [item.id, item.name]));
             regionMap = new Map(availableRegions.map(item => [item.id, item.name]));
             sourceMap = new Map(availableSources.map(item => [item.id, item.name]));
             routeMap = new Map(availableRoutes.map(item => [item.id, item.name]));
             businessMap = new Map(availableBusiness.map(item => [item.id, item.name]));
+            clientProductMap = new Map(availableClientProducts.map(item => [item.id, item.name]));
             userMap = new Map(availableUsers.map(item => [item.id, item.name]));
             productMap = new Map(availableProducts.map(item => [item.id, item.name]));
 
@@ -722,15 +729,17 @@ document.addEventListener('DOMContentLoaded', () => {
             populateSelect('route-filter', availableRoutes);
             populateSelect('business', availableBusiness);
             populateSelect('business-filter', availableBusiness);
+            populateSelect('clientProduct', availableClientProducts);
+            populateSelect('client-product-filter', availableClientProducts);
 
-            ['region', 'status', 'source', 'route', 'business'].forEach(selectId => {
+            ['region', 'status', 'source', 'route', 'business', 'clientProduct'].forEach(selectId => {
                 const select = document.getElementById(selectId);
                 if (select && !customSelects[`${selectId}-custom`]) {
                     customSelects[`${selectId}-custom`] = createCustomSelect(select);
                 }
             });
 
-            ['region-filter', 'status-filter', 'source-filter', 'route-filter', 'business-filter']
+            ['region-filter', 'status-filter', 'source-filter', 'route-filter', 'business-filter', 'client-product-filter']
                 .forEach(selectId => {
                     const select = document.getElementById(selectId);
                     if (select && !customSelects[selectId]) {
@@ -738,7 +747,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 });
 
-            ['region-filter', 'status-filter', 'source-filter', 'route-filter', 'business-filter']
+            ['region-filter', 'status-filter', 'source-filter', 'route-filter', 'business-filter', 'client-product-filter']
                 .forEach(selectId => {
                     const select = document.getElementById(selectId);
                     if (select && customSelects[selectId]) {

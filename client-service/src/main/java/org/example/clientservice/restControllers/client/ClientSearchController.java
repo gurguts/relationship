@@ -43,6 +43,7 @@ public class ClientSearchController {
     private final IStatusClientService statusClientService;
     private final ISourceService sourceService;
     private final IBusinessService businessService;
+    private final IClientProductService clientProductService;
 
     @PreAuthorize("hasAuthority('client:view')")
     @GetMapping("/search")
@@ -92,7 +93,8 @@ public class ClientSearchController {
                 routeService.getAllRoutes(),
                 regionService.getAllRegions(),
                 statusClientService.getAllStatusClients(),
-                sourceService.getAllSources()
+                sourceService.getAllSources(),
+                clientProductService.getAllClientProducts()
         );
 
         return clients.stream()

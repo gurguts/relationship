@@ -1490,6 +1490,123 @@ document.addEventListener('DOMContentLoaded', function () {
         editProductModal.style.display = 'none';
     });
 
+    /*--client-product--*/
+
+    const clientProductList = document.getElementById('client-product-list');
+    const clientProductsTableBody = document.getElementById('client-products-table-body');
+    const clientShowProductsBtn = document.getElementById('show-client-products');
+    const clientCreateProductForm = document.getElementById('client-create-product-form');
+    const clientCreateProduct = document.getElementById('client-create-product');
+    const clientEditProductModal = document.getElementById('client-edit-product-modal');
+    const clientEditProductForm = document.getElementById('client-edit-product-form');
+    const clientCancelEditBtn = document.getElementById('client-cancel-edit');
+
+    const apiBaseClientProductUrl = '/api/v1/clientProduct';
+
+    clientShowProductsBtn.addEventListener('click', () => {
+        clientProductList.style.display = 'block';
+        clientCreateProduct.style.display = 'block';
+        fetchClientProducts();
+    });
+
+    function fetchClientProducts() {
+        fetch(`${apiBaseClientProductUrl}`)
+            .then(response => response.json())
+            .then(clientProducts => {
+                clientProductsTableBody.innerHTML = '';
+                clientProducts.forEach(clientProduct => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${clientProduct.id}</td>
+                        <td>${clientProduct.name}</td>
+                        <td>
+                            <button onclick="editClientProduct(${clientProduct.id})">Изменить</button>
+                            <button onclick="deleteClientProduct(${clientProduct.id})">Удалить</button>
+                        </td>
+                    `;
+                    clientProductsTableBody.appendChild(row);
+                });
+            })
+            .catch(error => console.error('Ошибка при получении продуктов клиентов:', error));
+    }
+
+    clientCreateProductForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const clientProductData = {
+            name: document.getElementById('client-create-name').value,
+        };
+
+        fetch(`${apiBaseClientProductUrl}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(clientProductData)
+        })
+            .then(response => {
+                if (!response.ok) throw new Error('Ошибка при создании продукта клиента');
+                return response.json();
+            })
+            .then(() => {
+                clientCreateProductForm.reset();
+                fetchClientProducts();
+            })
+            .catch(error => console.error('Ошибка:', error));
+    });
+
+    window.deleteClientProduct = function (id) {
+        if (confirm('Вы уверены, что хотите удалить этот продукт клиента?')) {
+            fetch(`${apiBaseClientProductUrl}/${id}`, {
+                method: 'DELETE'
+            })
+                .then(response => {
+                    if (!response.ok) throw new Error('Ошибка при удалении продукта клиента');
+                    fetchClientProducts();
+                })
+                .catch(error => console.error('Ошибка:', error));
+        }
+    };
+
+    window.editClientProduct = function (id) {
+        fetch(`${apiBaseClientProductUrl}/${id}`)
+            .then(response => response.json())
+            .then(product => {
+                document.getElementById('client-edit-id').value = product.id;
+                document.getElementById('client-edit-name').value = product.name;
+                clientEditProductModal.style.display = 'flex';
+            })
+            .catch(error => console.error('Ошибка при получении продукта:', error));
+    };
+
+    clientEditProductForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const id = document.getElementById('client-edit-id').value;
+        const productData = {
+            name: document.getElementById('client-edit-name').value
+        };
+
+        fetch(`${apiBaseClientProductUrl}/${id}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(productData)
+        })
+            .then(response => {
+                if (!response.ok) throw new Error('Ошибка при обновлении продукта клиента');
+                return response.json();
+            })
+            .then(() => {
+                clientEditProductForm.style.display = 'none';
+                fetchClientProducts();
+            })
+            .catch(error => console.error('Ошибка:', error));
+    });
+
+    clientCancelEditBtn.addEventListener('click', () => {
+        clientEditProductModal.style.display = 'none';
+    });
+
 });
 
 

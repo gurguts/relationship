@@ -29,6 +29,7 @@ public class ClientSearchService implements IClientSearchService {
     private final IRouteService routeService;
     private final ISourceService sourceService;
     private final IStatusClientService statusClientService;
+    private final IClientProductService clientProductService;
     private final PhoneNumberRepository phoneNumberRepository;
 
     @Override
@@ -75,7 +76,7 @@ public class ClientSearchService implements IClientSearchService {
             return;
         }
         Set<String> validKeys = Set.of("createdAtFrom", "createdAtTo", "updatedAtFrom", "updatedAtTo",
-                "business", "route", "region", "status", "source");
+                "business", "route", "region", "status", "source", "clientProduct");
         for (String key : filterParams.keySet()) {
             if (!validKeys.contains(key)) {
                 throw new ClientException(String.format("Invalid filter key: %s", key));
@@ -103,19 +104,22 @@ public class ClientSearchService implements IClientSearchService {
         List<Route> routeData = routeService.findByNameContaining(query);
         List<Source> sourceData = sourceService.findByNameContaining(query);
         List<StatusClient> statusClientData = statusClientService.findByNameContaining(query);
+        List<ClientProduct> clientProductData = clientProductService.findByNameContaining(query);
 
         List<Long> businessIds = extractIds(businessData, Business::getId);
         List<Long> regionIds = extractIds(regionData, Region::getId);
         List<Long> routeIds = extractIds(routeData, Route::getId);
         List<Long> sourceIds = extractIds(sourceData, Source::getId);
         List<Long> statusClientIds = extractIds(statusClientData, StatusClient::getId);
+        List<Long> clientProductIds = extractIds(clientProductData, ClientProduct::getId);
 
         return new FilterIds(
                 businessData, businessIds,
                 regionData, regionIds,
                 routeData, routeIds,
                 sourceData, sourceIds,
-                statusClientData, statusClientIds
+                statusClientData, statusClientIds,
+                clientProductData, clientProductIds
         );
     }
 
@@ -130,6 +134,11 @@ public class ClientSearchService implements IClientSearchService {
 
     private Page<Client> fetchClients(String query, Map<String, List<String>> filterParams, FilterIds filterIds,
                                       List<Long> excludeStatusIds, Pageable pageable) {
+        System.out.println("query = "+query);
+        System.out.println("filterParams = "+filterParams);
+        System.out.println("filterIds = "+filterIds);
+        System.out.println("excludeStatusIds = "+excludeStatusIds);
+        System.out.println("pageable = "+pageable);
         Page<Client> clientPage = clientRepository.findAll(new ClientSpecification(
                 query,
                 filterParams,
@@ -138,6 +147,7 @@ public class ClientSearchService implements IClientSearchService {
                 filterIds != null ? filterIds.routeIds() : null,
                 filterIds != null ? filterIds.regionIds() : null,
                 filterIds != null ? filterIds.businessIds() : null,
+                filterIds != null ? filterIds.clientProductIds() : null,
                 excludeStatusIds
         ), pageable);
 
@@ -168,6 +178,7 @@ public class ClientSearchService implements IClientSearchService {
                 filterIds != null ? filterIds.routeIds() : null,
                 filterIds != null ? filterIds.regionIds() : null,
                 filterIds != null ? filterIds.businessIds() : null,
+                filterIds != null ? filterIds.clientProductIds() : null,
                 null
         ));
 

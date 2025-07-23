@@ -42,6 +42,7 @@ public class ClientContainerSpecialOperationsService implements IClientContainer
     private final RouteClient routeClient;
     private final RegionClient regionClient;
     private final BusinessClient businessClient;
+    private final ClientProductClient clientProductClient;
 
     @Override
     public void generateExcelFile(
@@ -78,10 +79,10 @@ public class ClientContainerSpecialOperationsService implements IClientContainer
             List<RouteDTO> routeDTOs, List<Long> routeIds,
             List<RegionDTO> regionDTOs, List<Long> regionIds,
             List<BusinessDTO> businessDTOs, List<Long> businessIds,
+            List<ClientProductDTO> clientProductDTOs, List<Long> clientProductIds,
             List<ProductDTO> productDTOs, List<Long> productIds,
             List<UserDTO> userDTOs, List<Long> userIds
-    ) {
-    }
+    ) {}
 
     private Sort createSort(Sort.Direction sortDirection, String sortProperty) {
         return Sort.by(sortDirection, sortProperty);
@@ -103,6 +104,9 @@ public class ClientContainerSpecialOperationsService implements IClientContainer
         List<BusinessDTO> businessDTOs = businessClient.getAllBusiness();
         List<Long> businessIds = businessDTOs.stream().map(BusinessDTO::getId).toList();
 
+        List<ClientProductDTO> clientProductDTOs = clientProductClient.getAllClientProduct();
+        List<Long> clientProductIds = clientProductDTOs.stream().map(ClientProductDTO::getId).toList();
+
         List<ProductDTO> productDTOs = productClient.getAllProduct();
         List<Long> productIds = productDTOs.stream().map(ProductDTO::getId).toList();
 
@@ -115,6 +119,7 @@ public class ClientContainerSpecialOperationsService implements IClientContainer
                 routeDTOs, routeIds,
                 regionDTOs, regionIds,
                 businessDTOs, businessIds,
+                clientProductDTOs, clientProductIds,
                 productDTOs, productIds,
                 userDTOs, userIds);
     }
@@ -246,6 +251,7 @@ public class ClientContainerSpecialOperationsService implements IClientContainer
                         safeParseLong(client.getRegion().getName()) : null);
                 case "business-client" -> getNameFromDTOList(filterIds.businessDTOs(), client.getBusiness() != null ?
                         safeParseLong(client.getBusiness().getName()) : null);
+                case "client-product-client" -> client.getClientProduct() != null ? client.getClientProduct().getName() : "";
                 case "edrpou-client" -> client.getEdrpou() != null ? client.getEdrpou() : "";
                 case "enterpriseName-client" -> client.getEnterpriseName() != null ? client.getEnterpriseName() : "";
                 case "vat-client" -> Boolean.TRUE.equals(client.getVat()) ? "так" : "";

@@ -78,6 +78,7 @@ public class SaleSpecialOperationsService implements ISaleSpecialOperationsServi
             List<RouteDTO> routeDTOs, List<Long> routeIds,
             List<RegionDTO> regionDTOs, List<Long> regionIds,
             List<BusinessDTO> businessDTOs, List<Long> businessIds,
+            List<ClientProductDTO> clientProductDTOs, List<Long> clientProductIds,
             List<Product> productDTOs, List<Long> productIds,
             List<UserDTO> userDTOs, List<Long> userIds
     ) {
@@ -123,6 +124,13 @@ public class SaleSpecialOperationsService implements ISaleSpecialOperationsServi
                 .toList();
         List<Long> businessIds = businessDTOs.stream().map(BusinessDTO::getId).toList();
 
+        List<ClientProductDTO> clientProductDTOs = clients.stream()
+                .map(ClientDTO::getClientProduct)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        List<Long> clientProductIds = clientProductDTOs.stream().map(ClientProductDTO::getId).toList();
+
         List<Product> products = productService.getAllProducts("all");
         List<Long> productIds = products.stream().map(Product::getId).toList();
 
@@ -135,6 +143,7 @@ public class SaleSpecialOperationsService implements ISaleSpecialOperationsServi
                 routeDTOs, routeIds,
                 regionDTOs, regionIds,
                 businessDTOs, businessIds,
+                clientProductDTOs, clientProductIds,
                 products, productIds,
                 userDTOs, userIds);
     }
@@ -144,7 +153,8 @@ public class SaleSpecialOperationsService implements ISaleSpecialOperationsServi
                 .filter(entry -> {
                     String key = entry.getKey();
                     return key.equals("status") || key.equals("business") ||
-                            key.equals("route") || key.equals("region") || key.equals("source-client");
+                            key.equals("route") || key.equals("region") || key.equals("source-client")||
+                            key.equals("clientProduct");
                 })
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
         ClientSearchRequest clientRequest = new ClientSearchRequest(query, filteredParams);
@@ -157,11 +167,9 @@ public class SaleSpecialOperationsService implements ISaleSpecialOperationsServi
 
     private List<Sale> fetchSales(String query, Map<String, List<String>> filterParams, List<Long> clientIds,
                                   List<Long> sourceIds, Sort sort) {
-        // Create a specification that enforces clientIds filter
         Specification<Sale> spec = (root, querySpec, criteriaBuilder) -> {
             List<Predicate> predicates = new ArrayList<>();
 
-            // Always filter by clientIds if provided
             if (!clientIds.isEmpty()) {
                 predicates.add(root.get("client").in(clientIds));
             } else {
@@ -206,6 +214,7 @@ public class SaleSpecialOperationsService implements ISaleSpecialOperationsServi
                 Map.entry("route-client", "Маршрут (клієнта)"),
                 Map.entry("region-client", "Область (клієнта)"),
                 Map.entry("business-client", "Тип бізнесу (клієнта)"),
+                Map.entry("clientProduct-client", "Товар (клієнта)"),
                 Map.entry("edrpou-client", "ЄДРПОУ (клієнта)"),
                 Map.entry("enterpriseName-client", "Назва підприємства (клієнта)"),
                 Map.entry("vat-client", "ПДВ (клієнта)"),
@@ -266,6 +275,7 @@ public class SaleSpecialOperationsService implements ISaleSpecialOperationsServi
                 case "route-client" -> client.getRoute() != null ? client.getRoute().getName() : "";
                 case "region-client" -> client.getRegion() != null ? client.getRegion().getName() : "";
                 case "business-client" -> client.getBusiness() != null ? client.getBusiness().getName() : "";
+                case "clientProduct-client" -> client.getClientProduct() != null ? client.getClientProduct().getName() : "";
                 case "edrpou-client" -> client.getEdrpou() != null ? client.getEdrpou() : "";
                 case "enterpriseName-client" -> client.getEnterpriseName() != null ? client.getEnterpriseName() : "";
                 case "vat-client" -> Boolean.TRUE.equals(client.getVat()) ? "так" : "";

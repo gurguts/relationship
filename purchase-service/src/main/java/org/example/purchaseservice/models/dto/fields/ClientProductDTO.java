@@ -1,0 +1,11 @@
+package org.example.purchaseservice.models.dto.fields;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+public class ClientProductDTO {
+    private long id;
+    private String name;
+}
