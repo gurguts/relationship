@@ -91,6 +91,26 @@
     <!--<button onclick="syncClients()">Синхронізувати клієнтів</button>
     <button onclick="syncAgreements()">Синхронізувати угоди</button>
     <button id="deleteAllClientsBtn">Видалити всіх клієнтів</button>-->
+
+    <button id="exportToExcel" class="btn-primary">Export to Excel</button>
+</div>
+
+<div id="exportModal" class="modal">
+    <div class="modal-content">
+        <h2>Export Comparison to Excel</h2>
+        <div class="form-group">
+            <label for="purchaseDataFrom">Date From:</label>
+            <input type="date" id="purchaseDataFrom" name="purchaseDataFrom">
+        </div>
+        <div class="form-group">
+            <label for="purchaseDataTo">Date To:</label>
+            <input type="date" id="purchaseDataTo" name="purchaseDataTo">
+        </div>
+        <div class="button-group">
+            <button id="exportCancel" class="btn-secondary">Cancel</button>
+            <button id="exportConfirm" class="btn-primary">Export</button>
+        </div>
+    </div>
 </div>
 
 <!--user-->

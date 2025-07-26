@@ -4,9 +4,11 @@ import jakarta.persistence.criteria.Predicate;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.example.purchaseservice.clients.*;
 import org.example.purchaseservice.models.Product;
@@ -24,6 +26,7 @@ import org.example.purchaseservice.services.impl.IProductService;
 import org.example.purchaseservice.services.impl.IPurchaseSpecialOperationsService;
 import org.example.purchaseservice.services.impl.IWarehouseEntryService;
 import org.example.purchaseservice.spec.PurchaseSpecification;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -31,6 +34,10 @@ import org.springframework.stereotype.Service;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -527,5 +534,97 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
                 .averagePriceByCurrency(averagePriceByCurrency)
                 .averageCollectedPerTimeByProduct(averageCollectedPerTimeByProduct)
                 .build();
+    }
+
+
+    @Override
+    public void generateComparisonExcelFile(String purchaseDataFrom, String purchaseDataTo, HttpServletResponse response) {
+        try {
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+            LocalDate fromDate = LocalDate.parse(purchaseDataFrom, formatter);
+            LocalDate toDate = LocalDate.parse(purchaseDataTo, formatter);
+
+            LocalDateTime fromDateTime = fromDate.atStartOfDay();
+            LocalDateTime toDateTime = toDate.atTime(23, 59, 59, 999999999);
+
+            ClientSearchRequest request = new ClientSearchRequest(null, null);
+            List<ClientDTO> clients = clientApiClient.searchClients(request);
+
+            XSSFWorkbook workbook = new XSSFWorkbook();
+            XSSFSheet sheet = workbook.createSheet("Purchase Report");
+
+            Row headerRow = sheet.createRow(0);
+            String[] headers = {
+                    "Client ID", "Company", "Phone Numbers", "Location", "Region", "Product", "Total Volume"
+            };
+            for (int i = 0; i < headers.length; i++) {
+                Cell cell = headerRow.createCell(i);
+                cell.setCellValue(headers[i]);
+            }
+
+            int rowNum = 1;
+
+            Map<Long, String> productNames = productService.getAllProducts("all").stream()
+                    .collect(Collectors.toMap(Product::getId, Product::getName));
+
+            for (ClientDTO client : clients) {
+                Specification<Purchase> spec = (root, query, cb) -> {
+                    List<Predicate> predicates = new ArrayList<>();
+                    predicates.add(cb.equal(root.get("client"), client.getId()));
+                    predicates.add(cb.between(root.get("createdAt"), fromDateTime, toDateTime));
+                    return cb.and(predicates.toArray(new Predicate[0]));
+                };
+
+                List<Purchase> purchases = purchaseRepository.findAll(spec, Pageable.unpaged()).getContent();
+
+                Map<Long, BigDecimal> productSums = purchases.stream()
+                        .collect(Collectors.groupingBy(
+                                Purchase::getProduct,
+                                Collectors.reducing(
+                                        BigDecimal.ZERO,
+                                        Purchase::getQuantity,
+                                        BigDecimal::add
+                                )
+                        ));
+                if (productSums.isEmpty()) {
+                    Row row = sheet.createRow(rowNum++);
+                    row.createCell(0).setCellValue(client.getId());
+                    row.createCell(1).setCellValue(client.getCompany());
+                    row.createCell(2).setCellValue(String.join(", ", client.getPhoneNumbers()));
+                    row.createCell(3).setCellValue(client.getLocation());
+                    row.createCell(4).setCellValue(client.getRegion() != null ? client.getRegion().getName() : "");
+                    row.createCell(5).setCellValue(productNames.getOrDefault(1L, "Unknown Product"));
+                    row.createCell(6).setCellValue(0);
+                } else {
+                    for (Map.Entry<Long, BigDecimal> entry : productSums.entrySet()) {
+                        Row row = sheet.createRow(rowNum++);
+                        row.createCell(0).setCellValue(client.getId());
+                        row.createCell(1).setCellValue(client.getCompany());
+                        row.createCell(2).setCellValue(String.join(", ", client.getPhoneNumbers()));
+                        row.createCell(3).setCellValue(client.getLocation());
+                        row.createCell(4).setCellValue(client.getRegion() != null ? client.getRegion().getName() : "");
+                        row.createCell(5).setCellValue(productNames.getOrDefault(entry.getKey(), "Unknown Product"));
+                        row.createCell(6).setCellValue(entry.getValue().doubleValue());
+                    }
+                }
+            }
+
+            for (int i = 0; i < headers.length; i++) {
+                sheet.autoSizeColumn(i);
+            }
+
+            response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+            response.setHeader("Content-Disposition", "attachment; filename=purchase_report.xlsx");
+
+            workbook.write(response.getOutputStream());
+            workbook.close();
+
+        } catch (DateTimeParseException e) {
+            log.error("Invalid date format for purchaseDataFrom or purchaseDataTo. Expected format: yyyy-MM-dd", e);
+            throw new IllegalArgumentException("Invalid date format. Please use yyyy-MM-dd", e);
+        } catch (Exception e) {
+            log.error("Error generating Excel file", e);
+            throw new RuntimeException("Failed to generate Excel file", e);
+        }
     }
 }

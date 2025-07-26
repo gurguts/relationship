@@ -1607,6 +1607,82 @@ document.addEventListener('DOMContentLoaded', function () {
         clientEditProductModal.style.display = 'none';
     });
 
+
+
+
+
+
+
+    document.getElementById('exportToExcel').addEventListener('click', () => {
+        const exportModal = document.getElementById('exportModal');
+        exportModal.classList.remove('hide');
+        exportModal.style.display = 'flex';
+        setTimeout(() => {
+            exportModal.classList.add('show');
+        }, 10);
+    });
+
+    document.getElementById('exportCancel').addEventListener('click', () => {
+        const exportModal = document.getElementById('exportModal');
+        exportModal.classList.add('hide');
+        exportModal.classList.remove('show');
+        setTimeout(() => {
+            exportModal.style.display = 'none';
+        }, 300);
+    });
+
+    document.getElementById('exportConfirm').addEventListener('click', async () => {
+        const exportModal = document.getElementById('exportModal');
+        const loaderBackdrop = document.getElementById('loaderBackdrop');
+        const purchaseDataFrom = document.getElementById('purchaseDataFrom').value;
+        const purchaseDataTo = document.getElementById('purchaseDataTo').value;
+
+        // Basic validation
+        if (!purchaseDataFrom ||  !purchaseDataTo) {
+            showMessage('Please select both dates', 'error');
+            return;
+        }
+
+        if (new Date(purchaseDataTo) < new Date(purchaseDataFrom)) {
+            showMessage('End date cannot be earlier than start date', 'error');
+            return;
+        }
+
+        exportModal.style.display = 'none';
+
+        try {
+            const params = new URLSearchParams({
+                purchaseDataFrom,
+                purchaseDataTo
+            });
+
+            const response = await fetch(`/api/v1/purchase/comparison/excel?${params}`, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                }
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message,  'Failed to export Excel');
+            }
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'comparison_data.xlsx';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+
+            showMessage('Data successfully exported to Excel', 'info');
+        } catch (error) {
+            handleError(error);
+        }
+    });
 });
 
 

@@ -77,4 +77,15 @@ public class PurchaseSpecialOperationsController {
 
         return ResponseEntity.ok(report);
     }
+
+
+    @PreAuthorize("hasAuthority('purchase:excel')")
+    @PostMapping("/comparison/excel")
+    public void exportComparisonToExcel(
+            @RequestParam(name = "purchaseDataFrom", required = false) String purchaseDataFrom,
+            @RequestParam(name = "purchaseDataTo", required = false) String purchaseDataTo,
+            HttpServletResponse response) {
+
+        purchaseService.generateComparisonExcelFile(purchaseDataFrom, purchaseDataTo, response);
+    }
 }

@@ -19,4 +19,6 @@ public interface IPurchaseSpecialOperationsService {
             List<String> selectedFields) throws IOException;
 
     PurchaseReportDTO generateReport(String query, Map<String, List<String>> filterParams);
+
+    void generateComparisonExcelFile(String purchaseDataFrom, String purchaseDataTo, HttpServletResponse response);
 }
