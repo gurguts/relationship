@@ -1252,7 +1252,7 @@ input.custom-select-placeholder {
 
 .section-client-buttons-block {
     display: flex;
-    margin: 1em 0 0 0;
+    margin: 0.5em auto;
     gap: 1em;
 }
 
