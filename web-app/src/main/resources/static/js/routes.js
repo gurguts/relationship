@@ -251,12 +251,10 @@ function toggleExchangeRateField() {
     if (currencySelect.value === 'UAH') {
         exchangeRateInput.style.display = 'none';
         exchangeRateLabel.style.display = 'none';
-        exchangeRateInput.value = ''; // Очистить значение
-        exchangeRateInput.removeAttribute('required');
+        exchangeRateInput.value = '';
     } else {
         exchangeRateInput.style.display = 'block';
         exchangeRateLabel.style.display = 'block';
-        exchangeRateInput.setAttribute('required', 'required');
     }
 }
 
