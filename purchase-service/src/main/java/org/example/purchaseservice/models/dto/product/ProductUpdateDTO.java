@@ -1,6 +1,7 @@
 package org.example.purchaseservice.models.dto.product;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 import org.example.purchaseservice.models.ProductUsage;
@@ -11,7 +12,6 @@ public class ProductUpdateDTO {
     @Size(max = 255, message = "{validation.product.name.size}")
     private String name;
 
-    @NotBlank(message = "{validation.product.usage.notblank}")
-    @Size(max = 255, message = "{validation.product.usage.size}")
+    @NotNull(message = "{validation.product.usage.notnull}")
     private ProductUsage usage;
 }

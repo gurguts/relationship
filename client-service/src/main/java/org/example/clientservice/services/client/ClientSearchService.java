@@ -134,11 +134,7 @@ public class ClientSearchService implements IClientSearchService {
 
     private Page<Client> fetchClients(String query, Map<String, List<String>> filterParams, FilterIds filterIds,
                                       List<Long> excludeStatusIds, Pageable pageable) {
-        System.out.println("query = "+query);
-        System.out.println("filterParams = "+filterParams);
-        System.out.println("filterIds = "+filterIds);
-        System.out.println("excludeStatusIds = "+excludeStatusIds);
-        System.out.println("pageable = "+pageable);
+
         Page<Client> clientPage = clientRepository.findAll(new ClientSpecification(
                 query,
                 filterParams,
