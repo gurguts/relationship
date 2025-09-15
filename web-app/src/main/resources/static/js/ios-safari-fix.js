@@ -53,9 +53,10 @@
             resourceLoadAttempts = 0;
         }
 
-        if (resourceLoadAttempts >= maxRetries) {
-            window.location.reload();
-        }
+        // Убираем автоматическую перезагрузку страницы - это слишком агрессивно
+        // if (resourceLoadAttempts >= maxRetries) {
+        //     window.location.reload();
+        // }
     }
 
     function handleVisibilityChange() {
@@ -103,11 +104,12 @@
             setTimeout(checkAndReloadResources, 500);
         });
 
+        // Периодическая проверка (каждые 60 секунд) - реже, чтобы не мешать
         setInterval(function() {
             if (isAppVisible) {
                 checkAndReloadResources();
             }
-        }, 30000);
+        }, 60000);
     }
 
     if (document.readyState === 'loading') {
