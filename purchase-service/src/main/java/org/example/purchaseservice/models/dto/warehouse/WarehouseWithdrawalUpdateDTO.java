@@ -6,7 +6,8 @@ import java.time.LocalDate;
 
 @Data
 public class WarehouseWithdrawalUpdateDTO {
-    private String reasonType;
+    private Long productId;
+    private Long withdrawalReasonId;
     private Double quantity;
     private String description;
     private LocalDate withdrawalDate;

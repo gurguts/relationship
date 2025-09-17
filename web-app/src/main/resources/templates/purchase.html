@@ -62,11 +62,8 @@
             <li id="nav-balance"><a href="/balance">
                 Баланс грошовий
             </a></li>
-            <li id="nav-warehouse"><a href="/warehouse">
-                Склад
-            </a></li>
             <li id="nav-stock"><a href="/stock">
-                Баланс складу
+                Склад
             </a></li>
             <li id="nav-analytics"><a href="/analytics">
                 Аналітика
@@ -299,6 +296,7 @@
             <label><input type="checkbox" name="fields" value="transaction" checked> Id транзакції</label><br>
             <label><input type="checkbox" name="fields" value="createdAt" checked> Дата створення</label><br>
             <label><input type="checkbox" name="fields" value="updatedAt" checked> Дата оновлення</label><br>
+            <label><input type="checkbox" name="fields" value="comment" checked> Коментар</label><br>
         </form>
         <button id="exportConfirm" class="btn btn-primary">Експортувати</button>
         <button id="exportCancel" class="btn btn-secondary">Скасування</button>
@@ -320,6 +318,7 @@
             <th data-sort="currency">Валюта</th>
             <th data-sort="exchangeRate">Курс</th>
             <th data-sort="createdAt">Дата</th>
+            <th>Коментар</th>
             <th>Дії</th>
         </tr>
         </thead>
@@ -346,6 +345,9 @@
             </label>
             <label>Курс:
                 <input type="number" name="exchangeRate" step="0.000001" min="0">
+            </label>
+            <label>Коментар:
+                <textarea name="comment" rows="3" placeholder="Додатковий коментар до закупівлі"></textarea>
             </label>
             <label class="edit-source" style="display: none;">Залучення:
                 <select name="sourceId" class="edit-source"></select>

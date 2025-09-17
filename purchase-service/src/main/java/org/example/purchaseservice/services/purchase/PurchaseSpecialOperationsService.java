@@ -311,6 +311,7 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
                 case "transaction" -> purchase.getTransaction() != null ? purchase.getTransaction().toString() : "";
                 case "createdAt" -> purchase.getCreatedAt() != null ? purchase.getCreatedAt().toString() : "";
                 case "updatedAt" -> purchase.getUpdatedAt() != null ? purchase.getUpdatedAt().toString() : "";
+                case "comment" -> purchase.getComment() != null ? purchase.getComment() : "";
                 default -> "";
             };
         }

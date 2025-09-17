@@ -144,7 +144,7 @@ function toggleExchangeRateFieldSale() {
     if (currencySelectSale.value === 'UAH') {
         exchangeRateInputSale.style.display = 'none';
         exchangeRateLabelSale.style.display = 'none';
-        exchangeRateInputSale.value = ''; // Очистить значение
+        exchangeRateInputSale.value = '';
         exchangeRateInputSale.removeAttribute('required');
     } else {
         exchangeRateInputSale.style.display = 'block';
@@ -299,6 +299,7 @@ purchaseForm.addEventListener('submit', async (event) => {
     const paymentMethod = document.getElementById('paymentMethod').value;
     const currency = document.getElementById('currencyPurchase').value;
     const exchangeRate = currency !== 'UAH' && exchangeRateInput.value ? exchangeRateInput.value : null;
+    const comment = document.getElementById('commentPurchase').value;
 
     try {
         const response = await fetch(`/api/v1/purchase`, {
@@ -306,7 +307,7 @@ purchaseForm.addEventListener('submit', async (event) => {
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({clientId, sourceId, productId, quantity, totalPrice, paymentMethod, currency, exchangeRate})
+            body: JSON.stringify({clientId, sourceId, productId, quantity, totalPrice, paymentMethod, currency, exchangeRate, comment})
         });
 
         if (!response.ok) {

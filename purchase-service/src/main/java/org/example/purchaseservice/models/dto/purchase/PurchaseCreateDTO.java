@@ -33,4 +33,6 @@ public class PurchaseCreateDTO {
 
     @DecimalMin(value = "0.000001", message = "{validation.purchase.exchangeRate.invalid}")
     private BigDecimal exchangeRate;
+
+    private String comment;
 }

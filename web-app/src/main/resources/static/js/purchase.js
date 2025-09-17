@@ -99,7 +99,11 @@ function renderPurchase(purchases) {
 
         editButton.addEventListener('click', () => showEditModal(purchase));
         deleteButton.addEventListener('click', () => deletePurchase(purchase.id));
-        companyCell.addEventListener('click', () => loadClientDetails(purchase.client));
+        companyCell.addEventListener('click', () => {
+            if (purchase.client) {
+                loadClientDetails(purchase.client);
+            }
+        });
     });
 }
 
@@ -120,7 +124,7 @@ document.querySelectorAll('th[data-sort]').forEach(th => {
 
 function getRowHtml(purchase) {
     return `
-        <td data-label="Компанія" class="company-cell">${purchase.client.company}</td>
+        <td data-label="Компанія" class="company-cell">${purchase.client ? purchase.client.company : ''}</td>
         <td data-label="Товар">${findNameByIdFromMap(productMap, purchase.productId)}</td>
         <td data-label="Водій">${findNameByIdFromMap(userMap, purchase.userId)}</td>
         <td data-label="Залучення">${findNameByIdFromMap(sourceMap, purchase.sourceId)}</td>
@@ -132,6 +136,7 @@ function getRowHtml(purchase) {
         <td data-label="Курс">${purchase.exchangeRate ? purchase.exchangeRate : ''}</td>
         <td data-label="Забрано">${purchase.createdAt ? new Date(purchase.createdAt)
         .toLocaleDateString('ua-UA') : ''}</td>
+        <td data-label="Коментар">${purchase.comment ? purchase.comment : ''}</td>
         <td data-label="Дії">
             <button class="edit-button" data-id="${purchase.id}" title="Редагувати"><i class="fas fa-edit"></i></button>
             <button class="delete-button" data-id="${purchase.id}" title="Видалити"><i class="fas fa-trash"></i></button>
@@ -167,12 +172,14 @@ function showEditModal(purchase) {
     const createdAtInput = form.querySelector('input[name="createdAt"]');
     const exchangeRate = form.querySelector('input[name="exchangeRate"]');
     const sourceSelect = form.querySelector('select[name="sourceId"]');
+    const commentTextarea = form.querySelector('textarea[name="comment"]');
 
     header.textContent = `ID: ${purchase.id}`;
     productSelect.innerHTML = generateProductOptions(purchase.productId);
     quantityInput.value = purchase.quantity || 0;
     totalPriceInput.value = purchase.totalPrice || 0;
     exchangeRate.value = purchase.exchangeRate || '';
+    commentTextarea.value = purchase.comment || '';
     createdAtInput.value = purchase.createdAt
         ? new Date(purchase.createdAt.replace(' ', 'T') + 'Z').toISOString().split('T')[0]
         : '';
@@ -189,7 +196,8 @@ function showEditModal(purchase) {
             totalPrice: parseFloat(totalPriceInput.value),
             createdAt: createdAtInput.value,
             sourceId: sourceSelect.value,
-            exchangeRate: exchangeRate.value
+            exchangeRate: exchangeRate.value,
+            comment: commentTextarea.value
         };
         await savePurchase(purchase, updatedData);
         modal.style.display = 'none';

@@ -2,6 +2,7 @@ package org.example.purchaseservice.services.impl;
 
 import org.example.purchaseservice.models.PageResponse;
 import org.example.purchaseservice.models.warehouse.WarehouseWithdrawal;
+import org.example.purchaseservice.models.warehouse.WithdrawalReason;
 import org.example.purchaseservice.models.dto.warehouse.WithdrawalDTO;
 
 import java.util.List;
@@ -15,4 +16,8 @@ public interface IWarehouseWithdrawService {
     void deleteWithdrawal(Long id);
 
     PageResponse<WithdrawalDTO> getWithdrawals(int page, int size, String sort, String direction, Map<String, List<String>> filterMap);
+    
+    List<WithdrawalReason> getAllWithdrawalReasons();
+    
+    List<WithdrawalReason> getWithdrawalReasonsByPurpose(WithdrawalReason.Purpose purpose);
 }

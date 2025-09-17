@@ -18,5 +18,7 @@ public class WarehouseEntryCreateDTO {
 
     private LocalDate entryDate;
 
+    private Long typeId;
+
     private BigDecimal purchasedQuantity;
 }

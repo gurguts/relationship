@@ -4,8 +4,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.purchaseservice.models.PageResponse;
 import org.example.purchaseservice.models.warehouse.WarehouseWithdrawal;
+import org.example.purchaseservice.models.warehouse.WithdrawalReason;
 import org.example.purchaseservice.models.dto.warehouse.WithdrawalDTO;
 import org.example.purchaseservice.repositories.WarehouseWithdrawalRepository;
+import org.example.purchaseservice.repositories.WithdrawalReasonRepository;
 import org.example.purchaseservice.services.impl.IWarehouseWithdrawService;
 import org.example.purchaseservice.spec.WarehouseWithdrawalSpecification;
 import org.springframework.data.domain.Page;
@@ -26,6 +28,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class WarehouseWithdrawService implements IWarehouseWithdrawService {
     private final WarehouseWithdrawalRepository warehouseWithdrawalRepository;
+    private final WithdrawalReasonRepository withdrawalReasonRepository;
 
 
     @Override
@@ -45,10 +48,21 @@ public class WarehouseWithdrawService implements IWarehouseWithdrawService {
         WarehouseWithdrawal withdrawal = warehouseWithdrawalRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Withdrawal not found"));
 
-        withdrawal.setReasonType(request.getReasonType());
-        withdrawal.setQuantity(request.getQuantity());
-        withdrawal.setDescription(request.getDescription());
-        withdrawal.setWithdrawalDate(request.getWithdrawalDate());
+        if (request.getProductId() != null) {
+            withdrawal.setProductId(request.getProductId());
+        }
+        if (request.getWithdrawalReason() != null) {
+            withdrawal.setWithdrawalReason(request.getWithdrawalReason());
+        }
+        if (request.getQuantity() != null) {
+            withdrawal.setQuantity(request.getQuantity());
+        }
+        if (request.getDescription() != null) {
+            withdrawal.setDescription(request.getDescription());
+        }
+        if (request.getWithdrawalDate() != null) {
+            withdrawal.setWithdrawalDate(request.getWithdrawalDate());
+        }
 
         return warehouseWithdrawalRepository.save(withdrawal);
     }
@@ -73,7 +87,7 @@ public class WarehouseWithdrawService implements IWarehouseWithdrawService {
                         .productId(w.getProductId())
                         .warehouseId(w.getWarehouseId())
                         .userId(w.getUserId())
-                        .reasonType(w.getReasonType().name())
+                        .withdrawalReason(w.getWithdrawalReason())
                         .quantity(w.getQuantity().doubleValue())
                         .description(w.getDescription())
                         .withdrawalDate(w.getWithdrawalDate())
@@ -88,5 +102,15 @@ public class WarehouseWithdrawService implements IWarehouseWithdrawService {
                 withdrawalPage.getTotalPages(),
                 content
         );
+    }
+
+    @Override
+    public List<WithdrawalReason> getAllWithdrawalReasons() {
+        return withdrawalReasonRepository.findAll();
+    }
+
+    @Override
+    public List<WithdrawalReason> getWithdrawalReasonsByPurpose(WithdrawalReason.Purpose purpose) {
+        return withdrawalReasonRepository.findByPurpose(purpose);
     }
 }

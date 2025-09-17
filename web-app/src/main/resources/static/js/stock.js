@@ -1,14 +1,37 @@
 let productMap = new Map();
 let warehouseMap = new Map();
+let userMap = new Map();
+let withdrawalReasonMap = new Map();
+let withdrawalReasons = [];
 const customSelects = {};
+const entriesCustomSelects = {};
+const historyCustomSelects = {};
 const pageSize = 100;
 let currentPage = 0;
 let totalPages = 1;
+let entriesCurrentPage = 0;
+let entriesTotalPages = 1;
 let filters = {
     withdrawal_date_from: [],
     withdrawal_date_to: [],
     product_id: [],
-    reason_type: []
+    withdrawal_reason_id: []
+};
+
+let historyFilters = {
+    withdrawal_date_from: [],
+    withdrawal_date_to: [],
+    product_id: [],
+    withdrawal_reason_id: []
+};
+
+let entriesFilters = {
+    entry_date_from: [],
+    entry_date_to: [],
+    product_id: [],
+    user_id: [],
+    warehouse_id: [],
+    type: []
 };
 
 async function fetchProducts() {
@@ -48,10 +71,222 @@ async function fetchWarehouses() {
     }
 }
 
+async function fetchUsers() {
+    try {
+        const response = await fetch('/api/v1/user');
+        if (!response.ok) {
+            handleError(new Error('Failed to load users'));
+            return;
+        }
+        const users = await response.json();
+        userMap = new Map(users.map(user => [user.id, user.name]));
+        populateSelect('move-executor-id', users);
+    } catch (error) {
+        console.error('Error fetching users:', error);
+        handleError(error);
+    }
+}
+
+async function fetchWithdrawalReasons() {
+    try {
+        const response = await fetch('/api/v1/withdrawal-reason');
+        if (!response.ok) {
+            const errorData = await response.json();
+            handleError(new Error(errorData.message || 'Failed to fetch withdrawal reasons'));
+            return;
+        }
+        withdrawalReasons = await response.json();
+
+        withdrawalReasonMap = new Map(withdrawalReasons.map(reason => [reason.id, reason]));
+        
+        const filterReasons = withdrawalReasons.filter(reason => 
+            reason.purpose === 'REMOVING' || reason.purpose === 'BOTH'
+        );
+
+        populateSelect('withdrawal-reason-id-filter', filterReasons);
+        
+        populateSelect('edit-withdrawal-reason-id', filterReasons);
+        
+        return withdrawalReasons;
+    } catch (error) {
+        console.error('Error fetching withdrawal reasons:', error);
+        handleError(error);
+    }
+}
+
 const findNameByIdFromMap = (map, id) => {
     const numericId = Number(id);
     return map.get(numericId) || '';
 };
+
+function getWithdrawalReasonsByPurpose(purpose) {
+    return Array.from(withdrawalReasonMap.values()).filter(reason => reason.purpose === purpose);
+}
+
+function populateWithdrawalReasonsForWithdrawal() {
+    const reasonsForWithdrawal = getWithdrawalReasonsByPurpose('REMOVING');
+    populateSelect('withdrawal-reason-id', reasonsForWithdrawal);
+}
+
+function populateMoveTypes() {
+    const moveTypes = getWithdrawalReasonsByPurpose('BOTH');
+    populateSelect('move-type-id', moveTypes);
+}
+
+function setDefaultMoveDate() {
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('move-date').value = today;
+}
+
+function populateEntryTypes() {
+    const entryTypes = getWithdrawalReasonsByPurpose('ADDING');
+    populateSelect('entry-type-id', entryTypes);
+}
+
+function setDefaultEntryDate() {
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('entry-date').value = today;
+}
+
+function setDefaultHistoryDates() {
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('history-withdrawal-date-from-filter').value = today;
+    document.getElementById('history-withdrawal-date-to-filter').value = today;
+}
+
+function setDefaultEntriesDates() {
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('entries-entry-date-from-filter').value = today;
+    document.getElementById('entries-entry-date-to-filter').value = today;
+}
+
+function updateHistorySelectedFilters() {
+    Object.keys(historyFilters).forEach(key => delete historyFilters[key]);
+
+    Object.keys(historyCustomSelects).forEach(selectId => {
+        const name = document.getElementById(selectId).name;
+        const values = historyCustomSelects[selectId].getValue();
+        if (values.length > 0) {
+            historyFilters[name] = values;
+        }
+    });
+
+    const withdrawalDateFrom = document.getElementById('history-withdrawal-date-from-filter').value;
+    const withdrawalDateTo = document.getElementById('history-withdrawal-date-to-filter').value;
+
+    if (withdrawalDateFrom) {
+        historyFilters['withdrawal_date_from'] = [withdrawalDateFrom];
+    }
+    if (withdrawalDateTo) {
+        historyFilters['withdrawal_date_to'] = [withdrawalDateTo];
+    }
+
+    updateHistoryFilterCounter();
+}
+
+function updateHistoryFilterCounter() {
+    const counterElement = document.getElementById('history-filter-counter');
+    const countElement = document.getElementById('history-filter-count');
+    const filterButton = document.getElementById('open-history-filter-modal');
+    const exportButton = document.getElementById('export-excel-history');
+
+    let totalFilters = 0;
+    totalFilters += Object.values(historyFilters)
+        .filter(value => Array.isArray(value))
+        .reduce((count, values) => count + values.length, 0);
+
+    if (totalFilters > 0) {
+        countElement.textContent = totalFilters;
+        counterElement.style.display = 'inline-flex';
+    } else {
+        counterElement.style.display = 'none';
+    }
+
+    if (historyContainer.style.display === 'block') {
+        filterButton.style.display = 'inline-block';
+        exportButton.style.display = 'inline-block';
+    }
+}
+
+function clearHistoryFilters() {
+    Object.keys(historyFilters).forEach(key => delete historyFilters[key]);
+
+    const filterForm = document.getElementById('history-filter-form');
+    if (filterForm) {
+        filterForm.reset();
+        Object.keys(historyCustomSelects).forEach(selectId => {
+            historyCustomSelects[selectId].reset();
+        });
+        setDefaultHistoryDates();
+    }
+
+    updateHistoryFilterCounter();
+    loadWithdrawalHistory(0);
+}
+
+function updateEntriesSelectedFilters() {
+    Object.keys(entriesFilters).forEach(key => delete entriesFilters[key]);
+
+    Object.keys(entriesCustomSelects).forEach(selectId => {
+        const name = document.getElementById(selectId).name;
+        const values = entriesCustomSelects[selectId].getValue();
+        if (values.length > 0) {
+            entriesFilters[name] = values;
+        }
+    });
+
+    const entryDateFrom = document.getElementById('entries-entry-date-from-filter').value;
+    const entryDateTo = document.getElementById('entries-entry-date-to-filter').value;
+
+    if (entryDateFrom) {
+        entriesFilters['entry_date_from'] = [entryDateFrom];
+    }
+    if (entryDateTo) {
+        entriesFilters['entry_date_to'] = [entryDateTo];
+    }
+
+    updateEntriesFilterCounter();
+}
+
+function updateEntriesFilterCounter() {
+    const counterElement = document.getElementById('entries-filter-counter');
+    const countElement = document.getElementById('entries-filter-count');
+    const filterButton = document.getElementById('open-entries-filter-modal');
+    const exportButton = document.getElementById('export-excel-entries');
+
+    let totalFilters = 0;
+    totalFilters += Object.values(entriesFilters)
+        .filter(value => Array.isArray(value))
+        .reduce((count, values) => count + values.length, 0);
+
+    if (totalFilters > 0) {
+        countElement.textContent = totalFilters;
+        counterElement.style.display = 'inline-flex';
+    } else {
+        counterElement.style.display = 'none';
+    }
+    
+    if (entriesContainer.style.display === 'block') {
+        filterButton.style.display = 'inline-block';
+        exportButton.style.display = 'inline-block';
+    }
+}
+
+function clearEntriesFilters() {
+    Object.keys(entriesFilters).forEach(key => delete entriesFilters[key]);
+
+    const filterForm = document.getElementById('entries-filter-form');
+    if (filterForm) {
+        filterForm.reset();
+        Object.keys(entriesCustomSelects).forEach(selectId => {
+            entriesCustomSelects[selectId].reset();
+        });
+        setDefaultEntriesDates();
+    }
+
+    updateEntriesFilterCounter();
+    loadWarehouseEntries(0);
+}
 
 async function loadBalance() {
     try {
@@ -122,13 +357,15 @@ function populateWarehouses(selectId) {
 }
 
 async function loadWithdrawalHistory(page) {
-    Object.keys(filters).forEach(key => {
-        if (Array.isArray(filters[key]) && filters[key].length === 0) {
-            delete filters[key];
+    const activeFilters = Object.keys(historyFilters).length > 0 ? historyFilters : filters;
+    
+    Object.keys(activeFilters).forEach(key => {
+        if (Array.isArray(activeFilters[key]) && activeFilters[key].length === 0) {
+            delete activeFilters[key];
         }
     });
     const queryParams = `page=${page}&size=${pageSize}&sort=withdrawalDate&direction=DESC&filters=
-    ${encodeURIComponent(JSON.stringify(filters))}`;
+    ${encodeURIComponent(JSON.stringify(activeFilters))}`;
     try {
         const response = await fetch(`/api/v1/warehouse/withdrawals?${queryParams}`);
         if (!response.ok) {
@@ -142,8 +379,7 @@ async function loadWithdrawalHistory(page) {
         for (const withdrawal of data.content) {
             const productName = findNameByIdFromMap(productMap, withdrawal.productId);
             const warehouseName = findNameByIdFromMap(warehouseMap, withdrawal.warehouseId);
-            console.log("withdrawal.reasonType = ",withdrawal.reasonType)
-            const reason = reasonTypes.find(type => type.id === withdrawal.reasonType)?.name || 'Невідома причина';
+            const reason = withdrawal.withdrawalReason ? withdrawal.withdrawalReason.name : 'Невідома причина';
             html += `
                         <tr data-id="${withdrawal.id}">
                             <td>${warehouseName}</td>
@@ -167,6 +403,79 @@ async function loadWithdrawalHistory(page) {
     }
 }
 
+async function loadWarehouseEntries(page) {
+    const activeFilters = Object.keys(entriesFilters).length > 0 ? entriesFilters : filters;
+    
+    Object.keys(activeFilters).forEach(key => {
+        if (Array.isArray(activeFilters[key]) && activeFilters[key].length === 0) {
+            delete activeFilters[key];
+        }
+    });
+
+    const queryParams = `page=${page}&size=${pageSize}&sort=entryDate&direction=DESC&filters=${encodeURIComponent(JSON.stringify(activeFilters))}`;
+
+    try {
+        const response = await fetch(`/api/v1/warehouse/entries?${queryParams}`, {
+            method: 'GET',
+            headers: {'Content-Type': 'application/json'}
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            handleError(new Error(errorData.message || 'Failed to load entries'));
+            return;
+        }
+
+        const data = await response.json();
+        const container = document.getElementById('entries-body');
+        let html = '';
+        for (const entry of data.content) {
+            const productName = findNameByIdFromMap(productMap, entry.productId);
+            const warehouseName = findNameByIdFromMap(warehouseMap, entry.warehouseId);
+            const userName = findNameByIdFromMap(userMap, entry.userId);
+            const typeName = entry.type ? entry.type.name : 'Невідомий тип';
+            const difference = (entry.quantity || 0) - (entry.purchasedQuantity || 0);
+            html += `
+                <tr data-id="${entry.id}">
+                    <td>${warehouseName}</td>
+                    <td>${entry.entryDate}</td>
+                    <td>${userName}</td>
+                    <td>${productName}</td>
+                    <td>${typeName}</td>
+                    <td>${entry.quantity} кг</td>
+                    <td>${entry.purchasedQuantity} кг</td>
+                    <td>${difference} кг</td>
+                </tr>`;
+        }
+        container.innerHTML = html;
+        
+        // Добавляем обработчики клика на строки таблицы надходжень
+        const rows = container.querySelectorAll('tr[data-id]');
+        rows.forEach(row => {
+            row.addEventListener('click', () => {
+                const entryId = row.dataset.id;
+                const entry = data.content.find(e => e.id == entryId);
+                if (entry) {
+                    openEditEntryModal(entry);
+                }
+            });
+        });
+        
+        updateEntriesPagination(data.totalPages, page);
+    } catch (error) {
+        console.error('Error loading entries:', error);
+        handleError(error);
+    }
+}
+
+function updateEntriesPagination(total, page) {
+    entriesTotalPages = total;
+    entriesCurrentPage = page;
+    document.getElementById('entries-page-info').textContent = `Сторінка ${entriesCurrentPage + 1} з ${entriesTotalPages}`;
+    document.getElementById('entries-prev-page').disabled = entriesCurrentPage === 0;
+    document.getElementById('entries-next-page').disabled = entriesCurrentPage >= entriesTotalPages - 1;
+}
+
 function updatePagination(total, page) {
     totalPages = total;
     currentPage = page;
@@ -175,14 +484,13 @@ function updatePagination(total, page) {
     document.getElementById('next-page').disabled = currentPage >= totalPages - 1;
 }
 
-// Handle withdrawal form submission
 document.getElementById('withdraw-form').addEventListener('submit',
     async (e) => {
         e.preventDefault();
         const withdrawal = {
             warehouseId: Number(document.getElementById('warehouse-id').value),
             productId: Number(document.getElementById('product-id').value),
-            reasonType: document.getElementById('reason-type').value,
+            withdrawalReasonId: Number(document.getElementById('withdrawal-reason-id').value),
             quantity: Number(document.getElementById('quantity').value),
             description: document.getElementById('description').value,
             withdrawalDate: document.getElementById('withdrawal-date').value
@@ -210,13 +518,112 @@ document.getElementById('withdraw-form').addEventListener('submit',
         }
     });
 
+document.getElementById('move-form').addEventListener('submit',
+    async (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        
+        const withdrawal = {
+            warehouseId: Number(formData.get('warehouse_id')),
+            productId: Number(formData.get('from_product_id')),
+            withdrawalReasonId: Number(formData.get('type_id')),
+            quantity: Number(formData.get('from_quantity')),
+            description: `${formData.get('description') || 'Без опису'}`,
+            withdrawalDate: formData.get('move_date')
+        };
+        
+        const entry = {
+            warehouseId: Number(formData.get('warehouse_id')),
+            productId: Number(formData.get('to_product_id')),
+            quantity: Number(formData.get('to_quantity')),
+            entryDate: formData.get('move_date'),
+            typeId: Number(formData.get('type_id')),
+            userId: Number(formData.get('executor_id'))
+        };
+        
+        try {
+            const withdrawalResponse = await fetch('/api/v1/warehouse/withdraw', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(withdrawal)
+            });
+            
+            if (!withdrawalResponse.ok) {
+                const errorData = await withdrawalResponse.json();
+                handleError(new Error(errorData.message || 'Failed to create withdrawal'));
+                return;
+            }
+            
+            const entryResponse = await fetch('/api/v1/warehouse/entries', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(entry)
+            });
+            
+            if (!entryResponse.ok) {
+                const errorData = await entryResponse.json();
+                handleError(new Error(errorData.message || 'Failed to create entry'));
+                return;
+            }
+            
+            showMessage('Переміщення успішно виконано', 'info');
+            closeModal('move-modal');
+            loadBalance();
+            if (historyContainer.style.display === 'block') {
+                loadWithdrawalHistory(currentPage);
+            }
+        } catch (error) {
+            console.error('Error creating move:', error);
+            handleError(error);
+        }
+    });
+
+document.getElementById('entry-form').addEventListener('submit',
+    async (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        
+        const entry = {
+            warehouseId: Number(formData.get('warehouse_id')),
+            productId: Number(formData.get('product_id')),
+            quantity: Number(formData.get('quantity')),
+            entryDate: formData.get('entry_date'),
+            typeId: Number(formData.get('type_id')),
+            userId: Number(formData.get('user_id'))
+        };
+        
+        try {
+            const response = await fetch('/api/v1/warehouse/entries', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(entry)
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                handleError(new Error(errorData.message || 'Failed to create entry'));
+                return;
+            }
+            
+            showMessage('Надходження успішно створено', 'info');
+            closeModal('entry-modal');
+            loadBalance();
+            if (entriesContainer.style.display === 'block') {
+                loadWarehouseEntries(0);
+            }
+        } catch (error) {
+            console.error('Error creating entry:', error);
+            handleError(error);
+        }
+    });
+
 function openEditModal(id, withdrawals) {
     const withdrawal = withdrawals.find(w => w.id === Number(id));
     if (!withdrawal) return;
     populateProducts('edit-product-id');
     document.getElementById('edit-id').value = withdrawal.id;
     document.getElementById('edit-withdrawal-date').value = withdrawal.withdrawalDate;
-    document.getElementById('edit-reason-type').value = withdrawal.reasonType;
+    document.getElementById('edit-withdrawal-reason-id').value = withdrawal.withdrawalReason?.id || '';
     document.getElementById('edit-product-id').value = withdrawal.productId;
     document.getElementById('edit-quantity').value = withdrawal.quantity;
     document.getElementById('edit-description').value = withdrawal.description || '';
@@ -231,7 +638,7 @@ document.getElementById('edit-form').addEventListener('submit',
         const id = Number(document.getElementById('edit-id').value);
         const withdrawal = {
             productId: Number(document.getElementById('edit-product-id').value),
-            reasonType: document.getElementById('edit-reason-type').value,
+            withdrawalReasonId: Number(document.getElementById('edit-withdrawal-reason-id').value),
             quantity: Number(document.getElementById('edit-quantity').value),
             description: document.getElementById('edit-description').value,
             withdrawalDate: document.getElementById('edit-withdrawal-date').value
@@ -571,15 +978,62 @@ function clearFilters() {
 const withdrawModal = document.getElementById('withdraw-modal');
 const editModal = document.getElementById('edit-modal');
 const withdrawBtn = document.getElementById('withdraw-btn');
+const moveBtn = document.getElementById('move-btn');
+const moveModal = document.getElementById('move-modal');
 const historyContainer = document.getElementById('history-container');
 const filtersContainer = document.getElementById('filters-container');
+const entriesBtn = document.getElementById('entries-btn');
+const entriesContainer = document.getElementById('entries-container');
+const addEntryBtn = document.getElementById('add-entry-btn');
+const entryModal = document.getElementById('entry-modal');
+const editEntryModal = document.getElementById('edit-entry-modal');
 const closeBtns = document.getElementsByClassName('close');
 
 withdrawBtn.addEventListener('click', () => {
     populateProducts('product-id');
     populateWarehouses('warehouse-id');
+    populateWithdrawalReasonsForWithdrawal();
     withdrawModal.style.display = 'flex';
     withdrawModal.classList.add('open');
+    document.body.classList.add('modal-open');
+});
+
+moveBtn.addEventListener('click', () => {
+    populateProducts('move-from-product-id');
+    populateProducts('move-to-product-id');
+    populateWarehouses('move-warehouse-id');
+    populateSelect('move-executor-id', Array.from(userMap.entries()).map(([id, name]) => ({id, name})));
+    populateMoveTypes();
+    setDefaultMoveDate();
+    moveModal.style.display = 'flex';
+    moveModal.classList.add('open');
+    document.body.classList.add('modal-open');
+});
+
+entriesBtn.addEventListener('click', async () => {
+    if (entriesContainer.style.display === 'block') {
+        entriesContainer.style.display = 'none';
+        document.getElementById('open-entries-filter-modal').style.display = 'none';
+        document.getElementById('entries-filter-counter').style.display = 'none';
+        document.getElementById('export-excel-entries').style.display = 'none';
+    } else {
+        entriesContainer.style.display = 'block';
+        document.getElementById('open-entries-filter-modal').style.display = 'inline-block';
+        document.getElementById('export-excel-entries').style.display = 'inline-block';
+        await initializeEntriesFilters();
+        loadWarehouseEntries(0);
+    }
+});
+
+addEntryBtn.addEventListener('click', () => {
+    populateProducts('entry-product-id');
+    populateWarehouses('entry-warehouse-id');
+    populateSelect('entry-user-id', Array.from(userMap.entries()).map(([id, name]) => ({id, name})));
+    populateEntryTypes();
+    setDefaultEntryDate();
+    entryModal.style.display = 'flex';
+    entryModal.classList.add('open');
+    document.body.classList.add('modal-open');
 });
 
 Array.from(closeBtns).forEach(btn => {
@@ -589,7 +1043,7 @@ Array.from(closeBtns).forEach(btn => {
 });
 
 window.addEventListener('click', (e) => {
-    if (e.target === withdrawModal || e.target === editModal) {
+    if (e.target === withdrawModal || e.target === editModal || e.target === moveModal || e.target === entryModal || e.target === editEntryModal) {
         closeModal(e.target.id);
     }
 });
@@ -598,22 +1052,84 @@ function closeModal(modalId) {
     const modal = document.getElementById(modalId);
     modal.classList.remove('open');
     modal.style.display = 'none';
+    document.body.classList.remove('modal-open');
     if (modalId === 'withdraw-modal') {
         document.getElementById('withdraw-form').reset();
     } else if (modalId === 'edit-modal') {
         document.getElementById('edit-form').reset();
+    } else if (modalId === 'move-modal') {
+        document.getElementById('move-form').reset();
+    } else if (modalId === 'entry-modal') {
+        document.getElementById('entry-form').reset();
+    } else if (modalId === 'edit-entry-modal') {
+        document.getElementById('edit-entry-form').reset();
     }
 }
+
+// Функции для редактирования надходжень
+function openEditEntryModal(entry) {
+    if (entry.id == null) {
+        handleError(new Error('Дані надходження не були вказані'));
+        return;
+    }
+    document.getElementById('edit-entry-id').value = entry.id;
+    document.getElementById('edit-entry-quantity').value = entry.quantity;
+    editEntryModal.style.display = 'flex';
+    editEntryModal.classList.add('open');
+    document.body.classList.add('modal-open');
+}
+
+// Обработчик формы редактирования надходжень
+document.getElementById('edit-entry-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = document.getElementById('edit-entry-id').value;
+    const newQuantity = document.getElementById('edit-entry-quantity').value;
+
+    try {
+        // Находим WithdrawalReason с purpose = ADDING
+        const addingReason = withdrawalReasons.find(reason => reason.purpose === 'ADDING');
+        if (!addingReason) {
+            handleError(new Error('Не знайдена причина з типом ADDING'));
+            return;
+        }
+
+        const response = await fetch(`/api/v1/warehouse/entries/${id}`, {
+            method: 'PATCH',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({quantity: Number(newQuantity), typeId: addingReason.id})
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            handleError(new Error(errorData.message || 'Failed to update entry'));
+            return;
+        }
+
+        showMessage('Надходження успішно оновлено', 'info');
+        closeModal('edit-entry-modal');
+        loadBalance();
+        if (entriesContainer.style.display === 'block') {
+            loadWarehouseEntries(0);
+        }
+    } catch (error) {
+        console.error('Error updating entry:', error);
+        handleError(error);
+    }
+});
 
 const historyBtn = document.getElementById('history-btn');
 historyBtn.addEventListener('click', () => {
     if (historyContainer.style.display === 'block') {
         historyContainer.style.display = 'none';
-        filtersContainer.classList.remove('open');
+        document.getElementById('open-history-filter-modal').style.display = 'none';
+        document.getElementById('history-filter-counter').style.display = 'none';
+        document.getElementById('export-excel-history').style.display = 'none';
     } else {
         historyContainer.style.display = 'block';
-        filtersContainer.classList.add('open');
-        initializeCustomSelects();
+        document.getElementById('open-history-filter-modal').style.display = 'inline-block';
+        document.getElementById('export-excel-history').style.display = 'inline-block';
+        initializeHistoryFilters();
+        loadWithdrawalHistory(0);
     }
 });
 
@@ -627,15 +1143,94 @@ document.getElementById('clear-filters').addEventListener('click', () => {
     clearFilters();
 });
 
-const reasonTypes = [
-    {id: 'SHIPMENT', name: 'Відгрузка машини'},
-    {id: 'WASTE', name: 'Залишок сміття'},
-    {id: 'FUSES', name: 'Фузи'},
-    {id: 'FERMENTATION', name: 'Ферментація'}
-];
+document.getElementById('entries-prev-page').addEventListener('click', () => {
+    if (entriesCurrentPage > 0) {
+        loadWarehouseEntries(entriesCurrentPage - 1);
+    }
+});
+
+document.getElementById('entries-next-page').addEventListener('click', () => {
+    if (entriesCurrentPage < entriesTotalPages - 1) {
+        loadWarehouseEntries(entriesCurrentPage + 1);
+    }
+});
+
+document.getElementById('open-history-filter-modal').addEventListener('click', () => {
+    document.getElementById('history-filter-modal').classList.add('open');
+    document.body.classList.add('modal-open');
+});
+
+document.getElementById('history-filter-modal-close').addEventListener('click', () => {
+    document.getElementById('history-filter-modal').classList.remove('open');
+    document.body.classList.remove('modal-open');
+});
+
+document.getElementById('apply-history-filters').addEventListener('click', () => {
+    updateHistorySelectedFilters();
+    loadWithdrawalHistory(0);
+    document.getElementById('history-filter-modal').classList.remove('open');
+    document.body.classList.remove('modal-open');
+    updateHistoryFilterCounter();
+});
+
+document.getElementById('history-filter-counter').addEventListener('click', clearHistoryFilters);
+
+document.getElementById('open-entries-filter-modal').addEventListener('click', () => {
+    document.getElementById('entries-filter-modal').classList.add('open');
+    document.body.classList.add('modal-open');
+});
+
+document.getElementById('entries-filter-modal-close').addEventListener('click', () => {
+    document.getElementById('entries-filter-modal').classList.remove('open');
+    document.body.classList.remove('modal-open');
+});
+
+const applyEntriesFiltersBtn = document.getElementById('apply-entries-filters');
+if (applyEntriesFiltersBtn) {
+    applyEntriesFiltersBtn.addEventListener('click', () => {
+        console.log('Apply entries filters button clicked');
+    updateEntriesSelectedFilters();
+    loadWarehouseEntries(0);
+    document.getElementById('entries-filter-modal').classList.remove('open');
+        document.body.classList.remove('modal-open');
+    updateEntriesFilterCounter();
+});
+} else {
+    console.error('Apply entries filters button not found!');
+}
+
+document.getElementById('entries-filter-counter').addEventListener('click', clearEntriesFilters);
+
+async function initializeHistoryFilters() {
+
+    const historySelects = document.querySelectorAll('#history-product-id-filter, #history-withdrawal-reason-id-filter, #history-warehouse-id-filter');
+    historySelects.forEach(select => {
+        if (!historyCustomSelects[select.id]) {
+            historyCustomSelects[select.id] = createCustomSelect(select);
+        }
+    });
+
+    const productArray = Array.from(productMap.entries()).map(([id, name]) => ({id, name}));
+    const warehouseArray = Array.from(warehouseMap.entries()).map(([id, name]) => ({id, name}));
+    const withdrawalReasons = getWithdrawalReasonsByPurpose('REMOVING');
+
+    if (historyCustomSelects['history-product-id-filter']) {
+        historyCustomSelects['history-product-id-filter'].populate(productArray);
+    }
+    if (historyCustomSelects['history-warehouse-id-filter']) {
+        historyCustomSelects['history-warehouse-id-filter'].populate(warehouseArray);
+    }
+    if (historyCustomSelects['history-withdrawal-reason-id-filter']) {
+        historyCustomSelects['history-withdrawal-reason-id-filter'].populate(withdrawalReasons);
+    }
+
+    setDefaultHistoryDates();
+    
+    updateHistorySelectedFilters();
+}
 
 async function initializeCustomSelects() {
-    const selects = document.querySelectorAll('#product-id-filter, #reason-type-filter, #warehouse-id-filter');
+    const selects = document.querySelectorAll('#product-id-filter, #withdrawal-reason-id-filter, #warehouse-id-filter');
     selects.forEach(select => {
         if (!customSelects[select.id]) {
             customSelects[select.id] = createCustomSelect(select);
@@ -644,8 +1239,8 @@ async function initializeCustomSelects() {
 
     try {
         await fetchProducts();
-
-        populateSelect('reason-type-filter', reasonTypes);
+        await fetchWithdrawalReasons();
+        
         const warehouseArray = Array.from(warehouseMap, ([id, name]) => ({id, name}));
         populateSelect('warehouse-id-filter', warehouseArray);
         updateSelectedFilters();
@@ -656,9 +1251,45 @@ async function initializeCustomSelects() {
     }
 }
 
+async function initializeEntriesFilters() {
+    const entriesSelects = document.querySelectorAll('#entries-user-id-filter, #entries-product-id-filter, #entries-warehouse-id-filter, #entries-type-filter');
+    entriesSelects.forEach(select => {
+        if (!entriesCustomSelects[select.id]) {
+            entriesCustomSelects[select.id] = createCustomSelect(select);
+        }
+    });
+    
+    const userArray = Array.from(userMap.entries()).map(([id, name]) => ({id, name}));
+    const productArray = Array.from(productMap.entries()).map(([id, name]) => ({id, name}));
+    const warehouseArray = Array.from(warehouseMap.entries()).map(([id, name]) => ({id, name}));
+    const entryTypes = getWithdrawalReasonsByPurpose('ADDING');
+    
+    if (entriesCustomSelects['entries-user-id-filter']) {
+        entriesCustomSelects['entries-user-id-filter'].populate(userArray);
+    }
+    if (entriesCustomSelects['entries-product-id-filter']) {
+        entriesCustomSelects['entries-product-id-filter'].populate(productArray);
+    }
+    if (entriesCustomSelects['entries-warehouse-id-filter']) {
+        entriesCustomSelects['entries-warehouse-id-filter'].populate(warehouseArray);
+    }
+    if (entriesCustomSelects['entries-type-filter']) {
+        entriesCustomSelects['entries-type-filter'].populate(entryTypes);
+    }
+    
+    setDefaultEntriesDates();
+    updateEntriesSelectedFilters();
+}
+
 async function initialize() {
     await fetchProducts();
     await fetchWarehouses();
+    await fetchUsers();
+    await fetchWithdrawalReasons();
+    
+    await initializeHistoryFilters();
+    await initializeEntriesFilters();
+    
     loadBalance();
 }
 
@@ -685,4 +1316,12 @@ function exportTableToExcel(tableId, filename = 'withdrawal_data') {
 
 document.getElementById('export-excel-withdrawal').addEventListener('click', () => {
     exportTableToExcel('history-table', 'withdrawal_export');
+});
+
+document.getElementById('export-excel-history').addEventListener('click', () => {
+    exportTableToExcel('history-table', 'withdrawal_export');
+});
+
+document.getElementById('export-excel-entries').addEventListener('click', () => {
+    exportTableToExcel('entries-table', 'entries_export');
 });

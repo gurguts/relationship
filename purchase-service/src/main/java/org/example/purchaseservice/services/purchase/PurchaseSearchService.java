@@ -19,6 +19,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -60,15 +61,24 @@ public class PurchaseSearchService implements IPurchaseSearchService {
                 })
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
-        ClientSearchRequest clientRequest = new ClientSearchRequest(query, filteredParams);
-        List<ClientDTO> clients = clientApiClient.searchClients(clientRequest);
-        List<Long> clientIds = clients.stream()
-                .map(ClientDTO::getId)
-                .collect(Collectors.toList());
-        Map<Long, ClientDTO> clientMap = clients.stream()
-                .collect(Collectors.toMap(ClientDTO::getId, client -> client));
+        if (!filteredParams.isEmpty()) {
+            ClientSearchRequest clientRequest = new ClientSearchRequest(query, filteredParams);
+            List<ClientDTO> clients = clientApiClient.searchClients(clientRequest);
+            List<Long> clientIds = clients.stream()
+                    .map(ClientDTO::getId)
+                    .collect(Collectors.toList());
+            Map<Long, ClientDTO> clientMap = clients.stream()
+                    .collect(Collectors.toMap(ClientDTO::getId, client -> client));
 
-        return new ClientData(clientIds, clientMap);
+            return new ClientData(clientIds, clientMap);
+        } else {
+            ClientSearchRequest clientRequest = new ClientSearchRequest(null, Collections.emptyMap());
+            List<ClientDTO> clients = clientApiClient.searchClients(clientRequest);
+            Map<Long, ClientDTO> clientMap = clients.stream()
+                    .collect(Collectors.toMap(ClientDTO::getId, client -> client));
+
+            return new ClientData(null, clientMap);
+        }
     }
 
     private List<Long> fetchSourceIds(String query) {
@@ -101,6 +111,7 @@ public class PurchaseSearchService implements IPurchaseSearchService {
         dto.setTransactionId(purchase.getTransaction());
         dto.setCreatedAt(purchase.getCreatedAt());
         dto.setUpdatedAt(purchase.getUpdatedAt());
+        dto.setComment(purchase.getComment());
         return dto;
     }
 

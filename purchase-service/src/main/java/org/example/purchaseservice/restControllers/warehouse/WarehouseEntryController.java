@@ -67,7 +67,7 @@ public class WarehouseEntryController {
     @PatchMapping("/entries/{warehouseId}")
     public ResponseEntity<Void> updateWarehouseEntry(@PathVariable Long warehouseId,
                                                      @RequestBody UpdateWarehouseEntryDTO dto) {
-        warehouseEntryService.updateWarehouseEntry(warehouseId, dto.quantity());
+        warehouseEntryService.updateWarehouseEntry(warehouseId, dto);
         return ResponseEntity.noContent().build();
     }
 

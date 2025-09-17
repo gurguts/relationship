@@ -1314,6 +1314,31 @@ input.custom-select-placeholder {
     background-color: var(--bright-blue);
 }
 
+#purchaseForm textarea {
+    width: 100%;
+    padding: 0.4em;
+    margin: 0;
+    box-sizing: border-box;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background-color: #fff;
+    font-size: var(--base-text-size);
+    font-family: inherit;
+    transition: border-color 0.3s ease;
+    resize: vertical;
+    min-height: 60px;
+}
+
+#purchaseForm textarea:focus {
+    border-color: var(--bright-green, var(--bright-blue));
+    outline: none;
+}
+
+#purchaseForm textarea::placeholder {
+    color: #aaa;
+    font-style: italic;
+}
+
 
 /*--modal-barrel--*/
 .modal-barrel {

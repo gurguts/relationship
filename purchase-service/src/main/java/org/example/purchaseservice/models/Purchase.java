@@ -62,6 +62,9 @@ public class Purchase {
     @Column(name = "exchange_rate", precision = 20, scale = 6)
     private BigDecimal exchangeRate;
 
+    @Column(name = "comment", columnDefinition = "TEXT")
+    private String comment;
+
     public void calculateAndSetUnitPrice() {
         if (quantity != null && totalPrice != null && quantity.compareTo(BigDecimal.ZERO) != 0) {
             this.unitPrice = totalPrice.divide(quantity, 2, RoundingMode.HALF_UP);

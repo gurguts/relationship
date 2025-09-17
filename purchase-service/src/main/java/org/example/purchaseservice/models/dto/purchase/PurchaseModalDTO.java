@@ -29,4 +29,6 @@ public class PurchaseModalDTO {
     private BigDecimal exchangeRate;
 
     private LocalDateTime createdAt;
+
+    private String comment;
 }

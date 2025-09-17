@@ -43,6 +43,11 @@ public class WarehouseEntrySpecification implements Specification<WarehouseEntry
                 predicates.add(root.get("warehouseId").in(warehouseIds));
             }
 
+            if (filters.containsKey("type")) {
+                List<Long> typeIds = filters.get("type").stream().map(Long::parseLong).toList();
+                predicates.add(root.get("type").get("id").in(typeIds));
+            }
+
             if (filters.containsKey("entry_date_from")) {
                 List<String> fromDates = filters.get("entry_date_from").stream().filter(s -> !s.isEmpty()).toList();
                 if (!fromDates.isEmpty()) {

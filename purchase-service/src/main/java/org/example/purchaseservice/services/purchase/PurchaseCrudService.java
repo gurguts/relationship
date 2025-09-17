@@ -114,6 +114,10 @@ public class PurchaseCrudService implements IPurchaseCrudService {
 
         existingPurchase.setExchangeRate(updatedPurchase.getExchangeRate());
 
+        if (updatedPurchase.getComment() != null) {
+            existingPurchase.setComment(updatedPurchase.getComment());
+        }
+
         return purchaseRepository.save(existingPurchase);
     }
 

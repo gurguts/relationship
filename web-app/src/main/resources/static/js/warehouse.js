@@ -2,6 +2,7 @@ let filters = {};
 let userMap = new Map();
 let productMap = new Map();
 let warehouseMap = new Map();
+let withdrawalReasons = [];
 let currentPage = 0;
 let totalPages = 0;
 let pageSize = 200;
@@ -77,7 +78,8 @@ document.getElementById('entryForm').addEventListener('submit',
         userId: formData.get('user_id'),
         warehouseId: formData.get('warehouse_id'),
         productId: formData.get('product_id'),
-        quantity: parseFloat(formData.get('quantity'))
+        quantity: parseFloat(formData.get('quantity')),
+        typeId: formData.get('type_id')
     };
 
     try {
@@ -98,6 +100,7 @@ document.getElementById('entryForm').addEventListener('submit',
         customSelects['user-id'].reset();
         customSelects['warehouse-id'].reset();
         customSelects['product-id'].reset();
+        customSelects['type-id'].reset();
         document.getElementById('entryModal').classList.remove('open');
         loadWarehouseEntries(currentPage);
     } catch (error) {
@@ -149,6 +152,7 @@ function renderWarehouseEntries(entries) {
             <td>${entry.entryDate}</td>
             <td>${userMap.get(Number(entry.userId)) || entry.userId}</td>
             <td>${productMap.get(Number(entry.productId)) || entry.productId}</td>
+            <td>${entry.type && entry.type.name ? entry.type.name : 'Невідомий тип'}</td>
             <td>${entry.quantity}</td>
             <td>${entry.purchasedQuantity}</td>
             <td class="difference"></td>
@@ -168,9 +172,9 @@ function renderWarehouseEntries(entries) {
 
         const rows = tbody.querySelectorAll('tr');
         rows.forEach((row,) => {
-            const quantityCell = row.cells[4];
-            const purchasedCell = row.cells[5];
-            const differenceCell = row.cells[6];
+            const quantityCell = row.cells[5];
+            const purchasedCell = row.cells[6];
+            const differenceCell = row.cells[7];
 
             const quantity = parseFloat(quantityCell.textContent) || 0;
             const purchased = parseFloat(purchasedCell.textContent) || 0;
@@ -186,7 +190,7 @@ function renderWarehouseEntries(entries) {
         const summaryRow = document.createElement('tr');
         summaryRow.classList.add('summary-row');
         summaryRow.innerHTML = `
-            <td colspan="4"><strong>Сума</strong></td>
+            <td colspan="5"><strong>Сума</strong></td>
             <td><strong>${totalQuantity.toFixed(2)}</strong></td>
             <td><strong>${totalPurchased.toFixed(2)}</strong></td>
             <td><strong>${totalDifference.toFixed(2)}</strong></td>
@@ -234,10 +238,16 @@ editForm.addEventListener('submit', async (e) => {
     const newQuantity = document.getElementById('quantityInput').value;
 
     try {
+        const addingReason = withdrawalReasons.find(reason => reason.purpose === 'ADDING');
+        if (!addingReason) {
+            handleError(new Error('Не найдена причина с типом ADDING'));
+            return;
+        }
+
         const response = await fetch(`/api/v1/warehouse/entries/${id}`, {
             method: 'PATCH',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({quantity: Number(newQuantity)})
+            body: JSON.stringify({quantity: Number(newQuantity), typeId: addingReason.id})
         });
 
         if (!response.ok) {
@@ -554,6 +564,9 @@ function createCustomSelect(selectElement) {
             updateSelection();
             updateHiddenInput();
             populateDropdown(selectData);
+        },
+        populateDropdown: function (data) {
+            populateDropdown(data);
         }
     };
 }
@@ -565,9 +578,12 @@ async function initializeCustomSelects() {
     });
 
     try {
+        await fetchWithdrawalReasons();
         await fetchUsers();
         await fetchProducts();
         await fetchWarehouses();
+        
+        
         setDefaultDates();
         updateSelectedFilters();
         await loadWarehouseEntries(0);
@@ -609,7 +625,6 @@ async function fetchUsers() {
         userMap = new Map(users.map(user => [user.id, user.name]));
         populateSelect('user-id-filter', users);
         populateSelect('user-id', users);
-        /*populateSelect('user-remove-id', users);*/
     } catch (error) {
         console.error('Ошибка:', error);
         handleError(error);
@@ -648,6 +663,31 @@ async function fetchWarehouses() {
         populateSelect('warehouse-id', warehouses);
     } catch (error) {
         console.error('Error fetching products:', error);
+        handleError(error);
+    }
+}
+
+async function fetchWithdrawalReasons() {
+    try {
+        const response = await fetch('/api/v1/withdrawal-reason');
+        if (!response.ok) {
+            const errorData = await response.json();
+            handleError(new Error(errorData.message || 'Failed to fetch withdrawal reasons'));
+            return;
+        }
+        withdrawalReasons = await response.json();
+
+        const filterReasons = withdrawalReasons.filter(reason => 
+            reason.purpose === 'ADDING' || reason.purpose === 'BOTH'
+        );
+        populateSelect('type-filter', filterReasons);
+
+        const addingReasons = withdrawalReasons.filter(reason => 
+            reason.purpose === 'ADDING'
+        );
+        populateSelect('type-id', addingReasons);
+    } catch (error) {
+        console.error('Error fetching withdrawal reasons:', error);
         handleError(error);
     }
 }

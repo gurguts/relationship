@@ -1147,6 +1147,19 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
+    /*----------WithdrawalReason----------*/
+
+    document.getElementById('showWithdrawalReasonsBtn').addEventListener('click',
+        async function () {
+        const withdrawalReasonListContainer = document.getElementById('withdrawalReasonListContainer');
+        const addWithdrawalReasonContainer = document.getElementById('addWithdrawalReasonContainer');
+        withdrawalReasonListContainer.style.display = withdrawalReasonListContainer.style.display === 'none' ? 'block' : 'none';
+        addWithdrawalReasonContainer.style.display = addWithdrawalReasonContainer.style.display === 'none' ? 'block' : 'none';
+        if (withdrawalReasonListContainer.style.display === 'block') {
+            loadWithdrawalReasons();
+        }
+    });
+
     async function loadStorages() {
         try {
             const response = await fetch('/api/v1/warehouse');
@@ -1248,6 +1261,111 @@ document.addEventListener('DOMContentLoaded', function () {
             loadStorages();
         } catch (error) {
             console.error('Error creating storage:', error);
+        }
+    });
+
+    async function loadWithdrawalReasons() {
+        try {
+            const response = await fetch('/api/v1/withdrawal-reason');
+            if (!response.ok) new Error('Error fetching withdrawal reasons');
+            const withdrawalReasons = await response.json();
+            const withdrawalReasonList = document.getElementById('withdrawalReasonList');
+            withdrawalReasonList.innerHTML = '';
+
+            withdrawalReasons.forEach(withdrawalReason => {
+                const listItem = document.createElement('li');
+                listItem.classList.add('withdrawalReason-item');
+                listItem.setAttribute('data-withdrawalReason-id', withdrawalReason.id);
+
+                const withdrawalReasonText = document.createElement('span');
+                const purposeText = withdrawalReason.purpose === 'REMOVING' ? 'Сняття' : 
+                                   withdrawalReason.purpose === 'ADDING' ? 'Пополнення' : 'Загальний';
+                withdrawalReasonText.textContent = `${withdrawalReason.id} - ${withdrawalReason.name} (${purposeText})`;
+                listItem.appendChild(withdrawalReasonText);
+
+                const editButton = document.createElement('button');
+                editButton.textContent = 'Змінити';
+                editButton.onclick = () => editWithdrawalReason(withdrawalReason);
+                listItem.appendChild(editButton);
+
+                const deleteButton = document.createElement('button');
+                deleteButton.textContent = 'Видалити';
+                deleteButton.onclick = () => deleteWithdrawalReason(withdrawalReason.id);
+                listItem.appendChild(deleteButton);
+
+                withdrawalReasonList.appendChild(listItem);
+            });
+        } catch (error) {
+            console.error('Error loading withdrawal reasons:', error);
+        }
+    }
+
+    function editWithdrawalReason(withdrawalReason) {
+        const newName = prompt('Введіть нову назву причини списання:', withdrawalReason.name);
+        const newPurpose = prompt('Введіть нове призначення (ADDING, REMOVING або BOTH):', withdrawalReason.purpose);
+        if (newName !== null && newPurpose !== null) {
+            updateWithdrawalReason(withdrawalReason.id, newName, newPurpose);
+        }
+    }
+
+    async function updateWithdrawalReason(id, name, purpose) {
+        try {
+            const response = await fetch(`/api/v1/withdrawal-reason/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({name, purpose})
+            });
+
+            if (!response.ok) new Error('Error updating withdrawal reason');
+            alert('Причину списання оновлено!');
+            loadWithdrawalReasons();
+        } catch (error) {
+            console.error('Error updating withdrawal reason:', error);
+        }
+    }
+
+    async function deleteWithdrawalReason(id) {
+        try {
+            const response = await fetch(`/api/v1/withdrawal-reason/${id}`, {
+                method: 'DELETE'
+            });
+
+            if (!response.ok) new Error('Error deleting withdrawal reason');
+            alert('Причину списання видалено!');
+            loadWithdrawalReasons();
+        } catch (error) {
+            console.error('Error deleting withdrawal reason:', error);
+        }
+    }
+
+    document.getElementById('createWithdrawalReasonBtn').addEventListener('click',
+        async function () {
+        const name = document.getElementById('newWithdrawalReasonName').value;
+        const purpose = document.getElementById('newWithdrawalReasonPurpose').value;
+
+        if (!name) {
+            alert('Будь ласка, введіть назву для створення причини списання.');
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/v1/withdrawal-reason', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({name, purpose})
+            });
+
+            if (!response.ok) new Error('Error creating withdrawal reason');
+            alert('Причину списання створено!');
+            document.getElementById('newWithdrawalReasonName').value = '';
+            document.getElementById('newWithdrawalReasonPurpose').value = 'REMOVING';
+            loadWithdrawalReasons();
+        } catch (error) {
+            console.error('Error creating withdrawal reason:', error);
         }
     });
 

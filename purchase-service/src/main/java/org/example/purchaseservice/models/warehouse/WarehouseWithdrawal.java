@@ -1,5 +1,6 @@
 package org.example.purchaseservice.models.warehouse;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -13,6 +14,7 @@ import java.time.LocalDateTime;
 @Setter
 @Entity
 @Table(name = "warehouse_withdrawals")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class WarehouseWithdrawal {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -27,9 +29,9 @@ public class WarehouseWithdrawal {
     @Column(name = "warehouse_id", nullable = false)
     private Long warehouseId;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "reason_type", nullable = false)
-    private WithdrawalReason reasonType;
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "withdrawal_reason_id", nullable = false)
+    private WithdrawalReason withdrawalReason;
 
     @Column(nullable = false, precision = 20, scale = 2)
     private BigDecimal quantity;

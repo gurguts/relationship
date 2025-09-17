@@ -13,6 +13,29 @@
 
     <link rel="stylesheet" href="/css/ios-safari-fix.css">
     <link rel="stylesheet" href="/css/stock.css">
+    <style>
+        #entries-filter-counter {
+            display: inline-flex;
+            width: 2.5em;
+            background-color: var(--dark-blue, #1976D2);
+            font-size: 0.8em;
+            color: white;
+            padding: 0.5em 1em 0.5em 0.5em;
+            z-index: 0;
+            border-radius: 10px;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        #entries-filter-counter svg {
+            transform: scale(1.2);
+            transform-origin: -100% 100%;
+        }
+
+        #entries-filter-count {
+            font-size: 1.5em;
+        }
+    </style>
     <link rel="stylesheet" href="/css/common.css">
 
     <link rel="icon" type="image/png" href="/favicon/favicon-96x96.png" sizes="96x96"/>
@@ -60,11 +83,8 @@
             <li id="nav-balance"><a href="/balance">
                 Баланс грошовий
             </a></li>
-            <li id="nav-warehouse"><a href="/warehouse">
+            <li id="nav-stock"><a class="selected-nav" href="/stock">
                 Склад
-            </a></li>
-            <li id="nav-stock"><a class="selected-nav" href="/warehouse">
-                Баланс складу
             </a></li>
             <li id="nav-analytics"><a href="/analytics">
                 Аналітика
@@ -85,73 +105,34 @@
 
 <div class="container">
     <div id="balance-container"></div>
-    <button class="button" id="withdraw-btn">Списати баланс</button>
-    <button class="button" id="history-btn">Переглянути історію списань</button>
-
-    <div id="withdraw-modal" class="modal">
-        <div class="modal-content">
-            <span class="close">×</span>
-            <h3>Списання балансу</h3>
-            <form id="withdraw-form">
-                <label style="display: none" for="withdrawal-date"></label>
-                <input type="date" id="withdrawal-date" required>
-                <label style="display: none" for="reason-type"></label>
-                <select id="reason-type" required>
-                    <option value="">Оберіть причину</option>
-                    <option value="SHIPMENT">Відвантаження машини</option>
-                    <option value="WASTE">Залишок сміття</option>
-                    <option value="FUSES">Фузи</option>
-                    <option value="FERMENTATION">Ферментація</option>
-                    <option value="MOVING">Переміщення</option>
-                </select>
-                <label style="display: none" for="product-id"></label>
-                <select id="product-id" required>
-                    <option value="">Оберіть товар</option>
-                </select>
-                <label style="display: none" for="warehouse-id"></label>
-                <select id="warehouse-id" required>
-                    <option value="">Оберіть cклад</option>
-                </select>
-                <label style="display: none" for="quantity"></label>
-                <input type="number" id="quantity" step="0.01" min="0" placeholder="Кількість (кг)" required>
-                <label style="display: none" for="description"></label>
-                <textarea id="description" placeholder="Додатковий опис"></textarea>
-                <button type="submit" class="button">Списати</button>
-            </form>
+    <div class="modal-buttons">
+        <div class="button-row">
+            <button class="button" id="add-entry-btn">Додати надходження</button>
+            <button class="button" id="move-btn">Переміщення</button>
+            <button class="button" id="withdraw-btn">Списати баланс</button>
+        </div>
+        <div class="button-row">
+            <button class="button" id="entries-btn">Переглянути історію надходжень</button>
+            <button class="button" id="history-btn">Переглянути історію списань</button>
         </div>
     </div>
 
-    <div id="edit-modal" class="modal">
-        <div class="modal-content">
-            <span class="close">×</span>
-            <h3>Редагувати списання</h3>
-            <form id="edit-form">
-                <input type="hidden" id="edit-id">
-                <label style="display: none" for="edit-withdrawal-date"></label>
-                <input type="date" id="edit-withdrawal-date" required>
-                <label style="display: none" for="edit-reason-type"></label>
-                <select id="edit-reason-type" required>
-                    <option value="">Оберіть причину</option>
-                    <option value="SHIPMENT">Відвантаження машини</option>
-                    <option value="WASTE">Залишок сміття</option>
-                </select>
-                <label style="display: none" for="edit-product-id"></label>
-                <select id="edit-product-id" required>
-                    <option value="">Оберіть товар</option>
-                </select>
-                <label style="display: none" for="edit-quantity"></label>
-                <input type="number" id="edit-quantity" step="0.01" min="0" placeholder="Кількість (кг)" required>
-                <label style="display: none" for="edit-description"></label>
-                <textarea id="edit-description" placeholder="Додатковий опис"></textarea>
-                <button type="submit" class="button">Зберегти</button>
-                <button type="button" class="button delete-button" id="delete-btn">Видалити</button>
-            </form>
-        </div>
-    </div>
 
     <div id="history-container" class="history-container">
-        <h3>Історія списань</h3>
-        <div id="filters-container" class="filters-container">
+        <div class="history-header">
+            <h3>Історія списань</h3>
+            <div class="history-filter-controls">
+                <button class="open-filter-modal-btn" id="open-history-filter-modal" style="display: none;">Фільтри списань</button>
+                <span id="history-filter-counter" style="display: none;">
+                    <span id="history-filter-count">0</span>
+                    <svg width="10" height="10" viewBox="0 0 10 10">
+                        <path d="M1 1l8 8M9 1l-8 8" stroke="white" stroke-width="2"/>
+                    </svg>
+                </span>
+                <button type="button" id="export-excel-history" class="excel-export" style="display: none;">Експорт в Excel</button>
+            </div>
+        </div>
+        <div id="filters-container" class="filters-container" style="display: none;">
             <form id="history-filters-form">
                 <div class="filters">
                     <div class="filter-group">
@@ -173,11 +154,8 @@
                                 <select id="warehouse-id-filter" name="warehouse_id" multiple></select>
                             </div>
                             <div class="select-section-item">
-                                <label for="reason-type-filter">Причина:</label>
-                                <select id="reason-type-filter" name="reason_type" multiple>
-                                    <option value="SHIPMENT">Відгрузка машини</option>
-                                    <option value="WASTE">Залишок сміття</option>
-                                </select>
+                                <label for="withdrawal-reason-id-filter">Причина:</label>
+                                <select id="withdrawal-reason-id-filter" name="withdrawal_reason_id" multiple></select>
                             </div>
                         </div>
                     </div>
@@ -209,6 +187,272 @@
             <span id="page-info">Сторінка 1 з 1</span>
             <button id="next-page" disabled>Наступна</button>
         </div>
+    </div>
+
+
+
+    <div id="entries-container" class="entries-container" style="display: none;">
+        <div class="entries-header">
+            <h3>Історія надходжень</h3>
+            <div class="entries-filter-controls">
+                <button class="open-filter-modal-btn" id="open-entries-filter-modal" style="display: none;">Фільтри надходжень</button>
+                <span id="entries-filter-counter" style="display: none;">
+                    <span id="entries-filter-count">0</span>
+                    <svg width="10" height="10" viewBox="0 0 10 10">
+                        <path d="M1 1l8 8M9 1l-8 8" stroke="white" stroke-width="2"/>
+                    </svg>
+                </span>
+                <button type="button" id="export-excel-entries" class="excel-export" style="display: none;">Експорт в Excel</button>
+            </div>
+        </div>
+        
+        <table id="entries-table">
+            <thead>
+                <tr>
+                    <th>Склад</th>
+                    <th>Дата</th>
+                    <th>Водій</th>
+                    <th>Товар</th>
+                    <th>Тип</th>
+                    <th>Привезено</th>
+                    <th>Закуплено</th>
+                    <th>Різниця</th>
+                </tr>
+            </thead>
+            <tbody id="entries-body"></tbody>
+        </table>
+
+        <div class="pagination">
+            <button id="entries-prev-page" disabled>Попередня</button>
+            <span id="entries-page-info">Сторінка 1 з 1</span>
+            <button id="entries-next-page" disabled>Наступна</button>
+        </div>
+    </div>
+</div>
+
+<div id="withdraw-modal" class="modal">
+    <div class="modal-content">
+        <span class="close">×</span>
+        <h3>Списання балансу</h3>
+        <form id="withdraw-form">
+            <label for="withdrawal-date">Дата списання:</label>
+            <input type="date" id="withdrawal-date" required>
+            
+            <label for="withdrawal-reason-id">Причина списання:</label>
+            <select id="withdrawal-reason-id" required>
+                <option value="">Оберіть причину</option>
+            </select>
+            
+            <label for="product-id">Товар:</label>
+            <select id="product-id" required>
+                <option value="">Оберіть товар</option>
+            </select>
+            
+            <label for="warehouse-id">Склад:</label>
+            <select id="warehouse-id" required>
+                <option value="">Оберіть cклад</option>
+            </select>
+            
+            <label for="quantity">Кількість (кг):</label>
+            <input type="number" id="quantity" step="0.01" min="0" placeholder="Кількість (кг)" required>
+            
+            <label for="description">Додатковий опис:</label>
+            <textarea id="description" placeholder="Додатковий опис"></textarea>
+            
+            <button type="submit" class="button">Списати</button>
+        </form>
+    </div>
+</div>
+
+<div id="edit-modal" class="modal">
+    <div class="modal-content">
+        <span class="close">×</span>
+        <h3>Редагувати списання</h3>
+        <form id="edit-form">
+            <input type="hidden" id="edit-id">
+            
+            <label for="edit-withdrawal-date">Дата списання:</label>
+            <input type="date" id="edit-withdrawal-date" required>
+            
+            <label for="edit-withdrawal-reason-id">Причина списання:</label>
+            <select id="edit-withdrawal-reason-id" required>
+                <option value="">Оберіть причину</option>
+            </select>
+            
+            <label for="edit-product-id">Товар:</label>
+            <select id="edit-product-id" required>
+                <option value="">Оберіть товар</option>
+            </select>
+            
+            <label for="edit-quantity">Кількість (кг):</label>
+            <input type="number" id="edit-quantity" step="0.01" min="0" placeholder="Кількість (кг)" required>
+            
+            <label for="edit-description">Додатковий опис:</label>
+            <textarea id="edit-description" placeholder="Додатковий опис"></textarea>
+            
+            <button type="submit" class="button">Зберегти</button>
+            <button type="button" class="button delete-button" id="delete-btn">Видалити</button>
+        </form>
+    </div>
+</div>
+
+<div id="edit-entry-modal" class="modal">
+    <div class="modal-content">
+        <span class="close">×</span>
+        <h3>Редагувати надходження</h3>
+        <form id="edit-entry-form">
+            <input type="hidden" id="edit-entry-id">
+            
+            <label for="edit-entry-quantity">Нова кількість (Привезено):</label>
+            <input type="number" id="edit-entry-quantity" step="0.01" min="0" required>
+            
+            <button type="submit" class="button">Зберегти</button>
+        </form>
+    </div>
+</div>
+
+<div id="move-modal" class="modal">
+    <div class="modal-content">
+        <span class="close">×</span>
+        <h3>Переміщення товару</h3>
+        <form id="move-form">
+            <label for="move-warehouse-id">Склад:</label>
+            <select id="move-warehouse-id" name="warehouse_id" required></select>
+            
+            <label for="move-date">Дата:</label>
+            <input type="date" id="move-date" name="move_date" required>
+            
+            <label for="move-executor-id">Виконавець:</label>
+            <select id="move-executor-id" name="executor_id" required></select>
+            
+            <label for="move-type-id">Тип:</label>
+            <select id="move-type-id" name="type_id" required></select>
+            
+            <label for="move-from-product-id">Товар з якого знімається:</label>
+            <select id="move-from-product-id" name="from_product_id" required></select>
+            
+            <label for="move-from-quantity">Кількість знімаємого товару (кг):</label>
+            <input type="number" id="move-from-quantity" name="from_quantity" step="0.01" min="0" required>
+            
+            <label for="move-to-product-id">Товар до якого додається:</label>
+            <select id="move-to-product-id" name="to_product_id" required></select>
+            
+            <label for="move-to-quantity">Кількість додаваємого товару (кг):</label>
+            <input type="number" id="move-to-quantity" name="to_quantity" step="0.01" min="0" required>
+            
+            <label for="move-description">Додатковий опис:</label>
+            <textarea id="move-description" name="description" placeholder="Опис переміщення"></textarea>
+            
+            <button type="submit" class="button">Перемістити</button>
+        </form>
+    </div>
+</div>
+
+<div id="entry-modal" class="modal">
+    <div class="modal-content">
+        <span class="close">×</span>
+        <h3>Додати надходження</h3>
+        <form id="entry-form">
+            <label for="entry-warehouse-id">Склад:</label>
+            <select id="entry-warehouse-id" name="warehouse_id" required></select>
+            
+            <label for="entry-date">Дата:</label>
+            <input type="date" id="entry-date" name="entry_date" required>
+            
+            <label for="entry-user-id">Водій:</label>
+            <select id="entry-user-id" name="user_id" required></select>
+            
+            <label for="entry-product-id">Товар:</label>
+            <select id="entry-product-id" name="product_id" required></select>
+            
+            <label for="entry-type-id">Тип:</label>
+            <select id="entry-type-id" name="type_id" required></select>
+            
+            <label for="entry-quantity">Кількість (кг):</label>
+            <input type="number" id="entry-quantity" name="quantity" step="0.01" min="0" required>
+            
+            <button type="submit" class="button">Додати</button>
+        </form>
+    </div>
+</div>
+
+<div class="filter-modal" id="history-filter-modal">
+    <div class="modal-content">
+        <span class="modal-close" id="history-filter-modal-close">×</span>
+        <h3>Фільтри списаний:</h3>
+        <form id="history-filter-form">
+            <div class="filters">
+                <div class="filter-group">
+                    <div class="filter-block">
+                        <label for="history-withdrawal-date-from-filter">Дата списання від:</label>
+                        <input type="date" id="history-withdrawal-date-from-filter" name="withdrawal_date_from">
+                    </div>
+                    <div class="filter-block">
+                        <label for="history-withdrawal-date-to-filter">Дата списання до:</label>
+                        <input type="date" id="history-withdrawal-date-to-filter" name="withdrawal_date_to">
+                    </div>
+                    <div class="select-section-items">
+                        <div class="select-section-item">
+                            <label for="history-product-id-filter">Товар:</label>
+                            <select id="history-product-id-filter" name="product_id" multiple></select>
+                        </div>
+                        <div class="select-section-item">
+                            <label for="history-warehouse-id-filter">Склад:</label>
+                            <select id="history-warehouse-id-filter" name="warehouse_id" multiple></select>
+                        </div>
+                        <div class="select-section-item">
+                            <label for="history-withdrawal-reason-id-filter">Причина:</label>
+                            <select id="history-withdrawal-reason-id-filter" name="withdrawal_reason_id" multiple></select>
+                        </div>
+                    </div>
+                </div>
+                <div class="filter-actions">
+                    <button type="button" id="apply-history-filters" class="apply-btn">Застосувати</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="filter-modal" id="entries-filter-modal">
+    <div class="modal-content">
+        <span class="modal-close" id="entries-filter-modal-close">×</span>
+        <h3>Фільтри надходжень:</h3>
+        <form id="entries-filter-form">
+            <div class="filters">
+                <div class="filter-group">
+                    <div class="filter-block">
+                        <label for="entries-entry-date-from-filter">Дата від:</label>
+                        <input type="date" id="entries-entry-date-from-filter" name="entry_date_from">
+                    </div>
+                    <div class="filter-block">
+                        <label for="entries-entry-date-to-filter">Дата до:</label>
+                        <input type="date" id="entries-entry-date-to-filter" name="entry_date_to">
+                    </div>
+                    <div class="select-section-items">
+                        <div class="select-section-item">
+                            <label for="entries-user-id-filter">Водій:</label>
+                            <select id="entries-user-id-filter" name="user_id" multiple></select>
+                        </div>
+                        <div class="select-section-item">
+                            <label for="entries-product-id-filter">Товар:</label>
+                            <select id="entries-product-id-filter" name="product_id" multiple></select>
+                        </div>
+                        <div class="select-section-item">
+                            <label for="entries-warehouse-id-filter">Склад:</label>
+                            <select id="entries-warehouse-id-filter" name="warehouse_id" multiple></select>
+                        </div>
+                        <div class="select-section-item">
+                            <label for="entries-type-filter">Тип:</label>
+                            <select id="entries-type-filter" name="type" multiple></select>
+                        </div>
+                    </div>
+                </div>
+                <div class="filter-actions">
+                    <button type="button" id="apply-entries-filters" class="apply-btn">Застосувати</button>
+                </div>
+            </div>
+        </form>
     </div>
 </div>
 

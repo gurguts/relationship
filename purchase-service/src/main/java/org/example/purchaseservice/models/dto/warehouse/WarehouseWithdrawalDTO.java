@@ -17,7 +17,7 @@ public class WarehouseWithdrawalDTO {
 
     private Long warehouseId;
 
-    private WithdrawalReason reasonType;
+    private WithdrawalReason withdrawalReason;
 
     private BigDecimal quantity;
 

@@ -1,5 +1,6 @@
 package org.example.purchaseservice.models.warehouse;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -13,6 +14,7 @@ import java.time.LocalDateTime;
 @Setter
 @Entity
 @Table(name = "warehouse_entries")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class WarehouseEntry {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -35,6 +37,10 @@ public class WarehouseEntry {
 
     @Column(name = "entry_date", nullable = false)
     private LocalDate entryDate;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "type_id", nullable = false)
+    private WithdrawalReason type;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false)

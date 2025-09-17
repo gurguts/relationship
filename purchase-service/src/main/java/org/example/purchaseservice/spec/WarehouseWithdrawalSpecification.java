@@ -38,9 +38,9 @@ public class WarehouseWithdrawalSpecification implements Specification<Warehouse
                 predicates.add(root.get("warehouseId").in(warehouseIds));
             }
 
-            if (filters.containsKey("reason_type")) {
-                List<String> reasonTypes = filters.get("reason_type");
-                predicates.add(root.get("reasonType").in(reasonTypes));
+            if (filters.containsKey("withdrawal_reason_id")) {
+                List<Long> withdrawalReasonIds = filters.get("withdrawal_reason_id").stream().map(Long::parseLong).toList();
+                predicates.add(root.get("withdrawalReason").get("id").in(withdrawalReasonIds));
             }
 
             if (filters.containsKey("withdrawal_date_from")) {

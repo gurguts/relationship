@@ -9,6 +9,7 @@ import org.example.purchaseservice.mappers.WarehouseWithdrawalMapper;
 import org.example.purchaseservice.models.PageResponse;
 import org.example.purchaseservice.models.dto.warehouse.WarehouseWithdrawalDTO;
 import org.example.purchaseservice.models.warehouse.WarehouseWithdrawal;
+import org.example.purchaseservice.models.warehouse.WithdrawalReason;
 import org.example.purchaseservice.models.dto.warehouse.WarehouseWithdrawalUpdateDTO;
 import org.example.purchaseservice.models.dto.warehouse.WithdrawalDTO;
 import org.example.purchaseservice.models.dto.warehouse.WithdrawalCreateDTO;
@@ -86,5 +87,24 @@ public class WarehouseWithdrawalController {
                 warehouseWithdrawService.getWithdrawals(page, size, sort, direction, filterMap);
 
         return ResponseEntity.ok(result);
+    }
+
+    @PreAuthorize("hasAuthority('warehouse:view')")
+    @GetMapping("/withdrawal-reasons")
+    public ResponseEntity<List<WithdrawalReason>> getAllWithdrawalReasons() {
+        List<WithdrawalReason> reasons = warehouseWithdrawService.getAllWithdrawalReasons();
+        return ResponseEntity.ok(reasons);
+    }
+
+    @PreAuthorize("hasAuthority('warehouse:view')")
+    @GetMapping("/withdrawal-reasons/purpose/{purpose}")
+    public ResponseEntity<List<WithdrawalReason>> getWithdrawalReasonsByPurpose(@PathVariable String purpose) {
+        try {
+            WithdrawalReason.Purpose purposeEnum = WithdrawalReason.Purpose.valueOf(purpose.toUpperCase());
+            List<WithdrawalReason> reasons = warehouseWithdrawService.getWithdrawalReasonsByPurpose(purposeEnum);
+            return ResponseEntity.ok(reasons);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        }
     }
 }

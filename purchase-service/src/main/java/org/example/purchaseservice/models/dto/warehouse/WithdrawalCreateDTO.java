@@ -8,7 +8,7 @@ import java.time.LocalDate;
 public class WithdrawalCreateDTO {
     private Long productId;
     private Long warehouseId;
-    private String reasonType;
+    private Long withdrawalReasonId;
     private Double quantity;
     private String description;
     private LocalDate withdrawalDate;

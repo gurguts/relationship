@@ -50,6 +50,11 @@ public class PurchaseSpecification implements Specification<Purchase> {
                             String.format("%%%s%%", this.query.toLowerCase()))
             );
 
+            searchPredicates.add(
+                    criteriaBuilder.like(criteriaBuilder.lower(root.get("comment")),
+                            String.format("%%%s%%", this.query.toLowerCase()))
+            );
+
             if (sourceIds != null && !sourceIds.isEmpty()) {
                 searchPredicates.add(root.get("source").in(sourceIds));
             }

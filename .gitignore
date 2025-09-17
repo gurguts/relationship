@@ -41,3 +41,4 @@ build/
 /deploy.sh
 /start-services.sh
 /stop-services.sh
+/start-services.ps1

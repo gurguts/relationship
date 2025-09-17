@@ -35,4 +35,6 @@ public class PurchaseDTO {
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;
+
+    private String comment;
 }

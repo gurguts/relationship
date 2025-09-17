@@ -60,11 +60,8 @@
             <li id="nav-balance"><a href="/balance">
                 Баланс грошовий
             </a></li>
-            <li id="nav-warehouse"><a href="/warehouse">
-                Склад
-            </a></li>
             <li id="nav-stock"><a href="/stock">
-                Баланс складу
+                Склад
             </a></li>
             <li id="nav-analytics"><a href="/analytics">
                 Аналітика
@@ -92,6 +89,7 @@
     <button id="showRegionsBtn">Області</button>
     <button id="showContainersBtn">Тара</button>
     <button id="showStoragesBtn">Склади</button>
+    <button id="showWithdrawalReasonsBtn">Причини списання</button>
     <button id="showStatusesBtn">Статуси клієнтів</button>
     <button id="show-products">Продукты</button>
     <button id="show-client-products">Продукты клиентов</button>
@@ -306,6 +304,30 @@
         <input type="text" id="newStorageDescription">
     </div>
     <button id="createStorageBtn">Створити cклад</button>
+</div>
+
+<!--WithdrawalReason-->
+
+<div id="withdrawalReasonListContainer" style="display: none;">
+    <h3>Список причин списання</h3>
+    <ul id="withdrawalReasonList"></ul>
+</div>
+
+<div id="addWithdrawalReasonContainer" style="display: none;">
+    <h3>Створити нову причину списання</h3>
+    <div class="form-field">
+        <label for="newWithdrawalReasonName">Назва:</label>
+        <input type="text" id="newWithdrawalReasonName" required>
+    </div>
+    <div class="form-field">
+        <label for="newWithdrawalReasonPurpose">Призначення:</label>
+        <select id="newWithdrawalReasonPurpose" required>
+            <option value="ADDING">Пополнення</option>
+            <option value="REMOVING">Сняття</option>
+            <option value="BOTH">Загальний</option>
+        </select>
+    </div>
+    <button id="createWithdrawalReasonBtn">Створити причину списання</button>
 </div>
 
 

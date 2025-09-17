@@ -104,6 +104,7 @@
             <th>Дата</th>
             <th>Водій</th>
             <th>Товар</th>
+            <th>Тип</th>
             <th>Привезено</th>
             <th>Закуплено</th>
             <th>Різниця</th>
@@ -146,6 +147,10 @@
                                 <label for="warehouse-id-filter">Склад:</label>
                                 <select id="warehouse-id-filter" name="warehouse_id" multiple></select>
                             </div>
+                            <div class="select-section-item">
+                                <label for="type-filter">Тип:</label>
+                                <select id="type-filter" name="type" multiple></select>
+                            </div>
                         </div>
                     </div>
                     <div class="filter-actions">
@@ -166,8 +171,6 @@
                         <label for="warehouse-id">Склад:</label>
                         <select id="warehouse-id" name="warehouse_id" required></select>
                     </div>
-<!--                    <label for="warehouse-id">Склад:</label>
-                    <select id="warehouse-id" required></select>-->
 
                     <div class="entry-item">
                         <label for="entry-date">Дата:</label>
@@ -184,6 +187,10 @@
                     <div class="entry-item">
                         <label for="quantity">Кількість:</label>
                         <input type="number" id="quantity" name="quantity" step="0.01" min="0" required>
+                    </div>
+                    <div class="entry-item">
+                        <label for="type-id">Тип:</label>
+                        <select id="type-id" name="type_id" required></select>
                     </div>
                     <button type="submit" class="apply-btn">Додати</button>
                 </div>

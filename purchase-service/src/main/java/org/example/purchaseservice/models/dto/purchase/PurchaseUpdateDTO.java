@@ -26,4 +26,6 @@ public class PurchaseUpdateDTO {
     private BigDecimal exchangeRate;
 
     private String createdAt;
+
+    private String comment;
 }

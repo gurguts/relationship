@@ -3,8 +3,8 @@ package org.example.purchaseservice.services.impl;
 import org.example.purchaseservice.models.PageResponse;
 import org.example.purchaseservice.models.warehouse.WarehouseEntry;
 import org.example.purchaseservice.models.dto.warehouse.WarehouseEntryDTO;
+import org.example.purchaseservice.models.dto.warehouse.UpdateWarehouseEntryDTO;
 
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
@@ -13,7 +13,7 @@ public interface IWarehouseEntryService {
 
     WarehouseEntry createWarehouseEntry(WarehouseEntry dto);
 
-    void updateWarehouseEntry(Long warehouseId, BigDecimal quantity);
+    void updateWarehouseEntry(Long warehouseId, UpdateWarehouseEntryDTO updateDTO);
 
     Map<Long, Map<Long, Double>> getWarehouseBalance();
 
