@@ -40,7 +40,18 @@ public class PurchaseSearchService implements IPurchaseSearchService {
         List<Long> clientIds = clientData.clientIds();
         Map<Long, ClientDTO> clientMap = clientData.clientMap();
 
-        List<Long> sourceIds = (query == null || query.trim().isEmpty()) ? null : fetchSourceIds(query);
+        Map<String, List<String>> clientFilterParams = filterParams.entrySet().stream()
+                .filter(entry -> {
+                    String key = entry.getKey();
+                    return key.equals("status") || key.equals("business") ||
+                            key.equals("route") || key.equals("region") || key.equals("clientProduct");
+                })
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+
+        List<Long> sourceIds = null;
+        if (query != null && !query.trim().isEmpty() && clientFilterParams.isEmpty()) {
+            sourceIds = fetchSourceIds(query);
+        }
 
         Page<Purchase> purchasePage = fetchPurchases(query, filterParams, clientIds, sourceIds, pageable);
 
@@ -61,23 +72,30 @@ public class PurchaseSearchService implements IPurchaseSearchService {
                 })
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
+        ClientSearchRequest clientRequest = new ClientSearchRequest(query, filteredParams);
+        List<ClientDTO> foundClients = clientApiClient.searchClients(clientRequest);
+
+        ClientSearchRequest allClientsRequest = new ClientSearchRequest(null, Collections.emptyMap());
+        List<ClientDTO> allClients = clientApiClient.searchClients(allClientsRequest);
+        Map<Long, ClientDTO> clientMap = allClients.stream()
+                .collect(Collectors.toMap(ClientDTO::getId, client -> client));
+
         if (!filteredParams.isEmpty()) {
-            ClientSearchRequest clientRequest = new ClientSearchRequest(query, filteredParams);
-            List<ClientDTO> clients = clientApiClient.searchClients(clientRequest);
-            List<Long> clientIds = clients.stream()
+            List<Long> clientIds = foundClients.stream()
                     .map(ClientDTO::getId)
                     .collect(Collectors.toList());
-            Map<Long, ClientDTO> clientMap = clients.stream()
-                    .collect(Collectors.toMap(ClientDTO::getId, client -> client));
-
+            
             return new ClientData(clientIds, clientMap);
         } else {
-            ClientSearchRequest clientRequest = new ClientSearchRequest(null, Collections.emptyMap());
-            List<ClientDTO> clients = clientApiClient.searchClients(clientRequest);
-            Map<Long, ClientDTO> clientMap = clients.stream()
-                    .collect(Collectors.toMap(ClientDTO::getId, client -> client));
-
-            return new ClientData(null, clientMap);
+            if (query != null && !query.trim().isEmpty()) {
+                List<Long> clientIds = foundClients.stream()
+                        .map(ClientDTO::getId)
+                        .collect(Collectors.toList());
+                
+                return new ClientData(clientIds, clientMap);
+            } else {
+                return new ClientData(null, clientMap);
+            }
         }
     }
 

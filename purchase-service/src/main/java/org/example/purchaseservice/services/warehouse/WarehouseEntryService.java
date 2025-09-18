@@ -12,7 +12,6 @@ import org.example.purchaseservice.models.warehouse.WithdrawalReason;
 import org.example.purchaseservice.models.dto.warehouse.*;
 import org.example.purchaseservice.repositories.WarehouseEntryRepository;
 import org.example.purchaseservice.repositories.WarehouseWithdrawalRepository;
-import org.example.purchaseservice.repositories.WithdrawalReasonRepository;
 import org.example.purchaseservice.services.impl.IPurchaseSearchService;
 import org.example.purchaseservice.services.impl.IWarehouseEntryService;
 import org.example.purchaseservice.spec.WarehouseEntrySpecification;
@@ -39,7 +38,6 @@ public class WarehouseEntryService implements IWarehouseEntryService {
     private final WarehouseEntryRepository warehouseEntryRepository;
     private final IPurchaseSearchService purchaseSearchService;
     private final WarehouseWithdrawalRepository warehouseWithdrawalRepository;
-    private final WithdrawalReasonRepository withdrawalReasonRepository;
 
     @Override
     public PageResponse<WarehouseEntryDTO> getWarehouseEntries(int page, int size, String sort,
@@ -59,9 +57,51 @@ public class WarehouseEntryService implements IWarehouseEntryService {
 
         Map<String, BigDecimal> purchaseQuantityMap = aggregatePurchaseQuantities(purchases);
 
-        Map<String, WarehouseEntryDTO> dtoMap = buildDtoMap(purchases, purchaseQuantityMap);
+        Map<String, WarehouseEntryDTO> dtoMap = new HashMap<>();
 
-        enrichDtoMapWithEntries(warehouseEntryPage.getContent(), purchaseQuantityMap, dtoMap);
+        for (WarehouseEntry entry : warehouseEntryPage.getContent()) {
+
+            String key;
+            if (entry.getType().getPurpose() == WithdrawalReason.Purpose.BOTH) {
+                key = entry.getUserId() + "-" + entry.getProductId() + "-" + entry.getEntryDate() + "-" + entry.getType().getId();
+            } else {
+                key = entry.getUserId() + "-" + entry.getProductId() + "-" + entry.getEntryDate() + "-" + entry.getType().getPurpose();
+            }
+            
+            WarehouseEntryDTO dto = new WarehouseEntryDTO();
+            dto.setId(entry.getId());
+            dto.setUserId(entry.getUserId());
+            dto.setProductId(entry.getProductId());
+            dto.setWarehouseId(entry.getWarehouseId());
+            dto.setQuantity(entry.getQuantity());
+            dto.setEntryDate(entry.getEntryDate());
+            dto.setType(entry.getType());
+
+            if (entry.getType().getPurpose() == WithdrawalReason.Purpose.ADDING) {
+                String purchaseKey = entry.getUserId() + "-" + entry.getProductId() + "-" + entry.getEntryDate() + "-ADDING";
+                dto.setPurchasedQuantity(purchaseQuantityMap.getOrDefault(purchaseKey, BigDecimal.ZERO));
+            } else {
+                dto.setPurchasedQuantity(BigDecimal.ZERO);
+            }
+            
+            dtoMap.put(key, dto);
+        }
+
+        for (Purchase purchase : purchases) {
+            String purchaseKey = purchase.getUser() + "-" + purchase.getProduct() + "-" + purchase.getCreatedAt().toLocalDate() + "-ADDING";
+            String entryKey = purchase.getUser() + "-" + purchase.getProduct() + "-" + purchase.getCreatedAt().toLocalDate() + "-ADDING";
+            
+            if (!dtoMap.containsKey(entryKey)) {
+                WarehouseEntryDTO dto = new WarehouseEntryDTO();
+                dto.setId(null);
+                dto.setUserId(purchase.getUser());
+                dto.setProductId(purchase.getProduct());
+                dto.setQuantity(BigDecimal.ZERO);
+                dto.setEntryDate(purchase.getCreatedAt().toLocalDate());
+                dto.setPurchasedQuantity(purchaseQuantityMap.getOrDefault(purchaseKey, BigDecimal.ZERO));
+                dtoMap.put(entryKey, dto);
+            }
+        }
 
         enrichDtoMapWithAllEntries(spec, dtoMap);
 
@@ -112,7 +152,7 @@ public class WarehouseEntryService implements IWarehouseEntryService {
         return purchases.stream()
                 .collect(Collectors.groupingBy(
                         purchase -> purchase.getUser() + "-" + purchase.getProduct() + "-"
-                                + purchase.getCreatedAt().toLocalDate(),
+                                + purchase.getCreatedAt().toLocalDate() + "-ADDING",
                         Collectors.reducing(
                                 BigDecimal.ZERO,
                                 Purchase::getQuantity,
@@ -121,51 +161,20 @@ public class WarehouseEntryService implements IWarehouseEntryService {
                 ));
     }
 
-    private Map<String, WarehouseEntryDTO> buildDtoMap(
-            List<Purchase> purchases, Map<String, BigDecimal> purchaseQuantityMap) {
-        Map<String, WarehouseEntryDTO> dtoMap = new HashMap<>();
-        for (Purchase purchase : purchases) {
-            String key = purchase.getUser() + "-" + purchase.getProduct() + "-" + purchase.getCreatedAt().toLocalDate();
-            if (!dtoMap.containsKey(key)) {
-                WarehouseEntryDTO dto = new WarehouseEntryDTO();
-                dto.setId(null);
-                dto.setUserId(purchase.getUser());
-                dto.setProductId(purchase.getProduct());
-                dto.setQuantity(BigDecimal.ZERO);
-                dto.setEntryDate(purchase.getCreatedAt().toLocalDate());
-                dto.setPurchasedQuantity(purchaseQuantityMap.getOrDefault(key, BigDecimal.ZERO));
-                dtoMap.put(key, dto);
-            }
-        }
-        return dtoMap;
-    }
-
-    private void enrichDtoMapWithEntries(List<WarehouseEntry> entries, Map<String, BigDecimal> purchaseQuantityMap,
-                                         Map<String, WarehouseEntryDTO> dtoMap) {
-        for (WarehouseEntry entry : entries) {
-            String key = entry.getId().toString();
-            WarehouseEntryDTO dto = new WarehouseEntryDTO();
-            dto.setId(entry.getId());
-            dto.setUserId(entry.getUserId());
-            dto.setProductId(entry.getProductId());
-            dto.setWarehouseId(entry.getWarehouseId());
-            dto.setQuantity(entry.getQuantity());
-            dto.setEntryDate(entry.getEntryDate());
-            dto.setType(entry.getType());
-
-            String purchaseKey = entry.getUserId() + "-" + entry.getProductId() + "-" + entry.getEntryDate();
-            dto.setPurchasedQuantity(purchaseQuantityMap.getOrDefault(purchaseKey, BigDecimal.ZERO));
-            
-            dtoMap.put(key, dto);
-        }
-    }
 
     private void enrichDtoMapWithAllEntries(WarehouseEntrySpecification spec,
                                             Map<String, WarehouseEntryDTO> dtoMap) {
         PageRequest allEntriesRequest = PageRequest.of(0, Integer.MAX_VALUE);
         Page<WarehouseEntry> allWarehouseEntries = warehouseEntryRepository.findAll(spec, allEntriesRequest);
         for (WarehouseEntry entry : allWarehouseEntries.getContent()) {
-            String key = entry.getId().toString();
+            // Для записей с Purpose=BOTH используем ID WithdrawalReason в ключе
+            String key;
+            if (entry.getType().getPurpose() == WithdrawalReason.Purpose.BOTH) {
+                key = entry.getUserId() + "-" + entry.getProductId() + "-" + entry.getEntryDate() + "-" + entry.getType().getId();
+            } else {
+                key = entry.getUserId() + "-" + entry.getProductId() + "-" + entry.getEntryDate() + "-" + entry.getType().getPurpose();
+            }
+            
             if (!dtoMap.containsKey(key)) {
                 WarehouseEntryDTO dto = new WarehouseEntryDTO();
                 dto.setId(entry.getId());
@@ -210,11 +219,19 @@ public class WarehouseEntryService implements IWarehouseEntryService {
     @Transactional
     public WarehouseEntry createWarehouseEntry(WarehouseEntry warehouseEntry) {
         Optional<WarehouseEntry> existingEntry = warehouseEntryRepository
-                .findByUserIdAndProductIdAndEntryDate(
+                .findByUserIdAndProductIdAndEntryDateAndType(
                         warehouseEntry.getUserId(),
                         warehouseEntry.getProductId(),
-                        warehouseEntry.getEntryDate()
+                        warehouseEntry.getEntryDate(),
+                        warehouseEntry.getType()
                 );
+
+        if (existingEntry.isPresent()) {
+            // Объединяем количество вместо выброса ошибки
+            WarehouseEntry entry = existingEntry.get();
+            entry.setQuantity(entry.getQuantity().add(warehouseEntry.getQuantity()));
+            return warehouseEntryRepository.save(entry);
+        }
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         Long executorUserId = (Long) authentication.getDetails();
@@ -225,11 +242,11 @@ public class WarehouseEntryService implements IWarehouseEntryService {
 
     @Override
     @Transactional
-    public void updateWarehouseEntry(Long warehouseEntryId, UpdateWarehouseEntryDTO updateDTO) {
+    public void updateWarehouseEntry(Long warehouseEntryId, BigDecimal newQuantity) {
         if (warehouseEntryId == null) {
             throw new WarehouseException("Warehouse ID cannot be null");
         }
-        if (updateDTO.quantity() == null) {
+        if (newQuantity == null) {
             throw new WarehouseException("New quantity cannot be null");
         }
 
@@ -237,15 +254,10 @@ public class WarehouseEntryService implements IWarehouseEntryService {
                 .orElseThrow(() -> new WarehouseNotFoundException(
                         String.format("Warehouse entry with ID %d not found", warehouseEntryId)));
 
-        if (updateDTO.quantity().compareTo(BigDecimal.ZERO) == 0) {
+        if (newQuantity.compareTo(BigDecimal.ZERO) == 0) {
             warehouseEntryRepository.delete(entry);
         } else {
-            entry.setQuantity(updateDTO.quantity());
-            if (updateDTO.typeId() != null) {
-                WithdrawalReason type = withdrawalReasonRepository.findById(updateDTO.typeId())
-                    .orElseThrow(() -> new WarehouseException("Withdrawal reason not found"));
-                entry.setType(type);
-            }
+            entry.setQuantity(newQuantity);
             warehouseEntryRepository.save(entry);
         }
     }

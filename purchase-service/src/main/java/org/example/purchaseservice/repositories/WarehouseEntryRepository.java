@@ -1,6 +1,7 @@
 package org.example.purchaseservice.repositories;
 
 import org.example.purchaseservice.models.warehouse.WarehouseEntry;
+import org.example.purchaseservice.models.warehouse.WithdrawalReason;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -16,4 +17,6 @@ public interface WarehouseEntryRepository extends JpaRepository<WarehouseEntry, 
     List<WarehouseEntry> findAll(Specification<WarehouseEntry> specification);
 
     Optional<WarehouseEntry> findByUserIdAndProductIdAndEntryDate(Long userId, Long productId, LocalDate entryDate);
+    
+    Optional<WarehouseEntry> findByUserIdAndProductIdAndEntryDateAndType(Long userId, Long productId, LocalDate entryDate, WithdrawalReason type);
 }

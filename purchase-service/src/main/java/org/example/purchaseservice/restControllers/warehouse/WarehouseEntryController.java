@@ -15,6 +15,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import java.math.BigDecimal;
 import java.net.URI;
 import java.util.Collections;
 import java.util.List;
@@ -66,8 +67,9 @@ public class WarehouseEntryController {
     @PreAuthorize("hasAuthority('warehouse:edit')")
     @PatchMapping("/entries/{warehouseId}")
     public ResponseEntity<Void> updateWarehouseEntry(@PathVariable Long warehouseId,
-                                                     @RequestBody UpdateWarehouseEntryDTO dto) {
-        warehouseEntryService.updateWarehouseEntry(warehouseId, dto);
+                                                     @RequestBody Map<String, BigDecimal> request) {
+        BigDecimal newQuantity = request.get("quantity");
+        warehouseEntryService.updateWarehouseEntry(warehouseId, newQuantity);
         return ResponseEntity.noContent().build();
     }
 

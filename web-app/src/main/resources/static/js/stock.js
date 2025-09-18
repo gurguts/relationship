@@ -448,8 +448,7 @@ async function loadWarehouseEntries(page) {
                 </tr>`;
         }
         container.innerHTML = html;
-        
-        // Добавляем обработчики клика на строки таблицы надходжень
+
         const rows = container.querySelectorAll('tr[data-id]');
         rows.forEach(row => {
             row.addEventListener('click', () => {
@@ -1066,7 +1065,6 @@ function closeModal(modalId) {
     }
 }
 
-// Функции для редактирования надходжень
 function openEditEntryModal(entry) {
     if (entry.id == null) {
         handleError(new Error('Дані надходження не були вказані'));
@@ -1079,24 +1077,16 @@ function openEditEntryModal(entry) {
     document.body.classList.add('modal-open');
 }
 
-// Обработчик формы редактирования надходжень
 document.getElementById('edit-entry-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const id = document.getElementById('edit-entry-id').value;
     const newQuantity = document.getElementById('edit-entry-quantity').value;
 
     try {
-        // Находим WithdrawalReason с purpose = ADDING
-        const addingReason = withdrawalReasons.find(reason => reason.purpose === 'ADDING');
-        if (!addingReason) {
-            handleError(new Error('Не знайдена причина з типом ADDING'));
-            return;
-        }
-
         const response = await fetch(`/api/v1/warehouse/entries/${id}`, {
             method: 'PATCH',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({quantity: Number(newQuantity), typeId: addingReason.id})
+            body: JSON.stringify({quantity: Number(newQuantity)})
         });
 
         if (!response.ok) {
