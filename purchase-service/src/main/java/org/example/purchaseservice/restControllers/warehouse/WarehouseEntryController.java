@@ -17,6 +17,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.math.BigDecimal;
 import java.net.URI;
+import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -75,9 +76,12 @@ public class WarehouseEntryController {
 
     @PreAuthorize("hasAuthority('warehouse:view')")
     @GetMapping("/balance")
-    public ResponseEntity<BalanceWarehouseDTO> getBalance() {
+    public ResponseEntity<BalanceWarehouseDTO> getBalance(
+            @RequestParam(required = false) String balanceDate) {
 
-        Map<Long, Map<Long, Double>> balanceByWarehouseAndProduct = warehouseEntryService.getWarehouseBalance();
+        LocalDate date = balanceDate != null ? LocalDate.parse(balanceDate) : LocalDate.now();
+
+        Map<Long, Map<Long, Double>> balanceByWarehouseAndProduct = warehouseEntryService.getWarehouseBalance(date);
 
         BalanceWarehouseDTO balanceWarehouseDTO = BalanceWarehouseDTO.builder()
                 .balanceByWarehouseAndProduct(balanceByWarehouseAndProduct)

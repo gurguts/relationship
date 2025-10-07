@@ -98,15 +98,15 @@ async function fetchWithdrawalReasons() {
         withdrawalReasons = await response.json();
 
         withdrawalReasonMap = new Map(withdrawalReasons.map(reason => [reason.id, reason]));
-        
-        const filterReasons = withdrawalReasons.filter(reason => 
+
+        const filterReasons = withdrawalReasons.filter(reason =>
             reason.purpose === 'REMOVING' || reason.purpose === 'BOTH'
         );
 
         populateSelect('withdrawal-reason-id-filter', filterReasons);
-        
+
         populateSelect('edit-withdrawal-reason-id', filterReasons);
-        
+
         return withdrawalReasons;
     } catch (error) {
         console.error('Error fetching withdrawal reasons:', error);
@@ -265,7 +265,7 @@ function updateEntriesFilterCounter() {
     } else {
         counterElement.style.display = 'none';
     }
-    
+
     if (entriesContainer.style.display === 'block') {
         filterButton.style.display = 'inline-block';
         exportButton.style.display = 'inline-block';
@@ -290,7 +290,12 @@ function clearEntriesFilters() {
 
 async function loadBalance() {
     try {
-        const response = await fetch('/api/v1/warehouse/balance');
+        const balanceDate = document.getElementById('balance-date').value;
+        const url = balanceDate
+            ? `/api/v1/warehouse/balance?balanceDate=${balanceDate}`
+            : '/api/v1/warehouse/balance';
+
+        const response = await fetch(url);
         if (!response.ok) {
             handleError(new Error('Failed to load balance'));
             return;
@@ -358,7 +363,7 @@ function populateWarehouses(selectId) {
 
 async function loadWithdrawalHistory(page) {
     const activeFilters = Object.keys(historyFilters).length > 0 ? historyFilters : filters;
-    
+
     Object.keys(activeFilters).forEach(key => {
         if (Array.isArray(activeFilters[key]) && activeFilters[key].length === 0) {
             delete activeFilters[key];
@@ -405,7 +410,7 @@ async function loadWithdrawalHistory(page) {
 
 async function loadWarehouseEntries(page) {
     const activeFilters = Object.keys(entriesFilters).length > 0 ? entriesFilters : filters;
-    
+
     Object.keys(activeFilters).forEach(key => {
         if (Array.isArray(activeFilters[key]) && activeFilters[key].length === 0) {
             delete activeFilters[key];
@@ -459,7 +464,7 @@ async function loadWarehouseEntries(page) {
                 }
             });
         });
-        
+
         updateEntriesPagination(data.totalPages, page);
     } catch (error) {
         console.error('Error loading entries:', error);
@@ -521,7 +526,7 @@ document.getElementById('move-form').addEventListener('submit',
     async (e) => {
         e.preventDefault();
         const formData = new FormData(e.target);
-        
+
         const withdrawal = {
             warehouseId: Number(formData.get('warehouse_id')),
             productId: Number(formData.get('from_product_id')),
@@ -530,7 +535,7 @@ document.getElementById('move-form').addEventListener('submit',
             description: `${formData.get('description') || 'Без опису'}`,
             withdrawalDate: formData.get('move_date')
         };
-        
+
         const entry = {
             warehouseId: Number(formData.get('warehouse_id')),
             productId: Number(formData.get('to_product_id')),
@@ -539,32 +544,32 @@ document.getElementById('move-form').addEventListener('submit',
             typeId: Number(formData.get('type_id')),
             userId: Number(formData.get('executor_id'))
         };
-        
+
         try {
             const withdrawalResponse = await fetch('/api/v1/warehouse/withdraw', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify(withdrawal)
             });
-            
+
             if (!withdrawalResponse.ok) {
                 const errorData = await withdrawalResponse.json();
                 handleError(new Error(errorData.message || 'Failed to create withdrawal'));
                 return;
             }
-            
+
             const entryResponse = await fetch('/api/v1/warehouse/entries', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify(entry)
             });
-            
+
             if (!entryResponse.ok) {
                 const errorData = await entryResponse.json();
                 handleError(new Error(errorData.message || 'Failed to create entry'));
                 return;
             }
-            
+
             showMessage('Переміщення успішно виконано', 'info');
             closeModal('move-modal');
             loadBalance();
@@ -581,7 +586,7 @@ document.getElementById('entry-form').addEventListener('submit',
     async (e) => {
         e.preventDefault();
         const formData = new FormData(e.target);
-        
+
         const entry = {
             warehouseId: Number(formData.get('warehouse_id')),
             productId: Number(formData.get('product_id')),
@@ -590,20 +595,20 @@ document.getElementById('entry-form').addEventListener('submit',
             typeId: Number(formData.get('type_id')),
             userId: Number(formData.get('user_id'))
         };
-        
+
         try {
             const response = await fetch('/api/v1/warehouse/entries', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify(entry)
             });
-            
+
             if (!response.ok) {
                 const errorData = await response.json();
                 handleError(new Error(errorData.message || 'Failed to create entry'));
                 return;
             }
-            
+
             showMessage('Надходження успішно створено', 'info');
             closeModal('entry-modal');
             loadBalance();
@@ -1179,12 +1184,12 @@ const applyEntriesFiltersBtn = document.getElementById('apply-entries-filters');
 if (applyEntriesFiltersBtn) {
     applyEntriesFiltersBtn.addEventListener('click', () => {
         console.log('Apply entries filters button clicked');
-    updateEntriesSelectedFilters();
-    loadWarehouseEntries(0);
-    document.getElementById('entries-filter-modal').classList.remove('open');
+        updateEntriesSelectedFilters();
+        loadWarehouseEntries(0);
+        document.getElementById('entries-filter-modal').classList.remove('open');
         document.body.classList.remove('modal-open');
-    updateEntriesFilterCounter();
-});
+        updateEntriesFilterCounter();
+    });
 } else {
     console.error('Apply entries filters button not found!');
 }
@@ -1215,7 +1220,7 @@ async function initializeHistoryFilters() {
     }
 
     setDefaultHistoryDates();
-    
+
     updateHistorySelectedFilters();
 }
 
@@ -1230,7 +1235,7 @@ async function initializeCustomSelects() {
     try {
         await fetchProducts();
         await fetchWithdrawalReasons();
-        
+
         const warehouseArray = Array.from(warehouseMap, ([id, name]) => ({id, name}));
         populateSelect('warehouse-id-filter', warehouseArray);
         updateSelectedFilters();
@@ -1248,12 +1253,12 @@ async function initializeEntriesFilters() {
             entriesCustomSelects[select.id] = createCustomSelect(select);
         }
     });
-    
+
     const userArray = Array.from(userMap.entries()).map(([id, name]) => ({id, name}));
     const productArray = Array.from(productMap.entries()).map(([id, name]) => ({id, name}));
     const warehouseArray = Array.from(warehouseMap.entries()).map(([id, name]) => ({id, name}));
     const entryTypes = getWithdrawalReasonsByPurpose('ADDING');
-    
+
     if (entriesCustomSelects['entries-user-id-filter']) {
         entriesCustomSelects['entries-user-id-filter'].populate(userArray);
     }
@@ -1266,9 +1271,14 @@ async function initializeEntriesFilters() {
     if (entriesCustomSelects['entries-type-filter']) {
         entriesCustomSelects['entries-type-filter'].populate(entryTypes);
     }
-    
+
     setDefaultEntriesDates();
     updateEntriesSelectedFilters();
+}
+
+function setDefaultBalanceDate() {
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('balance-date').value = today;
 }
 
 async function initialize() {
@@ -1276,10 +1286,17 @@ async function initialize() {
     await fetchWarehouses();
     await fetchUsers();
     await fetchWithdrawalReasons();
-    
+
     await initializeHistoryFilters();
     await initializeEntriesFilters();
-    
+
+    setDefaultBalanceDate();
+
+    // Добавляем обработчик изменения даты баланса
+    document.getElementById('balance-date').addEventListener('change', () => {
+        loadBalance();
+    });
+
     loadBalance();
 }
 
