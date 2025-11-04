@@ -57,7 +57,7 @@ public class ClientSpecialOperationsService implements IClientSpecialOperationsS
 
         Sort sort = createSort(sortDirection, sortProperty);
         List<Long> excludeStatusIds = parseExcludedStatuses(excludedStatuses);
-        FilterIds filterIds = fetchFilterIds();
+        FilterIds filterIds = (query != null && !query.trim().isEmpty()) ? fetchFilterIds(query) : fetchFilterIds();
 
         List<Client> clientList = fetchClients(query, filterParams, filterIds, excludeStatusIds, sort);
 
@@ -115,6 +115,29 @@ public class ClientSpecialOperationsService implements IClientSpecialOperationsS
             throw new ClientException("INVALID_STATUSES", String.format("Incorrect status format for exclusion: %s",
                     excludedStatuses));
         }
+    }
+
+    private FilterIds fetchFilterIds(String query) {
+        List<Business> businessDTOs = businessService.findByNameContaining(query);
+        List<Long> businessIds = businessDTOs.stream().map(Business::getId).toList();
+
+        List<Region> regionDTOs = regionService.findByNameContaining(query);
+        List<Long> regionIds = regionDTOs.stream().map(Region::getId).toList();
+
+        List<Route> routeDTOs = routeService.findByNameContaining(query);
+        List<Long> routeIds = routeDTOs.stream().map(Route::getId).toList();
+
+        List<Source> sourceDTOs = sourceService.findByNameContaining(query);
+        List<Long> sourceIds = sourceDTOs.stream().map(Source::getId).toList();
+
+        List<StatusClient> statusDTOs = statusClientService.findByNameContaining(query);
+        List<Long> statusIds = statusDTOs.stream().map(StatusClient::getId).toList();
+
+        List<ClientProduct> clientProductDTOs = clientProductService.findByNameContaining(query);
+        List<Long> clientProductIds = clientProductDTOs.stream().map(ClientProduct::getId).toList();
+
+        return new FilterIds(businessDTOs, businessIds, regionDTOs, regionIds, routeDTOs, routeIds,
+                sourceDTOs, sourceIds, statusDTOs, statusIds, clientProductDTOs, clientProductIds);
     }
 
     private FilterIds fetchFilterIds() {

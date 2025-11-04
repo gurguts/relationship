@@ -28,6 +28,39 @@
         #entries-filter-count {
             font-size: 1.5em;
         }
+        
+        .balance-date-selector {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #f5f5f5;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .balance-date-selector label {
+            font-weight: bold;
+            font-size: 16px;
+        }
+        
+        .balance-date-selector input[type="date"] {
+            padding: 8px 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        
+        .balance-date-selector input[type="date"]:hover {
+            border-color: #1976D2;
+        }
+        
+        .balance-date-selector input[type="date"]:focus {
+            outline: none;
+            border-color: #1976D2;
+            box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.1);
+        }
     </style>
     <link rel="stylesheet" href="/css/common.css">
 
@@ -97,6 +130,10 @@
 <h1>Баланс Складу</h1>
 
 <div class="container">
+    <div class="balance-date-selector">
+        <label for="balance-date">Баланс на:</label>
+        <input type="date" id="balance-date" value="">
+    </div>
     <div id="balance-container"></div>
     <div class="modal-buttons">
         <div class="button-row">

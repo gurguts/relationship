@@ -67,7 +67,7 @@ public class WarehouseEntryService implements IWarehouseEntryService {
             } else {
                 key = entry.getUserId() + "-" + entry.getProductId() + "-" + entry.getEntryDate() + "-" + entry.getType().getPurpose();
             }
-            
+
             WarehouseEntryDTO dto = new WarehouseEntryDTO();
             dto.setId(entry.getId());
             dto.setUserId(entry.getUserId());
@@ -83,14 +83,14 @@ public class WarehouseEntryService implements IWarehouseEntryService {
             } else {
                 dto.setPurchasedQuantity(BigDecimal.ZERO);
             }
-            
+
             dtoMap.put(key, dto);
         }
 
         for (Purchase purchase : purchases) {
             String purchaseKey = purchase.getUser() + "-" + purchase.getProduct() + "-" + purchase.getCreatedAt().toLocalDate() + "-ADDING";
             String entryKey = purchase.getUser() + "-" + purchase.getProduct() + "-" + purchase.getCreatedAt().toLocalDate() + "-ADDING";
-            
+
             if (!dtoMap.containsKey(entryKey)) {
                 WarehouseEntryDTO dto = new WarehouseEntryDTO();
                 dto.setId(null);
@@ -174,7 +174,7 @@ public class WarehouseEntryService implements IWarehouseEntryService {
             } else {
                 key = entry.getUserId() + "-" + entry.getProductId() + "-" + entry.getEntryDate() + "-" + entry.getType().getPurpose();
             }
-            
+
             if (!dtoMap.containsKey(key)) {
                 WarehouseEntryDTO dto = new WarehouseEntryDTO();
                 dto.setId(entry.getId());
@@ -271,11 +271,11 @@ public class WarehouseEntryService implements IWarehouseEntryService {
 
 
     @Override
-    public Map<Long, Map<Long, Double>> getWarehouseBalance() {
+    public Map<Long, Map<Long, Double>> getWarehouseBalance(LocalDate balanceDate) {
         try {
 
-            Map<Long, Map<Long, BigDecimal>> totalWarehouseEntry = calculateTotalEntries();
-            Map<Long, Map<Long, BigDecimal>> totalWithdrawals = calculateTotalWithdrawals();
+            Map<Long, Map<Long, BigDecimal>> totalWarehouseEntry = calculateTotalEntries(balanceDate);
+            Map<Long, Map<Long, BigDecimal>> totalWithdrawals = calculateTotalWithdrawals(balanceDate);
             return Collections.unmodifiableMap(calculateBalance(totalWarehouseEntry, totalWithdrawals));
 
         } catch (Exception e) {
@@ -315,18 +315,20 @@ public class WarehouseEntryService implements IWarehouseEntryService {
         return true;
     }
 
-    private Map<Long, Map<Long, BigDecimal>> calculateTotalEntries() {
+    private Map<Long, Map<Long, BigDecimal>> calculateTotalEntries(LocalDate balanceDate) {
+        List<WarehouseEntry> entries = warehouseEntryRepository.findAllByEntryDateLessThanEqual(balanceDate);
         return calculateTotals(
-                warehouseEntryRepository.findAll(),
+                entries,
                 WarehouseEntry::getWarehouseId,
                 WarehouseEntry::getProductId,
                 WarehouseEntry::getQuantity
         );
     }
 
-    private Map<Long, Map<Long, BigDecimal>> calculateTotalWithdrawals() {
+    private Map<Long, Map<Long, BigDecimal>> calculateTotalWithdrawals(LocalDate balanceDate) {
+        List<WarehouseWithdrawal> withdrawals = warehouseWithdrawalRepository.findAllByWithdrawalDateLessThanEqual(balanceDate);
         return calculateTotals(
-                warehouseWithdrawalRepository.findAll(),
+                withdrawals,
                 WarehouseWithdrawal::getWarehouseId,
                 WarehouseWithdrawal::getProductId,
                 WarehouseWithdrawal::getQuantity

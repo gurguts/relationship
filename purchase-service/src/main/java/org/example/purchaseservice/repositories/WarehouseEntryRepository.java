@@ -19,4 +19,6 @@ public interface WarehouseEntryRepository extends JpaRepository<WarehouseEntry, 
     Optional<WarehouseEntry> findByUserIdAndProductIdAndEntryDate(Long userId, Long productId, LocalDate entryDate);
     
     Optional<WarehouseEntry> findByUserIdAndProductIdAndEntryDateAndType(Long userId, Long productId, LocalDate entryDate, WithdrawalReason type);
+    
+    List<WarehouseEntry> findAllByEntryDateLessThanEqual(LocalDate date);
 }

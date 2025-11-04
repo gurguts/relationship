@@ -6,6 +6,7 @@ import org.example.purchaseservice.models.dto.warehouse.WarehouseEntryDTO;
 import org.example.purchaseservice.models.dto.warehouse.UpdateWarehouseEntryDTO;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -16,7 +17,7 @@ public interface IWarehouseEntryService {
 
     void updateWarehouseEntry(Long warehouseId, BigDecimal newQuantity);
 
-    Map<Long, Map<Long, Double>> getWarehouseBalance();
+    Map<Long, Map<Long, Double>> getWarehouseBalance(LocalDate balanceDate);
 
     List<WarehouseEntry> findWarehouseEntriesByFilters(Map<String, List<String>> warehouseFilters);
 }

@@ -37,7 +37,6 @@ public class ClientSpecialOperationsController {
             @RequestParam(name = "filters", required = false) String filtersJson,
             @RequestParam(name = "excludeStatuses", required = false) String excludeStatuses
     ) {
-
         List<String> selectedFields = requestBody.get("fields");
         if (selectedFields == null || selectedFields.isEmpty()) {
             throw new ClientException("INVALID_FIELDS", "The list of fields for export cannot be empty");
