@@ -13,6 +13,6 @@ import java.util.List;
 @Repository
 public interface WarehouseWithdrawalRepository extends JpaRepository<WarehouseWithdrawal, Long> {
     Page<WarehouseWithdrawal> findAll(Specification<WarehouseWithdrawal> specification, Pageable pageable);
-    
+
     List<WarehouseWithdrawal> findAllByWithdrawalDateLessThanEqual(LocalDate date);
 }

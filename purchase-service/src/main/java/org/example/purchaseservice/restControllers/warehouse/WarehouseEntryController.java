@@ -78,9 +78,9 @@ public class WarehouseEntryController {
     @GetMapping("/balance")
     public ResponseEntity<BalanceWarehouseDTO> getBalance(
             @RequestParam(required = false) String balanceDate) {
-        
+
         LocalDate date = balanceDate != null ? LocalDate.parse(balanceDate) : LocalDate.now();
-        
+
         Map<Long, Map<Long, Double>> balanceByWarehouseAndProduct = warehouseEntryService.getWarehouseBalance(date);
 
         BalanceWarehouseDTO balanceWarehouseDTO = BalanceWarehouseDTO.builder()
