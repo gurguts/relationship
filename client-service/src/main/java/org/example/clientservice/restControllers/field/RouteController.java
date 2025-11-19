@@ -40,7 +40,7 @@ public class RouteController {
         return ResponseEntity.ok(dtos);
     }
 
-    @PreAuthorize("hasAuthority('settings:edit')")
+    @PreAuthorize("hasAuthority('settings_client:create')")
     @PostMapping
     public ResponseEntity<RouteDTO> createRoute(@RequestBody RouteCreateDTO routeCreateDTO) {
         Route route = routeMapper.routeCreateDTOToRoute(routeCreateDTO);
@@ -52,7 +52,7 @@ public class RouteController {
         return ResponseEntity.created(location).body(createdRoute);
     }
 
-    @PreAuthorize("hasAuthority('settings:edit')")
+    @PreAuthorize("hasAuthority('settings_client:edit')")
     @PutMapping("/{id}")
     public ResponseEntity<RouteDTO> updateRoute(@PathVariable Long id, @RequestBody RouteUpdateDTO routeUpdateDTO) {
         Route route = routeMapper.routeUpdateDTOToRoute(routeUpdateDTO);
@@ -60,7 +60,7 @@ public class RouteController {
         return ResponseEntity.ok(routeMapper.routeToRouteDTO(updatedRoute));
     }
 
-    @PreAuthorize("hasAuthority('settings:edit')")
+    @PreAuthorize("hasAuthority('settings_client:delete')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteRoute(@PathVariable Long id) {
         routeService.deleteRoute(id);

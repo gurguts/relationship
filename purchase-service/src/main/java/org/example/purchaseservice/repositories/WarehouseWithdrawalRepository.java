@@ -15,4 +15,6 @@ public interface WarehouseWithdrawalRepository extends JpaRepository<WarehouseWi
     Page<WarehouseWithdrawal> findAll(Specification<WarehouseWithdrawal> specification, Pageable pageable);
 
     List<WarehouseWithdrawal> findAllByWithdrawalDateLessThanEqual(LocalDate date);
+    
+    List<WarehouseWithdrawal> findByShipmentId(Long shipmentId);
 }

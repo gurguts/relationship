@@ -41,7 +41,7 @@ public class RegionController {
         return ResponseEntity.ok(dtos);
     }
 
-    @PreAuthorize("hasAuthority('settings:edit')")
+    @PreAuthorize("hasAuthority('settings_client:create')")
     @PostMapping
     public ResponseEntity<RegionDTO> createRegion(@RequestBody @Valid RegionCreateDTO regionCreateDTO) {
         Region region = regionMapper.regionCreateDTOToRegion(regionCreateDTO);
@@ -54,7 +54,7 @@ public class RegionController {
         return ResponseEntity.created(location).body(createdRegion);
     }
 
-    @PreAuthorize("hasAuthority('settings:edit')")
+    @PreAuthorize("hasAuthority('settings_client:edit')")
     @PutMapping("/{id}")
     public ResponseEntity<RegionDTO> updateRegion(@PathVariable Long id,
                                                   @RequestBody @Valid RegionUpdateDTO regionUpdateDTO) {
@@ -63,7 +63,7 @@ public class RegionController {
         return ResponseEntity.ok(regionMapper.regionToRegionDTO(updateRegion));
     }
 
-    @PreAuthorize("hasAuthority('settings:edit')")
+    @PreAuthorize("hasAuthority('settings_client:delete')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteRegion(@PathVariable Long id) {
         regionService.deleteRegion(id);

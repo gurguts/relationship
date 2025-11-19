@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import org.example.purchaseservice.models.warehouse.WithdrawalReason;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -18,6 +19,8 @@ public class WithdrawalDTO {
     private Long userId;
     private WithdrawalReason withdrawalReason;
     private Double quantity;
+    private BigDecimal unitPriceUah;
+    private BigDecimal totalCostUah;
     private String description;
     private LocalDate withdrawalDate;
     private LocalDateTime createdAt;

@@ -30,6 +30,9 @@ public class WithdrawalReason {
     private LocalDateTime createdAt;
 
     public enum Purpose {
-        ADDING, REMOVING, BOTH
+        ADDING,
+        REMOVING,
+        BOTH,
+        DEPRECATED
     }
 }

@@ -6,6 +6,7 @@ let withdrawalReasons = [];
 const customSelects = {};
 const entriesCustomSelects = {};
 const historyCustomSelects = {};
+const transfersCustomSelects = {};
 const pageSize = 100;
 let currentPage = 0;
 let totalPages = 1;
@@ -34,6 +35,22 @@ let entriesFilters = {
     type: []
 };
 
+let currentWithdrawalItem = null;
+
+let transfersCache = [];
+
+/**
+ * Formats a number by removing trailing zeros
+ * Examples: 25.000000 -> 25, 25.500000 -> 25.5, 25.333333 -> 25.333333
+ */
+function formatNumber(value, maxDecimals = 6) {
+    if (value === null || value === undefined || value === '') return '0';
+    const num = parseFloat(value);
+    if (isNaN(num)) return '0';
+    // toFixed to limit decimals, then parseFloat to remove trailing zeros
+    return parseFloat(num.toFixed(maxDecimals)).toString();
+}
+
 async function fetchProducts() {
     try {
         const response = await fetch('/api/v1/product');
@@ -46,7 +63,6 @@ async function fetchProducts() {
         productMap = new Map(products.map(product => [product.id, product.name]));
         populateSelect('product-id-filter', products);
         populateSelect('product-id', products);
-        populateSelect('edit-product-id', products);
     } catch (error) {
         console.error('Error fetching products:', error);
         handleError(error);
@@ -99,13 +115,9 @@ async function fetchWithdrawalReasons() {
 
         withdrawalReasonMap = new Map(withdrawalReasons.map(reason => [reason.id, reason]));
 
-        const filterReasons = withdrawalReasons.filter(reason =>
-            reason.purpose === 'REMOVING' || reason.purpose === 'BOTH'
-        );
-
-        populateSelect('withdrawal-reason-id-filter', filterReasons);
-
-        populateSelect('edit-withdrawal-reason-id', filterReasons);
+        const removingReasons = getWithdrawalReasonsByPurpose('REMOVING');
+        populateSelect('withdrawal-reason-id-filter', removingReasons);
+        populateSelect('edit-withdrawal-reason-id', removingReasons);
 
         return withdrawalReasons;
     } catch (error) {
@@ -120,12 +132,32 @@ const findNameByIdFromMap = (map, id) => {
 };
 
 function getWithdrawalReasonsByPurpose(purpose) {
+    if (!withdrawalReasonMap) {
+        return [];
+    }
+
     return Array.from(withdrawalReasonMap.values()).filter(reason => reason.purpose === purpose);
 }
 
 function populateWithdrawalReasonsForWithdrawal() {
     const reasonsForWithdrawal = getWithdrawalReasonsByPurpose('REMOVING');
     populateSelect('withdrawal-reason-id', reasonsForWithdrawal);
+}
+
+function populateTransferReasons(selectId) {
+    const select = document.getElementById(selectId);
+    if (!select) {
+        console.error(`Select with id "${selectId}" not found in DOM`);
+        return;
+    }
+    const reasons = getWithdrawalReasonsByPurpose('BOTH');
+    select.innerHTML = '<option value="">Оберіть причину</option>';
+    reasons.forEach(reason => {
+        const option = document.createElement('option');
+        option.value = String(reason.id);
+        option.textContent = reason.name;
+        select.appendChild(option);
+    });
 }
 
 function populateMoveTypes() {
@@ -158,6 +190,24 @@ function setDefaultEntriesDates() {
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('entries-entry-date-from-filter').value = today;
     document.getElementById('entries-entry-date-to-filter').value = today;
+}
+
+function setDefaultTransfersDates() {
+    const today = new Date();
+    const fromDate = new Date();
+    fromDate.setDate(today.getDate() - 30);
+    const formattedToday = today.toISOString().split('T')[0];
+    const formattedFrom = fromDate.toISOString().split('T')[0];
+
+    const fromInput = document.getElementById('transfer-date-from-filter');
+    const toInput = document.getElementById('transfer-date-to-filter');
+
+    if (fromInput && !fromInput.value) {
+        fromInput.value = formattedFrom;
+    }
+    if (toInput && !toInput.value) {
+        toInput.value = formattedToday;
+    }
 }
 
 function updateHistorySelectedFilters() {
@@ -290,28 +340,71 @@ function clearEntriesFilters() {
 
 async function loadBalance() {
     try {
-        const balanceDate = document.getElementById('balance-date').value;
-        const url = balanceDate
-            ? `/api/v1/warehouse/balance?balanceDate=${balanceDate}`
-            : '/api/v1/warehouse/balance';
-
-        const response = await fetch(url);
+        const response = await fetch('/api/v1/warehouse/balances/active');
         if (!response.ok) {
             handleError(new Error('Failed to load balance'));
             return;
         }
-        const data = await response.json();
+        const balances = await response.json();
+        
+        // Group balances by warehouse
+        const balancesByWarehouse = {};
+        balances.forEach(balance => {
+            if (!balancesByWarehouse[balance.warehouseId]) {
+                balancesByWarehouse[balance.warehouseId] = [];
+            }
+            balancesByWarehouse[balance.warehouseId].push(balance);
+        });
+        
         const container = document.getElementById('balance-container');
         let html = '';
-        for (const [warehouseId, products] of Object.entries(data.balanceByWarehouseAndProduct)) {
+        
+        // Display balances grouped by warehouse
+        for (const [warehouseId, warehouseBalances] of Object.entries(balancesByWarehouse)) {
             const warehouseName = findNameByIdFromMap(warehouseMap, warehouseId);
             html += `<h3>Склад: ${warehouseName}</h3>`;
-            for (const [productId, quantity] of Object.entries(products)) {
-                const productName = findNameByIdFromMap(productMap, productId);
-                html += `<div class="balance-item">${productName}: ${quantity} кг</div>`;
+            html += '<table class="balance-table"><thead><tr>';
+            html += '<th>Товар</th>';
+            html += '<th>Кількість (кг)</th>';
+            html += '<th>Середня ціна (грн/кг)</th>';
+            html += '<th>Загальна вартість (грн)</th>';
+            html += '</tr></thead><tbody>';
+            
+            let warehouseTotal = 0;
+            for (const balance of warehouseBalances) {
+                const productName = findNameByIdFromMap(productMap, balance.productId);
+                const quantity = formatNumber(balance.quantity, 2);
+                const avgPrice = formatNumber(balance.averagePriceUah, 6);
+                const totalCost = formatNumber(balance.totalCostUah, 6);
+                warehouseTotal += parseFloat(totalCost);
+                
+                html += `<tr class="balance-row"
+                            data-warehouse-id="${warehouseId}"
+                            data-product-id="${balance.productId}"
+                            data-warehouse-name="${warehouseName}"
+                            data-product-name="${productName}"
+                            data-quantity="${balance.quantity}"
+                            data-total-cost="${balance.totalCostUah}"
+                            data-average-price="${balance.averagePriceUah}">
+                            <td>${productName}</td>
+                            <td>${quantity}</td>
+                            <td>${avgPrice}</td>
+                            <td>${totalCost}</td>
+                        </tr>`;
             }
+            
+            html += '</tbody><tfoot><tr>';
+            html += '<td colspan="3"><strong>Загальна вартість складу:</strong></td>';
+            html += `<td><strong>${formatNumber(warehouseTotal, 6)} грн</strong></td>`;
+            html += '</tr></tfoot></table>';
         }
+        
+        if (html === '') {
+            html = '<p>Немає активних балансів на складі</p>';
+        }
+        
         container.innerHTML = html;
+        attachBalanceRowListeners();
     } catch (error) {
         console.error('Error loading balance:', error);
         handleError(error);
@@ -382,15 +475,19 @@ async function loadWithdrawalHistory(page) {
         const container = document.getElementById('history-content');
         let html = '';
         for (const withdrawal of data.content) {
-            const productName = findNameByIdFromMap(productMap, withdrawal.productId);
-            const warehouseName = findNameByIdFromMap(warehouseMap, withdrawal.warehouseId);
+            const productName = findNameByIdFromMap(productMap, withdrawal.productId) || 'Не вказано';
+            const warehouseName = findNameByIdFromMap(warehouseMap, withdrawal.warehouseId) || 'Не вказано';
             const reason = withdrawal.withdrawalReason ? withdrawal.withdrawalReason.name : 'Невідома причина';
+            const unitPrice = withdrawal.unitPriceUah ? formatNumber(withdrawal.unitPriceUah, 6) + ' грн' : '-';
+            const totalCost = withdrawal.totalCostUah ? formatNumber(withdrawal.totalCostUah, 6) + ' грн' : '-';
             html += `
                         <tr data-id="${withdrawal.id}">
                             <td>${warehouseName}</td>
                             <td>${productName}</td>
                             <td>${reason}</td>
                             <td>${withdrawal.quantity} кг</td>
+                            <td style="text-align: right;">${unitPrice}</td>
+                            <td style="text-align: right; font-weight: bold;">${totalCost}</td>
                             <td>${withdrawal.withdrawalDate}</td>
                             <td>${withdrawal.description || ''}</td>
                             <td>${new Date(withdrawal.createdAt).toLocaleString()}</td>
@@ -420,7 +517,7 @@ async function loadWarehouseEntries(page) {
     const queryParams = `page=${page}&size=${pageSize}&sort=entryDate&direction=DESC&filters=${encodeURIComponent(JSON.stringify(activeFilters))}`;
 
     try {
-        const response = await fetch(`/api/v1/warehouse/entries?${queryParams}`, {
+        const response = await fetch(`/api/v1/warehouse/receipts?${queryParams}`, {
             method: 'GET',
             headers: {'Content-Type': 'application/json'}
         });
@@ -439,7 +536,10 @@ async function loadWarehouseEntries(page) {
             const warehouseName = findNameByIdFromMap(warehouseMap, entry.warehouseId);
             const userName = findNameByIdFromMap(userMap, entry.userId);
             const typeName = entry.type ? entry.type.name : 'Невідомий тип';
-            const difference = (entry.quantity || 0) - (entry.purchasedQuantity || 0);
+            const driverBalance = entry.driverBalanceQuantity || 0;
+            const receivedQuantity = entry.quantity || 0;
+            const difference = receivedQuantity - driverBalance;
+            const totalCost = formatNumber(entry.totalCostUah, 6);
             html += `
                 <tr data-id="${entry.id}">
                     <td>${warehouseName}</td>
@@ -447,23 +547,13 @@ async function loadWarehouseEntries(page) {
                     <td>${userName}</td>
                     <td>${productName}</td>
                     <td>${typeName}</td>
-                    <td>${entry.quantity} кг</td>
-                    <td>${entry.purchasedQuantity} кг</td>
+                    <td>${receivedQuantity} кг</td>
+                    <td>${driverBalance} кг</td>
                     <td>${difference} кг</td>
+                    <td>${totalCost} грн</td>
                 </tr>`;
         }
         container.innerHTML = html;
-
-        const rows = container.querySelectorAll('tr[data-id]');
-        rows.forEach(row => {
-            row.addEventListener('click', () => {
-                const entryId = row.dataset.id;
-                const entry = data.content.find(e => e.id == entryId);
-                if (entry) {
-                    openEditEntryModal(entry);
-                }
-            });
-        });
 
         updateEntriesPagination(data.totalPages, page);
     } catch (error) {
@@ -491,6 +581,7 @@ function updatePagination(total, page) {
 document.getElementById('withdraw-form').addEventListener('submit',
     async (e) => {
         e.preventDefault();
+        
         const withdrawal = {
             warehouseId: Number(document.getElementById('warehouse-id').value),
             productId: Number(document.getElementById('product-id').value),
@@ -527,57 +618,37 @@ document.getElementById('move-form').addEventListener('submit',
         e.preventDefault();
         const formData = new FormData(e.target);
 
-        const withdrawal = {
+        const transfer = {
             warehouseId: Number(formData.get('warehouse_id')),
-            productId: Number(formData.get('from_product_id')),
+            fromProductId: Number(formData.get('from_product_id')),
+            toProductId: Number(formData.get('to_product_id')),
+            quantity: Number(formData.get('quantity')),
+            transferDate: formData.get('move_date'),
             withdrawalReasonId: Number(formData.get('type_id')),
-            quantity: Number(formData.get('from_quantity')),
-            description: `${formData.get('description') || 'Без опису'}`,
-            withdrawalDate: formData.get('move_date')
-        };
-
-        const entry = {
-            warehouseId: Number(formData.get('warehouse_id')),
-            productId: Number(formData.get('to_product_id')),
-            quantity: Number(formData.get('to_quantity')),
-            entryDate: formData.get('move_date'),
-            typeId: Number(formData.get('type_id')),
-            userId: Number(formData.get('executor_id'))
+            description: formData.get('description') || ''
         };
 
         try {
-            const withdrawalResponse = await fetch('/api/v1/warehouse/withdraw', {
+            const response = await fetch('/api/v1/warehouse/transfer', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(withdrawal)
+                body: JSON.stringify(transfer)
             });
 
-            if (!withdrawalResponse.ok) {
-                const errorData = await withdrawalResponse.json();
-                handleError(new Error(errorData.message || 'Failed to create withdrawal'));
+            const data = await response.json();
+
+            if (!response.ok || !data.success) {
+                handleError(new Error(data.message || 'Помилка переміщення товару'));
                 return;
             }
 
-            const entryResponse = await fetch('/api/v1/warehouse/entries', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(entry)
-            });
-
-            if (!entryResponse.ok) {
-                const errorData = await entryResponse.json();
-                handleError(new Error(errorData.message || 'Failed to create entry'));
-                return;
-            }
-
-            showMessage('Переміщення успішно виконано', 'info');
+            showMessage(data.message || 'Товар успішно переміщено', 'success');
             closeModal('move-modal');
             loadBalance();
             if (historyContainer.style.display === 'block') {
                 loadWithdrawalHistory(currentPage);
             }
         } catch (error) {
-            console.error('Error creating move:', error);
             handleError(error);
         }
     });
@@ -597,7 +668,7 @@ document.getElementById('entry-form').addEventListener('submit',
         };
 
         try {
-            const response = await fetch('/api/v1/warehouse/entries', {
+        const response = await fetch('/api/v1/warehouse/receipts', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify(entry)
@@ -624,68 +695,123 @@ document.getElementById('entry-form').addEventListener('submit',
 function openEditModal(id, withdrawals) {
     const withdrawal = withdrawals.find(w => w.id === Number(id));
     if (!withdrawal) return;
-    populateProducts('edit-product-id');
+
+    currentWithdrawalItem = withdrawal;
+
     document.getElementById('edit-id').value = withdrawal.id;
-    document.getElementById('edit-withdrawal-date').value = withdrawal.withdrawalDate;
+    const dateInput = document.getElementById('edit-withdrawal-date');
+    if (dateInput) {
+        dateInput.value = withdrawal.withdrawalDate;
+    }
+    const dateDisplay = document.getElementById('edit-withdrawal-date-display');
+    if (dateDisplay) {
+        dateDisplay.textContent = withdrawal.withdrawalDate || '—';
+    }
+    const productNameDisplay = document.getElementById('edit-withdrawal-product-name');
+    if (productNameDisplay) {
+        const productName = findNameByIdFromMap(productMap, withdrawal.productId) || 'Не вказано';
+        productNameDisplay.textContent = productName;
+    }
     document.getElementById('edit-withdrawal-reason-id').value = withdrawal.withdrawalReason?.id || '';
-    document.getElementById('edit-product-id').value = withdrawal.productId;
-    document.getElementById('edit-quantity').value = withdrawal.quantity;
+
+    const quantityField = document.getElementById('edit-quantity');
+    if (quantityField) {
+        const numericQuantity = parseFloat(withdrawal.quantity);
+        quantityField.value = Number.isNaN(numericQuantity) ? '' : numericQuantity.toFixed(2);
+    }
+
     document.getElementById('edit-description').value = withdrawal.description || '';
+
     const editModal = document.getElementById('edit-modal');
     editModal.style.display = 'flex';
     editModal.classList.add('open');
+    document.body.classList.add('modal-open');
 }
 
 document.getElementById('edit-form').addEventListener('submit',
     async (e) => {
         e.preventDefault();
+
+        if (!currentWithdrawalItem) {
+            showMessage('Не вдалося знайти списання для редагування', 'error');
+            return;
+        }
+
         const id = Number(document.getElementById('edit-id').value);
-        const withdrawal = {
-            productId: Number(document.getElementById('edit-product-id').value),
-            withdrawalReasonId: Number(document.getElementById('edit-withdrawal-reason-id').value),
-            quantity: Number(document.getElementById('edit-quantity').value),
-            description: document.getElementById('edit-description').value,
-            withdrawalDate: document.getElementById('edit-withdrawal-date').value
+        const reasonElement = document.getElementById('edit-withdrawal-reason-id');
+        const quantityField = document.getElementById('edit-quantity');
+        const descriptionField = document.getElementById('edit-description');
+        const dateField = document.getElementById('edit-withdrawal-date');
+
+        const reasonId = Number(reasonElement.value);
+        if (!reasonId) {
+            showMessage('Оберіть причину списання', 'error');
+            return;
+        }
+
+        const rawQuantity = parseFloat(quantityField.value);
+        if (Number.isNaN(rawQuantity) || rawQuantity < 0) {
+            showMessage('Вкажіть коректну кількість (0 або більше)', 'error');
+            return;
+        }
+
+        const roundedQuantity = Number(rawQuantity.toFixed(2));
+        const descriptionValue = descriptionField.value;
+        const withdrawalDateValue = dateField.value;
+
+        const originalQuantity = parseFloat(currentWithdrawalItem.quantity);
+        const originalReasonId = currentWithdrawalItem.withdrawalReason ? currentWithdrawalItem.withdrawalReason.id : null;
+        const originalDescription = currentWithdrawalItem.description || '';
+        const originalDate = currentWithdrawalItem.withdrawalDate;
+
+        const hasQuantityChange = Math.abs(roundedQuantity - originalQuantity) > 0.0001;
+        const hasReasonChange = reasonId !== originalReasonId;
+        const hasDescriptionChange = (descriptionValue || '') !== originalDescription;
+        const hasDateChange = withdrawalDateValue !== originalDate;
+
+        if (!hasQuantityChange && !hasReasonChange && !hasDescriptionChange && !hasDateChange) {
+            showMessage('Зміни відсутні', 'info');
+            return;
+        }
+
+        if (roundedQuantity === 0) {
+            const productLabel = findNameByIdFromMap(productMap, currentWithdrawalItem.productId) || 'товар';
+            const confirmRemoval = confirm(`Ви впевнені, що хочете повністю видалити списання для ${productLabel}?`);
+            if (!confirmRemoval) {
+                return;
+            }
+        }
+
+        const withdrawalUpdate = {
+            withdrawalReasonId: reasonId,
+            quantity: roundedQuantity,
+            description: descriptionValue,
+            withdrawalDate: withdrawalDateValue
         };
+
         try {
             const response = await fetch(`/api/v1/warehouse/withdraw/${id}`, {
                 method: 'PUT',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(withdrawal)
+                body: JSON.stringify(withdrawalUpdate)
             });
+
             if (!response.ok) {
-                const errorData = await response.json();
+                const errorData = await response.json().catch(() => ({}));
                 handleError(new Error(errorData.message || 'Failed to update withdrawal'));
                 return;
             }
-            showMessage('Списання успішно оновлено', 'info');
+
+            const successMessage = response.status === 204
+                ? 'Списання успішно видалено'
+                : 'Списання успішно оновлено';
+
+            showMessage(successMessage, 'info');
             closeModal('edit-modal');
-            loadBalance();
-            loadWithdrawalHistory(currentPage);
+            await loadBalance();
+            await loadWithdrawalHistory(currentPage);
         } catch (error) {
             console.error('Error updating withdrawal:', error);
-            handleError(error);
-        }
-    });
-
-document.getElementById('delete-btn').addEventListener('click', async () => {
-    if (!confirm('Ви впевнені, що хочете видалити це списання?')) return;
-    const id = Number(document.getElementById('edit-id').value);
-    try {
-        const response = await fetch(`/api/v1/warehouse/withdraw/${id}`, {
-            method: 'DELETE'
-        });
-        if (!response.ok) {
-            const errorData = await response.json();
-            handleError(new Error(errorData.message || 'Failed to delete withdrawal'));
-            return;
-        }
-        showMessage('Списання успішно видалено', 'info');
-        closeModal('edit-modal');
-        loadBalance();
-        loadWithdrawalHistory(currentPage);
-    } catch (error) {
-        console.error('Error deleting withdrawal:', error);
         handleError(error);
     }
 });
@@ -990,8 +1116,46 @@ const entriesBtn = document.getElementById('entries-btn');
 const entriesContainer = document.getElementById('entries-container');
 const addEntryBtn = document.getElementById('add-entry-btn');
 const entryModal = document.getElementById('entry-modal');
-const editEntryModal = document.getElementById('edit-entry-modal');
+const driverBalancesBtn = document.getElementById('driver-balances-btn');
+const driverBalancesModal = document.getElementById('driver-balances-modal');
+const discrepanciesBtn = document.getElementById('discrepancies-btn');
+const discrepanciesModal = document.getElementById('discrepancies-modal');
+const transfersBtn = document.getElementById('transfers-btn');
+const transfersContainer = document.getElementById('transfers-container');
+const shipmentsBtn = document.getElementById('shipments-btn');
+const shipmentsContainer = document.getElementById('shipments-container');
 const closeBtns = document.getElementsByClassName('close');
+const editTransferModal = document.getElementById('edit-transfer-modal');
+const editTransferForm = document.getElementById('edit-transfer-form');
+const editTransferReasonSelect = document.getElementById('edit-transfer-reason-id');
+const editTransferQuantityInput = document.getElementById('edit-transfer-quantity');
+const editTransferDescriptionInput = document.getElementById('edit-transfer-description');
+const editTransferDateSpan = document.getElementById('edit-transfer-date');
+const editTransferWarehouseSpan = document.getElementById('edit-transfer-warehouse');
+const editTransferFromProductSpan = document.getElementById('edit-transfer-from-product');
+const editTransferToProductSpan = document.getElementById('edit-transfer-to-product');
+const balanceEditModal = document.getElementById('balance-edit-modal');
+const balanceEditForm = document.getElementById('balance-edit-form');
+const balanceEditModeRadios = document.querySelectorAll('input[name="balance-edit-mode"]');
+const balanceEditQuantityInput = document.getElementById('balance-edit-quantity');
+const balanceEditTotalCostInput = document.getElementById('balance-edit-total-cost');
+const balanceEditDescriptionInput = document.getElementById('balance-edit-description');
+const balanceEditWarehouseIdInput = document.getElementById('balance-edit-warehouse-id');
+const balanceEditProductIdInput = document.getElementById('balance-edit-product-id');
+const balanceHistoryBody = document.getElementById('balance-history-body');
+const balanceHistoryEmpty = document.getElementById('balance-history-empty');
+const balanceHistoryModal = document.getElementById('balance-history-modal');
+const balanceHistoryBtn = document.getElementById('balance-history-btn');
+
+// Discrepancies pagination state
+let currentDiscrepanciesPage = 0;
+let discrepanciesPageSize = 20;
+let discrepanciesFilters = {};
+
+// Transfers pagination state
+let currentTransfersPage = 0;
+let transfersPageSize = 20;
+let transfersFilters = {};
 
 withdrawBtn.addEventListener('click', () => {
     populateProducts('product-id');
@@ -1021,6 +1185,11 @@ entriesBtn.addEventListener('click', async () => {
         document.getElementById('entries-filter-counter').style.display = 'none';
         document.getElementById('export-excel-entries').style.display = 'none';
     } else {
+        // Hide other containers
+        document.getElementById('history-container').style.display = 'none';
+        transfersContainer.style.display = 'none';
+        shipmentsContainer.style.display = 'none';
+        
         entriesContainer.style.display = 'block';
         document.getElementById('open-entries-filter-modal').style.display = 'inline-block';
         document.getElementById('export-excel-entries').style.display = 'inline-block';
@@ -1047,7 +1216,10 @@ Array.from(closeBtns).forEach(btn => {
 });
 
 window.addEventListener('click', (e) => {
-    if (e.target === withdrawModal || e.target === editModal || e.target === moveModal || e.target === entryModal || e.target === editEntryModal) {
+    if (e.target === withdrawModal || e.target === editModal || e.target === moveModal || e.target === entryModal ||
+        e.target === driverBalancesModal || e.target === discrepanciesModal || e.target === createShipmentModal ||
+        e.target === shipmentDetailsModal || e.target === addProductToShipmentModal || e.target === editShipmentItemModal ||
+        e.target === editTransferModal || e.target === balanceEditModal) {
         closeModal(e.target.id);
     }
 });
@@ -1061,56 +1233,34 @@ function closeModal(modalId) {
         document.getElementById('withdraw-form').reset();
     } else if (modalId === 'edit-modal') {
         document.getElementById('edit-form').reset();
+        currentWithdrawalItem = null;
     } else if (modalId === 'move-modal') {
         document.getElementById('move-form').reset();
     } else if (modalId === 'entry-modal') {
         document.getElementById('entry-form').reset();
-    } else if (modalId === 'edit-entry-modal') {
-        document.getElementById('edit-entry-form').reset();
+    } else if (modalId === 'create-shipment-modal') {
+        document.getElementById('create-shipment-form').reset();
+    } else if (modalId === 'add-product-to-shipment-modal') {
+        document.getElementById('add-product-to-shipment-form').reset();
+    } else if (modalId === 'shipment-details-modal') {
+        resetShipmentFormState();
+    } else if (modalId === 'edit-shipment-item-modal') {
+        if (editShipmentItemForm) {
+            editShipmentItemForm.reset();
+        }
+        currentShipmentItemId = null;
+        updateShipmentItemMode();
+    } else if (modalId === 'edit-transfer-modal') {
+        if (editTransferForm) {
+            editTransferForm.reset();
+        }
+        currentTransferItem = null;
+    } else if (modalId === 'balance-edit-modal') {
+        resetBalanceEditModal();
+    } else if (modalId === 'balance-history-modal') {
+        resetBalanceHistoryModal();
     }
 }
-
-function openEditEntryModal(entry) {
-    if (entry.id == null) {
-        handleError(new Error('Дані надходження не були вказані'));
-        return;
-    }
-    document.getElementById('edit-entry-id').value = entry.id;
-    document.getElementById('edit-entry-quantity').value = entry.quantity;
-    editEntryModal.style.display = 'flex';
-    editEntryModal.classList.add('open');
-    document.body.classList.add('modal-open');
-}
-
-document.getElementById('edit-entry-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const id = document.getElementById('edit-entry-id').value;
-    const newQuantity = document.getElementById('edit-entry-quantity').value;
-
-    try {
-        const response = await fetch(`/api/v1/warehouse/entries/${id}`, {
-            method: 'PATCH',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({quantity: Number(newQuantity)})
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            handleError(new Error(errorData.message || 'Failed to update entry'));
-            return;
-        }
-
-        showMessage('Надходження успішно оновлено', 'info');
-        closeModal('edit-entry-modal');
-        loadBalance();
-        if (entriesContainer.style.display === 'block') {
-            loadWarehouseEntries(0);
-        }
-    } catch (error) {
-        console.error('Error updating entry:', error);
-        handleError(error);
-    }
-});
 
 const historyBtn = document.getElementById('history-btn');
 historyBtn.addEventListener('click', () => {
@@ -1120,6 +1270,11 @@ historyBtn.addEventListener('click', () => {
         document.getElementById('history-filter-counter').style.display = 'none';
         document.getElementById('export-excel-history').style.display = 'none';
     } else {
+        // Hide other containers
+        document.getElementById('entries-container').style.display = 'none';
+        transfersContainer.style.display = 'none';
+        shipmentsContainer.style.display = 'none';
+        
         historyContainer.style.display = 'block';
         document.getElementById('open-history-filter-modal').style.display = 'inline-block';
         document.getElementById('export-excel-history').style.display = 'inline-block';
@@ -1127,6 +1282,57 @@ historyBtn.addEventListener('click', () => {
         loadWithdrawalHistory(0);
     }
 });
+
+if (driverBalancesBtn) {
+    driverBalancesBtn.addEventListener('click', async () => {
+        await loadDriverBalances();
+        driverBalancesModal.style.display = 'flex';
+        driverBalancesModal.classList.add('open');
+        document.body.classList.add('modal-open');
+    });
+    
+    discrepanciesBtn.addEventListener('click', async () => {
+        currentDiscrepanciesPage = 0;
+        discrepanciesFilters = {};
+        await loadDiscrepancies();
+        await loadDiscrepanciesStatistics();
+        discrepanciesModal.style.display = 'flex';
+        discrepanciesModal.classList.add('open');
+        document.body.classList.add('modal-open');
+    });
+}
+
+// Transfers button click event
+if (transfersBtn) {
+    transfersBtn.addEventListener('click', async () => {
+        const filterButton = document.getElementById('open-transfers-filter-modal');
+        const filterCounter = document.getElementById('transfers-filter-counter');
+        const exportButton = document.getElementById('export-excel-transfers');
+        const transfersFilterModal = document.getElementById('transfers-filter-modal');
+
+        if (transfersContainer.style.display === 'block') {
+            transfersContainer.style.display = 'none';
+            if (filterButton) filterButton.style.display = 'none';
+            if (filterCounter) filterCounter.style.display = 'none';
+            if (exportButton) exportButton.style.display = 'none';
+            if (transfersFilterModal) transfersFilterModal.classList.remove('open');
+            document.body.classList.remove('modal-open');
+        } else {
+            historyContainer.style.display = 'none';
+            entriesContainer.style.display = 'none';
+            shipmentsContainer.style.display = 'none';
+
+            transfersContainer.style.display = 'block';
+            if (filterButton) filterButton.style.display = 'inline-block';
+            if (exportButton) exportButton.style.display = 'inline-block';
+
+            await initializeTransfersFilters();
+            updateTransfersFilterCounter();
+            currentTransfersPage = 0;
+            await loadTransfers();
+        }
+    });
+}
 
 document.getElementById('apply-filters').addEventListener('click', () => {
     updateSelectedFilters();
@@ -1183,7 +1389,6 @@ document.getElementById('entries-filter-modal-close').addEventListener('click', 
 const applyEntriesFiltersBtn = document.getElementById('apply-entries-filters');
 if (applyEntriesFiltersBtn) {
     applyEntriesFiltersBtn.addEventListener('click', () => {
-        console.log('Apply entries filters button clicked');
         updateEntriesSelectedFilters();
         loadWarehouseEntries(0);
         document.getElementById('entries-filter-modal').classList.remove('open');
@@ -1195,6 +1400,35 @@ if (applyEntriesFiltersBtn) {
 }
 
 document.getElementById('entries-filter-counter').addEventListener('click', clearEntriesFilters);
+
+// Transfers filter modal toggle
+const openTransfersFilterModalBtn = document.getElementById('open-transfers-filter-modal');
+if (openTransfersFilterModalBtn) {
+    openTransfersFilterModalBtn.addEventListener('click', async () => {
+        await initializeTransfersFilters();
+        const modal = document.getElementById('transfers-filter-modal');
+        if (modal) {
+            modal.classList.add('open');
+        }
+        document.body.classList.add('modal-open');
+    });
+}
+
+const transfersFilterModalClose = document.getElementById('transfers-filter-modal-close');
+if (transfersFilterModalClose) {
+    transfersFilterModalClose.addEventListener('click', () => {
+        const modal = document.getElementById('transfers-filter-modal');
+        if (modal) {
+            modal.classList.remove('open');
+        }
+        document.body.classList.remove('modal-open');
+    });
+}
+
+const transfersFilterCounterElement = document.getElementById('transfers-filter-counter');
+if (transfersFilterCounterElement) {
+    transfersFilterCounterElement.addEventListener('click', () => clearTransfersFilters(true));
+}
 
 async function initializeHistoryFilters() {
 
@@ -1276,9 +1510,69 @@ async function initializeEntriesFilters() {
     updateEntriesSelectedFilters();
 }
 
-function setDefaultBalanceDate() {
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('balance-date').value = today;
+async function loadDriverBalances() {
+    try {
+        const response = await fetch('/api/v1/driver/balances/active');
+        if (!response.ok) {
+            handleError(new Error('Failed to load driver balances'));
+            return;
+        }
+        const balances = await response.json();
+        
+        // Group balances by driver
+        const balancesByDriver = {};
+        balances.forEach(balance => {
+            if (!balancesByDriver[balance.driverId]) {
+                balancesByDriver[balance.driverId] = [];
+            }
+            balancesByDriver[balance.driverId].push(balance);
+        });
+        
+        const container = document.getElementById('driver-balances-container');
+        let html = '';
+        
+        // Display balances grouped by driver
+        for (const [driverId, driverBalances] of Object.entries(balancesByDriver)) {
+            const driverName = findNameByIdFromMap(userMap, driverId);
+            html += `<h4>Водій: ${driverName}</h4>`;
+            html += '<table class="balance-table"><thead><tr>';
+            html += '<th>Товар</th>';
+            html += '<th>Кількість (кг)</th>';
+            html += '<th>Середня ціна (грн/кг)</th>';
+            html += '<th>Загальна вартість (грн)</th>';
+            html += '</tr></thead><tbody>';
+            
+            let driverTotal = 0;
+            for (const balance of driverBalances) {
+                const productName = findNameByIdFromMap(productMap, balance.productId);
+                const quantity = formatNumber(balance.quantity, 2);
+                const avgPrice = formatNumber(balance.averagePriceUah, 6);
+                const totalCost = formatNumber(balance.totalCostUah, 6);
+                driverTotal += parseFloat(totalCost);
+                
+                html += '<tr>';
+                html += `<td>${productName}</td>`;
+                html += `<td>${quantity}</td>`;
+                html += `<td>${avgPrice}</td>`;
+                html += `<td>${totalCost}</td>`;
+                html += '</tr>';
+            }
+            
+            html += '</tbody><tfoot><tr>';
+            html += '<td colspan="3"><strong>Загальна вартість товару водія:</strong></td>';
+            html += `<td><strong>${formatNumber(driverTotal, 6)} грн</strong></td>`;
+            html += '</tr></tfoot></table>';
+        }
+        
+        if (html === '') {
+            html = '<p>Немає активних балансів водіїв</p>';
+        }
+        
+        container.innerHTML = html;
+    } catch (error) {
+        console.error('Error loading driver balances:', error);
+        handleError(error);
+    }
 }
 
 async function initialize() {
@@ -1290,17 +1584,372 @@ async function initialize() {
     await initializeHistoryFilters();
     await initializeEntriesFilters();
 
-    setDefaultBalanceDate();
-
-    // Добавляем обработчик изменения даты баланса
-    document.getElementById('balance-date').addEventListener('change', () => {
         loadBalance();
-    });
-
-    loadBalance();
 }
 
 initialize();
+
+// ========================================
+// SHIPMENTS FUNCTIONALITY
+// ========================================
+
+const createShipmentBtn = document.getElementById('create-shipment-btn');
+const createShipmentModal = document.getElementById('create-shipment-modal');
+const shipmentDetailsModal = document.getElementById('shipment-details-modal');
+const createShipmentForm = document.getElementById('create-shipment-form');
+const addProductToShipmentModal = document.getElementById('add-product-to-shipment-modal');
+const addProductToShipmentForm = document.getElementById('add-product-to-shipment-form');
+const updateShipmentForm = document.getElementById('update-shipment-form');
+const detailShipmentDateInput = document.getElementById('detail-shipment-date');
+const detailShipmentVehicleInput = document.getElementById('detail-shipment-vehicle-number');
+const detailShipmentInvoiceUaInput = document.getElementById('detail-shipment-invoice-ua');
+const detailShipmentInvoiceEuInput = document.getElementById('detail-shipment-invoice-eu');
+const detailShipmentDescriptionInput = document.getElementById('detail-shipment-description');
+const editShipmentBtn = document.getElementById('edit-shipment-btn');
+const saveShipmentBtn = document.getElementById('save-shipment-btn');
+const editShipmentItemModal = document.getElementById('edit-shipment-item-modal');
+const editShipmentItemForm = document.getElementById('edit-shipment-item-form');
+const editShipmentItemQuantityInput = document.getElementById('edit-shipment-item-quantity');
+const editShipmentItemTotalCostInput = document.getElementById('edit-shipment-item-total-cost');
+const editShipmentItemModeRadios = document.querySelectorAll('input[name="edit-shipment-item-mode"]');
+
+let currentShipmentId = null;
+let shipmentsCache = [];
+let currentShipmentDetails = null;
+let currentShipmentItems = new Map();
+let currentShipmentItemId = null;
+let currentTransferItem = null;
+let currentBalanceEditData = null;
+
+function populateShipmentForm(shipment) {
+    if (!shipment) {
+        if (detailShipmentDateInput) detailShipmentDateInput.value = '';
+        if (detailShipmentVehicleInput) detailShipmentVehicleInput.value = '';
+        if (detailShipmentInvoiceUaInput) detailShipmentInvoiceUaInput.value = '';
+        if (detailShipmentInvoiceEuInput) detailShipmentInvoiceEuInput.value = '';
+        if (detailShipmentDescriptionInput) detailShipmentDescriptionInput.value = '';
+        return;
+    }
+
+    if (detailShipmentDateInput) detailShipmentDateInput.value = shipment.shipmentDate || '';
+    if (detailShipmentVehicleInput) detailShipmentVehicleInput.value = shipment.vehicleNumber || '';
+    if (detailShipmentInvoiceUaInput) detailShipmentInvoiceUaInput.value = shipment.invoiceUa || '';
+    if (detailShipmentInvoiceEuInput) detailShipmentInvoiceEuInput.value = shipment.invoiceEu || '';
+    if (detailShipmentDescriptionInput) detailShipmentDescriptionInput.value = shipment.description || '';
+}
+
+function setShipmentFormEditable(isEditable) {
+    const fields = [
+        detailShipmentDateInput,
+        detailShipmentVehicleInput,
+        detailShipmentInvoiceUaInput,
+        detailShipmentInvoiceEuInput,
+        detailShipmentDescriptionInput
+    ];
+
+    fields.forEach(field => {
+        if (field) {
+            field.disabled = !isEditable;
+        }
+    });
+
+    if (saveShipmentBtn) {
+        saveShipmentBtn.style.display = isEditable ? 'inline-flex' : 'none';
+    }
+    if (editShipmentBtn) {
+        editShipmentBtn.style.display = isEditable ? 'none' : 'inline-flex';
+    }
+}
+
+function resetShipmentFormState() {
+    populateShipmentForm(currentShipmentDetails);
+    setShipmentFormEditable(false);
+}
+
+if (updateShipmentForm) {
+    setShipmentFormEditable(false);
+}
+
+if (editShipmentBtn) {
+    editShipmentBtn.addEventListener('click', () => {
+        if (!currentShipmentDetails) {
+            return;
+        }
+        populateShipmentForm(currentShipmentDetails);
+        setShipmentFormEditable(true);
+        detailShipmentDateInput?.focus();
+    });
+}
+
+// Open shipments container
+if (shipmentsBtn) {
+    shipmentsBtn.addEventListener('click', async () => {
+        if (shipmentsContainer.style.display === 'block') {
+            // Close shipments container
+            shipmentsContainer.style.display = 'none';
+        } else {
+            // Hide other containers
+            document.getElementById('history-container').style.display = 'none';
+            document.getElementById('entries-container').style.display = 'none';
+            transfersContainer.style.display = 'none';
+            
+            // Show shipments container
+            shipmentsContainer.style.display = 'block';
+            await loadShipments();
+        }
+    });
+}
+
+// Open create shipment modal
+if (createShipmentBtn) {
+    createShipmentBtn.addEventListener('click', () => {
+        document.getElementById('shipment-date').valueAsDate = new Date();
+        createShipmentModal.style.display = 'flex';
+        createShipmentModal.classList.add('open');
+        document.body.classList.add('modal-open');
+    });
+}
+
+// Create shipment form submit
+if (createShipmentForm) {
+    createShipmentForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const shipmentData = {
+            shipmentDate: document.getElementById('shipment-date').value,
+            vehicleNumber: document.getElementById('shipment-vehicle-number').value,
+            invoiceUa: document.getElementById('shipment-invoice-ua').value,
+            invoiceEu: document.getElementById('shipment-invoice-eu').value,
+            description: document.getElementById('shipment-description').value
+        };
+        
+        try {
+            const response = await fetch('/api/v1/shipments', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(shipmentData)
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to create shipment');
+            }
+            
+            const result = await response.json();
+            showMessage('Машину успішно створено', 'success');
+            
+            closeModal('create-shipment-modal');
+            createShipmentForm.reset();
+            
+            await loadShipments();
+        } catch (error) {
+            showMessage('Помилка при створенні машини', 'error');
+        }
+    });
+}
+
+// Load shipments list
+async function loadShipments() {
+    const dateFrom = document.getElementById('shipments-date-from')?.value;
+    const dateTo = document.getElementById('shipments-date-to')?.value;
+    
+    try {
+        let url = '/api/v1/shipments/by-date-range?';
+        
+        if (dateFrom && dateTo) {
+            url += `fromDate=${dateFrom}&toDate=${dateTo}`;
+        } else {
+            // Default: last 30 days
+            const today = new Date();
+            const last30Days = new Date();
+            last30Days.setDate(today.getDate() - 30);
+            url += `fromDate=${last30Days.toISOString().split('T')[0]}&toDate=${today.toISOString().split('T')[0]}`;
+        }
+        
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+            throw new Error('Failed to load shipments');
+        }
+        
+        shipmentsCache = await response.json();
+        renderShipments(shipmentsCache);
+    } catch (error) {
+        showMessage('Помилка завантаження машин', 'error');
+        
+        // Show empty table even on error
+        const tbody = document.getElementById('shipments-tbody');
+        if (tbody) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">Помилка завантаження даних</td></tr>';
+        }
+    }
+}
+
+// Render shipments table
+function renderShipments(shipments) {
+    const tbody = document.getElementById('shipments-tbody');
+    
+    if (!tbody) {
+        return;
+    }
+    
+    if (!shipments || shipments.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">Немає даних</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = shipments.map(shipment => `
+        <tr onclick="viewShipmentDetails(${shipment.id})" style="cursor: pointer;">
+            <td>${shipment.shipmentDate}</td>
+            <td>${shipment.vehicleNumber || '-'}</td>
+            <td>${shipment.invoiceUa || '-'}</td>
+            <td>${shipment.invoiceEu || '-'}</td>
+            <td style="font-weight: bold; color: #FF6F00;">${formatNumber(shipment.totalCostUah, 2)} грн</td>
+            <td>${shipment.description || '-'}</td>
+        </tr>
+    `).join('');
+}
+
+// View shipment details
+async function viewShipmentDetails(shipmentId) {
+    currentShipmentId = shipmentId;
+    
+    try {
+        const response = await fetch(`/api/v1/shipments/${shipmentId}`);
+        
+        if (!response.ok) {
+            throw new Error('Failed to load shipment details');
+        }
+        
+        const shipment = await response.json();
+        renderShipmentDetails(shipment);
+        
+        shipmentDetailsModal.style.display = 'flex';
+        shipmentDetailsModal.classList.add('open');
+        document.body.classList.add('modal-open');
+    } catch (error) {
+        showMessage('Помилка завантаження деталей машини', 'error');
+    }
+}
+
+// Render shipment details
+function renderShipmentDetails(shipment) {
+    currentShipmentDetails = shipment;
+    currentShipmentItems = new Map();
+    populateShipmentForm(shipment);
+    setShipmentFormEditable(false);
+    
+    const itemsTbody = document.getElementById('shipment-items-tbody');
+    
+    if (!shipment.items || shipment.items.length === 0) {
+        itemsTbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">Товари ще не додані</td></tr>';
+    } else {
+        itemsTbody.innerHTML = shipment.items.map(item => {
+            const productName = findNameByIdFromMap(productMap, item.productId) || 'Невідомий товар';
+            const warehouseName = findNameByIdFromMap(warehouseMap, item.warehouseId) || 'Невідомий склад';
+
+            currentShipmentItems.set(Number(item.withdrawalId), {
+                ...item,
+                productName,
+                warehouseName
+            });
+
+            return `
+                <tr class="shipment-item-row" data-item-id="${item.withdrawalId}" style="cursor: pointer;">
+                    <td>${productName}</td>
+                    <td>${formatNumber(item.quantity, 2)} кг</td>
+                    <td style="text-align: right;">${formatNumber(item.unitPriceUah, 6)} грн</td>
+                    <td style="text-align: right; font-weight: bold;">${formatNumber(item.totalCostUah, 6)} грн</td>
+                    <td>${item.withdrawalDate || shipment.shipmentDate}</td>
+                </tr>
+            `;
+        }).join('');
+    }
+    
+    document.getElementById('shipment-total-cost').textContent = formatNumber(shipment.totalCostUah, 2);
+}
+
+// Add product to shipment button
+document.getElementById('add-product-to-shipment-btn')?.addEventListener('click', () => {
+    // Populate warehouses and products
+    populateWarehouses('shipment-warehouse-id');
+    populateProducts('shipment-product-id');
+    
+    addProductToShipmentModal.style.display = 'flex';
+    addProductToShipmentModal.classList.add('open');
+    document.body.classList.add('modal-open');
+});
+
+// Add product to shipment form submit
+if (addProductToShipmentForm) {
+    addProductToShipmentForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const data = {
+            warehouseId: Number(document.getElementById('shipment-warehouse-id').value),
+            productId: Number(document.getElementById('shipment-product-id').value),
+            quantity: Number(document.getElementById('shipment-quantity').value)
+        };
+        
+        try {
+            const response = await fetch(`/api/v1/shipments/${currentShipmentId}/products`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Failed to add product to shipment');
+            }
+            
+            const updatedShipment = await response.json();
+            
+            showMessage('Товар успішно додано до машини', 'success');
+            closeModal('add-product-to-shipment-modal');
+            addProductToShipmentForm.reset();
+            
+            // Refresh shipment details
+            renderShipmentDetails(updatedShipment);
+            
+            // Refresh shipments list in table
+            await loadShipments();
+            
+            // Reload balance
+    loadBalance();
+        } catch (error) {
+            showMessage(error.message || 'Помилка при додаванні товару до машини', 'error');
+        }
+    });
+}
+
+// Delete shipment button
+document.getElementById('delete-shipment-btn')?.addEventListener('click', async () => {
+    if (!confirm('Ви впевнені, що хочете видалити цю машину?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/v1/shipments/${currentShipmentId}`, {
+            method: 'DELETE'
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to delete shipment');
+        }
+        
+        showMessage('Машину успішно видалено', 'success');
+        closeModal('shipment-details-modal');
+        await loadShipments();
+        await loadBalance();
+    } catch (error) {
+        showMessage('Помилка при видаленні машини', 'error');
+    }
+});
+
+// Apply shipments filters
+document.getElementById('apply-shipments-filters')?.addEventListener('click', async () => {
+    await loadShipments();
+});
 
 function exportTableToExcel(tableId, filename = 'withdrawal_data') {
     const table = document.getElementById(tableId);
@@ -1331,4 +1980,1283 @@ document.getElementById('export-excel-history').addEventListener('click', () => 
 
 document.getElementById('export-excel-entries').addEventListener('click', () => {
     exportTableToExcel('entries-table', 'entries_export');
+});
+
+// ========================================
+// DISCREPANCIES FUNCTIONALITY
+// ========================================
+
+async function loadDiscrepanciesStatistics() {
+    try {
+        const response = await fetch('/api/v1/warehouse/discrepancies/statistics');
+        
+        if (!response.ok) {
+            throw new Error('Failed to load statistics');
+        }
+        
+        const stats = await response.json();
+        
+        document.getElementById('total-losses-value').textContent = `${formatNumber(stats.totalLossesValue, 6)} грн`;
+        document.getElementById('total-losses-count').textContent = `${stats.lossCount} записів`;
+        document.getElementById('total-gains-value').textContent = `${formatNumber(stats.totalGainsValue, 6)} грн`;
+        document.getElementById('total-gains-count').textContent = `${stats.gainCount} записів`;
+        document.getElementById('net-value').textContent = `${formatNumber(stats.netValue, 6)} грн`;
+        
+        // Change color based on positive/negative net value
+        const netValueElement = document.getElementById('net-value');
+        if (stats.netValue < 0) {
+            netValueElement.style.color = '#d32f2f';
+        } else if (stats.netValue > 0) {
+            netValueElement.style.color = '#388e3c';
+        } else {
+            netValueElement.style.color = '#1976d2';
+        }
+    } catch (error) {
+        console.error('Error loading discrepancies statistics:', error);
+    }
+}
+
+async function loadDiscrepancies() {
+    try {
+        const params = new URLSearchParams({
+            page: currentDiscrepanciesPage,
+            size: discrepanciesPageSize,
+            sort: 'receiptDate',
+            direction: 'DESC',
+            ...discrepanciesFilters
+        });
+        
+        const response = await fetch(`/api/v1/warehouse/discrepancies?${params}`);
+        
+        if (!response.ok) {
+            throw new Error('Failed to load discrepancies');
+        }
+        
+        const data = await response.json();
+        
+        // Render table
+        const tbody = document.getElementById('discrepancies-table-body');
+        tbody.innerHTML = '';
+        
+        if (data.content.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; padding: 30px; color: #999;">Немає даних</td></tr>';
+        } else {
+            for (const item of data.content) {
+                const row = document.createElement('tr');
+                
+                const driverName = findNameByIdFromMap(userMap, item.driverId);
+                const productName = findNameByIdFromMap(productMap, item.productId);
+                const warehouseName = findNameByIdFromMap(warehouseMap, item.warehouseId);
+                
+                const typeLabel = item.type === 'LOSS' ? 'Втрата' : 'Придбання';
+                const typeClass = item.type === 'LOSS' ? 'loss' : 'gain';
+                const typeColor = item.type === 'LOSS' ? '#d32f2f' : '#388e3c';
+                
+                row.innerHTML = `
+                    <td>${formatDate(item.receiptDate)}</td>
+                    <td>${driverName}</td>
+                    <td>${productName}</td>
+                    <td>${warehouseName}</td>
+                    <td style="text-align: center;">${item.purchasedQuantity} кг</td>
+                    <td style="text-align: center;">${item.receivedQuantity} кг</td>
+                    <td style="text-align: center; font-weight: bold; color: ${typeColor};">
+                        ${item.discrepancyQuantity > 0 ? '+' : ''}${item.discrepancyQuantity} кг
+                    </td>
+                    <td style="text-align: right;">${formatNumber(item.unitPriceUah, 6)} грн</td>
+                    <td style="text-align: right; font-weight: bold;">
+                        ${formatNumber(Math.abs(item.discrepancyValueUah), 6)} грн
+                    </td>
+                    <td style="text-align: center;">
+                        <span class="discrepancy-type-badge ${typeClass}">
+                            ${typeLabel}
+                        </span>
+                    </td>
+                `;
+                
+                tbody.appendChild(row);
+            }
+        }
+        
+        // Update pagination
+        updateDiscrepanciesPagination(data);
+        
+    } catch (error) {
+        console.error('Error loading discrepancies:', error);
+        const tbody = document.getElementById('discrepancies-table-body');
+        tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; padding: 30px; color: #d32f2f;">Помилка завантаження даних</td></tr>';
+    }
+}
+
+function updateDiscrepanciesPagination(data) {
+    const start = data.page * data.size + 1;
+    const end = Math.min((data.page + 1) * data.size, data.totalElements);
+    document.getElementById('discrepancies-info').textContent = `Показано ${start}-${end} з ${data.totalElements}`;
+    
+    const prevBtn = document.getElementById('discrepancies-prev');
+    const nextBtn = document.getElementById('discrepancies-next');
+    
+    prevBtn.disabled = data.page === 0;
+    nextBtn.disabled = data.page >= data.totalPages - 1;
+    
+    // Generate page numbers
+    const pageNumbersContainer = document.getElementById('discrepancies-page-numbers');
+    pageNumbersContainer.innerHTML = '';
+    
+    const maxPagesToShow = 5;
+    let startPage = Math.max(0, data.page - Math.floor(maxPagesToShow / 2));
+    let endPage = Math.min(data.totalPages, startPage + maxPagesToShow);
+    
+    if (endPage - startPage < maxPagesToShow) {
+        startPage = Math.max(0, endPage - maxPagesToShow);
+    }
+    
+    for (let i = startPage; i < endPage; i++) {
+        const pageBtn = document.createElement('button');
+        pageBtn.textContent = i + 1;
+        pageBtn.className = 'button';
+        
+        if (i === data.page) {
+            pageBtn.classList.add('active');
+        }
+        
+        pageBtn.addEventListener('click', async () => {
+            currentDiscrepanciesPage = i;
+            await loadDiscrepancies();
+        });
+        
+        pageNumbersContainer.appendChild(pageBtn);
+    }
+}
+
+function formatDate(dateString) {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}.${month}.${year}`;
+}
+
+// Event listeners for discrepancies pagination
+document.getElementById('discrepancies-prev').addEventListener('click', async () => {
+    if (currentDiscrepanciesPage > 0) {
+        currentDiscrepanciesPage--;
+        await loadDiscrepancies();
+    }
+});
+
+document.getElementById('discrepancies-next').addEventListener('click', async () => {
+    currentDiscrepanciesPage++;
+    await loadDiscrepancies();
+});
+
+// Event listeners for discrepancies filters
+document.getElementById('apply-discrepancy-filters').addEventListener('click', async () => {
+    discrepanciesFilters = {};
+    
+    const type = document.getElementById('discrepancy-type-filter').value;
+    const dateFrom = document.getElementById('discrepancy-date-from').value;
+    const dateTo = document.getElementById('discrepancy-date-to').value;
+    
+    if (type) discrepanciesFilters.type = type;
+    if (dateFrom) discrepanciesFilters.dateFrom = dateFrom;
+    if (dateTo) discrepanciesFilters.dateTo = dateTo;
+    
+    currentDiscrepanciesPage = 0;
+    await loadDiscrepancies();
+});
+
+document.getElementById('reset-discrepancy-filters').addEventListener('click', async () => {
+    document.getElementById('discrepancy-type-filter').value = '';
+    document.getElementById('discrepancy-date-from').value = '';
+    document.getElementById('discrepancy-date-to').value = '';
+    
+    discrepanciesFilters = {};
+    currentDiscrepanciesPage = 0;
+    await loadDiscrepancies();
+});
+
+// Export discrepancies to Excel
+document.getElementById('export-discrepancies-excel').addEventListener('click', async () => {
+    try {
+        // Build query params from current filters
+        const params = new URLSearchParams();
+        
+        if (discrepanciesFilters.type) {
+            params.append('type', discrepanciesFilters.type);
+        }
+        if (discrepanciesFilters.dateFrom) {
+            params.append('dateFrom', discrepanciesFilters.dateFrom);
+        }
+        if (discrepanciesFilters.dateTo) {
+            params.append('dateTo', discrepanciesFilters.dateTo);
+        }
+        
+        const url = `/api/v1/warehouse/discrepancies/export?${params.toString()}`;
+        
+        // Fetch the file
+        const response = await fetch(url, {
+            method: 'GET'
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        // Get filename from Content-Disposition header or use default with current date
+        const contentDisposition = response.headers.get('Content-Disposition');
+        const today = new Date().toISOString().split('T')[0];
+        let filename = `vtrati_ta_pridbanna_${today}.xlsx`;
+        
+        if (contentDisposition) {
+            // Try multiple patterns to extract filename
+            let extractedFilename = null;
+            
+            // Pattern 1: filename="something.xlsx"
+            let match = contentDisposition.match(/filename="([^"]+)"/);
+            if (match && match[1]) {
+                extractedFilename = match[1];
+            }
+            
+            // Pattern 2: filename=something.xlsx (without quotes)
+            if (!extractedFilename) {
+                match = contentDisposition.match(/filename=([^;]+)/);
+                if (match && match[1]) {
+                    extractedFilename = match[1].trim();
+                }
+            }
+            
+            // Pattern 3: filename*=UTF-8''something.xlsx
+            if (!extractedFilename) {
+                match = contentDisposition.match(/filename\*=UTF-8''([^;]+)/);
+                if (match && match[1]) {
+                    extractedFilename = decodeURIComponent(match[1]);
+                }
+            }
+            
+            if (extractedFilename) {
+                // Remove any trailing special characters and ensure .xlsx extension
+                filename = extractedFilename.replace(/['";\s]+$/, '').replace(/_+$/, '');
+                if (!filename.endsWith('.xlsx')) {
+                    filename += '.xlsx';
+                }
+            }
+        }
+        
+        // Create blob and download
+        const blob = await response.blob();
+        const downloadUrl = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(downloadUrl);
+        document.body.removeChild(a);
+        
+        showMessage('Excel файл успішно завантажено!', 'info');
+    } catch (error) {
+        console.error('Error exporting to Excel:', error);
+        showMessage('Помилка при експорті в Excel', 'error');
+    }
+});
+
+// ============================================
+// TRANSFERS CONTAINER FUNCTIONALITY
+// ============================================
+
+// Load transfers with pagination
+async function loadTransfers() {
+    try {
+        const params = new URLSearchParams({
+            page: currentTransfersPage,
+            size: transfersPageSize,
+            sort: 'transferDate',
+            direction: 'desc'
+        });
+        
+        if (transfersFilters.dateFrom) params.append('dateFrom', transfersFilters.dateFrom);
+        if (transfersFilters.dateTo) params.append('dateTo', transfersFilters.dateTo);
+        if (transfersFilters.warehouseId) params.append('warehouseId', transfersFilters.warehouseId);
+        if (transfersFilters.fromProductId) params.append('fromProductId', transfersFilters.fromProductId);
+        if (transfersFilters.toProductId) params.append('toProductId', transfersFilters.toProductId);
+        if (transfersFilters.userId) params.append('userId', transfersFilters.userId);
+        if (transfersFilters.reasonId) params.append('reasonId', transfersFilters.reasonId);
+        
+        const response = await fetch(`/api/v1/warehouse/transfers?${params}`);
+        
+        if (!response.ok) {
+            throw new Error('Failed to load transfers');
+        }
+        
+        const data = await response.json();
+        
+        renderTransfers(data.content);
+        updateTransfersPagination(data);
+        
+    } catch (error) {
+        console.error('Error loading transfers:', error);
+        showMessage('Помилка завантаження переміщень', 'error');
+    }
+}
+
+// Render transfers table
+function renderTransfers(transfers) {
+    const tbody = document.getElementById('transfers-body');
+    if (!tbody) return;
+    
+    if (!Array.isArray(transfers) || transfers.length === 0) {
+        transfersCache = [];
+        tbody.innerHTML = '<tr><td colspan="10" style="text-align: center;">Немає даних</td></tr>';
+        return;
+    }
+    
+    transfersCache = transfers.slice();
+    
+    tbody.innerHTML = transfers.map(item => {
+        const fromProductName = findNameByIdFromMap(productMap, item.fromProductId) || 'Не вказано';
+        const toProductName = findNameByIdFromMap(productMap, item.toProductId) || 'Не вказано';
+        const warehouseName = findNameByIdFromMap(warehouseMap, item.warehouseId) || 'Не вказано';
+        const userName = findNameByIdFromMap(userMap, item.userId) || 'Не вказано';
+        const reasonObj = withdrawalReasonMap.get(Number(item.reasonId));
+        const reasonName = reasonObj ? reasonObj.name : 'Не вказано';
+        
+        return `
+            <tr data-id="${item.id}">
+                <td style="text-align: center;">${item.transferDate || ''}</td>
+                <td>${warehouseName}</td>
+                <td>${fromProductName}</td>
+                <td>${toProductName}</td>
+                <td style="text-align: center;">${formatNumber(item.quantity, 2)} кг</td>
+                <td style="text-align: right;">${formatNumber(item.unitPriceUah, 6)} грн</td>
+                <td style="text-align: right; font-weight: bold;">${formatNumber(item.totalCostUah, 6)} грн</td>
+                <td>${userName}</td>
+                <td>${reasonName}</td>
+                <td>${item.description || ''}</td>
+            </tr>
+        `;
+    }).join('');
+    
+    tbody.querySelectorAll('tr[data-id]').forEach(row => {
+        row.addEventListener('click', () => openEditTransferModal(Number(row.dataset.id)));
+    });
+}
+
+// Update transfers pagination
+function updateTransfersPagination(data) {
+    const totalPages = data.totalPages || 1;
+    const currentPage = data.number || 0;
+    
+    const infoSpan = document.getElementById('transfers-page-info');
+    if (infoSpan) {
+        infoSpan.textContent = `Сторінка ${currentPage + 1} з ${totalPages}`;
+    }
+    
+    const prevBtn = document.getElementById('transfers-prev-page');
+    const nextBtn = document.getElementById('transfers-next-page');
+    
+    if (prevBtn) {
+        prevBtn.disabled = currentPage === 0;
+    }
+    
+    if (nextBtn) {
+        nextBtn.disabled = currentPage >= totalPages - 1;
+    }
+}
+
+// Apply transfer filters
+const applyTransferFiltersBtn = document.getElementById('apply-transfer-filters');
+if (applyTransferFiltersBtn) {
+    applyTransferFiltersBtn.addEventListener('click', async () => {
+        updateTransfersSelectedFilters();
+        currentTransfersPage = 0;
+        await loadTransfers();
+        const modal = document.getElementById('transfers-filter-modal');
+        if (modal) {
+            modal.classList.remove('open');
+        }
+        document.body.classList.remove('modal-open');
+    });
+}
+
+// Reset transfer filters
+const clearTransferFiltersBtn = document.getElementById('clear-transfer-filters');
+if (clearTransferFiltersBtn) {
+    clearTransferFiltersBtn.addEventListener('click', () => {
+        clearTransfersFilters();
+    });
+}
+
+// Transfers pagination - Previous
+document.getElementById('transfers-prev-page').addEventListener('click', async () => {
+    if (currentTransfersPage > 0) {
+        currentTransfersPage--;
+        await loadTransfers();
+    }
+});
+
+// Transfers pagination - Next
+document.getElementById('transfers-next-page').addEventListener('click', async () => {
+    currentTransfersPage++;
+    await loadTransfers();
+});
+
+// Export transfers to Excel
+async function exportTransfersToExcel() {
+    try {
+        const params = new URLSearchParams();
+        
+        if (transfersFilters.dateFrom) params.append('dateFrom', transfersFilters.dateFrom);
+        if (transfersFilters.dateTo) params.append('dateTo', transfersFilters.dateTo);
+        if (transfersFilters.warehouseId) params.append('warehouseId', transfersFilters.warehouseId);
+        if (transfersFilters.fromProductId) params.append('fromProductId', transfersFilters.fromProductId);
+        if (transfersFilters.toProductId) params.append('toProductId', transfersFilters.toProductId);
+        if (transfersFilters.userId) params.append('userId', transfersFilters.userId);
+        if (transfersFilters.reasonId) params.append('reasonId', transfersFilters.reasonId);
+        
+        const response = await fetch(`/api/v1/warehouse/transfers/export?${params}`);
+        
+        if (!response.ok) {
+            throw new Error('Failed to export transfers');
+        }
+        
+        let filename = 'product_transfers.xlsx';
+        const contentDisposition = response.headers.get('Content-Disposition');
+        if (contentDisposition) {
+            const filenameMatch = contentDisposition.match(/filename\*=UTF-8''([^;]+)|filename="?([^";]+)"?/i);
+            if (filenameMatch) {
+                filename = decodeURIComponent(filenameMatch[1] || filenameMatch[2]);
+            }
+        }
+        
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = filename.endsWith('.xlsx') ? filename : `${filename}.xlsx`;
+        document.body.appendChild(anchor);
+        anchor.click();
+        document.body.removeChild(anchor);
+        window.URL.revokeObjectURL(url);
+    } catch (error) {
+        console.error('Error exporting transfers:', error);
+        showMessage('Помилка експорту переміщень', 'error');
+    }
+}
+
+const exportTransfersBtn = document.getElementById('export-excel-transfers');
+if (exportTransfersBtn) {
+    exportTransfersBtn.addEventListener('click', exportTransfersToExcel);
+}
+
+if (updateShipmentForm) {
+    updateShipmentForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (!currentShipmentId) {
+            showMessage('Не вдалося визначити машину для оновлення', 'error');
+            return;
+        }
+        
+        const payload = {
+            shipmentDate: detailShipmentDateInput?.value || null,
+            vehicleNumber: detailShipmentVehicleInput?.value ?? null,
+            invoiceUa: detailShipmentInvoiceUaInput?.value ?? null,
+            invoiceEu: detailShipmentInvoiceEuInput?.value ?? null,
+            description: detailShipmentDescriptionInput?.value ?? null
+        };
+        
+        Object.keys(payload).forEach(key => {
+            if (typeof payload[key] === 'string') {
+                const trimmed = payload[key].trim();
+                payload[key] = trimmed.length ? trimmed : null;
+            }
+        });
+        
+        if (!payload.shipmentDate) {
+            showMessage('Вкажіть дату відвантаження', 'error');
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/api/v1/shipments/${currentShipmentId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Не вдалося оновити машину');
+            }
+            
+            const updatedShipment = await response.json();
+            showMessage('Дані машини оновлено', 'success');
+            renderShipmentDetails(updatedShipment);
+            await loadShipments();
+            await loadBalance();
+            closeModal('edit-shipment-item-modal');
+        } catch (error) {
+            showMessage(error.message || 'Помилка при оновленні машини', 'error');
+        }
+    });
+}
+
+function setDefaultTransfersDates() {
+    const today = new Date();
+    const fromDate = new Date();
+    fromDate.setDate(today.getDate() - 30);
+    const formattedToday = today.toISOString().split('T')[0];
+    const formattedFrom = fromDate.toISOString().split('T')[0];
+
+    const fromInput = document.getElementById('transfer-date-from-filter');
+    const toInput = document.getElementById('transfer-date-to-filter');
+
+    if (fromInput && !fromInput.value) {
+        fromInput.value = formattedFrom;
+    }
+    if (toInput && !toInput.value) {
+        toInput.value = formattedToday;
+    }
+}
+
+function updateTransfersSelectedFilters() {
+    const dateFromInput = document.getElementById('transfer-date-from-filter');
+    const dateToInput = document.getElementById('transfer-date-to-filter');
+
+    const warehouseValues = transfersCustomSelects['transfer-warehouse-filter']
+        ? transfersCustomSelects['transfer-warehouse-filter'].getValue()
+        : [];
+    const fromProductValues = transfersCustomSelects['transfer-from-product-filter']
+        ? transfersCustomSelects['transfer-from-product-filter'].getValue()
+        : [];
+    const toProductValues = transfersCustomSelects['transfer-to-product-filter']
+        ? transfersCustomSelects['transfer-to-product-filter'].getValue()
+        : [];
+    const userValues = transfersCustomSelects['transfer-user-filter']
+        ? transfersCustomSelects['transfer-user-filter'].getValue()
+        : [];
+    const reasonValues = transfersCustomSelects['transfer-reason-filter']
+        ? transfersCustomSelects['transfer-reason-filter'].getValue()
+        : [];
+
+    transfersFilters = {
+        dateFrom: dateFromInput?.value || null,
+        dateTo: dateToInput?.value || null,
+        warehouseId: warehouseValues[0] || null,
+        fromProductId: fromProductValues[0] || null,
+        toProductId: toProductValues[0] || null,
+        userId: userValues[0] || null,
+        reasonId: reasonValues[0] || null
+    };
+
+    updateTransfersFilterCounter();
+}
+
+function updateTransfersFilterCounter() {
+    const counterElement = document.getElementById('transfers-filter-counter');
+    const countElement = document.getElementById('transfers-filter-count');
+
+    if (!counterElement || !countElement) {
+        return;
+    }
+
+    const activeFilters = Object.values(transfersFilters).filter(Boolean);
+    if (activeFilters.length > 0) {
+        countElement.textContent = activeFilters.length;
+        counterElement.style.display = 'inline-flex';
+    } else {
+        counterElement.style.display = 'none';
+    }
+}
+
+function clearTransfersFilters(closeModal = false) {
+    const form = document.getElementById('transfers-filter-form');
+    if (form) {
+        form.reset();
+    }
+
+    Object.keys(transfersCustomSelects).forEach(selectId => {
+        transfersCustomSelects[selectId].reset();
+    });
+
+    transfersFilters = {};
+    setDefaultTransfersDates();
+    updateTransfersSelectedFilters();
+    updateTransfersFilterCounter();
+    currentTransfersPage = 0;
+    loadTransfers();
+ 
+    if (closeModal) {
+        const modal = document.getElementById('transfers-filter-modal');
+        if (modal) {
+            modal.classList.remove('open');
+        }
+        document.body.classList.remove('modal-open');
+    }
+}
+
+async function initializeTransfersFilters() {
+    const selectElements = document.querySelectorAll('#transfer-warehouse-filter, #transfer-from-product-filter, #transfer-to-product-filter, #transfer-user-filter, #transfer-reason-filter');
+    selectElements.forEach(select => {
+        if (!select) return;
+        if (!transfersCustomSelects[select.id]) {
+            transfersCustomSelects[select.id] = createCustomSelect(select);
+        }
+    });
+
+    const warehouseArray = Array.from(warehouseMap.entries()).map(([id, name]) => ({id, name}));
+    const productArray = Array.from(productMap.entries()).map(([id, name]) => ({id, name}));
+    const userArray = Array.from(userMap.entries()).map(([id, name]) => ({id, name}));
+    const reasonArray = Array.from(withdrawalReasonMap.entries()).map(([id, reason]) => ({id, name: reason.name}));
+
+    if (transfersCustomSelects['transfer-warehouse-filter']) {
+        transfersCustomSelects['transfer-warehouse-filter'].populate(warehouseArray);
+        if (transfersFilters.warehouseId) {
+            transfersCustomSelects['transfer-warehouse-filter'].setValue(transfersFilters.warehouseId);
+        }
+    }
+    if (transfersCustomSelects['transfer-from-product-filter']) {
+        transfersCustomSelects['transfer-from-product-filter'].populate(productArray);
+        if (transfersFilters.fromProductId) {
+            transfersCustomSelects['transfer-from-product-filter'].setValue(transfersFilters.fromProductId);
+        }
+    }
+    if (transfersCustomSelects['transfer-to-product-filter']) {
+        transfersCustomSelects['transfer-to-product-filter'].populate(productArray);
+        if (transfersFilters.toProductId) {
+            transfersCustomSelects['transfer-to-product-filter'].setValue(transfersFilters.toProductId);
+        }
+    }
+    if (transfersCustomSelects['transfer-user-filter']) {
+        transfersCustomSelects['transfer-user-filter'].populate(userArray);
+        if (transfersFilters.userId) {
+            transfersCustomSelects['transfer-user-filter'].setValue(transfersFilters.userId);
+        }
+    }
+    if (transfersCustomSelects['transfer-reason-filter']) {
+        const bothReasons = getWithdrawalReasonsByPurpose('BOTH');
+        transfersCustomSelects['transfer-reason-filter'].populate(bothReasons);
+        if (transfersFilters.reasonId) {
+            transfersCustomSelects['transfer-reason-filter'].setValue(transfersFilters.reasonId);
+        }
+    }
+ 
+    const fromInput = document.getElementById('transfer-date-from-filter');
+    const toInput = document.getElementById('transfer-date-to-filter');
+    if (fromInput && transfersFilters.dateFrom) {
+        fromInput.value = transfersFilters.dateFrom;
+    }
+    if (toInput && transfersFilters.dateTo) {
+        toInput.value = transfersFilters.dateTo;
+    }
+
+    setDefaultTransfersDates();
+    updateTransfersSelectedFilters();
+}
+
+function updateShipmentItemMode() {
+    const mode = document.querySelector('input[name="edit-shipment-item-mode"]:checked')?.value;
+    if (!mode) {
+        return;
+    }
+
+    const quantityEnabled = mode === 'quantity';
+
+    if (editShipmentItemQuantityInput) {
+        editShipmentItemQuantityInput.disabled = !quantityEnabled;
+        editShipmentItemQuantityInput.classList.toggle('shipment-item-edit-disabled', !quantityEnabled);
+    }
+    if (editShipmentItemTotalCostInput) {
+        editShipmentItemTotalCostInput.disabled = quantityEnabled;
+        editShipmentItemTotalCostInput.classList.toggle('shipment-item-edit-disabled', quantityEnabled);
+    }
+
+    if (editShipmentItemModeRadios.length > 0) {
+        editShipmentItemModeRadios.forEach(radio => {
+            const label = radio.closest('label');
+            if (label) {
+                label.classList.toggle('active', radio.checked);
+            }
+        });
+    }
+}
+
+function openEditShipmentItemModal(itemId) {
+    if (!currentShipmentDetails) {
+        showMessage('Неможливо відредагувати товар: машина не вибрана', 'error');
+        return;
+    }
+
+    const item = currentShipmentItems.get(Number(itemId));
+    if (!item) {
+        showMessage('Товар не знайдений або вже оновлений', 'error');
+        return;
+    }
+
+    currentShipmentItemId = Number(itemId);
+
+    if (editShipmentItemQuantityInput) {
+        editShipmentItemQuantityInput.value = parseFloat(item.quantity).toFixed(2);
+    }
+    if (editShipmentItemTotalCostInput) {
+        editShipmentItemTotalCostInput.value = parseFloat(item.totalCostUah).toFixed(6);
+    }
+
+    const quantityModeRadio = document.querySelector('input[name="edit-shipment-item-mode"][value="quantity"]');
+    if (quantityModeRadio) {
+        quantityModeRadio.checked = true;
+    }
+    updateShipmentItemMode();
+
+    if (editShipmentItemModal) {
+        editShipmentItemModal.style.display = 'flex';
+        editShipmentItemModal.classList.add('open');
+    }
+    document.body.classList.add('modal-open');
+}
+
+const shipmentItemsTbody = document.getElementById('shipment-items-tbody');
+if (shipmentItemsTbody) {
+    shipmentItemsTbody.addEventListener('click', (event) => {
+        const row = event.target.closest('tr[data-item-id]');
+        if (!row) {
+            return;
+        }
+        const itemId = row.dataset.itemId;
+        if (itemId) {
+            openEditShipmentItemModal(itemId);
+        }
+    });
+}
+
+if (editShipmentItemModeRadios.length > 0) {
+    editShipmentItemModeRadios.forEach(radio => {
+        radio.addEventListener('change', updateShipmentItemMode);
+    });
+    updateShipmentItemMode();
+}
+
+if (editShipmentItemForm) {
+    editShipmentItemForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+
+        if (!currentShipmentId || currentShipmentItemId === null) {
+            showMessage('Не вдалося визначити товар для оновлення', 'error');
+            return;
+        }
+
+        const item = currentShipmentItems.get(Number(currentShipmentItemId));
+        if (!item) {
+            showMessage('Товар не знайдений або вже оновлений', 'error');
+            return;
+        }
+
+        const mode = document.querySelector('input[name="edit-shipment-item-mode"]:checked')?.value;
+        const payload = {};
+
+        if (mode === 'quantity') {
+            const newQuantityValue = parseFloat(editShipmentItemQuantityInput.value);
+            if (Number.isNaN(newQuantityValue) || newQuantityValue < 0) {
+                showMessage('Вкажіть коректну кількість', 'error');
+                return;
+            }
+
+            const roundedQuantity = parseFloat(newQuantityValue.toFixed(2));
+            if (Math.abs(roundedQuantity - parseFloat(item.quantity)) < 0.001) {
+                showMessage('Кількість не змінилася', 'info');
+                return;
+            }
+
+            if (roundedQuantity === 0) {
+                const productLabel = item.productName || 'товар';
+                const confirmRemoval = confirm(`Ви впевнені, що хочете повністю видалити ${productLabel} з машини?`);
+                if (!confirmRemoval) {
+                    return;
+                }
+            }
+
+            payload.quantity = roundedQuantity;
+        } else if (mode === 'totalCost') {
+            const newTotalValue = parseFloat(editShipmentItemTotalCostInput.value);
+            if (newTotalValue === undefined || newTotalValue === null || isNaN(newTotalValue) || newTotalValue <= 0) {
+                showMessage('Вкажіть коректну загальну вартість', 'error');
+                return;
+            }
+
+            const roundedTotal = parseFloat(newTotalValue.toFixed(6));
+            if (Math.abs(roundedTotal - parseFloat(item.totalCostUah)) < 0.000001) {
+                showMessage('Загальна вартість не змінилася', 'info');
+                return;
+            }
+
+            payload.totalCostUah = roundedTotal;
+        } else {
+            showMessage('Оберіть параметр для редагування', 'error');
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/v1/shipments/${currentShipmentId}/products/${currentShipmentItemId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || 'Не вдалося оновити товар у машині');
+            }
+
+            const updatedShipment = await response.json();
+            showMessage('Дані товару у машині оновлено', 'success');
+            renderShipmentDetails(updatedShipment);
+            await loadShipments();
+            closeModal('edit-shipment-item-modal');
+            await loadBalance();
+        } catch (error) {
+            showMessage(error.message || 'Помилка при оновленні товару у машині', 'error');
+        }
+    });
+}
+
+function openEditTransferModal(id) {
+    const transfer = transfersCache.find(item => Number(item.id) === Number(id));
+    if (!transfer) {
+        showMessage('Не вдалося знайти переміщення для редагування', 'error');
+        return;
+    }
+
+    currentTransferItem = transfer;
+    const hiddenIdInput = document.getElementById('edit-transfer-id');
+    if (hiddenIdInput) {
+        hiddenIdInput.value = transfer.id;
+    }
+
+    populateTransferReasons('edit-transfer-reason-id');
+    if (editTransferReasonSelect) {
+        editTransferReasonSelect.value = transfer.reasonId ? String(transfer.reasonId) : '';
+    }
+
+    if (editTransferQuantityInput) {
+        const numericQuantity = parseFloat(transfer.quantity);
+        editTransferQuantityInput.value = Number.isNaN(numericQuantity) ? '' : numericQuantity.toFixed(2);
+    }
+
+    if (editTransferDescriptionInput) {
+        editTransferDescriptionInput.value = transfer.description || '';
+    }
+
+    if (editTransferDateSpan) {
+        editTransferDateSpan.textContent = transfer.transferDate || '—';
+    }
+
+    if (editTransferWarehouseSpan) {
+        editTransferWarehouseSpan.textContent = findNameByIdFromMap(warehouseMap, transfer.warehouseId) || '—';
+    }
+
+    if (editTransferFromProductSpan) {
+        editTransferFromProductSpan.textContent = findNameByIdFromMap(productMap, transfer.fromProductId) || '—';
+    }
+
+    if (editTransferToProductSpan) {
+        editTransferToProductSpan.textContent = findNameByIdFromMap(productMap, transfer.toProductId) || '—';
+    }
+
+    if (editTransferModal) {
+        editTransferModal.style.display = 'flex';
+        editTransferModal.classList.add('open');
+        document.body.classList.add('modal-open');
+    }
+}
+
+if (editTransferForm) {
+    editTransferForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        if (!currentTransferItem) {
+            showMessage('Не вдалося знайти переміщення для редагування', 'error');
+            return;
+        }
+
+        const idInput = document.getElementById('edit-transfer-id');
+        const id = idInput ? Number(idInput.value) : null;
+        if (!id) {
+            showMessage('Невірний ідентифікатор переміщення', 'error');
+            return;
+        }
+
+        const reasonId = editTransferReasonSelect ? Number(editTransferReasonSelect.value) : NaN;
+        if (!reasonId) {
+            showMessage('Оберіть причину переміщення', 'error');
+            return;
+        }
+
+        const rawQuantity = editTransferQuantityInput ? parseFloat(editTransferQuantityInput.value) : NaN;
+        if (Number.isNaN(rawQuantity) || rawQuantity < 0) {
+            showMessage('Вкажіть коректну кількість (0 або більше)', 'error');
+            return;
+        }
+
+        const roundedQuantity = Number(rawQuantity.toFixed(2));
+        const descriptionRaw = editTransferDescriptionInput ? editTransferDescriptionInput.value : '';
+        const descriptionTrimmed = descriptionRaw ? descriptionRaw.trim() : '';
+        const descriptionValue = descriptionTrimmed.length ? descriptionTrimmed : null;
+
+        const originalQuantity = parseFloat(currentTransferItem.quantity);
+        const originalReasonId = currentTransferItem.reasonId || null;
+        const originalDescription = currentTransferItem.description || '';
+
+        if (roundedQuantity === 0) {
+            const fromProductName = findNameByIdFromMap(productMap, currentTransferItem.fromProductId) || 'товару';
+            const confirmRemoval = confirm(`Ви впевнені, що хочете повністю скасувати переміщення з ${fromProductName}?`);
+            if (!confirmRemoval) {
+                return;
+            }
+        }
+
+        const hasQuantityChange = Math.abs(roundedQuantity - originalQuantity) > 0.0001;
+        const hasReasonChange = reasonId !== originalReasonId;
+        const hasDescriptionChange = (descriptionValue || '') !== (originalDescription || '');
+
+        if (!hasQuantityChange && !hasReasonChange && !hasDescriptionChange) {
+            showMessage('Зміни відсутні', 'info');
+            return;
+        }
+
+        const payload = {
+            quantity: roundedQuantity,
+            reasonId,
+            description: descriptionValue
+        };
+
+        try {
+            const response = await fetch(`/api/v1/warehouse/transfers/${id}`, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+
+            if (response.status === 204) {
+                showMessage('Переміщення успішно видалено', 'info');
+                closeModal('edit-transfer-modal');
+                await loadBalance();
+                await loadTransfers();
+                return;
+            }
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                handleError(new Error(errorData.message || 'Не вдалося оновити переміщення'));
+                return;
+            }
+
+            await response.json().catch(() => null);
+            showMessage('Переміщення успішно оновлено', 'info');
+            closeModal('edit-transfer-modal');
+            await loadBalance();
+            await loadTransfers();
+        } catch (error) {
+            console.error('Error updating transfer:', error);
+            handleError(error);
+        }
+    });
+}
+
+function attachBalanceRowListeners() {
+    const rows = document.querySelectorAll('.balance-row');
+    rows.forEach(row => {
+        row.addEventListener('click', () => {
+            const data = row.dataset;
+            openBalanceEditModal({
+                warehouseId: Number(data.warehouseId),
+                productId: Number(data.productId),
+                warehouseName: data.warehouseName,
+                productName: data.productName,
+                quantity: parseFloat(data.quantity ?? '0') || 0,
+                totalCost: parseFloat(data.totalCost ?? '0') || 0,
+                averagePrice: parseFloat(data.averagePrice ?? '0') || 0
+            });
+        });
+    });
+}
+
+function resetBalanceEditModal() {
+    if (balanceEditForm) {
+        balanceEditForm.reset();
+    }
+    currentBalanceEditData = null;
+    balanceEditQuantityInput?.removeAttribute('disabled');
+    balanceEditTotalCostInput?.setAttribute('disabled', 'disabled');
+    balanceEditTotalCostInput && (balanceEditTotalCostInput.value = '');
+    balanceEditQuantityInput && (balanceEditQuantityInput.value = '');
+    balanceEditDescriptionInput && (balanceEditDescriptionInput.value = '');
+    balanceEditModeRadios.forEach(radio => {
+        radio.checked = radio.value === 'quantity';
+        const label = radio.closest('label');
+        if (label) {
+            label.classList.toggle('active', radio.checked);
+        }
+    });
+    if (balanceHistoryBody) {
+        balanceHistoryBody.innerHTML = '';
+    }
+    if (balanceHistoryEmpty) {
+        balanceHistoryEmpty.style.display = 'none';
+    }
+
+    updateBalanceEditMode();
+}
+
+function updateBalanceEditMode() {
+    const selected = document.querySelector('input[name="balance-edit-mode"]:checked');
+    if (!selected) {
+        return;
+    }
+    balanceEditModeRadios.forEach(radio => {
+        const label = radio.closest('label');
+        if (label) {
+            label.classList.toggle('active', radio === selected);
+        }
+    });
+
+    if (selected.value === 'quantity') {
+        balanceEditQuantityInput?.removeAttribute('disabled');
+        balanceEditTotalCostInput?.setAttribute('disabled', 'disabled');
+        balanceEditQuantityInput?.focus();
+    } else {
+        balanceEditTotalCostInput?.removeAttribute('disabled');
+        balanceEditQuantityInput?.setAttribute('disabled', 'disabled');
+        balanceEditTotalCostInput?.focus();
+    }
+}
+
+balanceEditModeRadios.forEach(radio => {
+    radio.addEventListener('change', updateBalanceEditMode);
+});
+
+function openBalanceEditModal(data) {
+    if (!balanceEditModal) {
+        return;
+    }
+
+    resetBalanceEditModal();
+    currentBalanceEditData = data;
+
+    balanceEditWarehouseIdInput && (balanceEditWarehouseIdInput.value = data.warehouseId || '');
+    balanceEditProductIdInput && (balanceEditProductIdInput.value = data.productId || '');
+
+    if (balanceEditQuantityInput && Number.isFinite(data.quantity)) {
+        balanceEditQuantityInput.value = Number(data.quantity).toFixed(2);
+    }
+    if (balanceEditTotalCostInput && Number.isFinite(data.totalCost)) {
+        balanceEditTotalCostInput.value = Number(data.totalCost).toFixed(6);
+    }
+
+    updateBalanceEditMode();
+
+    balanceEditModal.style.display = 'flex';
+    balanceEditModal.classList.add('open');
+    document.body.classList.add('modal-open');
+
+    loadBalanceHistory(data.warehouseId, data.productId).catch(error => {
+        console.error('Error loading balance history:', error);
+    });
+}
+
+async function loadBalanceHistory(warehouseId, productId) {
+    if (!balanceHistoryBody || !balanceHistoryEmpty) {
+        return;
+    }
+
+    balanceHistoryBody.innerHTML = '<tr><td colspan="7" style="text-align: center;">Завантаження...</td></tr>';
+    balanceHistoryEmpty.style.display = 'none';
+
+    try {
+        const response = await fetch(`/api/v1/warehouse/balances/${warehouseId}/product/${productId}/history`);
+        if (!response.ok) {
+            throw new Error('Не вдалося завантажити історію змін');
+        }
+        const history = await response.json();
+
+        if (!Array.isArray(history) || history.length === 0) {
+            balanceHistoryBody.innerHTML = '';
+            balanceHistoryEmpty.style.display = 'block';
+            return;
+        }
+
+        const typeLabels = {
+            QUANTITY: 'Кількість',
+            TOTAL_COST: 'Загальна вартість',
+            BOTH: 'Кількість та вартість'
+        };
+
+        balanceHistoryBody.innerHTML = history.map(item => {
+            const userName = findNameByIdFromMap(userMap, item.userId) || '—';
+            const typeLabel = typeLabels[item.adjustmentType] || item.adjustmentType || '—';
+            const createdAt = item.createdAt ? new Date(item.createdAt).toLocaleString() : '—';
+            const quantityChange = `${formatNumber(item.previousQuantity, 2)} → ${formatNumber(item.newQuantity, 2)} кг`;
+            const totalChange = `${formatNumber(item.previousTotalCostUah, 6)} → ${formatNumber(item.newTotalCostUah, 6)} грн`;
+            const averageChange = `${formatNumber(item.previousAveragePriceUah, 6)} → ${formatNumber(item.newAveragePriceUah, 6)} грн/кг`;
+            const description = item.description || '—';
+
+            return `
+                <tr>
+                    <td>${createdAt}</td>
+                    <td>${userName}</td>
+                    <td>${typeLabel}</td>
+                    <td>${quantityChange}</td>
+                    <td>${totalChange}</td>
+                    <td>${averageChange}</td>
+                    <td>${description}</td>
+                </tr>
+            `;
+        }).join('');
+    } catch (error) {
+        console.error('Error loading balance history:', error);
+        balanceHistoryBody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #e53935;">Помилка завантаження історії</td></tr>';
+        balanceHistoryEmpty.style.display = 'none';
+    }
+}
+
+if (balanceEditForm) {
+    balanceEditForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        if (!currentBalanceEditData) {
+            showMessage('Не вдалося визначити баланс для редагування', 'error');
+            return;
+        }
+
+        const modeRadio = document.querySelector('input[name="balance-edit-mode"]:checked');
+        if (!modeRadio) {
+            showMessage('Оберіть режим редагування', 'error');
+            return;
+        }
+
+        const mode = modeRadio.value;
+        const descriptionRaw = balanceEditDescriptionInput ? balanceEditDescriptionInput.value : '';
+        const descriptionValue = descriptionRaw ? descriptionRaw.trim() : '';
+        const payload = {};
+
+        if (mode === 'quantity') {
+            const rawValue = balanceEditQuantityInput ? parseFloat(balanceEditQuantityInput.value) : NaN;
+            if (Number.isNaN(rawValue) || rawValue < 0) {
+                showMessage('Вкажіть коректну кількість (0 або більше)', 'error');
+                return;
+            }
+            const rounded = Number(rawValue.toFixed(2));
+            const currentQuantity = currentBalanceEditData.quantity || 0;
+            if (Math.abs(rounded - currentQuantity) < 0.0001 && !descriptionValue) {
+                showMessage('Зміни відсутні', 'info');
+                return;
+            }
+            payload.newQuantity = rounded;
+        } else {
+            const rawValue = balanceEditTotalCostInput ? parseFloat(balanceEditTotalCostInput.value) : NaN;
+            if (Number.isNaN(rawValue) || rawValue < 0) {
+                showMessage('Вкажіть коректну суму (0 або більше)', 'error');
+                return;
+            }
+            const rounded = Number(rawValue.toFixed(6));
+            const currentTotal = currentBalanceEditData.totalCost || 0;
+            if (Math.abs(rounded - currentTotal) < 0.000001 && !descriptionValue) {
+                showMessage('Зміни відсутні', 'info');
+                return;
+            }
+            payload.newTotalCostUah = rounded;
+        }
+
+        const hasQuantityChange = Object.prototype.hasOwnProperty.call(payload, 'newQuantity');
+        const hasTotalCostChange = Object.prototype.hasOwnProperty.call(payload, 'newTotalCostUah');
+
+        if (!hasQuantityChange && !hasTotalCostChange && !descriptionValue) {
+            showMessage('Зміни відсутні', 'info');
+            return;
+        }
+
+        if (descriptionValue) {
+            payload.description = descriptionValue;
+        }
+
+        const warehouseId = currentBalanceEditData.warehouseId;
+        const productId = currentBalanceEditData.productId;
+
+        try {
+            const response = await fetch(`/api/v1/warehouse/balances/${warehouseId}/product/${productId}`, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                handleError(new Error(errorData.message || 'Не вдалося оновити баланс'));
+                return;
+            }
+
+            await response.json().catch(() => null);
+            showMessage('Баланс успішно оновлено', 'info');
+            closeModal('balance-edit-modal');
+            await loadBalance();
+        } catch (error) {
+            console.error('Error updating balance:', error);
+            handleError(error);
+        }
+    });
+}
+
+if (balanceHistoryBtn) {
+    balanceHistoryBtn.addEventListener('click', async () => {
+        if (historyContainer.style.display === 'block') {
+            historyContainer.style.display = 'none';
+            document.getElementById('open-history-filter-modal').style.display = 'none';
+            document.getElementById('history-filter-counter').style.display = 'none';
+            document.getElementById('export-excel-history').style.display = 'none';
+        } else {
+            // Hide other containers
+            document.getElementById('entries-container').style.display = 'none';
+            transfersContainer.style.display = 'none';
+            shipmentsContainer.style.display = 'none';
+            
+            historyContainer.style.display = 'block';
+            document.getElementById('open-history-filter-modal').style.display = 'inline-block';
+            document.getElementById('export-excel-history').style.display = 'inline-block';
+            initializeHistoryFilters();
+            loadWithdrawalHistory(0);
+        }
+    });
+}
+
+function resetBalanceHistoryModal() {
+    if (balanceHistoryBody) {
+        balanceHistoryBody.innerHTML = '';
+    }
+    if (balanceHistoryEmpty) {
+        balanceHistoryEmpty.style.display = 'none';
+    }
+}
+
+document.addEventListener('click', async (event) => {
+    const historyButton = event.target.closest('#balance-history-btn');
+    if (!historyButton) {
+        return;
+    }
+
+    if (!currentBalanceEditData) {
+        showMessage('Не вдалося визначити баланс для перегляду історії', 'error');
+        return;
+    }
+
+    resetBalanceHistoryModal();
+    if (balanceHistoryModal) {
+        balanceHistoryModal.style.display = 'flex';
+        balanceHistoryModal.classList.add('open');
+        document.body.classList.add('modal-open');
+    }
+
+    try {
+        await loadBalanceHistory(currentBalanceEditData.warehouseId, currentBalanceEditData.productId);
+    } catch (error) {
+        console.error('Error loading balance history:', error);
+    }
 });

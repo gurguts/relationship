@@ -25,6 +25,7 @@ import java.net.URI;
 public class PurchaseCrudController {
     private final IPurchaseCrudService purchaseCrudService;
     private final PurchaseMapper purchaseMapper;
+    private final org.example.purchaseservice.services.purchase.PurchaseCrudService purchaseCrudServiceImpl;
 
     @PreAuthorize("hasAuthority('purchase:create')")
     @PostMapping
@@ -33,6 +34,8 @@ public class PurchaseCrudController {
         Purchase purchase = purchaseMapper.purchaseCreateDTOToPurchase(purchaseCreateDTO);
         Purchase createdPurchase = purchaseCrudService.createPurchase(purchase);
         PurchaseDTO createdPurchaseDto = purchaseMapper.toDto(createdPurchase);
+
+        createdPurchaseDto.setIsReceived(false);
         log.info("Purchase created with ID: {}", createdPurchaseDto.getId());
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
                 .path("/{id}")
@@ -48,6 +51,8 @@ public class PurchaseCrudController {
         Purchase purchase = purchaseMapper.purchaseUpdateDTOToPurchase(purchaseDto);
         Purchase updatedPurchase = purchaseCrudService.updatePurchase(id, purchase);
         PurchaseDTO updatedPurchaseDto = purchaseMapper.toDto(updatedPurchase);
+
+        purchaseCrudServiceImpl.enrichPurchaseDTOWithReceivedStatus(updatedPurchaseDto, updatedPurchase);
         log.info("Purchase updated with ID: {}", updatedPurchaseDto.getId());
         return ResponseEntity.ok(updatedPurchaseDto);
     }
@@ -56,6 +61,8 @@ public class PurchaseCrudController {
     public ResponseEntity<PurchaseDTO> getPurchaseById(@PathVariable Long id) {
         Purchase purchase = purchaseCrudService.findPurchaseById(id);
         PurchaseDTO purchaseDto = purchaseMapper.toDto(purchase);
+
+        purchaseCrudServiceImpl.enrichPurchaseDTOWithReceivedStatus(purchaseDto, purchase);
         log.info("Purchase fetched with ID: {}", purchaseDto.getId());
         return ResponseEntity.ok(purchaseDto);
     }

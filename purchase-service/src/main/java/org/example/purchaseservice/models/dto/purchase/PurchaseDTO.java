@@ -37,4 +37,6 @@ public class PurchaseDTO {
     private LocalDateTime updatedAt;
 
     private String comment;
+
+    private Boolean isReceived;
 }

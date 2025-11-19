@@ -18,7 +18,7 @@ spring:
         - id: web-app
           uri: http://localhost:8081
           predicates:
-            - Path=/login,/clients,/routes,/purchase,/sale,/settings,/containers,/inventory,/balance,/warehouse,/stock,/analytics,/static/**,/css/**,/js/**,/favicon/**,/img/**
+            - Path=/login,/clients,/routes,/purchase,/sale,/settings,/administration,/containers,/inventory,/balance,/warehouse,/finance,/stock,/analytics,/profile,/static/**,/css/**,/js/**,/favicon/**,/img/**
           filters:
             - CustomTokenRelayFilterFactory
 
@@ -26,7 +26,7 @@ spring:
         - id: user-service
           uri: http://localhost:8082
           predicates:
-            - Path=/api/v1/user/**,/api/v1/user-balance/**,/api/v1/auth/**,/api/v1/balance/**,/api/v1/transaction/**
+            - Path=/api/v1/user/**,/api/v1/user-balance/**,/api/v1/auth/**,/api/v1/balance/**,/api/v1/transaction/**,/api/v1/accounts/**,/api/v1/branches/**,/api/v1/transaction-categories/**,/api/v1/branch-permissions/**
           filters:
             - CustomTokenRelayFilterFactory
 
@@ -110,11 +110,11 @@ spring:
         #          filters:
         #            - CustomTokenRelayFilterFactory
 
-        # 📌 Purchase, Warehouse, Product Service
+        # 📌 Purchase, Warehouse, Product, Driver Balance, Shipments Service
         - id: purchase-service
           uri: http://localhost:8093
           predicates:
-            - Path=/api/v1/purchase/**,/api/v1/product/**,/api/v1/warehouse/**,/api/v1/withdrawal-reason/**
+            - Path=/api/v1/purchase/**,/api/v1/product/**,/api/v1/warehouse/**,/api/v1/withdrawal-reason/**,/api/v1/driver/**,/api/v1/shipments/**
           filters:
             - CustomTokenRelayFilterFactory
 

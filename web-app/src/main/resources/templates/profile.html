@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ua">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Мій профіль</title>
+
+    <link rel="stylesheet" href="/css/profile.css">
+    <link rel="stylesheet" href="/css/common.css">
+
+    <link rel="icon" type="image/png" href="/favicon/favicon-96x96.png" sizes="96x96"/>
+    <link rel="icon" type="image/svg+xml" href="/favicon/favicon.svg"/>
+    <link rel="shortcut icon" href="/favicon/favicon.ico"/>
+    <link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png"/>
+    <meta name="apple-mobile-web-app-title" content="Vinteh"/>
+    <link rel="manifest" href="/favicon/site.webmanifest"/>
+</head>
+<body>
+<label class="hamburger">
+    <input id="hamburger" type="checkbox">
+    <svg viewBox="0 0 32 32">
+        <path class="line line-top-bottom"
+              d="M27 10 13 10C10.8 10 9 8.2 9 6 9 3.5 10.8 2 13 2 15.2 2 17 3.8 17 6L17 26C17 28.2 18.8 30 21 30 23.2 30 25 28.2 25 26 25 23.8 23.2 22 21 22L7 22"></path>
+        <path class="line" d="M7 16 27 16"></path>
+    </svg>
+</label>
+
+<header>
+    <div class="user-info">
+        <span id="userName">Не вказано</span><br>
+        <span id="userBalance">0</span>
+    </div>
+    <nav>
+        <ul>
+            <li id="nav-clients"><a href="/clients">Клієнти</a></li>
+            <li id="nav-routes"><a href="/routes">Маршрути</a></li>
+            <li id="nav-purchase"><a href="/purchase">Закупівлі</a></li>
+            <li id="nav-containers"><a href="/containers">Тари</a></li>
+            <li id="nav-inventory"><a href="/inventory">Баланс тари</a></li>
+            <li id="nav-balance"><a href="/balance">Баланс грошовий</a></li>
+            <li id="nav-finance"><a href="/finance">Фінанси</a></li>
+            <li id="nav-stock"><a href="/stock">Склад</a></li>
+            <li id="nav-analytics"><a href="/analytics">Аналітика</a></li>
+            <li id="nav-settings"><a href="/settings">Налаштування</a></li>
+            <li id="nav-administration"><a href="/administration">Адміністрація</a></li>
+            <li id="nav-profile"><a class="selected-nav" href="/profile">Мій профіль</a></li>
+            <li>
+                <a href="#" id="logout">Вихід</a>
+            </li>
+        </ul>
+    </nav>
+</header>
+
+<div class="profile-container">
+    <h1>Мій профіль</h1>
+
+    <div class="profile-sections">
+        <!-- Баланс товара -->
+        <section class="profile-section">
+            <h2>Баланс товару</h2>
+            <div id="product-balance-container">
+                <div class="loading">Завантаження...</div>
+            </div>
+        </section>
+
+        <!-- Финансовые счета -->
+        <section class="profile-section">
+            <h2>Фінансові рахунки</h2>
+            <div id="accounts-container">
+                <div class="loading">Завантаження...</div>
+            </div>
+        </section>
+    </div>
+</div>
+
+<script src="/js/common.js"></script>
+<script src="/js/profile.js"></script>
+</body>
+</html>
+

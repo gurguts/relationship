@@ -41,7 +41,7 @@ public class StatusClientController {
         return ResponseEntity.ok(dtos);
     }
 
-    @PreAuthorize("hasAuthority('settings:edit')")
+    @PreAuthorize("hasAuthority('settings_client:create')")
     @PostMapping
     public ResponseEntity<StatusClientDTO> createStatusClient(
             @RequestBody @Valid StatusClientCreateDTO statusClientCreateDTO) {
@@ -56,7 +56,7 @@ public class StatusClientController {
         return ResponseEntity.created(location).body(createdStatusClient);
     }
 
-    @PreAuthorize("hasAuthority('settings:edit')")
+    @PreAuthorize("hasAuthority('settings_client:edit')")
     @PutMapping("/{id}")
     public ResponseEntity<StatusClientDTO> updateStatusClient(@PathVariable Long id,
                                                               @RequestBody @Valid
@@ -66,7 +66,7 @@ public class StatusClientController {
         return ResponseEntity.ok(statusClientMapper.statusClientToStatusClientDTO(updatedStatusClient));
     }
 
-    @PreAuthorize("hasAuthority('settings:edit')")
+    @PreAuthorize("hasAuthority('settings_client:delte')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteStatusClient(@PathVariable Long id) {
         statusClientService.deleteStatusClient(id);

@@ -12,11 +12,13 @@ import org.example.purchaseservice.models.dto.purchase.PurchasePageDTO;
 import org.example.purchaseservice.models.dto.fields.SourceDTO;
 import org.example.purchaseservice.clients.ClientApiClient;
 import org.example.purchaseservice.repositories.PurchaseRepository;
+import org.example.purchaseservice.repositories.WarehouseReceiptRepository;
+import org.example.purchaseservice.models.warehouse.WarehouseReceipt;
 import org.example.purchaseservice.services.impl.IPurchaseSearchService;
 import org.example.purchaseservice.spec.PurchaseSpecification;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.util.Collections;
@@ -31,6 +33,7 @@ public class PurchaseSearchService implements IPurchaseSearchService {
     private final PurchaseRepository purchaseRepository;
     private final ClientApiClient clientApiClient;
     private final SourceClient sourceClient;
+    private final WarehouseReceiptRepository warehouseReceiptRepository;
 
     @Override
     public PageResponse<PurchasePageDTO> searchPurchase(String query, Pageable pageable,
@@ -56,7 +59,11 @@ public class PurchaseSearchService implements IPurchaseSearchService {
         Page<Purchase> purchasePage = fetchPurchases(query, filterParams, clientIds, sourceIds, pageable);
 
         List<PurchasePageDTO> purchaseDTOs = purchasePage.getContent().stream()
-                .map(purchase -> mapToPurchasePageDTO(purchase, clientMap))
+                .map(purchase -> {
+                    PurchasePageDTO dto = mapToPurchasePageDTO(purchase, clientMap);
+                    dto.setIsReceived(isPurchaseReceived(purchase));
+                    return dto;
+                })
                 .collect(Collectors.toList());
 
         return new PageResponse<>(purchasePage.getNumber(), purchasePage.getSize(), purchasePage.getTotalElements(),
@@ -143,6 +150,23 @@ public class PurchaseSearchService implements IPurchaseSearchService {
         Specification<Purchase> spec = new PurchaseSpecification(null, filters, null, null);
 
         return purchaseRepository.findAll(spec);
+    }
+
+    private boolean isPurchaseReceived(org.example.purchaseservice.models.Purchase purchase) {
+        if (purchase == null || purchase.getUser() == null || purchase.getProduct() == null 
+                || purchase.getCreatedAt() == null) {
+            return false;
+        }
+
+        Specification<WarehouseReceipt> spec = (root, query, cb) -> cb.and(
+                cb.equal(root.get("userId"), purchase.getUser()),
+                cb.equal(root.get("productId"), purchase.getProduct()),
+                cb.greaterThanOrEqualTo(root.get("createdAt"), purchase.getCreatedAt())
+        );
+        
+        List<WarehouseReceipt> receipts = warehouseReceiptRepository.findAll(spec);
+        
+        return !receipts.isEmpty();
     }
 
 }

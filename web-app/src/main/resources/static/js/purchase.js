@@ -97,8 +97,31 @@ function renderPurchase(purchases) {
         const deleteButton = row.querySelector('.delete-button');
         const companyCell = row.querySelector('.company-cell');
 
-        editButton.addEventListener('click', () => showEditModal(purchase));
-        deleteButton.addEventListener('click', () => deletePurchase(purchase.id));
+        // Блокируем редактирование и удаление принятых закупок
+        if (purchase.isReceived === true) {
+            // Кнопки уже disabled в HTML, но добавляем обработчик для показа сообщения
+            editButton.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (typeof showMessage === 'function') {
+                    showMessage('Неможливо редагувати закупку, оскільки товар вже прийнято кладовщиком.', 'error');
+                } else {
+                    alert('Неможливо редагувати закупку, оскільки товар вже прийнято кладовщиком.');
+                }
+            });
+            deleteButton.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (typeof showMessage === 'function') {
+                    showMessage('Неможливо видалити закупку, оскільки товар вже прийнято кладовщиком.', 'error');
+                } else {
+                    alert('Неможливо видалити закупку, оскільки товар вже прийнято кладовщиком.');
+                }
+            });
+        } else {
+            editButton.addEventListener('click', () => showEditModal(purchase));
+            deleteButton.addEventListener('click', () => deletePurchase(purchase.id));
+        }
         companyCell.addEventListener('click', () => {
             if (purchase.client) {
                 loadClientDetails(purchase.client);
@@ -123,6 +146,10 @@ document.querySelectorAll('th[data-sort]').forEach(th => {
 });
 
 function getRowHtml(purchase) {
+    const isReceived = purchase.isReceived === true;
+    const editButtonDisabled = isReceived ? 'disabled' : '';
+    const editButtonTitle = isReceived ? 'Неможливо редагувати - товар вже прийнято' : 'Редагувати';
+    
     return `
         <td data-label="Компанія" class="company-cell">${purchase.client ? purchase.client.company : ''}</td>
         <td data-label="Товар">${findNameByIdFromMap(productMap, purchase.productId)}</td>
@@ -138,8 +165,8 @@ function getRowHtml(purchase) {
         .toLocaleDateString('ua-UA') : ''}</td>
         <td data-label="Коментар">${purchase.comment ? purchase.comment : ''}</td>
         <td data-label="Дії">
-            <button class="edit-button" data-id="${purchase.id}" title="Редагувати"><i class="fas fa-edit"></i></button>
-            <button class="delete-button" data-id="${purchase.id}" title="Видалити"><i class="fas fa-trash"></i></button>
+            <button class="edit-button" data-id="${purchase.id}" ${editButtonDisabled} title="${editButtonTitle}" ${isReceived ? 'style="opacity: 0.5; cursor: not-allowed;"' : ''}><i class="fas fa-edit"></i></button>
+            <button class="delete-button" data-id="${purchase.id}" ${isReceived ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''} title="${isReceived ? 'Неможливо видалити - товар вже прийнято' : 'Видалити'}"><i class="fas fa-trash"></i></button>
         </td>
     `;
 }
@@ -221,7 +248,16 @@ async function savePurchase(purchase, updatedData) {
             loadDataWithSort(currentPage, pageSize, currentSort, currentDirection)
         } else {
             const errorData = await response.json();
-            handleError(new ErrorResponse(errorData.error, errorData.message, errorData.details));
+            // Показываем понятное сообщение для принятых закупок
+            if (errorData.message && errorData.message.includes('прийнято кладовщиком')) {
+                if (typeof showMessage === 'function') {
+                    showMessage(errorData.message, 'error');
+                } else {
+                    alert(errorData.message);
+                }
+            } else {
+                handleError(new ErrorResponse(errorData.error, errorData.message, errorData.details));
+            }
         }
     } catch (error) {
         console.error('Помилка:', error);

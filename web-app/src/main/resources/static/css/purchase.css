@@ -919,6 +919,13 @@ input.custom-select-placeholder {
     background-color: rgb(175, 131, 18);
 }
 
+.edit-button:disabled,
+.delete-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
 /*--clientModal--*/
 
 #client-modal {
@@ -1180,7 +1187,7 @@ input.custom-select-placeholder {
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
     border-radius: 8px;
     overflow: hidden;
-    z-index: 1000;
+    z-index: 12;
     font-family: Arial, sans-serif;
     font-size: var(--rem);
 }

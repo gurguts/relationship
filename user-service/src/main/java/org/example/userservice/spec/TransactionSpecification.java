@@ -28,10 +28,6 @@ public class TransactionSpecification implements Specification<Transaction> {
         List<Predicate> predicates = new ArrayList<>();
 
         if (filters != null && !filters.isEmpty()) {
-            if (filters.containsKey("target_user_id")) {
-                List<Long> targetUserIds = filters.get("target_user_id").stream().map(Long::parseLong).toList();
-                predicates.add(root.get("targetUserId").in(targetUserIds));
-            }
 
             if (filters.containsKey("type")) {
                 List<String> types = filters.get("type");
@@ -86,6 +82,29 @@ public class TransactionSpecification implements Specification<Transaction> {
             if (filters.containsKey("executor_user_id")) {
                 List<Long> executorUserIds = filters.get("executor_user_id").stream().map(Long::parseLong).toList();
                 predicates.add(root.get("executorUserId").in(executorUserIds));
+            }
+
+            if (filters.containsKey("from_account_id")) {
+                List<Long> accountIds = filters.get("from_account_id").stream().map(Long::parseLong).toList();
+                predicates.add(root.get("fromAccountId").in(accountIds));
+            }
+
+            if (filters.containsKey("to_account_id")) {
+                List<Long> accountIds = filters.get("to_account_id").stream().map(Long::parseLong).toList();
+                predicates.add(root.get("toAccountId").in(accountIds));
+            }
+
+            if (filters.containsKey("account_id")) {
+                List<Long> accountIds = filters.get("account_id").stream().map(Long::parseLong).toList();
+                predicates.add(cb.or(
+                        root.get("fromAccountId").in(accountIds),
+                        root.get("toAccountId").in(accountIds)
+                ));
+            }
+
+            if (filters.containsKey("category_id")) {
+                List<Long> categoryIds = filters.get("category_id").stream().map(Long::parseLong).toList();
+                predicates.add(root.get("categoryId").in(categoryIds));
             }
         }
 

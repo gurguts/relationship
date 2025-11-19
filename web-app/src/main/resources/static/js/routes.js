@@ -252,9 +252,11 @@ function toggleExchangeRateField() {
         exchangeRateInput.style.display = 'none';
         exchangeRateLabel.style.display = 'none';
         exchangeRateInput.value = '';
+        exchangeRateInput.removeAttribute('required');
     } else {
         exchangeRateInput.style.display = 'block';
         exchangeRateLabel.style.display = 'block';
+        exchangeRateInput.setAttribute('required', 'required');
     }
 }
 

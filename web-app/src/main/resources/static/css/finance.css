@@ -1,0 +1,631 @@
+.finance-container {
+    padding: 2em 3em;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.finance-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2em;
+}
+
+.finance-header h1 {
+    margin: 0;
+    color: var(--dark-blue);
+}
+
+.action-buttons {
+    display: flex;
+    gap: 1em;
+}
+
+.btn-primary {
+    background-color: var(--bright-green);
+    color: white;
+    border: none;
+    padding: 0.75em 1.5em;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: var(--base-text-size);
+    font-weight: bold;
+    transition: background-color 0.3s ease;
+}
+
+.btn-primary:hover {
+    background-color: #2d8f47;
+}
+
+.btn-secondary {
+    background-color: var(--dark-blue);
+    color: white;
+    border: none;
+    padding: 0.75em 1.5em;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: var(--base-text-size);
+    font-weight: bold;
+    transition: background-color 0.3s ease;
+}
+
+.btn-secondary:hover {
+    background-color: #1a4a6b;
+}
+
+.tabs {
+    display: flex;
+    gap: 0.5em;
+    margin-bottom: 2em;
+    border-bottom: 2px solid var(--dark-blue);
+}
+
+.tab-btn {
+    background: none;
+    border: none;
+    padding: 1em 2em;
+    cursor: pointer;
+    font-size: var(--base-text-size);
+    font-weight: bold;
+    color: var(--dark-blue);
+    border-bottom: 3px solid transparent;
+    transition: all 0.3s ease;
+}
+
+.tab-btn:hover {
+    background-color: rgba(26, 74, 107, 0.1);
+}
+
+.tab-btn.active {
+    border-bottom-color: var(--bright-green);
+    color: var(--bright-green);
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+.table-container {
+    overflow-x: auto;
+    margin-top: 1em;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.data-table thead {
+    background-color: var(--dark-blue);
+    color: white;
+}
+
+.data-table th,
+.data-table td {
+    padding: 1em;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+.data-table tbody tr:hover {
+    background-color: #f5f5f5;
+}
+
+.filter-section {
+    display: flex;
+    gap: 1em;
+    align-items: center;
+    margin-bottom: 1em;
+    flex-wrap: wrap;
+}
+
+.filter-section label {
+    font-weight: bold;
+    color: var(--dark-blue);
+}
+
+.filter-section select {
+    padding: 0.5em;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: var(--base-text-size);
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 10;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+.modal-content {
+    background-color: #fefefe;
+    margin: 5% auto;
+    padding: 2em;
+    border: 1px solid #888;
+    border-radius: 10px;
+    width: 90%;
+    max-width: 600px;
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+}
+
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    position: absolute;
+    right: 1em;
+    top: 0.5em;
+}
+
+.close:hover,
+.close:focus {
+    color: black;
+}
+
+.form-group {
+    margin-bottom: 1.5em;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5em;
+    font-weight: bold;
+    color: var(--dark-blue);
+}
+
+.form-group input[type="text"],
+.form-group input[type="number"],
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 0.75em;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: var(--base-text-size);
+    box-sizing: border-box;
+}
+
+.form-group textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+.checkbox-group {
+    display: flex;
+    gap: 1em;
+    flex-wrap: wrap;
+}
+
+.checkbox-group label {
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+    font-weight: normal;
+    cursor: pointer;
+}
+
+.checkbox-group input[type="checkbox"] {
+    width: auto;
+    cursor: pointer;
+}
+
+.currency-badges {
+    display: flex;
+    gap: 0.5em;
+    flex-wrap: wrap;
+}
+
+.currency-badge {
+    background-color: var(--bright-green);
+    color: white;
+    padding: 0.25em 0.75em;
+    border-radius: 15px;
+    font-size: 0.9em;
+    font-weight: bold;
+}
+
+.balance-info {
+    display: flex;
+    gap: 1em;
+    flex-wrap: wrap;
+}
+
+.balance-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+}
+
+.balance-value {
+    font-weight: bold;
+    color: var(--dark-blue);
+}
+
+.action-buttons-table {
+    display: flex;
+    gap: 0.5em;
+}
+
+.action-btn {
+    padding: 0.5em 1em;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: all 0.3s ease;
+}
+
+.btn-view {
+    background-color: var(--dark-blue);
+    color: white;
+}
+
+.btn-view:hover {
+    background-color: #1a4a6b;
+}
+
+.btn-edit {
+    background-color: #ffa500;
+    color: white;
+}
+
+.btn-edit:hover {
+    background-color: #ff8c00;
+}
+
+.btn-delete {
+    background-color: #dc3545;
+    color: white;
+}
+
+.btn-delete:hover {
+    background-color: #c82333;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 0.25em 0.75em;
+    border-radius: 15px;
+    font-size: 0.9em;
+    font-weight: bold;
+}
+
+.status-active {
+    background-color: var(--bright-green);
+    color: white;
+}
+
+.status-inactive {
+    background-color: #6c757d;
+    color: white;
+}
+
+.pagination-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1em;
+    margin-top: 1em;
+    padding: 1em;
+}
+
+.pagination-container button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+#page-info {
+    font-weight: bold;
+    color: var(--dark-blue);
+}
+
+.client-autocomplete-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+.client-autocomplete-input {
+    width: 100%;
+    padding: 0.75em;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: var(--base-text-size);
+    box-sizing: border-box;
+}
+
+.client-autocomplete-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 10;
+    display: none;
+    margin-top: 2px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.client-autocomplete-item {
+    padding: 0.75em;
+    cursor: pointer;
+    border-bottom: 1px solid #f0f0f0;
+    transition: background-color 0.2s ease;
+}
+
+.client-autocomplete-item:hover {
+    background-color: #f5f5f5;
+}
+
+.client-autocomplete-item:last-child {
+    border-bottom: none;
+}
+
+@media (max-width: 768px) {
+    .finance-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1em;
+    }
+
+    .action-buttons {
+        width: 100%;
+        flex-direction: column;
+    }
+
+    .tabs {
+        flex-wrap: wrap;
+    }
+
+    .tab-btn {
+        padding: 0.75em 1em;
+        font-size: 0.9em;
+    }
+
+    .data-table {
+        font-size: 0.9em;
+    }
+
+    .data-table th,
+    .data-table td {
+        padding: 0.5em;
+    }
+
+    .modal-content {
+        width: 95%;
+        padding: 1em;
+    }
+}
+
+/* Branch and Account Sections */
+#accounts-branches-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5em;
+}
+
+.branch-section {
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.branch-header {
+    background: linear-gradient(135deg, var(--dark-blue) 0%, #2c5282 100%);
+    color: white;
+    padding: 1.5em;
+}
+
+.branch-header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1em;
+}
+
+.branch-info {
+    flex: 1;
+    min-width: 200px;
+}
+
+.branch-name {
+    margin: 0 0 0.5em 0;
+    font-size: 1.5em;
+    font-weight: bold;
+    color: white;
+}
+
+.branch-description {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.95em;
+}
+
+.branch-balance {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.25em;
+}
+
+.balance-label {
+    font-size: 0.85em;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.branch-balance .balance-value {
+    font-size: 1.2em;
+    font-weight: bold;
+    color: white;
+}
+
+.branch-actions {
+    display: flex;
+    gap: 0.5em;
+}
+
+.branch-accounts {
+    padding: 1em;
+    background: #f9f9f9;
+}
+
+.account-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1em;
+    margin-bottom: 0.75em;
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.account-row:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transform: translateY(-1px);
+}
+
+.account-row.account-in-branch {
+    margin-left: 1.5em;
+    border-left: 3px solid var(--bright-green);
+}
+
+.account-info {
+    flex: 1;
+}
+
+.account-name {
+    font-size: 1.1em;
+    font-weight: 600;
+    color: var(--dark-blue);
+    margin-bottom: 0.5em;
+}
+
+.account-details {
+    display: flex;
+    gap: 1em;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.account-user {
+    color: #666;
+    font-size: 0.9em;
+}
+
+.account-currencies {
+    display: flex;
+    gap: 0.5em;
+}
+
+.account-balances {
+    margin-top: 0.75em;
+    padding-top: 0.75em;
+    border-top: 1px solid #e8e8e8;
+}
+
+.account-balances-loading,
+.account-balances-empty,
+.account-balances-error {
+    color: #999;
+    font-size: 0.85em;
+    font-style: italic;
+}
+
+.balance-item-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5em 0.75em;
+    margin-bottom: 0.5em;
+    background: #f8f9fa;
+    border-radius: 4px;
+    border-left: 3px solid var(--bright-green);
+}
+
+.balance-item-row:last-child {
+    margin-bottom: 0;
+}
+
+.balance-currency {
+    font-weight: 600;
+    color: var(--dark-blue);
+    font-size: 0.9em;
+}
+
+.balance-amount {
+    font-weight: bold;
+    color: var(--dark-blue);
+    font-size: 1em;
+}
+
+.no-permission-hint {
+    color: #dc3545;
+    font-size: 0.9em;
+    font-style: italic;
+    padding: 0.5em;
+    display: inline-block;
+}
+
+.account-actions {
+    display: flex;
+    gap: 0.5em;
+    flex-wrap: wrap;
+}
+
+.no-accounts {
+    text-align: center;
+    color: #999;
+    padding: 2em;
+    font-style: italic;
+}
+
+.standalone-accounts .branch-header {
+    background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+}
+
+@media (max-width: 768px) {
+    .branch-header-content {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .branch-balance {
+        align-items: flex-start;
+    }
+
+    .account-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1em;
+    }
+
+    .account-actions {
+        width: 100%;
+        justify-content: flex-start;
+    }
+}
+

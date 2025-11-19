@@ -8,6 +8,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.userservice.models.dto.PageResponse;
 import org.example.userservice.models.dto.transaction.TransactionPageDTO;
 import org.example.userservice.services.impl.ITransactionSearchService;
+import org.example.userservice.services.transaction.TransactionExportService;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -15,6 +18,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -25,6 +31,7 @@ import java.util.Map;
 @Slf4j
 public class TransactionSearchController {
     private final ITransactionSearchService transactionSearchService;
+    private final TransactionExportService transactionExportService;
 
     @PreAuthorize("hasAuthority('finance:view')")
     @GetMapping("/search")
@@ -44,6 +51,30 @@ public class TransactionSearchController {
                 transactionSearchService.getTransactionsWithPagination(page, size, sort, direction, filterMap);
 
         return ResponseEntity.ok(result);
+    }
+
+    @PreAuthorize("hasAuthority('finance:view')")
+    @GetMapping("/export")
+    public ResponseEntity<byte[]> exportTransactions(
+            @RequestParam(required = false) String filters) throws JsonProcessingException, IOException {
+
+        Map<String, List<String>> filterMap = filters != null && !filters.isEmpty()
+                ? new ObjectMapper().readValue(filters, new TypeReference<>() {
+        })
+                : Collections.emptyMap();
+
+        byte[] excelData = transactionExportService.exportToExcel(filterMap);
+
+        String filename = "transactions_" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss")) + ".xlsx";
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+        headers.setContentDispositionFormData("attachment", filename);
+        headers.setContentLength(excelData.length);
+
+        return ResponseEntity.ok()
+                .headers(headers)
+                .body(excelData);
     }
 
 }

@@ -38,4 +38,6 @@ public class PurchasePageDTO {
     private LocalDateTime updatedAt;
 
     private String comment;
+
+    private Boolean isReceived;
 }

@@ -35,10 +35,10 @@ public class Purchase {
     @Column(nullable = false, precision = 20, scale = 2)
     private BigDecimal quantity;
 
-    @Column(name = "unit_price", nullable = false, precision = 20, scale = 2)
+    @Column(name = "unit_price", nullable = false, precision = 20, scale = 6)
     private BigDecimal unitPrice;
 
-    @Column(name = "total_price", nullable = false, precision = 20, scale = 2)
+    @Column(name = "total_price", nullable = false, precision = 20, scale = 6)
     private BigDecimal totalPrice;
 
     @Enumerated(EnumType.STRING)
@@ -65,11 +65,40 @@ public class Purchase {
     @Column(name = "comment", columnDefinition = "TEXT")
     private String comment;
 
+    @Column(name = "total_price_uah", precision = 20, scale = 6)
+    private BigDecimal totalPriceUah;
+
+    @Column(name = "unit_price_uah", precision = 20, scale = 6)
+    private BigDecimal unitPriceUah;
+
     public void calculateAndSetUnitPrice() {
         if (quantity != null && totalPrice != null && quantity.compareTo(BigDecimal.ZERO) != 0) {
-            this.unitPrice = totalPrice.divide(quantity, 2, RoundingMode.HALF_UP);
+            this.unitPrice = totalPrice.divide(quantity, 6, RoundingMode.HALF_UP);
         } else {
             this.unitPrice = BigDecimal.ZERO;
+        }
+    }
+
+    /**
+     * Converts prices to UAH and sets unit_price_uah and total_price_uah
+     */
+    public void calculateAndSetPricesInUah() {
+        if (totalPrice == null || quantity == null) {
+            return;
+        }
+
+        // If currency is UAH or not specified, just copy prices
+        if ("UAH".equals(currency) || currency == null) {
+            this.totalPriceUah = totalPrice;
+            this.unitPriceUah = unitPrice;
+        } else {
+            // Convert via exchange rate
+            if (exchangeRate != null && exchangeRate.compareTo(BigDecimal.ZERO) > 0) {
+                this.totalPriceUah = totalPrice.multiply(exchangeRate).setScale(6, RoundingMode.HALF_UP);
+                if (quantity.compareTo(BigDecimal.ZERO) != 0) {
+                    this.unitPriceUah = this.totalPriceUah.divide(quantity, 6, RoundingMode.HALF_UP);
+                }
+            }
         }
     }
 }

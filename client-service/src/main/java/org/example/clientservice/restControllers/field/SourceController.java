@@ -40,7 +40,7 @@ public class SourceController {
         return ResponseEntity.ok(sourceDTOs);
     }
 
-    @PreAuthorize("hasAuthority('settings:edit')")
+    @PreAuthorize("hasAuthority('settings_client:create')")
     @PostMapping
     public ResponseEntity<SourceDTO> createSource(@RequestBody SourceCreateDTO sourceCreateDTO) {
         Source source = sourceMapper.sourceCreateDTOtoSource(sourceCreateDTO);
@@ -52,7 +52,7 @@ public class SourceController {
         return ResponseEntity.created(location).body(createdSource);
     }
 
-    @PreAuthorize("hasAuthority('settings:edit')")
+    @PreAuthorize("hasAuthority('settings_client:edit')")
     @PutMapping("/{id}")
     public ResponseEntity<SourceDTO> updateSource(@PathVariable Long id, @RequestBody SourceUpdateDTO sourceUpdateDTO) {
         Source source = sourceMapper.sourceUpdateDTOtoSource(sourceUpdateDTO);
@@ -60,7 +60,7 @@ public class SourceController {
         return ResponseEntity.ok(sourceMapper.sourceToSourceDTO(updatedSource));
     }
 
-    @PreAuthorize("hasAuthority('settings:edit')")
+    @PreAuthorize("hasAuthority('settings_client:delete')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteSource(@PathVariable Long id) {
         sourceService.deleteSource(id);

@@ -1,15 +1,9 @@
 package org.example.webapp.controllers;
 
-import jakarta.servlet.http.HttpSession;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
-
-import java.util.List;
-import java.util.Map;
 
 @Controller
 @RequestMapping
@@ -61,10 +55,10 @@ public class PageController {
         return "balance";
     }
 
-    @PreAuthorize("hasAuthority('warehouse:view')")
-    @GetMapping("/warehouse")
-    public String getWarehousePage() {
-        return "warehouse";
+    @PreAuthorize("hasAuthority('finance:view')")
+    @GetMapping("/finance")
+    public String getFinancePage() {
+        return "finance";
     }
 
     @PreAuthorize("hasAuthority('warehouse:view')")
@@ -83,5 +77,16 @@ public class PageController {
     @GetMapping("/settings")
     public String getSettingsPage() {
         return "settings";
+    }
+
+    @PreAuthorize("hasAuthority('administration:view')")
+    @GetMapping("/administration")
+    public String getAdministrationPage() {
+        return "administration";
+    }
+
+    @GetMapping("/profile")
+    public String getProfilePage() {
+        return "profile";
     }
 }

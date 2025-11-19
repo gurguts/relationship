@@ -41,7 +41,7 @@ public class BusinessController {
         return ResponseEntity.ok(dtos);
     }
 
-    @PreAuthorize("hasAuthority('settings:edit')")
+    @PreAuthorize("hasAuthority('settings_client:create')")
     @PostMapping
     public ResponseEntity<BusinessDTO> createBusiness(@RequestBody @Valid BusinessCreateDTO businessCreateDTO) {
         Business business = businessMapper.businessCreateDTOToBusiness(businessCreateDTO);
@@ -54,7 +54,7 @@ public class BusinessController {
         return ResponseEntity.created(location).body(createdBusiness);
     }
 
-    @PreAuthorize("hasAuthority('settings:edit')")
+    @PreAuthorize("hasAuthority('settings_client:edit')")
     @PutMapping("/{id}")
     public ResponseEntity<BusinessDTO> updateBusiness(@PathVariable Long id,
                                                       @RequestBody @Valid BusinessUpdateDTO businessUpdateDTO) {
@@ -63,7 +63,7 @@ public class BusinessController {
         return ResponseEntity.ok(businessMapper.businessToBusinessDTO(updatedBusiness));
     }
 
-    @PreAuthorize("hasAuthority('settings:edit')")
+    @PreAuthorize("hasAuthority('settings_client:delete')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteBusiness(@PathVariable Long id) {
         businessService.deleteBusiness(id);

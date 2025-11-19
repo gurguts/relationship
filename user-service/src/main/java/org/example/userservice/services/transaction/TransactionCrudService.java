@@ -8,6 +8,7 @@ import org.example.userservice.exceptions.transaction.TransactionNotFoundExcepti
 import org.example.userservice.models.transaction.Transaction;
 import org.example.userservice.models.transaction.TransactionType;
 import org.example.userservice.repositories.TransactionRepository;
+import org.example.userservice.services.account.AccountService;
 import org.example.userservice.services.impl.IBalanceService;
 import org.example.userservice.services.impl.ITransactionCrudService;
 import org.springframework.security.core.Authentication;
@@ -25,6 +26,7 @@ public class TransactionCrudService implements ITransactionCrudService {
     private final TransactionRepository transactionRepository;
     private final IBalanceService balanceService;
     private final ProductApiClient productApiClient;
+    private final AccountService accountService;
 
     @Override
     public Transaction getTransaction(Long id) {
@@ -49,10 +51,10 @@ public class TransactionCrudService implements ITransactionCrudService {
         BigDecimal difference = currentAmount.subtract(amount);
 
         if (difference.compareTo(BigDecimal.ZERO) != 0) {
-            Long userId = transaction.getTargetUserId();
+            Long userId = getUserIdFromTransaction(transaction);
             if (userId == null) {
                 throw new TransactionException(
-                        String.format("User ID is missing in transaction with ID: %d", transactionId));
+                        String.format("Cannot determine user ID from transaction with ID: %d. Transaction needs to have fromAccountId or toAccountId.", transactionId));
             }
             try {
                 balanceService.updateUserBalance(userId, difference, transaction.getCurrency());
@@ -66,7 +68,11 @@ public class TransactionCrudService implements ITransactionCrudService {
     @Override
     @Transactional
     public Transaction createSaleTransaction(Transaction transaction, Long productId) {
-        balanceService.updateUserBalance(transaction.getTargetUserId(), transaction.getAmount(),
+        Long userId = getUserIdFromTransaction(transaction);
+        if (userId == null) {
+            throw new TransactionException("Cannot determine user ID from transaction. Transaction needs to have fromAccountId or toAccountId.");
+        }
+        balanceService.updateUserBalance(userId, transaction.getAmount(),
                 transaction.getCurrency());
         String productName = productApiClient.getProduct(productId);
         transaction.setDescription(String.format("Продаж товара: %s", productName));
@@ -77,7 +83,11 @@ public class TransactionCrudService implements ITransactionCrudService {
     @Override
     @Transactional
     public Transaction createPurchaseTransaction(Transaction transaction, Long productId) {
-        balanceService.updateUserBalance(transaction.getTargetUserId(), transaction.getAmount().negate(),
+        Long userId = getUserIdFromTransaction(transaction);
+        if (userId == null) {
+            throw new TransactionException("Cannot determine user ID from transaction. Transaction needs to have fromAccountId or toAccountId.");
+        }
+        balanceService.updateUserBalance(userId, transaction.getAmount().negate(),
                 transaction.getCurrency());
         String productName = productApiClient.getProduct(productId);
         transaction.setDescription(String.format("Закупка товара: %s", productName));
@@ -94,7 +104,11 @@ public class TransactionCrudService implements ITransactionCrudService {
 
         transaction.setType(TransactionType.DEPOSIT);
 
-        balanceService.updateUserBalance(transaction.getTargetUserId(), transaction.getAmount(),
+        Long targetUserId = getUserIdFromTransaction(transaction);
+        if (targetUserId == null) {
+            throw new TransactionException("Cannot determine user ID from transaction. Transaction needs to have fromAccountId or toAccountId.");
+        }
+        balanceService.updateUserBalance(targetUserId, transaction.getAmount(),
                 transaction.getCurrency());
         return transactionRepository.save(transaction);
     }
@@ -108,7 +122,11 @@ public class TransactionCrudService implements ITransactionCrudService {
 
         transaction.setType(TransactionType.WITHDRAWAL);
 
-        balanceService.updateUserBalance(transaction.getTargetUserId(), transaction.getAmount().negate(),
+        Long targetUserId = getUserIdFromTransaction(transaction);
+        if (targetUserId == null) {
+            throw new TransactionException("Cannot determine user ID from transaction. Transaction needs to have fromAccountId or toAccountId.");
+        }
+        balanceService.updateUserBalance(targetUserId, transaction.getAmount().negate(),
                 transaction.getCurrency());
         return transactionRepository.save(transaction);
     }
@@ -121,15 +139,41 @@ public class TransactionCrudService implements ITransactionCrudService {
             throw new TransactionNotFoundException(String.format("Transaction not found with id: %d", transactionId));
         }
 
-        if (transaction.get().getType().equals(TransactionType.WITHDRAWAL)) {
-            balanceService.updateUserBalance(transaction.get().getTargetUserId(), transaction.get().getAmount(),
-                    transaction.get().getCurrency());
-
-        } else {
-            balanceService.updateUserBalance(transaction.get().getTargetUserId(),
-                    transaction.get().getAmount().negate(), transaction.get().getCurrency());
+        Transaction t = transaction.get();
+        Long userId = getUserIdFromTransaction(t);
+        if (userId == null) {
+            throw new TransactionException("Cannot determine user ID from transaction. Transaction needs to have fromAccountId or toAccountId.");
         }
 
-        transactionRepository.delete(transaction.get());
+        if (t.getType().equals(TransactionType.WITHDRAWAL)) {
+            balanceService.updateUserBalance(userId, t.getAmount(),
+                    t.getCurrency());
+
+        } else {
+            balanceService.updateUserBalance(userId,
+                    t.getAmount().negate(), t.getCurrency());
+        }
+
+        transactionRepository.delete(t);
+    }
+
+    private Long getUserIdFromTransaction(Transaction transaction) {
+        if (transaction.getFromAccountId() != null) {
+            try {
+                return accountService.getAccountById(transaction.getFromAccountId()).getUserId();
+            } catch (Exception e) {
+                log.warn("Failed to get userId from fromAccountId {}: {}", transaction.getFromAccountId(), e.getMessage());
+            }
+        }
+
+        if (transaction.getToAccountId() != null) {
+            try {
+                return accountService.getAccountById(transaction.getToAccountId()).getUserId();
+            } catch (Exception e) {
+                log.warn("Failed to get userId from toAccountId {}: {}", transaction.getToAccountId(), e.getMessage());
+            }
+        }
+
+        return null;
     }
 }

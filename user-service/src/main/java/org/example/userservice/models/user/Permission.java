@@ -59,7 +59,17 @@ public enum Permission {
     ANALYTICS_VIEW("analytics:view"),
 
     SETTINGS_VIEW("settings:view"),
-    SETTINGS_EDIT("settings:edit");
+    SETTINGS_CLIENT_CREATE("settings_client:create"),
+    SETTINGS_CLIENT_EDIT("settings_client:edit"),
+    SETTINGS_CLIENT_DELETE("settings_client:delete"),
+    SETTINGS_FINANCE_CREATE("settings_finance:create"),
+    SETTINGS_FINANCE_EDIT("settings_finance:edit"),
+    SETTINGS_FINANCE_DELETE("settings_finance:delete"),
+
+    SETTINGS_EDIT("settings:edit"),
+
+    ADMINISTRATION_VIEW("administration:view"),
+    ADMINISTRATION_EDIT("administration:edit");
 
     private final String permission;
 

@@ -4,9 +4,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.userservice.clients.ClientApiClient;
 import org.example.userservice.mappers.TransactionMapper;
+import org.example.userservice.models.account.Account;
 import org.example.userservice.models.dto.PageResponse;
 import org.example.userservice.models.dto.transaction.TransactionPageDTO;
 import org.example.userservice.models.transaction.Transaction;
+import org.example.userservice.models.transaction.TransactionCategory;
+import org.example.userservice.repositories.AccountRepository;
+import org.example.userservice.repositories.TransactionCategoryRepository;
 import org.example.userservice.repositories.TransactionRepository;
 import org.example.userservice.services.impl.ITransactionSearchService;
 import org.example.userservice.spec.TransactionSpecification;
@@ -19,7 +23,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 @Slf4j
 @Service
@@ -28,6 +34,8 @@ public class TransactionSearchService implements ITransactionSearchService {
     private final TransactionRepository transactionRepository;
     private final TransactionMapper transactionMapper;
     private final ClientApiClient clientApiClient;
+    private final AccountRepository accountRepository;
+    private final TransactionCategoryRepository transactionCategoryRepository;
 
     public PageResponse<TransactionPageDTO> getTransactionsWithPagination(int page, int size, String sort,
                                                                           String direction, Map<String,
@@ -56,11 +64,48 @@ public class TransactionSearchService implements ITransactionSearchService {
                         (a, _) -> a
                 ));
 
+        // Get account IDs
+        Set<Long> accountIds = transactionPage.getContent().stream()
+                .flatMap(t -> {
+                    if (t.getFromAccountId() != null && t.getToAccountId() != null) {
+                        return java.util.stream.Stream.of(t.getFromAccountId(), t.getToAccountId());
+                    } else if (t.getFromAccountId() != null) {
+                        return java.util.stream.Stream.of(t.getFromAccountId());
+                    } else if (t.getToAccountId() != null) {
+                        return java.util.stream.Stream.of(t.getToAccountId());
+                    }
+                    return java.util.stream.Stream.empty();
+                })
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        Map<Long, String> accountNameMap = accountIds.isEmpty()
+                ? Collections.emptyMap()
+                : StreamSupport.stream(accountRepository.findAllById(accountIds).spliterator(), false)
+                .collect(Collectors.toMap(Account::getId, Account::getName));
+
+        // Get category IDs
+        Set<Long> categoryIds = transactionPage.getContent().stream()
+                .map(Transaction::getCategoryId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        Map<Long, String> categoryNameMap = categoryIds.isEmpty()
+                ? Collections.emptyMap()
+                : StreamSupport.stream(transactionCategoryRepository.findAllById(categoryIds).spliterator(), false)
+                .collect(Collectors.toMap(TransactionCategory::getId, TransactionCategory::getName));
+
         List<TransactionPageDTO> content = transactionPage.getContent().stream()
                 .map(transaction -> {
                     TransactionPageDTO dto = transactionMapper.transactionToTransactionPageDTO(transaction);
                     dto.setClientCompany(transaction.getClientId() != null ? clientCompanyMap.getOrDefault(
                             transaction.getClientId(), "") : "");
+                    dto.setFromAccountName(transaction.getFromAccountId() != null 
+                            ? accountNameMap.getOrDefault(transaction.getFromAccountId(), "") : "");
+                    dto.setToAccountName(transaction.getToAccountId() != null 
+                            ? accountNameMap.getOrDefault(transaction.getToAccountId(), "") : "");
+                    dto.setCategoryName(transaction.getCategoryId() != null 
+                            ? categoryNameMap.getOrDefault(transaction.getCategoryId(), "") : "");
                     return dto;
                 })
                 .toList();

@@ -49,6 +49,7 @@ function showHideElements(authorities) {
         'nav-containers': ['container:view'],
         'nav-inventory': ['inventory:view'],
         'nav-balance': ['finance:view'],
+        'nav-finance': ['finance:view'],
         'nav-warehouse': ['warehouse:view'],
         'actions-container-transfer': ['container:transfer'],
         'nav-analytics': ['analytics:view'],
@@ -81,10 +82,12 @@ function showHideElements(authorities) {
 }
 
 const fullName = localStorage.getItem('fullName') || 'Не вказано';
-const balance = localStorage.getItem('balance') || '0';
 
-document.getElementById('userName').textContent = fullName + ': ';
-document.getElementById('userBalance').textContent = balance;
+document.getElementById('userName').textContent = fullName;
+const userBalanceElement = document.getElementById('userBalance');
+if (userBalanceElement) {
+    userBalanceElement.style.display = 'none';
+}
 
 
 document.addEventListener('DOMContentLoaded', function () {

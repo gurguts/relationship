@@ -36,6 +36,15 @@ public class WarehouseWithdrawal {
     @Column(nullable = false, precision = 20, scale = 2)
     private BigDecimal quantity;
 
+    @Column(name = "unit_price_uah", precision = 20, scale = 6)
+    private BigDecimal unitPriceUah;
+
+    @Column(name = "total_cost_uah", precision = 20, scale = 6)
+    private BigDecimal totalCostUah;
+
+    @Column(name = "shipment_id")
+    private Long shipmentId;
+
     @Column(name = "description")
     private String description;
 

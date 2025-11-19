@@ -17,17 +17,23 @@ public class Transaction {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "target_user_id", nullable = false)
-    private Long targetUserId;
+    @Column(name = "from_account_id")
+    private Long fromAccountId;
 
-    @Column(name = "amount", nullable = false)
+    @Column(name = "to_account_id")
+    private Long toAccountId;
+
+    @Column(name = "amount", nullable = false, precision = 20, scale = 2)
     private BigDecimal amount;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "type", nullable = false)
     private TransactionType type;
 
-    @Column(name = "description")
+    @Column(name = "category_id")
+    private Long categoryId;
+
+    @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
     @CreationTimestamp
@@ -40,6 +46,15 @@ public class Transaction {
     @Column(name = "executor_user_id")
     private Long executorUserId;
 
-    @Column(name = "currency")
+    @Column(name = "currency", length = 3)
     private String currency;
+
+    @Column(name = "exchange_rate", precision = 20, scale = 6)
+    private BigDecimal exchangeRate;
+
+    @Column(name = "converted_currency", length = 3)
+    private String convertedCurrency;
+
+    @Column(name = "converted_amount", precision = 20, scale = 2)
+    private BigDecimal convertedAmount;
 }

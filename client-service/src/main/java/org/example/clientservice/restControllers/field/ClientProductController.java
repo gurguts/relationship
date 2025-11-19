@@ -39,7 +39,7 @@ public class ClientProductController {
         return ResponseEntity.ok(dtos);
     }
 
-    @PreAuthorize("hasAuthority('settings:edit')")
+    @PreAuthorize("hasAuthority('settings_client:create')")
     @PostMapping
     public ResponseEntity<ClientProductDTO> createClientProduct(@RequestBody @Valid ClientProductCreateDTO clientProductCreateDTO) {
         ClientProduct clientProduct = clientProductMapper.clientProductCreateDTOToClientProduct(clientProductCreateDTO);
@@ -52,7 +52,7 @@ public class ClientProductController {
         return ResponseEntity.created(location).body(createdClientProduct);
     }
 
-    @PreAuthorize("hasAuthority('settings:edit')")
+    @PreAuthorize("hasAuthority('settings_client:edit')")
     @PutMapping("/{id}")
     public ResponseEntity<ClientProductDTO> updateClientProduct(@PathVariable Long id,
                                                   @RequestBody @Valid ClientProductUpdateDTO clientProductUpdateDTO) {
@@ -61,7 +61,7 @@ public class ClientProductController {
         return ResponseEntity.ok(clientProductMapper.clientProductToClientProductDTO(updateClientProduct));
     }
 
-    @PreAuthorize("hasAuthority('settings:edit')")
+    @PreAuthorize("hasAuthority('settings_client:delete')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteClientProduct(@PathVariable Long id) {
         clientProductService.deleteClientProduct(id);

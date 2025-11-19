@@ -60,6 +60,10 @@ public class WarehouseWithdrawalController {
 
         WarehouseWithdrawal updated = warehouseWithdrawService.updateWithdrawal(id, request);
 
+        if (updated == null) {
+            return ResponseEntity.noContent().build();
+        }
+
         return ResponseEntity.ok(warehouseWithdrawalMapper.warehouseWithdrawalToWarehouseWithdrawalDTO(updated));
     }
 

@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Settings</title>
+    <title>Налаштування</title>
 
-    <link rel="stylesheet" href="/css/common.css">
     <link rel="stylesheet" href="/css/settings.css">
+    <link rel="stylesheet" href="/css/common.css">
 
     <link rel="icon" type="image/png" href="/favicon/favicon-96x96.png" sizes="96x96"/>
     <link rel="icon" type="image/svg+xml" href="/favicon/favicon.svg"/>
@@ -41,9 +41,6 @@
             <li id="nav-purchase"><a href="/purchase">
                 Закупівлі
             </a></li>
-            <li id="nav-sale"><a href="/sale">
-                Продажі
-            </a></li>
             <li id="nav-containers"><a href="/containers">
                 Тари
             </a></li>
@@ -53,13 +50,16 @@
             <li id="nav-balance"><a href="/balance">
                 Баланс грошовий
             </a></li>
+            <li id="nav-finance"><a href="/finance">
+                Фінанси
+            </a></li>
             <li id="nav-stock"><a href="/stock">
                 Склад
             </a></li>
             <li id="nav-analytics"><a href="/analytics">
                 Аналітика
             </a></li>
-            <li id="nav-settings"><a class="selected-nav" href="/settings">
+            <li id="nav-settings"><a href="/settings" class="setting-icon-block selected-nav">
                 Налаштування
             </a></li>
             <li>
@@ -71,389 +71,299 @@
     </nav>
 </header>
 
-<h1>Settings</h1>
-
-<div>
-    <button id="showUsersBtn">Користувачі</button>
-    <button id="showSourcesBtn">Залучення</button>
-    <button id="showRoutesBtn">Маршрути</button>
-    <button id="showOilTypesBtn">Товар</button>
-    <button id="showBusinessesBtn">Бізнес</button>
-    <button id="showRegionsBtn">Області</button>
-    <button id="showContainersBtn">Тара</button>
-    <button id="showStoragesBtn">Склади</button>
-    <button id="showWithdrawalReasonsBtn">Причини списання</button>
-    <button id="showStatusesBtn">Статуси клієнтів</button>
-    <button id="show-products">Продукты</button>
-    <button id="show-client-products">Продукты клиентов</button>
-    <!--<button onclick="syncClients()">Синхронізувати клієнтів</button>
-    <button onclick="syncAgreements()">Синхронізувати угоди</button>
-    <button id="deleteAllClientsBtn">Видалити всіх клієнтів</button>-->
-
-    <button id="exportToExcel" class="btn-primary">Export to Excel</button>
-</div>
-
-<div id="exportModal" class="modal">
-    <div class="modal-content">
-        <h2>Export Comparison to Excel</h2>
-        <div class="form-group">
-            <label for="purchaseDataFrom">Date From:</label>
-            <input type="date" id="purchaseDataFrom" name="purchaseDataFrom">
-        </div>
-        <div class="form-group">
-            <label for="purchaseDataTo">Date To:</label>
-            <input type="date" id="purchaseDataTo" name="purchaseDataTo">
-        </div>
-        <div class="button-group">
-            <button id="exportCancel" class="btn-secondary">Cancel</button>
-            <button id="exportConfirm" class="btn-primary">Export</button>
-        </div>
+<div class="settings-container">
+    <div class="settings-header">
+        <h1>Налаштування</h1>
     </div>
-</div>
 
-<!--user-->
-
-<div id="userListContainer" style="display: none;">
-    <h3>Список користувачів</h3>
-    <ul id="userList"></ul>
-    <button id="addUserBtn">Додати користувача</button>
-</div>
-
-<div id="addUserContainer" style="display: none;">
-    <h3>Створити нового користувача</h3>
-    <div class="form-field">
-        <label for="newFullName">ПІБ:</label>
-        <input type="text" id="newFullName" required>
+    <div class="tabs">
+        <button class="tab-btn active" data-tab="finance-categories">Категорії фінансів</button>
+        <button class="tab-btn" data-tab="branches">Філії</button>
+        <button class="tab-btn" data-tab="accounts">Рахунки</button>
+        <button class="tab-btn" data-tab="business">Бізнеси</button>
+        <button class="tab-btn" data-tab="region">Регіони</button>
+        <button class="tab-btn" data-tab="source">Джерела</button>
+        <button class="tab-btn" data-tab="route">Маршрути</button>
+        <button class="tab-btn" data-tab="status">Статуси клієнтів</button>
     </div>
-    <div class="form-field">
-        <label for="newLogin">Логін:</label>
-        <input type="text" id="newLogin" required>
-    </div>
-    <div class="form-field">
-        <label for="newPassword">Пароль:</label>
-        <input type="password" id="newPassword" required>
-    </div>
-    <div class="form-field">
-        <label for="newRole">Роль:</label>
-        <select id="newRole">
-            <option value="MANAGER">Менеджер</option>
-            <option value="DRIVER">Водій</option>
-            <option value="STOREKEEPER">Комірник</option>
-            <option value="LEADER">Керівник</option>
-            <option value="ACCOUNTANT">Бухгалтер</option>
-        </select>
-    </div>
-    <button id="createUserBtn">Створити користувача</button>
-</div>
 
-<div id="userPermissionsModal" class="userPermissionsModal" style="display: none;">
-    <div class="modal-content-user-permission">
-        <span class="close-permissions">×</span>
-        <h2>Редагувати дозволи користувача</h2>
-        <div id="permissionsList">
-            <!-- Чекбоксы будут добавлены через JS -->
-        </div>
-        <button id="savePermissionsButton">Зберегти</button>
-    </div>
-</div>
-
-<!--source-->
-
-<div id="sourceListContainer" style="display: none;">
-    <h3>Список залучень</h3>
-    <ul id="sourceList"></ul>
-    <!--<button id="addSourceBtn">Додати нове залучення</button>-->
-</div>
-
-<div id="addSourceContainer" style="display: none;">
-    <h3>Створити нове залучення</h3>
-    <!--    <div class="form-field">
-            <label>Id:</label>
-            <input type="number" id="newSourceId" required>
-        </div>-->
-    <div class="form-field">
-        <label for="newSourceName">Назва:</label>
-        <input type="text" id="newSourceName" required>
-    </div>
-    <!--    <div class="form-field">
-            <label>Колір:</label>
-            <input type="color" id="newSourceColor" value="#ffffff">
-        </div>-->
-    <button id="createSourceBtn">Створити залучення</button>
-</div>
-
-<div id="editSourceModal" style="display: none;">
-    <h3>Редагувати джерело</h3>
-    <div class="form-field">
-        <label for="editSourceName">Назва:</label>
-        <input type="text" id="editSourceName" required>
-    </div>
-    <!--    <div class="form-field">
-            <label>Колір:</label>
-            <input type="color" id="editSourceColor">
-        </div>-->
-    <button id="saveSourceBtn">Зберегти</button>
-    <button id="cancelEditSourceBtn">Скасувати</button>
-</div>
-
-<!--routes-->
-
-<div id="routeListContainer" style="display: none;">
-    <h3>Список маршрутів</h3>
-    <ul id="routeList"></ul>
-    <!--<button id="addSourceBtn">Додати нове залучення</button>-->
-</div>
-
-<div id="addRouteContainer" style="display: none;">
-    <h3>Створити новий маршрут</h3>
-    <div class="form-field">
-        <label for="newRouteName">Назва:</label>
-        <input type="text" id="newRouteName" required>
-    </div>
-    <button id="createRouteBtn">Створити маршрут</button>
-</div>
-
-<!--oilType-->
-
-<div id="oilTypeListContainer" style="display: none;">
-    <h3>Список типів товару</h3>
-    <ul id="oilTypeList"></ul>
-</div>
-
-<div id="addOilTypeContainer" style="display: none;">
-    <h3>Створити новий товар</h3>
-    <div class="form-field">
-        <label for="newOilTypeName">Назва:</label>
-        <input type="text" id="newOilTypeName" required>
-    </div>
-    <button id="createOilTypeBtn">Додати товар</button>
-</div>
-
-<!--business-->
-
-<div id="businessListContainer" style="display: none;">
-    <h3>Список типів бізнесу</h3>
-    <ul id="businessList"></ul>
-    <!--<button id="addSourceBtn">Додати нове залучення</button>-->
-</div>
-
-<div id="addBusinessContainer" style="display: none;">
-    <h3>Створити новий тип бізнесу</h3>
-    <div class="form-field">
-        <label for="newBusinessName">Назва:</label>
-        <input type="text" id="newBusinessName" required>
-    </div>
-    <button id="createBusinessBtn">Створити тип бізнесу</button>
-</div>
-
-<!--regions-->
-
-<div id="regionListContainer" style="display: none;">
-    <h3>Список областей</h3>
-    <ul id="regionList"></ul>
-</div>
-
-<div id="addRegionContainer" style="display: none;">
-    <h3>Створити нову область</h3>
-    <div class="form-field">
-        <label for="newRegionName">Назва:</label>
-        <input type="text" id="newRegionName" required>
-    </div>
-    <button id="createRegionBtn">Додати область</button>
-</div>
-
-<!--barrelType-->
-
-<div id="containerListContainer" style="display: none;">
-    <h3>Список типів тар</h3>
-    <ul id="barrelTypeList"></ul>
-</div>
-
-<div id="addContainerContainer" style="display: none;">
-    <h3>Створити новий тип тари</h3>
-    <div class="form-field">
-        <label for="newBarrelTypeName">Назва:</label>
-        <input type="text" id="newBarrelTypeName" required>
-    </div>
-    <button id="createBarrelTypeBtn">Додати тип тари</button>
-</div>
-
-
-<!--Storage-->
-
-<div id="storageListContainer" style="display: none;">
-    <h3>Список cкладів</h3>
-    <ul id="storageList"></ul>
-</div>
-
-<div id="addStorageContainer" style="display: none;">
-    <h3>Створити новий cклад</h3>
-    <div class="form-field">
-        <label for="newStorageName">Назва:</label>
-        <input type="text" id="newStorageName" required>
-    </div>
-    <div class="form-field">
-        <label for="newStorageDescription">Опис:</label>
-        <input type="text" id="newStorageDescription">
-    </div>
-    <button id="createStorageBtn">Створити cклад</button>
-</div>
-
-<!--WithdrawalReason-->
-
-<div id="withdrawalReasonListContainer" style="display: none;">
-    <h3>Список причин списання</h3>
-    <ul id="withdrawalReasonList"></ul>
-</div>
-
-<div id="addWithdrawalReasonContainer" style="display: none;">
-    <h3>Створити нову причину списання</h3>
-    <div class="form-field">
-        <label for="newWithdrawalReasonName">Назва:</label>
-        <input type="text" id="newWithdrawalReasonName" required>
-    </div>
-    <div class="form-field">
-        <label for="newWithdrawalReasonPurpose">Призначення:</label>
-        <select id="newWithdrawalReasonPurpose" required>
-            <option value="ADDING">Пополнення</option>
-            <option value="REMOVING">Сняття</option>
-            <option value="BOTH">Загальний</option>
-        </select>
-    </div>
-    <button id="createWithdrawalReasonBtn">Створити причину списання</button>
-</div>
-
-
-<!--statusClient-->
-
-<div id="statusListContainer" style="display: none;">
-    <h3>Список cтатусів клієнтів</h3>
-    <ul id="statusList"></ul>
-    <!--<button id="addSourceBtn">Додати нове залучення</button>-->
-</div>
-
-<div id="addStatusContainer" style="display: none;">
-    <h3>Створити новий статус</h3>
-    <div class="form-field">
-        <label for="newStatusId">Id:</label>
-        <input type="number" id="newStatusId" required>
-    </div>
-    <div class="form-field">
-        <label for="newStatusName">Назва:</label>
-        <input type="text" id="newStatusName" required>
-    </div>
-    <button id="createStatusBtn">Створити статус</button>
-</div>
-
-<!--product-->
-
-<div id="product-list" class="product-list" style="display: none;">
-    <h2>Список продуктов</h2>
-    <table>
-        <thead>
-        <tr>
-            <th>ID</th>
-            <th>Название</th>
-            <th>Использование</th>
-            <th>Действия</th>
-        </tr>
-        </thead>
-        <tbody id="products-table-body"></tbody>
-    </table>
-</div>
-
-<div id="create-product" class="create-product" style="display: none;">
-    <h2>Создать новый продукт</h2>
-    <form id="create-product-form">
-        <div class="form-group">
-            <label for="create-name">Название:</label>
-            <input type="text" id="create-name" name="name" required>
-        </div>
-        <div class="form-group">
-            <label for="create-usage">Использование:</label>
-            <select id="create-usage" name="usage" required>
-                <option value="SALE_ONLY">Только для продажи</option>
-                <option value="PURCHASE_ONLY">Только для закупки</option>
-                <option value="BOTH">Оба</option>
+    <!-- Finance Categories Tab -->
+    <div id="finance-categories-tab" class="tab-content active">
+        <div class="filter-section">
+            <label for="category-type-filter">Тип транзакції:</label>
+            <select id="category-type-filter">
+                <option value="">Всі типи</option>
+                <option value="INTERNAL_TRANSFER">Переказ між рахунками</option>
+                <option value="EXTERNAL_INCOME">Зовнішній прихід</option>
+                <option value="EXTERNAL_EXPENSE">Зовнішня витрата</option>
+                <option value="CLIENT_PAYMENT">Оплата клієнту</option>
+                <option value="CURRENCY_CONVERSION">Конвертація валют</option>
             </select>
+            <button id="create-category-btn" class="btn-primary">Створити категорію</button>
         </div>
-        <button type="submit">Создать</button>
-    </form>
+        <div class="table-container">
+            <table id="categories-table" class="data-table">
+                <thead>
+                <tr>
+                    <th>Тип</th>
+                    <th>Назва</th>
+                    <th>Опис</th>
+                    <th>Активна</th>
+                    <th>Дії</th>
+                </tr>
+                </thead>
+                <tbody id="categories-body"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Business Tab -->
+    <div id="business-tab" class="tab-content">
+        <div class="filter-section">
+            <button id="create-business-btn" class="btn-primary">Створити бізнес</button>
+        </div>
+        <div class="table-container">
+            <table id="business-table" class="data-table">
+                <thead>
+                <tr>
+                    <th>Назва</th>
+                    <th>Дії</th>
+                </tr>
+                </thead>
+                <tbody id="business-body"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Region Tab -->
+    <div id="region-tab" class="tab-content">
+        <div class="filter-section">
+            <button id="create-region-btn" class="btn-primary">Створити регіон</button>
+        </div>
+        <div class="table-container">
+            <table id="region-table" class="data-table">
+                <thead>
+                <tr>
+                    <th>Назва</th>
+                    <th>Дії</th>
+                </tr>
+                </thead>
+                <tbody id="region-body"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Source Tab -->
+    <div id="source-tab" class="tab-content">
+        <div class="filter-section">
+            <button id="create-source-btn" class="btn-primary">Створити джерело</button>
+        </div>
+        <div class="table-container">
+            <table id="source-table" class="data-table">
+                <thead>
+                <tr>
+                    <th>Назва</th>
+                    <th>Дії</th>
+                </tr>
+                </thead>
+                <tbody id="source-body"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Route Tab -->
+    <div id="route-tab" class="tab-content">
+        <div class="filter-section">
+            <button id="create-route-btn" class="btn-primary">Створити маршрут</button>
+        </div>
+        <div class="table-container">
+            <table id="route-table" class="data-table">
+                <thead>
+                <tr>
+                    <th>Назва</th>
+                    <th>Дії</th>
+                </tr>
+                </thead>
+                <tbody id="route-body"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Status Tab -->
+    <div id="status-tab" class="tab-content">
+        <div class="filter-section">
+            <button id="create-status-btn" class="btn-primary">Створити статус</button>
+        </div>
+        <div class="table-container">
+            <table id="status-table" class="data-table">
+                <thead>
+                <tr>
+                    <th>Назва</th>
+                    <th>Дії</th>
+                </tr>
+                </thead>
+                <tbody id="status-body"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Branches Tab -->
+    <div id="branches-tab" class="tab-content">
+        <div class="filter-section">
+            <button id="create-branch-btn" class="btn-primary">Створити філію</button>
+        </div>
+        <div class="table-container">
+            <table id="branches-table" class="data-table">
+                <thead>
+                <tr>
+                    <th>Назва</th>
+                    <th>Опис</th>
+                    <th>Дії</th>
+                </tr>
+                </thead>
+                <tbody id="branches-body"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Accounts Tab -->
+    <div id="accounts-tab" class="tab-content">
+        <div class="filter-section">
+            <button id="create-account-btn" class="btn-primary">Створити рахунок</button>
+        </div>
+        <div class="table-container">
+            <table id="accounts-table" class="data-table">
+                <thead>
+                <tr>
+                    <th>Назва</th>
+                    <th>Опис</th>
+                    <th>Користувач</th>
+                    <th>Філія</th>
+                    <th>Валюти</th>
+                    <th>Дії</th>
+                </tr>
+                </thead>
+                <tbody id="accounts-body"></tbody>
+            </table>
+        </div>
+    </div>
 </div>
 
-<div id="edit-product-modal" class="modal" style="display: none;">
+<!-- Create/Edit Category Modal -->
+<div id="create-category-modal" class="modal">
     <div class="modal-content">
-        <h2>Редактировать продукт</h2>
-        <form id="edit-product-form">
-            <input type="hidden" id="edit-id" name="id">
+        <span class="close">&times;</span>
+        <h2 id="category-modal-title">Створити категорію</h2>
+        <form id="category-form">
+            <input type="hidden" id="category-id">
             <div class="form-group">
-                <label for="edit-name">Название:</label>
-                <input type="text" id="edit-name" name="name" required>
-            </div>
-            <div class="form-group">
-                <label for="edit-usage">Использование:</label>
-                <select id="edit-usage" name="usage" required>
-                    <option value="SALE_ONLY">Только для продажи</option>
-                    <option value="PURCHASE_ONLY">Только для закупки</option>
-                    <option value="BOTH">Оба</option>
+                <label for="category-type">Тип транзакції:</label>
+                <select id="category-type" required>
+                    <option value="">Виберіть тип</option>
+                    <option value="INTERNAL_TRANSFER">Переказ між рахунками</option>
+                    <option value="EXTERNAL_INCOME">Зовнішній прихід</option>
+                    <option value="EXTERNAL_EXPENSE">Зовнішня витрата</option>
+                    <option value="CLIENT_PAYMENT">Оплата клієнту</option>
+                    <option value="CURRENCY_CONVERSION">Конвертація валют</option>
                 </select>
             </div>
-            <button type="submit">Сохранить</button>
-            <button type="button" id="cancel-edit">Отмена</button>
-        </form>
-    </div>
-</div>
-
-<!--client-product-->
-
-<div id="client-product-list" class="client-product-list" style="display: none;">
-    <h2>Список продуктов клиентов</h2>
-    <table>
-        <thead>
-        <tr>
-            <th>ID</th>
-            <th>Название</th>
-            <th>Действия</th>
-        </tr>
-        </thead>
-        <tbody id="client-products-table-body"></tbody>
-    </table>
-</div>
-
-<div id="client-create-product" class="client-create-product" style="display: none;">
-    <h2>Создать новый продукт клиента</h2>
-    <form id="client-create-product-form">
-        <div class="form-group">
-            <label for="client-create-name">Название:</label>
-            <input type="text" id="client-create-name" name="name" required>
-        </div>
-        <button type="submit">Создать</button>
-    </form>
-</div>
-
-<div id="client-edit-product-modal" class="modal" style="display: none;">
-    <div class="modal-content">
-        <h2>Редактировать продукт</h2>
-        <form id="client-edit-product-form">
-            <input type="hidden" id="client-edit-id" name="id">
-            <div class="form-group">
-                <label for="client-edit-name">Название:</label>
-                <input type="text" id="client-edit-name" name="name" required>
+            <div class="form-group" id="category-active-group" style="display: none;">
+                <label>
+                    <input type="checkbox" id="category-active" checked> Активна
+                </label>
             </div>
-            <button type="submit">Сохранить</button>
-            <button type="button" id="client-cancel-edit">Отмена</button>
+            <div class="form-group">
+                <label for="category-name">Назва:</label>
+                <input type="text" id="category-name" required>
+            </div>
+            <div class="form-group">
+                <label for="category-description">Опис:</label>
+                <textarea id="category-description" rows="3"></textarea>
+            </div>
+            <button type="submit" class="btn-primary" id="category-submit-btn">Створити</button>
         </form>
     </div>
 </div>
 
-
-<div id="loader-backdrop" class="loader-backdrop" style="display: none;">
-    <div id="loader" class="loader"></div>
+<!-- Create/Edit Field Modal (for Business, Region, Source, Route, Status) -->
+<div id="create-field-modal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2 id="field-modal-title">Створити</h2>
+        <form id="field-form">
+            <input type="hidden" id="field-id">
+            <input type="hidden" id="field-type">
+            <div class="form-group">
+                <label for="field-name">Назва:</label>
+                <input type="text" id="field-name" required>
+            </div>
+            <button type="submit" class="btn-primary" id="field-submit-btn">Створити</button>
+        </form>
+    </div>
 </div>
 
-<script src="/js/settings.js"></script>
-<script src="/js/common.js"></script>
-<script src="/js/error.js"></script>
+<!-- Create/Edit Branch Modal -->
+<div id="create-branch-modal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2 id="branch-modal-title">Створити філію</h2>
+        <form id="branch-form">
+            <input type="hidden" id="branch-id">
+            <div class="form-group">
+                <label for="branch-name">Назва:</label>
+                <input type="text" id="branch-name" required>
+            </div>
+            <div class="form-group">
+                <label for="branch-description">Опис:</label>
+                <textarea id="branch-description" rows="3"></textarea>
+            </div>
+            <button type="submit" class="btn-primary" id="branch-submit-btn">Створити</button>
+        </form>
+    </div>
+</div>
 
+<!-- Create/Edit Account Modal -->
+<div id="create-account-modal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2 id="account-modal-title">Створити рахунок</h2>
+        <form id="account-form">
+            <input type="hidden" id="account-id">
+            <div class="form-group">
+                <label for="account-name">Назва:</label>
+                <input type="text" id="account-name" required>
+            </div>
+            <div class="form-group">
+                <label for="account-description">Опис:</label>
+                <textarea id="account-description" rows="3"></textarea>
+            </div>
+            <div class="form-group">
+                <label for="account-user">Користувач (опціонально):</label>
+                <select id="account-user">
+                    <option value="">Без користувача</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="account-branch">Філія (опціонально):</label>
+                <select id="account-branch">
+                    <option value="">Без філії</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Валюти:</label>
+                <div class="checkbox-group">
+                    <label><input type="checkbox" name="currency" value="UAH" checked> UAH</label>
+                    <label><input type="checkbox" name="currency" value="USD"> USD</label>
+                    <label><input type="checkbox" name="currency" value="EUR"> EUR</label>
+                </div>
+            </div>
+            <button type="submit" class="btn-primary" id="account-submit-btn">Створити</button>
+        </form>
+    </div>
+</div>
+
+<script src="/js/common.js"></script>
+<script src="/js/settings.js"></script>
 </body>
 </html>
+

@@ -6,6 +6,18 @@ let filters = {};
 let userMap;
 const customSelects = {};
 
+/**
+ * Formats a number by removing trailing zeros
+ * Examples: 25.000000 -> 25, 25.500000 -> 25.5, 25.333333 -> 25.333333
+ */
+function formatNumber(value, maxDecimals = 6) {
+    if (value === null || value === undefined || value === '') return '0';
+    const num = parseFloat(value);
+    if (isNaN(num)) return '0';
+    // toFixed to limit decimals, then parseFloat to remove trailing zeros
+    return parseFloat(num.toFixed(maxDecimals)).toString();
+}
+
 const transactionTypeMap = {
     "DEPOSIT": "Поповнення",
     "WITHDRAWAL": "Зняття"
@@ -80,7 +92,7 @@ function renderUserBalances(users) {
                     <span>${currency}: </span>
                     <span class="balance-amount" 
                           onclick="openTransactionsModal(${user.id}, '${currency}')">
-                        ${amount.toFixed(2)}
+                        ${formatNumber(amount, 6)}
                     </span>
                 </div>`
             ).join('');

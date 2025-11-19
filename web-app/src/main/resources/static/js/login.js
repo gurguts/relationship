@@ -46,7 +46,6 @@ document.getElementById('loginForm').addEventListener('submit',
                 localStorage.setItem('userId', data.userId);
                 localStorage.setItem('userRole', data.role);
                 localStorage.setItem('fullName', data.fullName);
-                localStorage.setItem('balance', data.balance);
                 localStorage.setItem('authorities', data.authorities);
 
 

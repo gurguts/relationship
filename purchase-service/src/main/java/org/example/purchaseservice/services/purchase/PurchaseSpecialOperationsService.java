@@ -14,7 +14,7 @@ import org.example.purchaseservice.clients.*;
 import org.example.purchaseservice.models.Product;
 import org.example.purchaseservice.models.Purchase;
 import org.example.purchaseservice.models.PaymentMethod;
-import org.example.purchaseservice.models.warehouse.WarehouseEntry;
+import org.example.purchaseservice.models.warehouse.WarehouseReceipt;
 import org.example.purchaseservice.models.dto.client.ClientDTO;
 import org.example.purchaseservice.models.dto.client.ClientSearchRequest;
 import org.example.purchaseservice.models.dto.fields.*;
@@ -24,7 +24,7 @@ import org.example.purchaseservice.models.dto.user.UserDTO;
 import org.example.purchaseservice.repositories.PurchaseRepository;
 import org.example.purchaseservice.services.impl.IProductService;
 import org.example.purchaseservice.services.impl.IPurchaseSpecialOperationsService;
-import org.example.purchaseservice.services.impl.IWarehouseEntryService;
+import org.example.purchaseservice.services.impl.IWarehouseReceiptService;
 import org.example.purchaseservice.spec.PurchaseSpecification;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -50,7 +50,7 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
     private final ClientApiClient clientApiClient;
     private final UserClient userClient;
     private final IProductService productService;
-    private final IWarehouseEntryService warehouseEntryService;
+    private final IWarehouseReceiptService warehouseReceiptService;
 
     @Override
     public void generateExcelFile(
@@ -339,10 +339,10 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
         List<ClientDTO> clients = fetchClientIds(query, filterParams);
         FilterIds filterIds = createFilterIds(clients);
         List<Purchase> purchaseList = fetchPurchases(query, filterParams, clients, filterIds);
-        List<WarehouseEntry> warehouseEntries = fetchWarehouseEntries(filterParams);
+        List<WarehouseReceipt> warehouseReceipts = fetchWarehouseReceipts(filterParams);
 
         Map<Long, Double> totalCollectedByProduct = calculateTotalCollectedByProduct(purchaseList);
-        Map<Long, Double> totalDeliveredByProduct = calculateTotalDeliveredByProduct(warehouseEntries);
+        Map<Long, Double> totalDeliveredByProduct = calculateTotalDeliveredByProduct(warehouseReceipts);
         Map<String, Map<Long, Double>> byDrivers = calculateByDrivers(purchaseList, filterIds);
         Map<String, Map<Long, Double>> byAttractors = calculateByAttractors(purchaseList, filterIds);
         Map<String, Double> totalSpentByCurrency = calculateTotalSpentByCurrency(purchaseList);
@@ -371,7 +371,7 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
         );
     }
 
-    private List<WarehouseEntry> fetchWarehouseEntries(Map<String, List<String>> filterParams) {
+    private List<WarehouseReceipt> fetchWarehouseReceipts(Map<String, List<String>> filterParams) {
         Map<String, List<String>> warehouseFilters = new HashMap<>();
         Map<String, String> filterKeyMapping = new HashMap<>();
         filterKeyMapping.put("user", "user_id");
@@ -387,7 +387,7 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
             }
         }
 
-        return warehouseEntryService.findWarehouseEntriesByFilters(warehouseFilters);
+        return warehouseReceiptService.findWarehouseReceiptsByFilters(warehouseFilters);
     }
 
     private Map<Long, Double> calculateTotalCollectedByProduct(List<Purchase> purchaseList) {
@@ -407,14 +407,14 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
                 ));
     }
 
-    private Map<Long, Double> calculateTotalDeliveredByProduct(List<WarehouseEntry> warehouseEntries) {
-        return warehouseEntries.stream()
+    private Map<Long, Double> calculateTotalDeliveredByProduct(List<WarehouseReceipt> warehouseReceipts) {
+        return warehouseReceipts.stream()
                 .filter(e -> e.getProductId() != null && e.getQuantity() != null)
                 .collect(Collectors.groupingBy(
-                        WarehouseEntry::getProductId,
+                        WarehouseReceipt::getProductId,
                         Collectors.reducing(
                                 BigDecimal.ZERO,
-                                WarehouseEntry::getQuantity,
+                                WarehouseReceipt::getQuantity,
                                 BigDecimal::add
                         )
                 )).entrySet().stream()
@@ -497,7 +497,7 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
                         Collectors.collectingAndThen(
                                 Collectors.averagingDouble(p ->
                                         p.getQuantity().compareTo(BigDecimal.ZERO) > 0
-                                                ? p.getTotalPrice().divide(p.getQuantity(), 2, RoundingMode.HALF_UP).doubleValue()
+                                                ? p.getTotalPrice().divide(p.getQuantity(), 6, RoundingMode.HALF_UP).doubleValue()
                                                 : 0.0
                                 ),
                                 avg -> avg
