@@ -31,16 +31,16 @@ public class WarehouseBalanceAdjustment {
     private BigDecimal newQuantity;
 
     @Column(name = "previous_total_cost", precision = 20, scale = 6, nullable = false)
-    private BigDecimal previousTotalCostUah;
+    private BigDecimal previousTotalCostEur;
 
     @Column(name = "new_total_cost", precision = 20, scale = 6, nullable = false)
-    private BigDecimal newTotalCostUah;
+    private BigDecimal newTotalCostEur;
 
     @Column(name = "previous_average_price", precision = 20, scale = 6, nullable = false)
-    private BigDecimal previousAveragePriceUah;
+    private BigDecimal previousAveragePriceEur;
 
     @Column(name = "new_average_price", precision = 20, scale = 6, nullable = false)
-    private BigDecimal newAveragePriceUah;
+    private BigDecimal newAveragePriceEur;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "adjustment_type", length = 20, nullable = false)

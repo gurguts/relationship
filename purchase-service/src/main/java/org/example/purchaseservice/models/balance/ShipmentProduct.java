@@ -30,11 +30,11 @@ public class ShipmentProduct {
     @Column(nullable = false, precision = 20, scale = 2)
     private BigDecimal quantity;
     
-    @Column(name = "unit_price_uah", nullable = false, precision = 20, scale = 6)
-    private BigDecimal unitPriceUah;
+    @Column(name = "unit_price_eur", nullable = false, precision = 20, scale = 6)
+    private BigDecimal unitPriceEur;
     
-    @Column(name = "total_cost_uah", nullable = false, precision = 20, scale = 6)
-    private BigDecimal totalCostUah;
+    @Column(name = "total_cost_eur", nullable = false, precision = 20, scale = 6)
+    private BigDecimal totalCostEur;
     
     @Column(name = "user_id", nullable = false)
     private Long userId;

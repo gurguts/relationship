@@ -23,9 +23,9 @@ public class DriverProductBalanceService {
      */
     @Transactional
     public DriverProductBalance addProduct(Long driverId, Long productId, 
-                                            BigDecimal quantity, BigDecimal totalPriceUah) {
-        log.info("Adding product to driver balance: driverId={}, productId={}, quantity={}, totalPriceUah={}", 
-                driverId, productId, quantity, totalPriceUah);
+                                            BigDecimal quantity, BigDecimal totalPriceEur) {
+        log.info("Adding product to driver balance: driverId={}, productId={}, quantity={}, totalPriceEur={}", 
+                driverId, productId, quantity, totalPriceEur);
         
         DriverProductBalance balance = driverProductBalanceRepository
                 .findByDriverIdAndProductId(driverId, productId)
@@ -36,30 +36,30 @@ public class DriverProductBalanceService {
                     return newBalance;
                 });
         
-        balance.addProduct(quantity, totalPriceUah);
+        balance.addProduct(quantity, totalPriceEur);
         DriverProductBalance saved = driverProductBalanceRepository.save(balance);
         
         log.info("Driver balance updated: id={}, newQuantity={}, newAveragePrice={}, totalCost={}", 
-                saved.getId(), saved.getQuantity(), saved.getAveragePriceUah(), saved.getTotalCostUah());
+                saved.getId(), saved.getQuantity(), saved.getAveragePriceEur(), saved.getTotalCostEur());
         
         return saved;
     }
     
     /**
      * Remove product from driver balance (when purchase is deleted or warehouse entry is created)
-     * @param totalPriceUah total price of the specific purchase being removed
+     * @param totalPriceEur total price in EUR of the specific purchase being removed
      */
     @Transactional
-    public DriverProductBalance removeProduct(Long driverId, Long productId, BigDecimal quantity, BigDecimal totalPriceUah) {
+    public DriverProductBalance removeProduct(Long driverId, Long productId, BigDecimal quantity, BigDecimal totalPriceEur) {
         log.info("Removing product from driver balance: driverId={}, productId={}, quantity={}, totalPrice={}", 
-                driverId, productId, quantity, totalPriceUah);
+                driverId, productId, quantity, totalPriceEur);
         
         DriverProductBalance balance = driverProductBalanceRepository
                 .findByDriverIdAndProductId(driverId, productId)
                 .orElseThrow(() -> new PurchaseException("BALANCE_NOT_FOUND", 
                         String.format("Driver balance not found: driverId=%d, productId=%d", driverId, productId)));
         
-        balance.removeProduct(quantity, totalPriceUah);
+        balance.removeProduct(quantity, totalPriceEur);
         DriverProductBalance saved = driverProductBalanceRepository.save(balance);
         
         // Delete record if quantity becomes 0
@@ -70,7 +70,7 @@ public class DriverProductBalanceService {
         }
         
         log.info("Driver balance updated: id={}, newQuantity={}, newAveragePrice={}, totalCost={}", 
-                saved.getId(), saved.getQuantity(), saved.getAveragePriceUah(), saved.getTotalCostUah());
+                saved.getId(), saved.getQuantity(), saved.getAveragePriceEur(), saved.getTotalCostEur());
         
         return saved;
     }
@@ -104,7 +104,7 @@ public class DriverProductBalanceService {
         }
         
         log.info("Driver balance updated: id={}, newQuantity={}, newAveragePrice={}, totalCost={}", 
-                saved.getId(), saved.getQuantity(), saved.getAveragePriceUah(), saved.getTotalCostUah());
+                saved.getId(), saved.getQuantity(), saved.getAveragePriceEur(), saved.getTotalCostEur());
         
         return saved;
     }

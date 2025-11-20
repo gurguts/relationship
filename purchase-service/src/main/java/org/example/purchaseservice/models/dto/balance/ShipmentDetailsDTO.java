@@ -17,7 +17,7 @@ public class ShipmentDetailsDTO {
     private String invoiceUa;
     private String invoiceEu;
     private String description;
-    private BigDecimal totalCostUah;
+    private BigDecimal totalCostEur;
     private Long userId;
     private LocalDateTime createdAt;
     private List<ShipmentItemDTO> items;
@@ -30,8 +30,8 @@ public class ShipmentDetailsDTO {
         private String productName;
         private Long warehouseId;
         private BigDecimal quantity;
-        private BigDecimal unitPriceUah;
-        private BigDecimal totalCostUah;
+        private BigDecimal unitPriceEur;
+        private BigDecimal totalCostEur;
         private LocalDate withdrawalDate;
     }
 }

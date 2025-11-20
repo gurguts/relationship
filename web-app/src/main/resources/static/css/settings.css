@@ -85,6 +85,19 @@
     font-size: var(--base-text-size);
 }
 
+.info-section {
+    margin-bottom: 20px;
+    padding: 15px;
+    background-color: #f0f0f0;
+    border-radius: 5px;
+    border-left: 4px solid var(--bright-green);
+}
+
+.info-section p {
+    margin: 0;
+    color: var(--dark-blue);
+}
+
 .table-container {
     overflow-x: auto;
     margin-top: 1em;

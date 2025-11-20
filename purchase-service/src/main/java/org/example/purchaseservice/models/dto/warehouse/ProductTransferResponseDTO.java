@@ -17,8 +17,8 @@ public class ProductTransferResponseDTO {
     private Long fromProductId;
     private Long toProductId;
     private BigDecimal quantity;
-    private BigDecimal unitPriceUah;
-    private BigDecimal totalCostUah;
+    private BigDecimal unitPriceEur;
+    private BigDecimal totalCostEur;
     private LocalDate transferDate;
     private Long userId;
     private Long reasonId;

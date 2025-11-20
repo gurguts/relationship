@@ -70,8 +70,8 @@ function renderProductBalances(balances) {
         <tr>
             <th>Товар</th>
             <th>Кількість (кг)</th>
-            <th>Середня ціна (UAH/кг)</th>
-            <th>Загальна вартість (UAH)</th>
+            <th>Середня ціна (EUR/кг)</th>
+            <th>Загальна вартість (EUR)</th>
         </tr>
     `;
     
@@ -85,8 +85,8 @@ function renderProductBalances(balances) {
         row.innerHTML = `
             <td>${productName}</td>
             <td>${formatNumber(balance.quantity, 2)}</td>
-            <td>${formatNumber(balance.averagePriceUah, 6)}</td>
-            <td>${formatNumber(balance.totalCostUah, 2)}</td>
+            <td>${formatNumber(balance.averagePriceEur, 6)}</td>
+            <td>${formatNumber(balance.totalCostEur, 2)}</td>
         `;
         tbody.appendChild(row);
     });

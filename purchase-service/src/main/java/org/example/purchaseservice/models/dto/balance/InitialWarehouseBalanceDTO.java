@@ -21,7 +21,7 @@ public class InitialWarehouseBalanceDTO {
     
     @NotNull(message = "Average price is required")
     @DecimalMin(value = "0.00", message = "Average price must be non-negative")
-    private BigDecimal averagePriceUah;
+    private BigDecimal averagePriceEur;
     
     private String note;
 }

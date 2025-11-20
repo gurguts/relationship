@@ -28,8 +28,8 @@ public class WarehouseReceiptDTO {
 
     private BigDecimal purchasedQuantity;
     
-    private BigDecimal unitPriceUah;
+    private BigDecimal unitPriceEur;
     
-    private BigDecimal totalCostUah;
+    private BigDecimal totalCostEur;
 }
 

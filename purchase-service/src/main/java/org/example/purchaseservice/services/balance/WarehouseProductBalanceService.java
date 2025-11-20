@@ -46,7 +46,7 @@ public class WarehouseProductBalanceService {
         WarehouseProductBalance saved = warehouseProductBalanceRepository.save(balance);
         
         log.info("Warehouse balance updated: id={}, newQuantity={}, newTotalCost={}, newAveragePrice={}", 
-                saved.getId(), saved.getQuantity(), saved.getTotalCostUah(), saved.getAveragePriceUah());
+                saved.getId(), saved.getQuantity(), saved.getTotalCostEur(), saved.getAveragePriceEur());
         
         return saved;
     }
@@ -75,7 +75,7 @@ public class WarehouseProductBalanceService {
             log.info("Warehouse balance deleted (quantity=0): id={}", saved.getId());
         } else {
             log.info("Warehouse balance updated: id={}, newQuantity={}, averagePrice={}", 
-                    saved.getId(), saved.getQuantity(), saved.getAveragePriceUah());
+                    saved.getId(), saved.getQuantity(), saved.getAveragePriceEur());
         }
         
         return averagePrice;
@@ -107,7 +107,7 @@ public class WarehouseProductBalanceService {
             log.info("Warehouse balance deleted (quantity=0): id={}", saved.getId());
         } else {
             log.info("Warehouse balance updated: id={}, newQuantity={}, newTotalCost={}, newAveragePrice={}", 
-                    saved.getId(), saved.getQuantity(), saved.getTotalCostUah(), saved.getAveragePriceUah());
+                    saved.getId(), saved.getQuantity(), saved.getTotalCostEur(), saved.getAveragePriceEur());
         }
     }
     
@@ -151,12 +151,12 @@ public class WarehouseProductBalanceService {
 
         WarehouseProductBalance saved = warehouseProductBalanceRepository.save(balance);
 
-        if (saved.getQuantity().compareTo(BigDecimal.ZERO) == 0 && saved.getTotalCostUah().compareTo(BigDecimal.ZERO) == 0) {
+        if (saved.getQuantity().compareTo(BigDecimal.ZERO) == 0 && saved.getTotalCostEur().compareTo(BigDecimal.ZERO) == 0) {
             warehouseProductBalanceRepository.delete(saved);
             log.info("Warehouse balance deleted (quantity=0) after cost adjustment: id={}", saved.getId());
         } else {
             log.info("Warehouse balance cost adjusted: id={}, totalCost={}, averagePrice={}",
-                    saved.getId(), saved.getTotalCostUah(), saved.getAveragePriceUah());
+                    saved.getId(), saved.getTotalCostEur(), saved.getAveragePriceEur());
         }
     }
 
@@ -176,7 +176,7 @@ public class WarehouseProductBalanceService {
      */
     public BigDecimal getAveragePrice(Long warehouseId, Long productId) {
         WarehouseProductBalance balance = getBalance(warehouseId, productId);
-        return balance != null ? balance.getAveragePriceUah() : BigDecimal.ZERO;
+        return balance != null ? balance.getAveragePriceEur() : BigDecimal.ZERO;
     }
     
     /**
@@ -185,9 +185,9 @@ public class WarehouseProductBalanceService {
      */
     @Transactional
     public WarehouseProductBalance setInitialBalance(Long warehouseId, Long productId,
-                                                      BigDecimal initialQuantity, BigDecimal averagePriceUah) {
+                                                      BigDecimal initialQuantity, BigDecimal averagePriceEur) {
         log.info("Setting initial warehouse balance: warehouseId={}, productId={}, quantity={}, avgPrice={}", 
-                warehouseId, productId, initialQuantity, averagePriceUah);
+                warehouseId, productId, initialQuantity, averagePriceEur);
         
         // Check if balance already exists
         Optional<WarehouseProductBalance> existing = warehouseProductBalanceRepository
@@ -203,13 +203,13 @@ public class WarehouseProductBalanceService {
         balance.setWarehouseId(warehouseId);
         balance.setProductId(productId);
         balance.setQuantity(initialQuantity);
-        balance.setAveragePriceUah(averagePriceUah);
-        balance.setTotalCostUah(initialQuantity.multiply(averagePriceUah));
+        balance.setAveragePriceEur(averagePriceEur);
+        balance.setTotalCostEur(initialQuantity.multiply(averagePriceEur));
         
         WarehouseProductBalance saved = warehouseProductBalanceRepository.save(balance);
         
         log.info("Initial warehouse balance set: id={}, quantity={}, avgPrice={}, totalCost={}", 
-                saved.getId(), saved.getQuantity(), saved.getAveragePriceUah(), saved.getTotalCostUah());
+                saved.getId(), saved.getQuantity(), saved.getAveragePriceEur(), saved.getTotalCostEur());
         
         return saved;
     }
@@ -235,8 +235,8 @@ public class WarehouseProductBalanceService {
                                 warehouseId, productId)));
 
         BigDecimal previousQuantity = balance.getQuantity().setScale(2, RoundingMode.HALF_UP);
-        BigDecimal previousTotalCost = balance.getTotalCostUah().setScale(6, RoundingMode.HALF_UP);
-        BigDecimal previousAverage = balance.getAveragePriceUah().setScale(6, RoundingMode.HALF_UP);
+        BigDecimal previousTotalCost = balance.getTotalCostEur().setScale(6, RoundingMode.HALF_UP);
+        BigDecimal previousAverage = balance.getAveragePriceEur().setScale(6, RoundingMode.HALF_UP);
 
         WarehouseBalanceAdjustment.AdjustmentType adjustmentType = null;
 
@@ -284,8 +284,8 @@ public class WarehouseProductBalanceService {
         }
 
         balance.setQuantity(updatedQuantity);
-        balance.setTotalCostUah(updatedTotalCost);
-        balance.setAveragePriceUah(updatedAverage);
+        balance.setTotalCostEur(updatedTotalCost);
+        balance.setAveragePriceEur(updatedAverage);
 
         WarehouseProductBalance savedBalance = warehouseProductBalanceRepository.save(balance);
 
@@ -294,10 +294,10 @@ public class WarehouseProductBalanceService {
         adjustment.setProductId(productId);
         adjustment.setPreviousQuantity(previousQuantity);
         adjustment.setNewQuantity(updatedQuantity);
-        adjustment.setPreviousTotalCostUah(previousTotalCost);
-        adjustment.setNewTotalCostUah(updatedTotalCost);
-        adjustment.setPreviousAveragePriceUah(previousAverage);
-        adjustment.setNewAveragePriceUah(updatedAverage);
+        adjustment.setPreviousTotalCostEur(previousTotalCost);
+        adjustment.setNewTotalCostEur(updatedTotalCost);
+        adjustment.setPreviousAveragePriceEur(previousAverage);
+        adjustment.setNewAveragePriceEur(updatedAverage);
         adjustment.setAdjustmentType(adjustmentType);
         adjustment.setDescription(description);
         adjustment.setUserId(userId);

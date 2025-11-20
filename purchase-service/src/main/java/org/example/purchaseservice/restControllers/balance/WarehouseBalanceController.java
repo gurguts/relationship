@@ -37,13 +37,13 @@ public class WarehouseBalanceController {
             @Valid @RequestBody InitialWarehouseBalanceDTO dto) {
         
         log.info("Setting initial balance: warehouse={}, product={}, qty={}, price={}", 
-                dto.getWarehouseId(), dto.getProductId(), dto.getInitialQuantity(), dto.getAveragePriceUah());
+                dto.getWarehouseId(), dto.getProductId(), dto.getInitialQuantity(), dto.getAveragePriceEur());
         
         WarehouseProductBalance balance = warehouseProductBalanceService.setInitialBalance(
                 dto.getWarehouseId(),
                 dto.getProductId(),
                 dto.getInitialQuantity(),
-                dto.getAveragePriceUah()
+                dto.getAveragePriceEur()
         );
         
         WarehouseProductBalanceDTO responseDTO = mapToDTO(balance);
@@ -88,7 +88,7 @@ public class WarehouseBalanceController {
                 warehouseId,
                 productId,
                 request.getNewQuantity(),
-                request.getNewTotalCostUah(),
+                request.getNewTotalCostEur(),
                 userId,
                 request.getDescription()
         );
@@ -153,8 +153,8 @@ public class WarehouseBalanceController {
                 .warehouseId(balance.getWarehouseId())
                 .productId(balance.getProductId())
                 .quantity(balance.getQuantity())
-                .averagePriceUah(balance.getAveragePriceUah())
-                .totalCostUah(balance.getTotalCostUah())
+                .averagePriceEur(balance.getAveragePriceEur())
+                .totalCostEur(balance.getTotalCostEur())
                 .updatedAt(balance.getUpdatedAt())
                 .build();
     }
@@ -166,10 +166,10 @@ public class WarehouseBalanceController {
                 .productId(adjustment.getProductId())
                 .previousQuantity(adjustment.getPreviousQuantity())
                 .newQuantity(adjustment.getNewQuantity())
-                .previousTotalCostUah(adjustment.getPreviousTotalCostUah())
-                .newTotalCostUah(adjustment.getNewTotalCostUah())
-                .previousAveragePriceUah(adjustment.getPreviousAveragePriceUah())
-                .newAveragePriceUah(adjustment.getNewAveragePriceUah())
+                .previousTotalCostEur(adjustment.getPreviousTotalCostEur())
+                .newTotalCostEur(adjustment.getNewTotalCostEur())
+                .previousAveragePriceEur(adjustment.getPreviousAveragePriceEur())
+                .newAveragePriceEur(adjustment.getNewAveragePriceEur())
                 .adjustmentType(adjustment.getAdjustmentType())
                 .description(adjustment.getDescription())
                 .userId(adjustment.getUserId())

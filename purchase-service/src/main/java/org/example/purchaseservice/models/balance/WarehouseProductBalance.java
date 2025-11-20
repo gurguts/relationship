@@ -30,11 +30,11 @@ public class WarehouseProductBalance {
     @Column(name = "quantity", nullable = false, precision = 20, scale = 2)
     private BigDecimal quantity = BigDecimal.ZERO;
     
-    @Column(name = "average_price_uah", nullable = false, precision = 20, scale = 6)
-    private BigDecimal averagePriceUah = BigDecimal.ZERO;
+    @Column(name = "average_price_eur", nullable = false, precision = 20, scale = 6)
+    private BigDecimal averagePriceEur = BigDecimal.ZERO;
     
-    @Column(name = "total_cost_uah", nullable = false, precision = 20, scale = 6)
-    private BigDecimal totalCostUah = BigDecimal.ZERO;
+    @Column(name = "total_cost_eur", nullable = false, precision = 20, scale = 6)
+    private BigDecimal totalCostEur = BigDecimal.ZERO;
     
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -57,15 +57,15 @@ public class WarehouseProductBalance {
             throw new IllegalArgumentException("Added total cost must be non-negative");
         }
         
-        BigDecimal newTotalCost = this.totalCostUah.add(addedTotalCost);
+        BigDecimal newTotalCost = this.totalCostEur.add(addedTotalCost);
         BigDecimal newQuantity = this.quantity.add(addedQuantity);
         
         this.quantity = newQuantity;
-        this.totalCostUah = newTotalCost;
+        this.totalCostEur = newTotalCost;
         
         // Recalculate average price from total cost and quantity
         if (newQuantity.compareTo(BigDecimal.ZERO) > 0) {
-            this.averagePriceUah = newTotalCost.divide(newQuantity, 6, RoundingMode.HALF_UP);
+            this.averagePriceEur = newTotalCost.divide(newQuantity, 6, RoundingMode.HALF_UP);
         }
     }
     
@@ -83,19 +83,19 @@ public class WarehouseProductBalance {
                     + this.quantity + ", trying to remove: " + removedQuantity);
         }
         
-        BigDecimal currentAveragePrice = this.averagePriceUah;
+        BigDecimal currentAveragePrice = this.averagePriceEur;
         BigDecimal removedCost = removedQuantity.multiply(currentAveragePrice);
         BigDecimal newQuantity = this.quantity.subtract(removedQuantity);
-        BigDecimal newTotalCost = this.totalCostUah.subtract(removedCost);
+        BigDecimal newTotalCost = this.totalCostEur.subtract(removedCost);
         
         this.quantity = newQuantity;
-        this.totalCostUah = newTotalCost;
+        this.totalCostEur = newTotalCost;
         
         // Average price stays the same during removal
         // But if quantity becomes 0, reset all
         if (newQuantity.compareTo(BigDecimal.ZERO) == 0) {
-            this.averagePriceUah = BigDecimal.ZERO;
-            this.totalCostUah = BigDecimal.ZERO;
+            this.averagePriceEur = BigDecimal.ZERO;
+            this.totalCostEur = BigDecimal.ZERO;
         }
         
         return currentAveragePrice;
@@ -120,7 +120,7 @@ public class WarehouseProductBalance {
         }
         
         BigDecimal newQuantity = this.quantity.subtract(removedQuantity);
-        BigDecimal newTotalCost = this.totalCostUah.subtract(removedTotalCost);
+        BigDecimal newTotalCost = this.totalCostEur.subtract(removedTotalCost);
         
         // Ensure we don't go negative on cost
         if (newTotalCost.compareTo(BigDecimal.ZERO) < 0) {
@@ -128,15 +128,15 @@ public class WarehouseProductBalance {
         }
         
         this.quantity = newQuantity;
-        this.totalCostUah = newTotalCost;
+        this.totalCostEur = newTotalCost;
         
         // Recalculate average price
         if (newQuantity.compareTo(BigDecimal.ZERO) > 0) {
-            this.averagePriceUah = newTotalCost.divide(newQuantity, 6, RoundingMode.HALF_UP);
+            this.averagePriceEur = newTotalCost.divide(newQuantity, 6, RoundingMode.HALF_UP);
         } else {
             // If quantity becomes 0, reset all
-            this.averagePriceUah = BigDecimal.ZERO;
-            this.totalCostUah = BigDecimal.ZERO;
+            this.averagePriceEur = BigDecimal.ZERO;
+            this.totalCostEur = BigDecimal.ZERO;
         }
     }
 
@@ -149,19 +149,19 @@ public class WarehouseProductBalance {
             throw new IllegalArgumentException("Cost delta must not be null");
         }
 
-        BigDecimal newTotalCost = this.totalCostUah.add(costDelta);
+        BigDecimal newTotalCost = this.totalCostEur.add(costDelta);
         if (newTotalCost.compareTo(BigDecimal.ZERO) < 0) {
             throw new IllegalArgumentException("Resulting total cost cannot be negative");
         }
 
-        this.totalCostUah = newTotalCost;
+        this.totalCostEur = newTotalCost;
 
         if (this.quantity.compareTo(BigDecimal.ZERO) > 0) {
-            this.averagePriceUah = newTotalCost.divide(this.quantity, 6, RoundingMode.HALF_UP);
+            this.averagePriceEur = newTotalCost.divide(this.quantity, 6, RoundingMode.HALF_UP);
         } else {
             // no quantity -> reset cost as well
-            this.totalCostUah = BigDecimal.ZERO;
-            this.averagePriceUah = BigDecimal.ZERO;
+            this.totalCostEur = BigDecimal.ZERO;
+            this.averagePriceEur = BigDecimal.ZERO;
         }
     }
 }

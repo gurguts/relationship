@@ -43,6 +43,8 @@ function initializeTabs() {
                 loadBranches();
             } else if (targetTab === 'accounts') {
                 loadAccounts();
+            } else if (targetTab === 'exchange-rates') {
+                loadExchangeRates();
             } else if (targetTab === 'business') {
                 loadBusinesses();
             } else if (targetTab === 'region') {
@@ -120,6 +122,9 @@ function setupEventListeners() {
     // Branch and Account forms
     document.getElementById('branch-form').addEventListener('submit', handleCreateBranch);
     document.getElementById('account-form').addEventListener('submit', handleCreateAccount);
+    
+    // Exchange Rate form
+    document.getElementById('exchange-rate-form').addEventListener('submit', handleUpdateExchangeRate);
 }
 
 // ========== CATEGORIES ==========
@@ -798,6 +803,104 @@ async function loadUsers() {
         usersCache = await response.json();
     } catch (error) {
         console.error('Error loading users:', error);
+    }
+}
+
+// ========== HELPER FUNCTIONS ==========
+
+// ========== EXCHANGE RATES ==========
+
+async function loadExchangeRates() {
+    try {
+        const response = await fetch(`${API_BASE}/exchange-rates`);
+        if (!response.ok) throw new Error('Failed to load exchange rates');
+        const rates = await response.json();
+        renderExchangeRates(rates);
+    } catch (error) {
+        console.error('Error loading exchange rates:', error);
+        showSettingsMessage('Помилка завантаження курсів валют', 'error');
+    }
+}
+
+function renderExchangeRates(rates) {
+    const tbody = document.getElementById('exchange-rates-body');
+    tbody.innerHTML = '';
+    
+    // Expected currencies: UAH and USD
+    const expectedCurrencies = ['UAH', 'USD'];
+    
+    expectedCurrencies.forEach(currency => {
+        const rate = rates.find(r => r.fromCurrency === currency);
+        const row = document.createElement('tr');
+        
+        const updatedAt = rate && rate.updatedAt 
+            ? new Date(rate.updatedAt).toLocaleString('uk-UA')
+            : 'Не встановлено';
+        
+        row.innerHTML = `
+            <td>${currency}</td>
+            <td>${rate ? rate.rate.toFixed(6) : 'Не встановлено'}</td>
+            <td>${updatedAt}</td>
+            <td>
+                <button class="action-btn btn-edit" onclick="openEditExchangeRateModal('${currency}', ${rate ? rate.rate : 'null'})">
+                    ${rate ? 'Оновити' : 'Встановити'}
+                </button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+function openEditExchangeRateModal(currency, currentRate) {
+    const modal = document.getElementById('edit-exchange-rate-modal');
+    const form = document.getElementById('exchange-rate-form');
+    const title = document.getElementById('exchange-rate-modal-title');
+    const currencyInput = document.getElementById('exchange-rate-currency');
+    const rateInput = document.getElementById('exchange-rate-value');
+    
+    title.textContent = `Оновити курс ${currency} до EUR`;
+    currencyInput.value = currency;
+    rateInput.value = currentRate || '';
+    
+    modal.style.display = 'block';
+}
+
+async function handleUpdateExchangeRate(event) {
+    event.preventDefault();
+    
+    const currency = document.getElementById('exchange-rate-currency').value;
+    const rate = parseFloat(document.getElementById('exchange-rate-value').value);
+    
+    if (!rate || rate <= 0) {
+        showSettingsMessage('Курс повинен бути більше нуля', 'error');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${API_BASE}/exchange-rates/${currency}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                fromCurrency: currency,
+                rate: rate
+            })
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Failed to update exchange rate');
+        }
+        
+        const modal = document.getElementById('edit-exchange-rate-modal');
+        modal.style.display = 'none';
+        
+        showSettingsMessage('Курс валют успішно оновлено', 'success');
+        loadExchangeRates();
+    } catch (error) {
+        console.error('Error updating exchange rate:', error);
+        showSettingsMessage(`Помилка оновлення курсу: ${error.message}`, 'error');
     }
 }
 

@@ -15,10 +15,10 @@ public class WarehouseBalanceAdjustmentDTO {
     Long productId;
     BigDecimal previousQuantity;
     BigDecimal newQuantity;
-    BigDecimal previousTotalCostUah;
-    BigDecimal newTotalCostUah;
-    BigDecimal previousAveragePriceUah;
-    BigDecimal newAveragePriceUah;
+    BigDecimal previousTotalCostEur;
+    BigDecimal newTotalCostEur;
+    BigDecimal previousAveragePriceEur;
+    BigDecimal newAveragePriceEur;
     WarehouseBalanceAdjustment.AdjustmentType adjustmentType;
     String description;
     Long userId;

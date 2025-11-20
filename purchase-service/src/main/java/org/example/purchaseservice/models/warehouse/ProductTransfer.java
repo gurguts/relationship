@@ -55,14 +55,14 @@ public class ProductTransfer {
     /**
      * Unit price at time of transfer (taken from source product)
      */
-    @Column(name = "unit_price_uah", nullable = false, precision = 20, scale = 6)
-    private BigDecimal unitPriceUah;
+    @Column(name = "unit_price_eur", nullable = false, precision = 20, scale = 6)
+    private BigDecimal unitPriceEur;
     
     /**
      * Total cost of transferred product
      */
-    @Column(name = "total_cost_uah", nullable = false, precision = 20, scale = 6)
-    private BigDecimal totalCostUah;
+    @Column(name = "total_cost_eur", nullable = false, precision = 20, scale = 6)
+    private BigDecimal totalCostEur;
     
     /**
      * Date of transfer

@@ -49,13 +49,13 @@ public interface WarehouseDiscrepancyRepository extends JpaRepository<WarehouseD
     /**
      * Get total losses value
      */
-    @Query("SELECT COALESCE(SUM(wd.discrepancyValueUah), 0) FROM WarehouseDiscrepancy wd WHERE wd.type = 'LOSS'")
+    @Query("SELECT COALESCE(SUM(wd.discrepancyValueEur), 0) FROM WarehouseDiscrepancy wd WHERE wd.type = 'LOSS'")
     BigDecimal getTotalLossesValue();
     
     /**
      * Get total gains value
      */
-    @Query("SELECT COALESCE(SUM(wd.discrepancyValueUah), 0) FROM WarehouseDiscrepancy wd WHERE wd.type = 'GAIN'")
+    @Query("SELECT COALESCE(SUM(wd.discrepancyValueEur), 0) FROM WarehouseDiscrepancy wd WHERE wd.type = 'GAIN'")
     BigDecimal getTotalGainsValue();
 }
 

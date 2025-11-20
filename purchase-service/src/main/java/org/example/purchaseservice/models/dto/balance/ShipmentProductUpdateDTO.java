@@ -14,5 +14,5 @@ public class ShipmentProductUpdateDTO {
 
     @DecimalMin(value = "0.000001", inclusive = true, message = "Total cost must be greater than zero")
     @Digits(integer = 14, fraction = 6)
-    private BigDecimal totalCostUah;
+    private BigDecimal totalCostEur;
 }

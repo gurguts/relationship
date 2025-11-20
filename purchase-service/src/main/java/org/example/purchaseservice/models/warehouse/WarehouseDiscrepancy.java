@@ -78,14 +78,14 @@ public class WarehouseDiscrepancy {
     /**
      * Average price per unit (from driver balance)
      */
-    @Column(name = "unit_price_uah", nullable = false, precision = 20, scale = 6)
-    private BigDecimal unitPriceUah;
+    @Column(name = "unit_price_eur", nullable = false, precision = 20, scale = 6)
+    private BigDecimal unitPriceEur;
     
     /**
-     * Total value of discrepancy (discrepancyQuantity * unitPriceUah)
+     * Total value of discrepancy (discrepancyQuantity * unitPriceEur)
      */
-    @Column(name = "discrepancy_value_uah", nullable = false, precision = 20, scale = 6)
-    private BigDecimal discrepancyValueUah;
+    @Column(name = "discrepancy_value_eur", nullable = false, precision = 20, scale = 6)
+    private BigDecimal discrepancyValueEur;
     
     /**
      * Type of discrepancy: LOSS (negative) or GAIN (positive)

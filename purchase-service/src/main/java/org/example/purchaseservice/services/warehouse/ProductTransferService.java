@@ -66,7 +66,7 @@ public class ProductTransferService {
         }
         
         // Get average price from source product
-        BigDecimal unitPrice = sourceBalance.getAveragePriceUah();
+        BigDecimal unitPrice = sourceBalance.getAveragePriceEur();
         
         // Calculate total cost based on source product's average price
         BigDecimal totalCost = transferDTO.getQuantity().multiply(unitPrice);
@@ -124,8 +124,8 @@ public class ProductTransferService {
         transfer.setFromProductId(transferDTO.getFromProductId());
         transfer.setToProductId(transferDTO.getToProductId());
         transfer.setQuantity(transferDTO.getQuantity());
-        transfer.setUnitPriceUah(unitPrice);
-        transfer.setTotalCostUah(totalCost);
+        transfer.setUnitPriceEur(unitPrice);
+        transfer.setTotalCostEur(totalCost);
         transfer.setTransferDate(transferDTO.getTransferDate());
         transfer.setUserId(userId);
         transfer.setReason(reason);
@@ -271,8 +271,8 @@ public class ProductTransferService {
         }
 
         if (newQuantity.compareTo(BigDecimal.ZERO) == 0) {
-            BigDecimal totalCost = transfer.getTotalCostUah() != null
-                    ? transfer.getTotalCostUah().setScale(6, RoundingMode.HALF_UP)
+            BigDecimal totalCost = transfer.getTotalCostEur() != null
+                    ? transfer.getTotalCostEur().setScale(6, RoundingMode.HALF_UP)
                     : originalQuantity.multiply(unitPrice).setScale(6, RoundingMode.HALF_UP);
 
             if (!warehouseProductBalanceService.hasEnoughProduct(transfer.getWarehouseId(),
@@ -380,8 +380,8 @@ public class ProductTransferService {
         }
 
         transfer.setQuantity(newQuantity);
-        transfer.setUnitPriceUah(unitPrice);
-        transfer.setTotalCostUah(newQuantity.multiply(unitPrice).setScale(6, RoundingMode.HALF_UP));
+        transfer.setUnitPriceEur(unitPrice);
+        transfer.setTotalCostEur(newQuantity.multiply(unitPrice).setScale(6, RoundingMode.HALF_UP));
 
         ProductTransfer saved = productTransferRepository.save(transfer);
         return toDTO(saved);
@@ -394,8 +394,8 @@ public class ProductTransferService {
         dto.setFromProductId(transfer.getFromProductId());
         dto.setToProductId(transfer.getToProductId());
         dto.setQuantity(transfer.getQuantity());
-        dto.setUnitPriceUah(transfer.getUnitPriceUah());
-        dto.setTotalCostUah(transfer.getTotalCostUah());
+        dto.setUnitPriceEur(transfer.getUnitPriceEur());
+        dto.setTotalCostEur(transfer.getTotalCostEur());
         dto.setTransferDate(transfer.getTransferDate());
         dto.setUserId(transfer.getUserId());
         dto.setReasonId(transfer.getReason() != null ? transfer.getReason().getId() : null);
@@ -406,13 +406,13 @@ public class ProductTransferService {
     }
 
     private BigDecimal resolveUnitPrice(ProductTransfer transfer) {
-        BigDecimal unitPrice = transfer.getUnitPriceUah();
+        BigDecimal unitPrice = transfer.getUnitPriceEur();
         if (unitPrice != null && unitPrice.compareTo(BigDecimal.ZERO) > 0) {
             return unitPrice.setScale(6, RoundingMode.HALF_UP);
         }
 
         BigDecimal quantity = transfer.getQuantity();
-        BigDecimal totalCost = transfer.getTotalCostUah();
+        BigDecimal totalCost = transfer.getTotalCostEur();
 
         if (quantity != null && quantity.compareTo(BigDecimal.ZERO) > 0
                 && totalCost != null && totalCost.compareTo(BigDecimal.ZERO) > 0) {

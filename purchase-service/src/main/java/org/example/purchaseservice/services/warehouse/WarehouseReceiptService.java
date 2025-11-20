@@ -68,8 +68,8 @@ public class WarehouseReceiptService implements IWarehouseReceiptService {
         dto.setDriverBalanceQuantity(receipt.getDriverBalanceQuantity());
         dto.setEntryDate(receipt.getEntryDate());
         dto.setType(receipt.getType());
-        dto.setUnitPriceUah(receipt.getUnitPriceUah());
-        dto.setTotalCostUah(receipt.getTotalCostUah());
+        dto.setUnitPriceEur(receipt.getUnitPriceEur());
+        dto.setTotalCostEur(receipt.getTotalCostEur());
         // purchasedQuantity is deprecated, can use driverBalanceQuantity instead
         dto.setPurchasedQuantity(receipt.getDriverBalanceQuantity());
         return dto;
@@ -102,8 +102,8 @@ public class WarehouseReceiptService implements IWarehouseReceiptService {
         // Store driver's full balance details (before removing)
         BigDecimal purchasedQuantity = driverBalance.getQuantity();        // What driver bought
         BigDecimal receivedQuantity = warehouseReceipt.getQuantity();      // What warehouse clerk received
-        BigDecimal totalDriverCost = driverBalance.getTotalCostUah();      // Total cost of all driver's product
-        BigDecimal driverUnitPrice = driverBalance.getAveragePriceUah();   // Average price per unit from driver
+        BigDecimal totalDriverCost = driverBalance.getTotalCostEur();      // Total cost of all driver's product in EUR
+        BigDecimal driverUnitPrice = driverBalance.getAveragePriceEur();   // Average price per unit from driver in EUR
         
         // Calculate warehouse unit price (total cost distributed over received quantity)
         // If received 19kg for 400 UAH total → 400/19 = 21.05 UAH/kg
@@ -111,8 +111,8 @@ public class WarehouseReceiptService implements IWarehouseReceiptService {
         
         // Set prices and driver balance in receipt
         warehouseReceipt.setDriverBalanceQuantity(purchasedQuantity);  // Store how much driver had
-        warehouseReceipt.setUnitPriceUah(warehouseUnitPrice);  // Recalculated price for received quantity
-        warehouseReceipt.setTotalCostUah(totalDriverCost);     // Full driver cost goes to warehouse
+        warehouseReceipt.setUnitPriceEur(warehouseUnitPrice);  // Recalculated price for received quantity in EUR
+        warehouseReceipt.setTotalCostEur(totalDriverCost);     // Full driver cost goes to warehouse in EUR
         warehouseReceipt.setExecutorUserId(executorUserId);
         
         // Always create new receipt - never merge with existing ones

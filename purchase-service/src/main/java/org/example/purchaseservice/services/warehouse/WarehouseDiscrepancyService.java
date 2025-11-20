@@ -42,7 +42,7 @@ public class WarehouseDiscrepancyService {
             LocalDate receiptDate,
             BigDecimal purchasedQuantity,
             BigDecimal receivedQuantity,
-            BigDecimal unitPriceUah,
+            BigDecimal unitPriceEur,
             Long createdByUserId,
             String comment) {
         
@@ -54,7 +54,7 @@ public class WarehouseDiscrepancyService {
             return null;
         }
         
-        BigDecimal discrepancyValue = discrepancyQuantity.multiply(unitPriceUah)
+        BigDecimal discrepancyValue = discrepancyQuantity.multiply(unitPriceEur)
                 .setScale(2, RoundingMode.HALF_UP);
         
         WarehouseDiscrepancy.DiscrepancyType type = discrepancyQuantity.compareTo(BigDecimal.ZERO) > 0 
@@ -70,8 +70,8 @@ public class WarehouseDiscrepancyService {
                 .purchasedQuantity(purchasedQuantity)
                 .receivedQuantity(receivedQuantity)
                 .discrepancyQuantity(discrepancyQuantity)
-                .unitPriceUah(unitPriceUah)
-                .discrepancyValueUah(discrepancyValue)
+                .unitPriceEur(unitPriceEur)
+                .discrepancyValueEur(discrepancyValue)
                 .type(type)
                 .comment(comment)
                 .createdByUserId(createdByUserId)
@@ -106,7 +106,7 @@ public class WarehouseDiscrepancyService {
                 receiptDate,
                 driverBalance.getQuantity(), // purchased
                 receivedQuantity,            // received
-                driverBalance.getAveragePriceUah(),
+                driverBalance.getAveragePriceEur(),
                 createdByUserId,
                 comment
         );
@@ -325,12 +325,12 @@ public class WarehouseDiscrepancyService {
                 
                 // Column 8: Unit price
                 Cell cell8 = row.createCell(8);
-                cell8.setCellValue(discrepancy.getUnitPriceUah().doubleValue());
+                cell8.setCellValue(discrepancy.getUnitPriceEur().doubleValue());
                 cell8.setCellStyle(dataStyle);
                 
                 // Column 9: Discrepancy value
                 Cell cell9 = row.createCell(9);
-                cell9.setCellValue(discrepancy.getDiscrepancyValueUah().doubleValue());
+                cell9.setCellValue(discrepancy.getDiscrepancyValueEur().doubleValue());
                 cell9.setCellStyle(typeStyle);
                 
                 // Column 10: Type

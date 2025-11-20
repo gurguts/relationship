@@ -38,7 +38,7 @@ public class ShipmentService {
         shipment.setInvoiceEu(invoiceEu);
         shipment.setDescription(description);
         shipment.setUserId(userId);
-        shipment.setTotalCostUah(BigDecimal.ZERO);
+        shipment.setTotalCostEur(BigDecimal.ZERO);
         
         Shipment saved = shipmentRepository.save(shipment);
         log.info("Shipment created: id={}", saved.getId());
@@ -57,7 +57,7 @@ public class ShipmentService {
         shipment.addWithdrawalCost(withdrawalCost);
         Shipment saved = shipmentRepository.save(shipment);
         
-        log.info("Shipment updated: id={}, newTotalCost={}", saved.getId(), saved.getTotalCostUah());
+        log.info("Shipment updated: id={}, newTotalCost={}", saved.getId(), saved.getTotalCostEur());
         
         return saved;
     }
@@ -73,7 +73,7 @@ public class ShipmentService {
         shipment.subtractWithdrawalCost(withdrawalCost);
         Shipment saved = shipmentRepository.save(shipment);
         
-        log.info("Shipment updated: id={}, newTotalCost={}", saved.getId(), saved.getTotalCostUah());
+        log.info("Shipment updated: id={}, newTotalCost={}", saved.getId(), saved.getTotalCostEur());
         
         return saved;
     }
@@ -117,8 +117,8 @@ public class ShipmentService {
         }
 
         BigDecimal oldQuantity = item.getQuantity();
-        BigDecimal oldTotalCost = item.getTotalCostUah();
-        BigDecimal unitPrice = item.getUnitPriceUah();
+        BigDecimal oldTotalCost = item.getTotalCostEur();
+        BigDecimal unitPrice = item.getUnitPriceEur();
 
         if (oldQuantity == null || oldQuantity.compareTo(BigDecimal.ZERO) <= 0) {
             throw new PurchaseException("INVALID_ITEM_STATE", "Shipment item quantity is invalid");
@@ -187,8 +187,8 @@ public class ShipmentService {
             }
 
             item.setQuantity(newQuantity);
-            item.setTotalCostUah(newTotal);
-            item.setUnitPriceUah(newTotal.divide(newQuantity, 6, java.math.RoundingMode.HALF_UP));
+            item.setTotalCostEur(newTotal);
+            item.setUnitPriceEur(newTotal.divide(newQuantity, 6, java.math.RoundingMode.HALF_UP));
         } else {
             if (newTotalCost == null || newTotalCost.compareTo(BigDecimal.ZERO) <= 0) {
                 throw new PurchaseException("INVALID_TOTAL_COST", "Total cost must be greater than zero");
@@ -209,8 +209,8 @@ public class ShipmentService {
                 shipment.subtractWithdrawalCost(deltaCost.abs());
             }
 
-            item.setTotalCostUah(newTotalCost);
-            item.setUnitPriceUah(newTotalCost.divide(oldQuantity, 6, java.math.RoundingMode.HALF_UP));
+            item.setTotalCostEur(newTotalCost);
+            item.setUnitPriceEur(newTotalCost.divide(oldQuantity, 6, java.math.RoundingMode.HALF_UP));
         }
 
         shipmentProductRepository.save(item);
@@ -278,8 +278,8 @@ public class ShipmentService {
         shipmentProduct.setWarehouseId(warehouseId);
         shipmentProduct.setProductId(productId);
         shipmentProduct.setQuantity(quantity);
-        shipmentProduct.setUnitPriceUah(averagePrice);
-        shipmentProduct.setTotalCostUah(totalCost);
+        shipmentProduct.setUnitPriceEur(averagePrice);
+        shipmentProduct.setTotalCostEur(totalCost);
         shipmentProduct.setUserId(userId);
         
         ShipmentProduct saved = shipmentProductRepository.save(shipmentProduct);
@@ -311,10 +311,10 @@ public class ShipmentService {
                     product.getWarehouseId(),
                     product.getProductId(),
                     product.getQuantity(),
-                    product.getTotalCostUah()
+                    product.getTotalCostEur()
             );
 
-            shipment.subtractWithdrawalCost(product.getTotalCostUah());
+            shipment.subtractWithdrawalCost(product.getTotalCostEur());
         }
 
         shipmentProductRepository.deleteAll(products);

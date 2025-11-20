@@ -74,8 +74,8 @@ public class WarehouseWithdrawService implements IWarehouseWithdrawService {
         // Calculate withdrawal cost
         BigDecimal totalCost = quantity.multiply(averagePrice).setScale(6, RoundingMode.HALF_UP);
         
-        warehouseWithdrawal.setUnitPriceUah(averagePrice);
-        warehouseWithdrawal.setTotalCostUah(totalCost);
+        warehouseWithdrawal.setUnitPriceEur(averagePrice);
+        warehouseWithdrawal.setTotalCostEur(totalCost);
 
         WarehouseWithdrawal savedWithdrawal = warehouseWithdrawalRepository.save(warehouseWithdrawal);
 
@@ -183,8 +183,8 @@ public class WarehouseWithdrawService implements IWarehouseWithdrawService {
         }
 
         withdrawal.setQuantity(newQuantity);
-        withdrawal.setUnitPriceUah(unitPrice);
-        withdrawal.setTotalCostUah(calculateTotalCost(unitPrice, newQuantity));
+        withdrawal.setUnitPriceEur(unitPrice);
+        withdrawal.setTotalCostEur(calculateTotalCost(unitPrice, newQuantity));
 
         return warehouseWithdrawalRepository.save(withdrawal);
     }
@@ -215,8 +215,8 @@ public class WarehouseWithdrawService implements IWarehouseWithdrawService {
                         .userId(w.getUserId())
                         .withdrawalReason(w.getWithdrawalReason())
                         .quantity(w.getQuantity().doubleValue())
-                        .unitPriceUah(w.getUnitPriceUah())
-                        .totalCostUah(w.getTotalCostUah())
+                        .unitPriceEur(w.getUnitPriceEur())
+                        .totalCostEur(w.getTotalCostEur())
                         .description(w.getDescription())
                         .withdrawalDate(w.getWithdrawalDate())
                         .createdAt(w.getCreatedAt())
@@ -243,13 +243,13 @@ public class WarehouseWithdrawService implements IWarehouseWithdrawService {
     }
 
     private BigDecimal resolveUnitPrice(WarehouseWithdrawal withdrawal) {
-        BigDecimal unitPrice = withdrawal.getUnitPriceUah();
+        BigDecimal unitPrice = withdrawal.getUnitPriceEur();
         if (unitPrice != null && unitPrice.compareTo(BigDecimal.ZERO) > 0) {
             return unitPrice.setScale(6, RoundingMode.HALF_UP);
         }
 
         BigDecimal quantity = withdrawal.getQuantity();
-        BigDecimal totalCost = withdrawal.getTotalCostUah();
+        BigDecimal totalCost = withdrawal.getTotalCostEur();
         if (quantity != null
                 && quantity.compareTo(BigDecimal.ZERO) > 0
                 && totalCost != null

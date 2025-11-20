@@ -35,8 +35,8 @@ public class Shipment {
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
     
-    @Column(name = "total_cost_uah", nullable = false, precision = 20, scale = 6)
-    private BigDecimal totalCostUah = BigDecimal.ZERO;
+    @Column(name = "total_cost_eur", nullable = false, precision = 20, scale = 6)
+    private BigDecimal totalCostEur = BigDecimal.ZERO;
     
     @Column(name = "user_id")
     private Long userId;
@@ -54,7 +54,7 @@ public class Shipment {
      */
     public void addWithdrawalCost(BigDecimal withdrawalCost) {
         if (withdrawalCost != null && withdrawalCost.compareTo(BigDecimal.ZERO) > 0) {
-            this.totalCostUah = this.totalCostUah.add(withdrawalCost);
+            this.totalCostEur = this.totalCostEur.add(withdrawalCost);
         }
     }
     
@@ -63,9 +63,9 @@ public class Shipment {
      */
     public void subtractWithdrawalCost(BigDecimal withdrawalCost) {
         if (withdrawalCost != null && withdrawalCost.compareTo(BigDecimal.ZERO) > 0) {
-            this.totalCostUah = this.totalCostUah.subtract(withdrawalCost);
-            if (this.totalCostUah.compareTo(BigDecimal.ZERO) < 0) {
-                this.totalCostUah = BigDecimal.ZERO;
+            this.totalCostEur = this.totalCostEur.subtract(withdrawalCost);
+            if (this.totalCostEur.compareTo(BigDecimal.ZERO) < 0) {
+                this.totalCostEur = BigDecimal.ZERO;
             }
         }
     }

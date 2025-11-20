@@ -65,11 +65,14 @@ public class Purchase {
     @Column(name = "comment", columnDefinition = "TEXT")
     private String comment;
 
-    @Column(name = "total_price_uah", precision = 20, scale = 6)
-    private BigDecimal totalPriceUah;
+    @Column(name = "total_price_eur", precision = 20, scale = 6)
+    private BigDecimal totalPriceEur;
 
-    @Column(name = "unit_price_uah", precision = 20, scale = 6)
-    private BigDecimal unitPriceUah;
+    @Column(name = "unit_price_eur", precision = 20, scale = 6)
+    private BigDecimal unitPriceEur;
+    
+    @Column(name = "quantity_eur", precision = 20, scale = 2)
+    private BigDecimal quantityEur; // Quantity converted to EUR
 
     public void calculateAndSetUnitPrice() {
         if (quantity != null && totalPrice != null && quantity.compareTo(BigDecimal.ZERO) != 0) {
@@ -80,24 +83,37 @@ public class Purchase {
     }
 
     /**
-     * Converts prices to UAH and sets unit_price_uah and total_price_uah
+     * Converts prices to EUR (quantity stays the same - it's a physical value)
+     * @param exchangeRateToEur exchange rate from purchase currency to EUR (from ExchangeRateService)
      */
-    public void calculateAndSetPricesInUah() {
+    public void calculateAndSetPricesInEur(BigDecimal exchangeRateToEur) {
         if (totalPrice == null || quantity == null) {
             return;
         }
 
-        // If currency is UAH or not specified, just copy prices
-        if ("UAH".equals(currency) || currency == null) {
-            this.totalPriceUah = totalPrice;
-            this.unitPriceUah = unitPrice;
+        // Quantity always stays the same - it's a physical value (kg, pieces, etc.)
+        this.quantityEur = quantity;
+
+        // If currency is EUR or not specified, just copy prices
+        if ("EUR".equalsIgnoreCase(currency) || currency == null) {
+            this.totalPriceEur = totalPrice;
+            this.unitPriceEur = unitPrice;
         } else {
-            // Convert via exchange rate
-            if (exchangeRate != null && exchangeRate.compareTo(BigDecimal.ZERO) > 0) {
-                this.totalPriceUah = totalPrice.multiply(exchangeRate).setScale(6, RoundingMode.HALF_UP);
+            // Convert prices via exchange rate to EUR
+            if (exchangeRateToEur != null && exchangeRateToEur.compareTo(BigDecimal.ZERO) > 0) {
+                // Convert total price: totalPrice * exchangeRate = totalPrice in EUR
+                this.totalPriceEur = totalPrice.multiply(exchangeRateToEur).setScale(6, RoundingMode.HALF_UP);
+                
+                // Calculate unit price in EUR: totalPriceEur / quantity
                 if (quantity.compareTo(BigDecimal.ZERO) != 0) {
-                    this.unitPriceUah = this.totalPriceUah.divide(quantity, 6, RoundingMode.HALF_UP);
+                    this.unitPriceEur = this.totalPriceEur.divide(quantity, 6, RoundingMode.HALF_UP);
+                } else {
+                    this.unitPriceEur = BigDecimal.ZERO;
                 }
+            } else {
+                // If no exchange rate, set to original values (should not happen)
+                this.totalPriceEur = totalPrice;
+                this.unitPriceEur = unitPrice;
             }
         }
     }

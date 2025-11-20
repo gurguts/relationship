@@ -248,7 +248,8 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function toggleExchangeRateField() {
-    if (currencySelect.value === 'UAH') {
+    // Exchange rate field is now optional (not used for price calculation, only for display)
+    if (currencySelect.value === 'EUR' || currencySelect.value === 'UAH') {
         exchangeRateInput.style.display = 'none';
         exchangeRateLabel.style.display = 'none';
         exchangeRateInput.value = '';
@@ -256,7 +257,7 @@ function toggleExchangeRateField() {
     } else {
         exchangeRateInput.style.display = 'block';
         exchangeRateLabel.style.display = 'block';
-        exchangeRateInput.setAttribute('required', 'required');
+        exchangeRateInput.removeAttribute('required'); // Not required anymore
     }
 }
 

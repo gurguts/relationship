@@ -366,16 +366,16 @@ async function loadBalance() {
             html += '<table class="balance-table"><thead><tr>';
             html += '<th>Товар</th>';
             html += '<th>Кількість (кг)</th>';
-            html += '<th>Середня ціна (грн/кг)</th>';
-            html += '<th>Загальна вартість (грн)</th>';
+            html += '<th>Середня ціна (EUR/кг)</th>';
+            html += '<th>Загальна вартість (EUR)</th>';
             html += '</tr></thead><tbody>';
             
             let warehouseTotal = 0;
             for (const balance of warehouseBalances) {
                 const productName = findNameByIdFromMap(productMap, balance.productId);
                 const quantity = formatNumber(balance.quantity, 2);
-                const avgPrice = formatNumber(balance.averagePriceUah, 6);
-                const totalCost = formatNumber(balance.totalCostUah, 6);
+                const avgPrice = formatNumber(balance.averagePriceEur, 6);
+                const totalCost = formatNumber(balance.totalCostEur, 6);
                 warehouseTotal += parseFloat(totalCost);
                 
                 html += `<tr class="balance-row"
@@ -384,8 +384,8 @@ async function loadBalance() {
                             data-warehouse-name="${warehouseName}"
                             data-product-name="${productName}"
                             data-quantity="${balance.quantity}"
-                            data-total-cost="${balance.totalCostUah}"
-                            data-average-price="${balance.averagePriceUah}">
+                            data-total-cost="${balance.totalCostEur}"
+                            data-average-price="${balance.averagePriceEur}">
                             <td>${productName}</td>
                             <td>${quantity}</td>
                             <td>${avgPrice}</td>
@@ -395,7 +395,7 @@ async function loadBalance() {
             
             html += '</tbody><tfoot><tr>';
             html += '<td colspan="3"><strong>Загальна вартість складу:</strong></td>';
-            html += `<td><strong>${formatNumber(warehouseTotal, 6)} грн</strong></td>`;
+            html += `<td><strong>${formatNumber(warehouseTotal, 6)} EUR</strong></td>`;
             html += '</tr></tfoot></table>';
         }
         
@@ -478,8 +478,8 @@ async function loadWithdrawalHistory(page) {
             const productName = findNameByIdFromMap(productMap, withdrawal.productId) || 'Не вказано';
             const warehouseName = findNameByIdFromMap(warehouseMap, withdrawal.warehouseId) || 'Не вказано';
             const reason = withdrawal.withdrawalReason ? withdrawal.withdrawalReason.name : 'Невідома причина';
-            const unitPrice = withdrawal.unitPriceUah ? formatNumber(withdrawal.unitPriceUah, 6) + ' грн' : '-';
-            const totalCost = withdrawal.totalCostUah ? formatNumber(withdrawal.totalCostUah, 6) + ' грн' : '-';
+            const unitPrice = withdrawal.unitPriceEur ? formatNumber(withdrawal.unitPriceEur, 6) + ' EUR' : '-';
+            const totalCost = withdrawal.totalCostEur ? formatNumber(withdrawal.totalCostEur, 6) + ' EUR' : '-';
             html += `
                         <tr data-id="${withdrawal.id}">
                             <td>${warehouseName}</td>
@@ -539,7 +539,7 @@ async function loadWarehouseEntries(page) {
             const driverBalance = entry.driverBalanceQuantity || 0;
             const receivedQuantity = entry.quantity || 0;
             const difference = receivedQuantity - driverBalance;
-            const totalCost = formatNumber(entry.totalCostUah, 6);
+            const totalCost = formatNumber(entry.totalCostEur, 6);
             html += `
                 <tr data-id="${entry.id}">
                     <td>${warehouseName}</td>
@@ -550,7 +550,7 @@ async function loadWarehouseEntries(page) {
                     <td>${receivedQuantity} кг</td>
                     <td>${driverBalance} кг</td>
                     <td>${difference} кг</td>
-                    <td>${totalCost} грн</td>
+                    <td>${totalCost} EUR</td>
                 </tr>`;
         }
         container.innerHTML = html;
@@ -1538,16 +1538,16 @@ async function loadDriverBalances() {
             html += '<table class="balance-table"><thead><tr>';
             html += '<th>Товар</th>';
             html += '<th>Кількість (кг)</th>';
-            html += '<th>Середня ціна (грн/кг)</th>';
-            html += '<th>Загальна вартість (грн)</th>';
+            html += '<th>Середня ціна (EUR/кг)</th>';
+            html += '<th>Загальна вартість (EUR)</th>';
             html += '</tr></thead><tbody>';
             
             let driverTotal = 0;
             for (const balance of driverBalances) {
                 const productName = findNameByIdFromMap(productMap, balance.productId);
                 const quantity = formatNumber(balance.quantity, 2);
-                const avgPrice = formatNumber(balance.averagePriceUah, 6);
-                const totalCost = formatNumber(balance.totalCostUah, 6);
+                const avgPrice = formatNumber(balance.averagePriceEur, 6);
+                const totalCost = formatNumber(balance.totalCostEur, 6);
                 driverTotal += parseFloat(totalCost);
                 
                 html += '<tr>';
@@ -1560,7 +1560,7 @@ async function loadDriverBalances() {
             
             html += '</tbody><tfoot><tr>';
             html += '<td colspan="3"><strong>Загальна вартість товару водія:</strong></td>';
-            html += `<td><strong>${formatNumber(driverTotal, 6)} грн</strong></td>`;
+            html += `<td><strong>${formatNumber(driverTotal, 6)} EUR</strong></td>`;
             html += '</tr></tfoot></table>';
         }
         
@@ -1803,7 +1803,7 @@ function renderShipments(shipments) {
             <td>${shipment.vehicleNumber || '-'}</td>
             <td>${shipment.invoiceUa || '-'}</td>
             <td>${shipment.invoiceEu || '-'}</td>
-            <td style="font-weight: bold; color: #FF6F00;">${formatNumber(shipment.totalCostUah, 2)} грн</td>
+            <td style="font-weight: bold; color: #FF6F00;">${formatNumber(shipment.totalCostEur, 2)} EUR</td>
             <td>${shipment.description || '-'}</td>
         </tr>
     `).join('');
@@ -1857,15 +1857,15 @@ function renderShipmentDetails(shipment) {
                 <tr class="shipment-item-row" data-item-id="${item.withdrawalId}" style="cursor: pointer;">
                     <td>${productName}</td>
                     <td>${formatNumber(item.quantity, 2)} кг</td>
-                    <td style="text-align: right;">${formatNumber(item.unitPriceUah, 6)} грн</td>
-                    <td style="text-align: right; font-weight: bold;">${formatNumber(item.totalCostUah, 6)} грн</td>
+                    <td style="text-align: right;">${formatNumber(item.unitPriceEur, 6)} EUR</td>
+                    <td style="text-align: right; font-weight: bold;">${formatNumber(item.totalCostEur, 6)} EUR</td>
                     <td>${item.withdrawalDate || shipment.shipmentDate}</td>
                 </tr>
             `;
         }).join('');
     }
     
-    document.getElementById('shipment-total-cost').textContent = formatNumber(shipment.totalCostUah, 2);
+    document.getElementById('shipment-total-cost').textContent = formatNumber(shipment.totalCostEur, 2);
 }
 
 // Add product to shipment button
@@ -1996,11 +1996,11 @@ async function loadDiscrepanciesStatistics() {
         
         const stats = await response.json();
         
-        document.getElementById('total-losses-value').textContent = `${formatNumber(stats.totalLossesValue, 6)} грн`;
+        document.getElementById('total-losses-value').textContent = `${formatNumber(stats.totalLossesValue, 6)} EUR`;
         document.getElementById('total-losses-count').textContent = `${stats.lossCount} записів`;
-        document.getElementById('total-gains-value').textContent = `${formatNumber(stats.totalGainsValue, 6)} грн`;
+        document.getElementById('total-gains-value').textContent = `${formatNumber(stats.totalGainsValue, 6)} EUR`;
         document.getElementById('total-gains-count').textContent = `${stats.gainCount} записів`;
-        document.getElementById('net-value').textContent = `${formatNumber(stats.netValue, 6)} грн`;
+        document.getElementById('net-value').textContent = `${formatNumber(stats.netValue, 6)} EUR`;
         
         // Change color based on positive/negative net value
         const netValueElement = document.getElementById('net-value');
@@ -2062,9 +2062,9 @@ async function loadDiscrepancies() {
                     <td style="text-align: center; font-weight: bold; color: ${typeColor};">
                         ${item.discrepancyQuantity > 0 ? '+' : ''}${item.discrepancyQuantity} кг
                     </td>
-                    <td style="text-align: right;">${formatNumber(item.unitPriceUah, 6)} грн</td>
+                    <td style="text-align: right;">${formatNumber(item.unitPriceEur, 6)} EUR</td>
                     <td style="text-align: right; font-weight: bold;">
-                        ${formatNumber(Math.abs(item.discrepancyValueUah), 6)} грн
+                        ${formatNumber(Math.abs(item.discrepancyValueEur), 6)} EUR
                     </td>
                     <td style="text-align: center;">
                         <span class="discrepancy-type-badge ${typeClass}">
@@ -2328,8 +2328,8 @@ function renderTransfers(transfers) {
                 <td>${fromProductName}</td>
                 <td>${toProductName}</td>
                 <td style="text-align: center;">${formatNumber(item.quantity, 2)} кг</td>
-                <td style="text-align: right;">${formatNumber(item.unitPriceUah, 6)} грн</td>
-                <td style="text-align: right; font-weight: bold;">${formatNumber(item.totalCostUah, 6)} грн</td>
+                <td style="text-align: right;">${formatNumber(item.unitPriceEur, 6)} EUR</td>
+                <td style="text-align: right; font-weight: bold;">${formatNumber(item.totalCostEur, 6)} EUR</td>
                 <td>${userName}</td>
                 <td>${reasonName}</td>
                 <td>${item.description || ''}</td>
@@ -2699,7 +2699,7 @@ function openEditShipmentItemModal(itemId) {
         editShipmentItemQuantityInput.value = parseFloat(item.quantity).toFixed(2);
     }
     if (editShipmentItemTotalCostInput) {
-        editShipmentItemTotalCostInput.value = parseFloat(item.totalCostUah).toFixed(6);
+        editShipmentItemTotalCostInput.value = parseFloat(item.totalCostEur).toFixed(6);
     }
 
     const quantityModeRadio = document.querySelector('input[name="edit-shipment-item-mode"][value="quantity"]');
@@ -2784,7 +2784,7 @@ if (editShipmentItemForm) {
             }
 
             const roundedTotal = parseFloat(newTotalValue.toFixed(6));
-            if (Math.abs(roundedTotal - parseFloat(item.totalCostUah)) < 0.000001) {
+            if (Math.abs(roundedTotal - parseFloat(item.totalCostEur)) < 0.000001) {
                 showMessage('Загальна вартість не змінилася', 'info');
                 return;
             }
@@ -3095,8 +3095,8 @@ async function loadBalanceHistory(warehouseId, productId) {
             const typeLabel = typeLabels[item.adjustmentType] || item.adjustmentType || '—';
             const createdAt = item.createdAt ? new Date(item.createdAt).toLocaleString() : '—';
             const quantityChange = `${formatNumber(item.previousQuantity, 2)} → ${formatNumber(item.newQuantity, 2)} кг`;
-            const totalChange = `${formatNumber(item.previousTotalCostUah, 6)} → ${formatNumber(item.newTotalCostUah, 6)} грн`;
-            const averageChange = `${formatNumber(item.previousAveragePriceUah, 6)} → ${formatNumber(item.newAveragePriceUah, 6)} грн/кг`;
+            const totalChange = `${formatNumber(item.previousTotalCostEur, 6)} → ${formatNumber(item.newTotalCostEur, 6)} EUR`;
+            const averageChange = `${formatNumber(item.previousAveragePriceEur, 6)} → ${formatNumber(item.newAveragePriceEur, 6)} EUR/кг`;
             const description = item.description || '—';
 
             return `

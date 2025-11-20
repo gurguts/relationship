@@ -19,8 +19,8 @@ public class WithdrawalDTO {
     private Long userId;
     private WithdrawalReason withdrawalReason;
     private Double quantity;
-    private BigDecimal unitPriceUah;
-    private BigDecimal totalCostUah;
+    private BigDecimal unitPriceEur;
+    private BigDecimal totalCostEur;
     private String description;
     private LocalDate withdrawalDate;
     private LocalDateTime createdAt;

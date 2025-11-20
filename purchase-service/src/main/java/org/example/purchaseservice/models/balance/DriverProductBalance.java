@@ -30,11 +30,11 @@ public class DriverProductBalance {
     @Column(name = "quantity", nullable = false, precision = 20, scale = 2)
     private BigDecimal quantity = BigDecimal.ZERO;
     
-    @Column(name = "average_price_uah", nullable = false, precision = 20, scale = 6)
-    private BigDecimal averagePriceUah = BigDecimal.ZERO;
+    @Column(name = "average_price_eur", nullable = false, precision = 20, scale = 6)
+    private BigDecimal averagePriceEur = BigDecimal.ZERO;
     
-    @Column(name = "total_cost_uah", nullable = false, precision = 20, scale = 6)
-    private BigDecimal totalCostUah = BigDecimal.ZERO;
+    @Column(name = "total_cost_eur", nullable = false, precision = 20, scale = 6)
+    private BigDecimal totalCostEur = BigDecimal.ZERO;
     
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -47,25 +47,25 @@ public class DriverProductBalance {
     /**
      * Adds product to balance with average price recalculation
      * @param addedQuantity quantity of added product
-     * @param totalPriceUah total price in UAH for this quantity
+     * @param totalPriceEur total price in EUR for this quantity
      */
-    public void addProduct(BigDecimal addedQuantity, BigDecimal totalPriceUah) {
+    public void addProduct(BigDecimal addedQuantity, BigDecimal totalPriceEur) {
         if (addedQuantity == null || addedQuantity.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Added quantity must be positive");
         }
-        if (totalPriceUah == null || totalPriceUah.compareTo(BigDecimal.ZERO) < 0) {
+        if (totalPriceEur == null || totalPriceEur.compareTo(BigDecimal.ZERO) < 0) {
             throw new IllegalArgumentException("Total price must be non-negative");
         }
         
-        BigDecimal newTotalCost = this.totalCostUah.add(totalPriceUah);
+        BigDecimal newTotalCost = this.totalCostEur.add(totalPriceEur);
         BigDecimal newQuantity = this.quantity.add(addedQuantity);
         
         this.quantity = newQuantity;
-        this.totalCostUah = newTotalCost;
+        this.totalCostEur = newTotalCost;
         
         // Recalculate average price
         if (newQuantity.compareTo(BigDecimal.ZERO) > 0) {
-            this.averagePriceUah = newTotalCost.divide(newQuantity, 6, RoundingMode.HALF_UP);
+            this.averagePriceEur = newTotalCost.divide(newQuantity, 6, RoundingMode.HALF_UP);
         }
     }
     
@@ -88,17 +88,17 @@ public class DriverProductBalance {
         
         // Use the SPECIFIC total price of the purchase being removed
         BigDecimal newQuantity = this.quantity.subtract(removedQuantity);
-        BigDecimal newTotalCost = this.totalCostUah.subtract(totalPriceOfRemovedPurchase);
+        BigDecimal newTotalCost = this.totalCostEur.subtract(totalPriceOfRemovedPurchase);
         
         this.quantity = newQuantity;
-        this.totalCostUah = newTotalCost;
+        this.totalCostEur = newTotalCost;
         
         // Recalculate average price based on remaining products
         if (newQuantity.compareTo(BigDecimal.ZERO) > 0) {
-            this.averagePriceUah = newTotalCost.divide(newQuantity, 6, RoundingMode.HALF_UP);
+            this.averagePriceEur = newTotalCost.divide(newQuantity, 6, RoundingMode.HALF_UP);
         } else {
-            this.averagePriceUah = BigDecimal.ZERO;
-            this.totalCostUah = BigDecimal.ZERO;
+            this.averagePriceEur = BigDecimal.ZERO;
+            this.totalCostEur = BigDecimal.ZERO;
         }
     }
     
@@ -109,7 +109,7 @@ public class DriverProductBalance {
                                           BigDecimal newQuantity, BigDecimal newTotalPrice) {
         // Rollback old values using the SPECIFIC old total price
         if (oldQuantity != null && oldQuantity.compareTo(BigDecimal.ZERO) > 0 && oldTotalPrice != null) {
-            this.totalCostUah = this.totalCostUah.subtract(oldTotalPrice);
+            this.totalCostEur = this.totalCostEur.subtract(oldTotalPrice);
             this.quantity = this.quantity.subtract(oldQuantity);
         }
         
@@ -118,12 +118,12 @@ public class DriverProductBalance {
             addProduct(newQuantity, newTotalPrice);
         } else if (this.quantity.compareTo(BigDecimal.ZERO) > 0) {
             // Recalculate average price if quantity > 0
-            this.averagePriceUah = this.totalCostUah.divide(this.quantity, 6, RoundingMode.HALF_UP);
+            this.averagePriceEur = this.totalCostEur.divide(this.quantity, 6, RoundingMode.HALF_UP);
         } else {
             // Reset if quantity becomes 0
             this.quantity = BigDecimal.ZERO;
-            this.averagePriceUah = BigDecimal.ZERO;
-            this.totalCostUah = BigDecimal.ZERO;
+            this.averagePriceEur = BigDecimal.ZERO;
+            this.totalCostEur = BigDecimal.ZERO;
         }
     }
 }

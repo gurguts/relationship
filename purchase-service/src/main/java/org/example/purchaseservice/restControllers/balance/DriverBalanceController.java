@@ -93,8 +93,8 @@ public class DriverBalanceController {
                 .driverId(balance.getDriverId())
                 .productId(balance.getProductId())
                 .quantity(balance.getQuantity())
-                .averagePriceUah(balance.getAveragePriceUah())
-                .totalCostUah(balance.getTotalCostUah())
+                .averagePriceEur(balance.getAveragePriceEur())
+                .totalCostEur(balance.getTotalCostEur())
                 .updatedAt(balance.getUpdatedAt())
                 .build();
     }

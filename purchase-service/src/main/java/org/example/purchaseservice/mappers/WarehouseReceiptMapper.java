@@ -53,8 +53,8 @@ public class WarehouseReceiptMapper {
         warehouseReceiptDTO.setQuantity(warehouseReceipt.getQuantity());
         warehouseReceiptDTO.setEntryDate(warehouseReceipt.getEntryDate());
         warehouseReceiptDTO.setType(warehouseReceipt.getType());
-        warehouseReceiptDTO.setUnitPriceUah(warehouseReceipt.getUnitPriceUah());
-        warehouseReceiptDTO.setTotalCostUah(warehouseReceipt.getTotalCostUah());
+        warehouseReceiptDTO.setUnitPriceEur(warehouseReceipt.getUnitPriceEur());
+        warehouseReceiptDTO.setTotalCostEur(warehouseReceipt.getTotalCostEur());
 
         return warehouseReceiptDTO;
     }

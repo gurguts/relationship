@@ -244,12 +244,12 @@ public class ProductTransferController {
                 
                 // Column 6: Unit price
                 Cell cell6 = row.createCell(6);
-                cell6.setCellValue(transfer.getUnitPriceUah().doubleValue());
+                cell6.setCellValue(transfer.getUnitPriceEur().doubleValue());
                 cell6.setCellStyle(dataStyle);
                 
                 // Column 7: Total cost
                 Cell cell7 = row.createCell(7);
-                cell7.setCellValue(transfer.getTotalCostUah().doubleValue());
+                cell7.setCellValue(transfer.getTotalCostEur().doubleValue());
                 cell7.setCellStyle(dataStyle);
                 
                 // Column 8: User ID

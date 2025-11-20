@@ -162,7 +162,7 @@ public class ShipmentController {
                 shipmentId,
                 shipmentProductId,
                 dto.getQuantity(),
-                dto.getTotalCostUah()
+                dto.getTotalCostEur()
         );
 
         return ResponseEntity.ok(mapToDetailsDTO(updated));
@@ -189,8 +189,8 @@ public class ShipmentController {
                         .productName(null) // Will be enriched on frontend or via separate call
                         .warehouseId(p.getWarehouseId())
                         .quantity(p.getQuantity())
-                        .unitPriceUah(p.getUnitPriceUah())
-                        .totalCostUah(p.getTotalCostUah())
+                        .unitPriceEur(p.getUnitPriceEur())
+                        .totalCostEur(p.getTotalCostEur())
                         .withdrawalDate(p.getAddedAt() != null ? p.getAddedAt().toLocalDate() : shipment.getShipmentDate())
                         .build())
                 .collect(Collectors.toList());
@@ -202,7 +202,7 @@ public class ShipmentController {
                 .invoiceUa(shipment.getInvoiceUa())
                 .invoiceEu(shipment.getInvoiceEu())
                 .description(shipment.getDescription())
-                .totalCostUah(shipment.getTotalCostUah())
+                .totalCostEur(shipment.getTotalCostEur())
                 .userId(shipment.getUserId())
                 .createdAt(shipment.getCreatedAt())
                 .items(items)

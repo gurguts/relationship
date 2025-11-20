@@ -24,7 +24,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.example.purchaseservice.services.ExchangeRateService;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Objects;
 
@@ -41,6 +43,7 @@ public class PurchaseCrudService implements IPurchaseCrudService {
     private final UserClient userCLient;
     private final org.example.purchaseservice.services.balance.DriverProductBalanceService driverProductBalanceService;
     private final WarehouseReceiptRepository warehouseReceiptRepository;
+    private final ExchangeRateService exchangeRateService;
 
     @Override
     @Transactional
@@ -50,7 +53,11 @@ public class PurchaseCrudService implements IPurchaseCrudService {
         purchase.setUser(userId);
 
         purchase.calculateAndSetUnitPrice();
-        purchase.calculateAndSetPricesInUah(); // Convert prices to UAH
+        
+        // Get exchange rate to EUR and convert prices/quantity
+        String purchaseCurrency = purchase.getCurrency() != null ? purchase.getCurrency() : "EUR";
+        BigDecimal exchangeRateToEur = exchangeRateService.getExchangeRateToEur(purchaseCurrency);
+        purchase.calculateAndSetPricesInEur(exchangeRateToEur);
 
         Long transactionId = null;
         if (purchase.getPaymentMethod().equals(PaymentMethod.CASH)) {
@@ -64,13 +71,13 @@ public class PurchaseCrudService implements IPurchaseCrudService {
 
         Purchase savedPurchase = purchaseRepository.save(purchase);
 
-        // Update driver product balance
-        if (savedPurchase.getTotalPriceUah() != null && savedPurchase.getQuantity() != null) {
+        // Update driver product balance (use EUR values)
+        if (savedPurchase.getTotalPriceEur() != null && savedPurchase.getQuantityEur() != null) {
             driverProductBalanceService.addProduct(
                     userId,
                     savedPurchase.getProduct(),
-                    savedPurchase.getQuantity(),
-                    savedPurchase.getTotalPriceUah()  // Use total price, not unit price!
+                    savedPurchase.getQuantityEur(),  // Use quantity in EUR
+                    savedPurchase.getTotalPriceEur()  // Use total price in EUR
             );
         }
 
@@ -99,8 +106,8 @@ public class PurchaseCrudService implements IPurchaseCrudService {
         }
 
         // Save old values for balance update
-        java.math.BigDecimal oldQuantity = existingPurchase.getQuantity();
-        java.math.BigDecimal oldTotalPriceUah = existingPurchase.getTotalPriceUah();
+        java.math.BigDecimal oldQuantity = existingPurchase.getQuantityEur();
+        java.math.BigDecimal oldTotalPriceEur = existingPurchase.getTotalPriceEur();
         Long productId = existingPurchase.getProduct();
 
         if (updatedPurchase.getProduct() != null && !Objects.equals(updatedPurchase.getProduct(),
@@ -156,20 +163,22 @@ public class PurchaseCrudService implements IPurchaseCrudService {
             existingPurchase.setComment(updatedPurchase.getComment());
         }
 
-        // Recalculate prices in UAH
-        existingPurchase.calculateAndSetPricesInUah();
+        // Recalculate prices in EUR
+        String purchaseCurrency = existingPurchase.getCurrency() != null ? existingPurchase.getCurrency() : "EUR";
+        BigDecimal exchangeRateToEur = exchangeRateService.getExchangeRateToEur(purchaseCurrency);
+        existingPurchase.calculateAndSetPricesInEur(exchangeRateToEur);
 
         Purchase savedPurchase = purchaseRepository.save(existingPurchase);
 
-        // Update driver balance if quantity or price changed
-        if (needsBalanceUpdate && savedPurchase.getTotalPriceUah() != null) {
+        // Update driver balance if quantity or price changed (use EUR values)
+        if (needsBalanceUpdate && savedPurchase.getTotalPriceEur() != null) {
             driverProductBalanceService.updateFromPurchaseChange(
                     savedPurchase.getUser(),
                     productId,
                     oldQuantity,
-                    oldTotalPriceUah,  // Use total price!
-                    savedPurchase.getQuantity(),
-                    savedPurchase.getTotalPriceUah()  // Use total price!
+                    oldTotalPriceEur,  // Use total price in EUR!
+                    savedPurchase.getQuantityEur(),  // Use quantity in EUR
+                    savedPurchase.getTotalPriceEur()  // Use total price in EUR!
             );
         }
 
@@ -269,15 +278,15 @@ public class PurchaseCrudService implements IPurchaseCrudService {
         Purchase purchase = purchaseRepository.findById(id).orElseThrow(() ->
                 new PurchaseNotFoundException(String.format("Purchase with ID %d not found", id)));
         
-        // Remove from driver balance before deleting purchase
-        if (purchase.getQuantity() != null && purchase.getQuantity().compareTo(java.math.BigDecimal.ZERO) > 0 
-                && purchase.getTotalPriceUah() != null) {
+        // Remove from driver balance before deleting purchase (use EUR values)
+        if (purchase.getQuantityEur() != null && purchase.getQuantityEur().compareTo(java.math.BigDecimal.ZERO) > 0 
+                && purchase.getTotalPriceEur() != null) {
             try {
                 driverProductBalanceService.removeProduct(
                         purchase.getUser(),
                         purchase.getProduct(),
-                        purchase.getQuantity(),
-                        purchase.getTotalPriceUah()  // Pass the specific total price of this purchase!
+                        purchase.getQuantityEur(),  // Use quantity in EUR
+                        purchase.getTotalPriceEur()  // Pass the specific total price in EUR of this purchase!
                 );
             } catch (Exception e) {
                 // Log error but don't interrupt deletion

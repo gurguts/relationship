@@ -17,8 +17,8 @@ public class DriverProductBalanceDTO {
     private Long driverId;
     private Long productId;
     private BigDecimal quantity;
-    private BigDecimal averagePriceUah;
-    private BigDecimal totalCostUah;
+    private BigDecimal averagePriceEur;
+    private BigDecimal totalCostEur;
     private LocalDateTime updatedAt;
 }
 

@@ -36,11 +36,11 @@ public class WarehouseWithdrawal {
     @Column(nullable = false, precision = 20, scale = 2)
     private BigDecimal quantity;
 
-    @Column(name = "unit_price_uah", precision = 20, scale = 6)
-    private BigDecimal unitPriceUah;
+    @Column(name = "unit_price_eur", precision = 20, scale = 6)
+    private BigDecimal unitPriceEur;
 
-    @Column(name = "total_cost_uah", precision = 20, scale = 6)
-    private BigDecimal totalCostUah;
+    @Column(name = "total_cost_eur", precision = 20, scale = 6)
+    private BigDecimal totalCostEur;
 
     @Column(name = "shipment_id")
     private Long shipmentId;

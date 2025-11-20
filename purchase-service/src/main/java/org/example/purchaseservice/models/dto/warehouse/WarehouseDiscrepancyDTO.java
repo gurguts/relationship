@@ -23,8 +23,8 @@ public class WarehouseDiscrepancyDTO {
     private BigDecimal purchasedQuantity;
     private BigDecimal receivedQuantity;
     private BigDecimal discrepancyQuantity;
-    private BigDecimal unitPriceUah;
-    private BigDecimal discrepancyValueUah;
+    private BigDecimal unitPriceEur;
+    private BigDecimal discrepancyValueEur;
     private String type; // LOSS or GAIN
     private String comment;
     private Long createdByUserId;
