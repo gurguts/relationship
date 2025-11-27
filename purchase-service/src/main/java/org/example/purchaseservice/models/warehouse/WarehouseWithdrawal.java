@@ -48,7 +48,7 @@ public class WarehouseWithdrawal {
     @Column(name = "description")
     private String description;
 
-    @Column(name = "withdrawal_date", nullable = false)
+    @Column(name = "withdrawal_date")
     private LocalDate withdrawalDate;
 
     @CreationTimestamp

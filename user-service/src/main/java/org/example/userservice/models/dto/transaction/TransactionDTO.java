@@ -22,4 +22,5 @@ public class TransactionDTO {
     private BigDecimal exchangeRate;
     private String convertedCurrency;
     private BigDecimal convertedAmount;
+    private BigDecimal commission;
 }

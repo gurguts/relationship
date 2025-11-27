@@ -165,19 +165,9 @@ function populateMoveTypes() {
     populateSelect('move-type-id', moveTypes);
 }
 
-function setDefaultMoveDate() {
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('move-date').value = today;
-}
-
 function populateEntryTypes() {
     const entryTypes = getWithdrawalReasonsByPurpose('ADDING');
     populateSelect('entry-type-id', entryTypes);
-}
-
-function setDefaultEntryDate() {
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('entry-date').value = today;
 }
 
 function setDefaultHistoryDates() {
@@ -356,11 +346,19 @@ async function loadBalance() {
             balancesByWarehouse[balance.warehouseId].push(balance);
         });
         
+        // Sort warehouses by ID to maintain consistent order
+        const sortedWarehouseIds = Object.keys(balancesByWarehouse).sort((a, b) => Number(a) - Number(b));
+        
         const container = document.getElementById('balance-container');
         let html = '';
         
-        // Display balances grouped by warehouse
-        for (const [warehouseId, warehouseBalances] of Object.entries(balancesByWarehouse)) {
+        // Display balances grouped by warehouse (sorted by warehouse ID)
+        for (const warehouseId of sortedWarehouseIds) {
+            const warehouseBalances = balancesByWarehouse[warehouseId];
+            
+            // Sort products by product ID to maintain consistent order
+            warehouseBalances.sort((a, b) => Number(a.productId) - Number(b.productId));
+            
             const warehouseName = findNameByIdFromMap(warehouseMap, warehouseId);
             html += `<h3>Склад: ${warehouseName}</h3>`;
             html += '<table class="balance-table"><thead><tr>';
@@ -588,7 +586,6 @@ document.getElementById('withdraw-form').addEventListener('submit',
             withdrawalReasonId: Number(document.getElementById('withdrawal-reason-id').value),
             quantity: Number(document.getElementById('quantity').value),
             description: document.getElementById('description').value,
-            withdrawalDate: document.getElementById('withdrawal-date').value
         };
         try {
             const response = await fetch('/api/v1/warehouse/withdraw', {
@@ -623,7 +620,6 @@ document.getElementById('move-form').addEventListener('submit',
             fromProductId: Number(formData.get('from_product_id')),
             toProductId: Number(formData.get('to_product_id')),
             quantity: Number(formData.get('quantity')),
-            transferDate: formData.get('move_date'),
             withdrawalReasonId: Number(formData.get('type_id')),
             description: formData.get('description') || ''
         };
@@ -662,7 +658,6 @@ document.getElementById('entry-form').addEventListener('submit',
             warehouseId: Number(formData.get('warehouse_id')),
             productId: Number(formData.get('product_id')),
             quantity: Number(formData.get('quantity')),
-            entryDate: formData.get('entry_date'),
             typeId: Number(formData.get('type_id')),
             userId: Number(formData.get('user_id'))
         };
@@ -1119,7 +1114,7 @@ const entryModal = document.getElementById('entry-modal');
 const driverBalancesBtn = document.getElementById('driver-balances-btn');
 const driverBalancesModal = document.getElementById('driver-balances-modal');
 const discrepanciesBtn = document.getElementById('discrepancies-btn');
-const discrepanciesModal = document.getElementById('discrepancies-modal');
+const discrepanciesContainer = document.getElementById('discrepancies-container');
 const transfersBtn = document.getElementById('transfers-btn');
 const transfersContainer = document.getElementById('transfers-container');
 const shipmentsBtn = document.getElementById('shipments-btn');
@@ -1172,7 +1167,6 @@ moveBtn.addEventListener('click', () => {
     populateWarehouses('move-warehouse-id');
     populateSelect('move-executor-id', Array.from(userMap.entries()).map(([id, name]) => ({id, name})));
     populateMoveTypes();
-    setDefaultMoveDate();
     moveModal.style.display = 'flex';
     moveModal.classList.add('open');
     document.body.classList.add('modal-open');
@@ -1189,6 +1183,7 @@ entriesBtn.addEventListener('click', async () => {
         document.getElementById('history-container').style.display = 'none';
         transfersContainer.style.display = 'none';
         shipmentsContainer.style.display = 'none';
+        if (discrepanciesContainer) discrepanciesContainer.style.display = 'none';
         
         entriesContainer.style.display = 'block';
         document.getElementById('open-entries-filter-modal').style.display = 'inline-block';
@@ -1203,11 +1198,30 @@ addEntryBtn.addEventListener('click', () => {
     populateWarehouses('entry-warehouse-id');
     populateSelect('entry-user-id', Array.from(userMap.entries()).map(([id, name]) => ({id, name})));
     populateEntryTypes();
-    setDefaultEntryDate();
     entryModal.style.display = 'flex';
     entryModal.classList.add('open');
     document.body.classList.add('modal-open');
+    
+    // Hide driver balance info and warning when opening modal
+    const driverBalanceInfo = document.getElementById('driver-balance-info');
+    const driverNoBalanceWarning = document.getElementById('driver-no-balance-warning');
+    if (driverBalanceInfo) {
+        driverBalanceInfo.style.display = 'none';
+    }
+    if (driverNoBalanceWarning) {
+        driverNoBalanceWarning.style.display = 'none';
+    }
 });
+
+// Use event delegation on entry form for driver and product selection
+const entryForm = document.getElementById('entry-form');
+if (entryForm) {
+    entryForm.addEventListener('change', (e) => {
+        if (e.target.id === 'entry-user-id' || e.target.id === 'entry-product-id') {
+            loadDriverBalanceForEntry();
+        }
+    });
+}
 
 Array.from(closeBtns).forEach(btn => {
     btn.addEventListener('click', () => {
@@ -1217,7 +1231,7 @@ Array.from(closeBtns).forEach(btn => {
 
 window.addEventListener('click', (e) => {
     if (e.target === withdrawModal || e.target === editModal || e.target === moveModal || e.target === entryModal ||
-        e.target === driverBalancesModal || e.target === discrepanciesModal || e.target === createShipmentModal ||
+        e.target === driverBalancesModal || e.target === createShipmentModal ||
         e.target === shipmentDetailsModal || e.target === addProductToShipmentModal || e.target === editShipmentItemModal ||
         e.target === editTransferModal || e.target === balanceEditModal) {
         closeModal(e.target.id);
@@ -1238,6 +1252,15 @@ function closeModal(modalId) {
         document.getElementById('move-form').reset();
     } else if (modalId === 'entry-modal') {
         document.getElementById('entry-form').reset();
+        // Hide driver balance info and warning when closing modal
+        const driverBalanceInfo = document.getElementById('driver-balance-info');
+        const driverNoBalanceWarning = document.getElementById('driver-no-balance-warning');
+        if (driverBalanceInfo) {
+            driverBalanceInfo.style.display = 'none';
+        }
+        if (driverNoBalanceWarning) {
+            driverNoBalanceWarning.style.display = 'none';
+        }
     } else if (modalId === 'create-shipment-modal') {
         document.getElementById('create-shipment-form').reset();
     } else if (modalId === 'add-product-to-shipment-modal') {
@@ -1274,6 +1297,7 @@ historyBtn.addEventListener('click', () => {
         document.getElementById('entries-container').style.display = 'none';
         transfersContainer.style.display = 'none';
         shipmentsContainer.style.display = 'none';
+        if (discrepanciesContainer) discrepanciesContainer.style.display = 'none';
         
         historyContainer.style.display = 'block';
         document.getElementById('open-history-filter-modal').style.display = 'inline-block';
@@ -1292,13 +1316,24 @@ if (driverBalancesBtn) {
     });
     
     discrepanciesBtn.addEventListener('click', async () => {
-        currentDiscrepanciesPage = 0;
-        discrepanciesFilters = {};
-        await loadDiscrepancies();
-        await loadDiscrepanciesStatistics();
-        discrepanciesModal.style.display = 'flex';
-        discrepanciesModal.classList.add('open');
-        document.body.classList.add('modal-open');
+        // Toggle container visibility
+        if (discrepanciesContainer.style.display === 'none' || discrepanciesContainer.style.display === '') {
+            // Show container
+            currentDiscrepanciesPage = 0;
+            discrepanciesFilters = {};
+            await loadDiscrepancies();
+            await loadDiscrepanciesStatistics();
+            discrepanciesContainer.style.display = 'block';
+            
+            // Hide other containers
+            if (historyContainer) historyContainer.style.display = 'none';
+            if (entriesContainer) entriesContainer.style.display = 'none';
+            if (transfersContainer) transfersContainer.style.display = 'none';
+            if (shipmentsContainer) shipmentsContainer.style.display = 'none';
+        } else {
+            // Hide container
+            discrepanciesContainer.style.display = 'none';
+        }
     });
 }
 
@@ -1317,10 +1352,12 @@ if (transfersBtn) {
             if (exportButton) exportButton.style.display = 'none';
             if (transfersFilterModal) transfersFilterModal.classList.remove('open');
             document.body.classList.remove('modal-open');
+            if (discrepanciesContainer) discrepanciesContainer.style.display = 'none';
         } else {
             historyContainer.style.display = 'none';
             entriesContainer.style.display = 'none';
             shipmentsContainer.style.display = 'none';
+            if (discrepanciesContainer) discrepanciesContainer.style.display = 'none';
 
             transfersContainer.style.display = 'block';
             if (filterButton) filterButton.style.display = 'inline-block';
@@ -1510,6 +1547,86 @@ async function initializeEntriesFilters() {
     updateEntriesSelectedFilters();
 }
 
+/**
+ * Load driver balance for entry modal when driver and product are selected
+ */
+async function loadDriverBalanceForEntry() {
+    const driverId = document.getElementById('entry-user-id')?.value;
+    const productId = document.getElementById('entry-product-id')?.value;
+    const driverBalanceInfo = document.getElementById('driver-balance-info');
+    const driverNoBalanceWarning = document.getElementById('driver-no-balance-warning');
+    
+    // Hide both info and warning if driver or product is not selected
+    if (!driverId || !productId) {
+        if (driverBalanceInfo) {
+            driverBalanceInfo.style.display = 'none';
+        }
+        if (driverNoBalanceWarning) {
+            driverNoBalanceWarning.style.display = 'none';
+        }
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/v1/driver/balances/${driverId}/product/${productId}`);
+        
+        if (response.status === 404) {
+            // No balance found for this driver/product combination
+            if (driverBalanceInfo) {
+                driverBalanceInfo.style.display = 'none';
+            }
+            if (driverNoBalanceWarning) {
+                driverNoBalanceWarning.style.display = 'block';
+            }
+            return;
+        }
+        
+        if (!response.ok) {
+            console.error('Failed to load driver balance');
+            if (driverBalanceInfo) {
+                driverBalanceInfo.style.display = 'none';
+            }
+            if (driverNoBalanceWarning) {
+                driverNoBalanceWarning.style.display = 'none';
+            }
+            return;
+        }
+        
+        const balance = await response.json();
+        
+        // Check if balance quantity is zero or null
+        if (!balance.quantity || parseFloat(balance.quantity) === 0) {
+            // No balance (quantity is 0)
+            if (driverBalanceInfo) {
+                driverBalanceInfo.style.display = 'none';
+            }
+            if (driverNoBalanceWarning) {
+                driverNoBalanceWarning.style.display = 'block';
+            }
+            return;
+        }
+        
+        // Display balance info
+        if (driverBalanceInfo) {
+            document.getElementById('driver-balance-quantity').textContent = formatNumber(balance.quantity, 2);
+            document.getElementById('driver-balance-price').textContent = formatNumber(balance.averagePriceEur, 6);
+            document.getElementById('driver-balance-total').textContent = formatNumber(balance.totalCostEur, 6);
+            driverBalanceInfo.style.display = 'block';
+        }
+        if (driverNoBalanceWarning) {
+            driverNoBalanceWarning.style.display = 'none';
+        }
+    } catch (error) {
+        console.error('Error loading driver balance:', error);
+        if (driverBalanceInfo) {
+            driverBalanceInfo.style.display = 'none';
+        }
+        if (driverNoBalanceWarning) {
+            driverNoBalanceWarning.style.display = 'none';
+        }
+    }
+}
+
 async function loadDriverBalances() {
     try {
         const response = await fetch('/api/v1/driver/balances/active');
@@ -1692,6 +1809,7 @@ if (shipmentsBtn) {
             document.getElementById('history-container').style.display = 'none';
             document.getElementById('entries-container').style.display = 'none';
             transfersContainer.style.display = 'none';
+            if (discrepanciesContainer) discrepanciesContainer.style.display = 'none';
             
             // Show shipments container
             shipmentsContainer.style.display = 'block';
@@ -1988,7 +2106,21 @@ document.getElementById('export-excel-entries').addEventListener('click', () => 
 
 async function loadDiscrepanciesStatistics() {
     try {
-        const response = await fetch('/api/v1/warehouse/discrepancies/statistics');
+        // Build query params from current filters
+        const params = new URLSearchParams();
+        
+        if (discrepanciesFilters.type) {
+            params.append('type', discrepanciesFilters.type);
+        }
+        if (discrepanciesFilters.dateFrom) {
+            params.append('dateFrom', discrepanciesFilters.dateFrom);
+        }
+        if (discrepanciesFilters.dateTo) {
+            params.append('dateTo', discrepanciesFilters.dateTo);
+        }
+        
+        const url = `/api/v1/warehouse/discrepancies/statistics${params.toString() ? '?' + params.toString() : ''}`;
+        const response = await fetch(url);
         
         if (!response.ok) {
             throw new Error('Failed to load statistics');
@@ -2164,6 +2296,7 @@ document.getElementById('apply-discrepancy-filters').addEventListener('click', a
     
     currentDiscrepanciesPage = 0;
     await loadDiscrepancies();
+    await loadDiscrepanciesStatistics(); // Reload statistics with filters
 });
 
 document.getElementById('reset-discrepancy-filters').addEventListener('click', async () => {
@@ -2174,6 +2307,7 @@ document.getElementById('reset-discrepancy-filters').addEventListener('click', a
     discrepanciesFilters = {};
     currentDiscrepanciesPage = 0;
     await loadDiscrepancies();
+    await loadDiscrepanciesStatistics(); // Reload statistics without filters
 });
 
 // Export discrepancies to Excel
@@ -2789,7 +2923,7 @@ if (editShipmentItemForm) {
                 return;
             }
 
-            payload.totalCostUah = roundedTotal;
+            payload.totalCostEur = roundedTotal;
         } else {
             showMessage('Оберіть параметр для редагування', 'error');
             return;
@@ -3163,11 +3297,11 @@ if (balanceEditForm) {
                 showMessage('Зміни відсутні', 'info');
                 return;
             }
-            payload.newTotalCostUah = rounded;
+            payload.newTotalCostEur = rounded;
         }
 
         const hasQuantityChange = Object.prototype.hasOwnProperty.call(payload, 'newQuantity');
-        const hasTotalCostChange = Object.prototype.hasOwnProperty.call(payload, 'newTotalCostUah');
+        const hasTotalCostChange = Object.prototype.hasOwnProperty.call(payload, 'newTotalCostEur');
 
         if (!hasQuantityChange && !hasTotalCostChange && !descriptionValue) {
             showMessage('Зміни відсутні', 'info');

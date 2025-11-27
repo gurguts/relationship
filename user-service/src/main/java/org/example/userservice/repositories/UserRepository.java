@@ -19,4 +19,7 @@ public interface UserRepository extends CrudRepository<User, Long> {
     @NotNull
     @EntityGraph(attributePaths = {"permissions"})
     Optional<User> findById(@NotNull Long id);
+    
+    @EntityGraph(attributePaths = {"permissions"})
+    List<User> findByStatus(org.example.userservice.models.user.Status status);
 }

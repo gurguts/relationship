@@ -25,4 +25,5 @@ public class TransactionPageDTO {
     private BigDecimal convertedAmount;
     private String fromAccountName;
     private String toAccountName;
+    private BigDecimal commission;
 }

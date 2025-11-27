@@ -34,7 +34,7 @@ public class UserController {
 
     @GetMapping
     public ResponseEntity<List<UserIdNameDTO>> getUsers() {
-        List<User> users = userService.getUsers();
+        List<User> users = userService.getActiveUsers();
         List<UserIdNameDTO> userIdNameDTO = users.stream()
                 .map(userMapper::userToUserIdNameDTO)
                 .collect(Collectors.toList());

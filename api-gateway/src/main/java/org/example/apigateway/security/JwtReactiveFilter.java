@@ -40,7 +40,6 @@ public class JwtReactiveFilter implements WebFilter {
             "/favicon.ico",
             "/api/v1/user/auth/",
             "/api/v1/user/details/",
-            "/api/v1/balance/secret/",
             "/favicon/",
             "/favicon/site.webmanifest",
             "/js/login.js",

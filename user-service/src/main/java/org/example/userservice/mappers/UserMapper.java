@@ -7,8 +7,6 @@ import org.example.userservice.models.user.Role;
 import org.example.userservice.models.user.User;
 import org.springframework.stereotype.Component;
 
-import java.math.BigDecimal;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 @Component
@@ -37,20 +35,12 @@ public class UserMapper {
         userIdNameDto.setLogin(user.getLogin());
         userIdNameDto.setRole(user.getRole().name());
         userIdNameDto.setFullName(user.getFullName());
+        userIdNameDto.setStatus(user.getStatus() != null ? user.getStatus().name() : "ACTIVE");
         userIdNameDto.setAuthorities(user.getPermissions().stream()
                 .map(Permission::getPermission)
                 .collect(Collectors.toList()));
 
         return userIdNameDto;
-    }
-
-    public UserBalanceDTO userToUserBalanceDTO(User user, Map<String, BigDecimal> balances) {
-        UserBalanceDTO dto = new UserBalanceDTO();
-        dto.setId(user.getId());
-        dto.setFullName(user.getFullName());
-        dto.setRole(user.getRole().name());
-        dto.setBalances(balances);
-        return dto;
     }
 
     public User userCreateDTOToUser(UserCreateDTO userCreateDTO) {
@@ -112,6 +102,16 @@ public class UserMapper {
             }
         } else {
             user.setRole(Role.MANAGER);
+        }
+        
+        String statusString = userUpdateDTO.getStatus();
+        if (statusString != null && !statusString.isEmpty()) {
+            try {
+                org.example.userservice.models.user.Status status = org.example.userservice.models.user.Status.valueOf(statusString.toUpperCase());
+                user.setStatus(status);
+            } catch (IllegalArgumentException e) {
+                user.setStatus(org.example.userservice.models.user.Status.ACTIVE);
+            }
         }
         return user;
     }

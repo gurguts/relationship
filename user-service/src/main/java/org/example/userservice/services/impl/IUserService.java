@@ -1,6 +1,5 @@
 package org.example.userservice.services.impl;
 
-import org.example.userservice.models.dto.user.UserBalanceDTO;
 import org.example.userservice.models.user.Permission;
 import org.example.userservice.models.user.User;
 
@@ -11,8 +10,9 @@ public interface IUserService {
     User getUserByLogin(String login);
 
     List<User> getUsers();
+    
+    List<User> getActiveUsers();
 
-    List<UserBalanceDTO> getUserBalances();
 
     User getUserById(Long id);
 

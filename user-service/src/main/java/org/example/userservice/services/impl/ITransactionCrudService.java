@@ -9,13 +9,5 @@ public interface ITransactionCrudService {
 
     void updateTransactionAmount(Long transactionId, BigDecimal amount);
 
-    Transaction createSaleTransaction(Transaction transaction, Long productId);
-
-    Transaction createPurchaseTransaction(Transaction transaction, Long productId);
-
-    Transaction createDepositTransaction(Transaction transaction);
-
-    Transaction createWithdrawTransaction(Transaction transaction);
-
     void delete(Long transactionId);
 }

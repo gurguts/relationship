@@ -17,5 +17,6 @@ public class TransactionCreateRequestDTO {
     private BigDecimal exchangeRate;
     private Long clientId;
     private String description;
+    private BigDecimal commission;
 }
 

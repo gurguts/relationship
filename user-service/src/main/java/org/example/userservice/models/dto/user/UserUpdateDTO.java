@@ -18,4 +18,6 @@ public class UserUpdateDTO {
     @NotBlank(message = "{validation.user.role.notblank}")
     @Size(max = 255, message = "{validation.user.role.size}")
     private String role;
+    
+    private String status;
 }

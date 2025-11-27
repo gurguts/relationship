@@ -24,7 +24,7 @@ public class WarehouseReceiptMapper {
         warehouseReceipt.setProductId(dto.getProductId());
         warehouseReceipt.setWarehouseId(dto.getWarehouseId());
         warehouseReceipt.setQuantity(dto.getQuantity());
-        warehouseReceipt.setEntryDate(dto.getEntryDate());
+        // entryDate will be set from createdAt in service
 
         if (dto.getTypeId() != null) {
             WithdrawalReason type = withdrawalReasonRepository.findById(dto.getTypeId()).orElse(null);

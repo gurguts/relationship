@@ -125,7 +125,8 @@ public class ShipmentService {
         }
 
         if (unitPrice == null || unitPrice.compareTo(BigDecimal.ZERO) <= 0) {
-            unitPrice = oldTotalCost.divide(oldQuantity, 6, java.math.RoundingMode.HALF_UP);
+            // Round up to avoid loss of precision
+            unitPrice = oldTotalCost.divide(oldQuantity, 6, java.math.RoundingMode.CEILING);
         }
 
         if (newQuantity != null) {
@@ -188,7 +189,8 @@ public class ShipmentService {
 
             item.setQuantity(newQuantity);
             item.setTotalCostEur(newTotal);
-            item.setUnitPriceEur(newTotal.divide(newQuantity, 6, java.math.RoundingMode.HALF_UP));
+            // Round up to avoid loss of precision
+            item.setUnitPriceEur(newTotal.divide(newQuantity, 6, java.math.RoundingMode.CEILING));
         } else {
             if (newTotalCost == null || newTotalCost.compareTo(BigDecimal.ZERO) <= 0) {
                 throw new PurchaseException("INVALID_TOTAL_COST", "Total cost must be greater than zero");
@@ -210,7 +212,8 @@ public class ShipmentService {
             }
 
             item.setTotalCostEur(newTotalCost);
-            item.setUnitPriceEur(newTotalCost.divide(oldQuantity, 6, java.math.RoundingMode.HALF_UP));
+            // Round up to avoid loss of precision
+            item.setUnitPriceEur(newTotalCost.divide(oldQuantity, 6, java.math.RoundingMode.CEILING));
         }
 
         shipmentProductRepository.save(item);

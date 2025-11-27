@@ -76,8 +76,19 @@ public class WarehouseWithdrawService implements IWarehouseWithdrawService {
         
         warehouseWithdrawal.setUnitPriceEur(averagePrice);
         warehouseWithdrawal.setTotalCostEur(totalCost);
+        
+        // Set withdrawalDate to current date if not already set (will be set from createdAt after save)
+        if (warehouseWithdrawal.getWithdrawalDate() == null) {
+            warehouseWithdrawal.setWithdrawalDate(java.time.LocalDate.now());
+        }
 
         WarehouseWithdrawal savedWithdrawal = warehouseWithdrawalRepository.save(warehouseWithdrawal);
+        
+        // Update withdrawalDate from createdAt after save to ensure consistency
+        if (savedWithdrawal.getCreatedAt() != null) {
+            savedWithdrawal.setWithdrawalDate(savedWithdrawal.getCreatedAt().toLocalDate());
+            savedWithdrawal = warehouseWithdrawalRepository.save(savedWithdrawal);
+        }
 
         // If shipmentId is specified, update total vehicle cost
         if (warehouseWithdrawal.getShipmentId() != null) {
@@ -254,7 +265,8 @@ public class WarehouseWithdrawService implements IWarehouseWithdrawService {
                 && quantity.compareTo(BigDecimal.ZERO) > 0
                 && totalCost != null
                 && totalCost.compareTo(BigDecimal.ZERO) > 0) {
-            return totalCost.divide(quantity, 6, RoundingMode.HALF_UP);
+            // Round up to avoid loss of precision
+            return totalCost.divide(quantity, 6, RoundingMode.CEILING);
         }
 
         throw new PurchaseException("WITHDRAWAL_PRICE_MISSING",

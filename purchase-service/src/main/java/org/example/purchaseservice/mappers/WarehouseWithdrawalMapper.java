@@ -30,7 +30,7 @@ public class WarehouseWithdrawalMapper {
         
         warehouseWithdrawal.setQuantity(BigDecimal.valueOf(dto.getQuantity()));
         warehouseWithdrawal.setDescription(dto.getDescription());
-        warehouseWithdrawal.setWithdrawalDate(dto.getWithdrawalDate());
+        // withdrawalDate will be set from createdAt in service
 
         return warehouseWithdrawal;
     }

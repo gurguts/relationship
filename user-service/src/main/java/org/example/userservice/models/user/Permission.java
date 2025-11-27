@@ -64,6 +64,7 @@ public enum Permission {
     SETTINGS_CLIENT_DELETE("settings_client:delete"),
     SETTINGS_FINANCE_CREATE("settings_finance:create"),
     SETTINGS_FINANCE_EDIT("settings_finance:edit"),
+    SETTINGS_EXCHANGE_EDIT("settings_exchange:edit"),
     SETTINGS_FINANCE_DELETE("settings_finance:delete"),
 
     SETTINGS_EDIT("settings:edit"),

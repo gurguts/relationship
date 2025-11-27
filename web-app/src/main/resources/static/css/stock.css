@@ -19,7 +19,7 @@ h1 {
 
 .container {
     max-width: 1200px;
-    margin: 0 auto;
+    margin: 0 15px;
     background: rgba(255, 255, 255, 0.95);
     padding: 30px;
     border-radius: 20px;
@@ -1462,9 +1462,8 @@ tr:hover {
 
 /* Table Container */
 #discrepancies-container {
-    max-height: calc(90vh - 400px);
-    overflow-y: auto;
     border-radius: 8px;
+    /* Removed max-height and overflow-y to allow page expansion */
 }
 
 /* Fix table header contrast - ensure dark background with white text */

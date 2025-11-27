@@ -47,9 +47,6 @@
             <li id="nav-inventory"><a href="/inventory">
                 Баланс тари
             </a></li>
-            <li id="nav-balance"><a href="/balance">
-                Баланс грошовий
-            </a></li>
             <li id="nav-finance"><a class="selected-nav" href="/finance">
                 Фінанси
             </a></li>
@@ -82,6 +79,7 @@
     <div class="tabs">
         <button class="tab-btn active" data-tab="accounts">Рахунки та філії</button>
         <button class="tab-btn" data-tab="transactions">Транзакції</button>
+        <button class="tab-btn" data-tab="exchange-rates">Курси валют</button>
     </div>
 
     <!-- Accounts Tab -->
@@ -141,6 +139,26 @@
             <button id="prev-page-btn" class="btn-secondary" disabled>Попередня</button>
             <span id="page-info">Сторінка 1 з 1</span>
             <button id="next-page-btn" class="btn-secondary" disabled>Наступна</button>
+        </div>
+    </div>
+
+    <!-- Exchange Rates Tab -->
+    <div id="exchange-rates-tab" class="tab-content">
+        <div class="info-section" style="margin-bottom: 20px; padding: 15px; background-color: #f0f0f0; border-radius: 5px;">
+            <p><strong>Інформація:</strong> Курси валют використовуються для конвертації закупок у EUR. Встановіть курс UAH до EUR та USD до EUR.</p>
+        </div>
+        <div class="table-container">
+            <table id="exchange-rates-table" class="data-table">
+                <thead>
+                <tr>
+                    <th>Валюта</th>
+                    <th>Курс до EUR</th>
+                    <th>Оновлено</th>
+                    <th>Дії</th>
+                </tr>
+                </thead>
+                <tbody id="exchange-rates-body"></tbody>
+            </table>
         </div>
     </div>
 </div>
@@ -203,6 +221,12 @@
                 <input type="number" id="exchange-rate" step="0.000001" min="0.000001">
             </div>
 
+            <div class="form-group" id="commission-group" style="display: none;">
+                <label for="transaction-commission">Комісія (опціонально):</label>
+                <input type="number" id="transaction-commission" step="0.01" min="0">
+                <small style="display: block; color: #666; margin-top: 5px;">Якщо вказано, на рахунок отримувача буде зараховано суму за мінусом комісії</small>
+            </div>
+
             <div class="form-group" id="client-group" style="display: none;">
                 <label for="transaction-client">Клієнт:</label>
                 <div class="client-autocomplete-wrapper">
@@ -218,66 +242,6 @@
             </div>
 
             <button type="submit" class="btn-primary">Створити</button>
-        </form>
-    </div>
-</div>
-
-<!-- Create/Edit Account Modal -->
-<div id="create-account-modal" class="modal">
-    <div class="modal-content">
-        <span class="close">&times;</span>
-        <h2 id="account-modal-title">Створити рахунок</h2>
-        <form id="account-form">
-            <input type="hidden" id="account-id">
-            <div class="form-group">
-                <label for="account-name">Назва:</label>
-                <input type="text" id="account-name" required>
-            </div>
-            <div class="form-group">
-                <label for="account-description">Опис:</label>
-                <textarea id="account-description" rows="3"></textarea>
-            </div>
-            <div class="form-group">
-                <label for="account-user">Користувач (опціонально):</label>
-                <select id="account-user">
-                    <option value="">Без користувача</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="account-branch">Філія (опціонально):</label>
-                <select id="account-branch">
-                    <option value="">Без філії</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label>Валюти:</label>
-                <div class="checkbox-group">
-                    <label><input type="checkbox" name="currency" value="UAH" checked> UAH</label>
-                    <label><input type="checkbox" name="currency" value="USD"> USD</label>
-                    <label><input type="checkbox" name="currency" value="EUR"> EUR</label>
-                </div>
-            </div>
-            <button type="submit" class="btn-primary" id="account-submit-btn">Створити</button>
-        </form>
-    </div>
-</div>
-
-<!-- Create/Edit Branch Modal -->
-<div id="create-branch-modal" class="modal">
-    <div class="modal-content">
-        <span class="close">&times;</span>
-        <h2 id="branch-modal-title">Створити філію</h2>
-        <form id="branch-form">
-            <input type="hidden" id="branch-id">
-            <div class="form-group">
-                <label for="branch-name">Назва:</label>
-                <input type="text" id="branch-name" required>
-            </div>
-            <div class="form-group">
-                <label for="branch-description">Опис:</label>
-                <textarea id="branch-description" rows="3"></textarea>
-            </div>
-            <button type="submit" class="btn-primary" id="branch-submit-btn">Створити</button>
         </form>
     </div>
 </div>
@@ -327,10 +291,32 @@
                 <input type="number" id="edit-transaction-exchange-rate" step="0.0001" min="0.0001">
             </div>
 
+            <div class="form-group" id="edit-commission-group" style="display: none;">
+                <label for="edit-transaction-commission">Комісія (опціонально):</label>
+                <input type="number" id="edit-transaction-commission" step="0.01" min="0">
+                <small style="display: block; color: #666; margin-top: 5px;">Якщо вказано, на рахунок отримувача буде зараховано суму за мінусом комісії</small>
+            </div>
+
             <div class="form-buttons">
                 <button type="submit" class="btn-primary">Зберегти</button>
                 <button type="button" class="btn-secondary" id="cancel-edit-transaction">Скасувати</button>
             </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Exchange Rate Modal -->
+<div id="edit-exchange-rate-modal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2 id="exchange-rate-modal-title">Оновити курс валют</h2>
+        <form id="exchange-rate-form">
+            <input type="hidden" id="exchange-rate-currency">
+            <div class="form-group">
+                <label for="exchange-rate-value">Курс до EUR:</label>
+                <input type="number" id="exchange-rate-value" step="0.000001" min="0.000001" required>
+            </div>
+            <button type="submit" class="btn-primary" id="exchange-rate-submit-btn">Оновити</button>
         </form>
     </div>
 </div>

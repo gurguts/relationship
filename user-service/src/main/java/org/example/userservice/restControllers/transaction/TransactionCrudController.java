@@ -3,10 +3,8 @@ package org.example.userservice.restControllers.transaction;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.userservice.mappers.TransactionMapper;
-import org.example.userservice.models.dto.transaction.TransactionCreateDTO;
 import org.example.userservice.models.dto.transaction.TransactionCreateRequestDTO;
 import org.example.userservice.models.dto.transaction.TransactionDTO;
-import org.example.userservice.models.dto.transaction.TransactionOperationsDTO;
 import org.example.userservice.models.dto.transaction.TransactionUpdateDTO;
 import org.example.userservice.models.transaction.Transaction;
 import org.example.userservice.services.impl.ITransactionCrudService;
@@ -34,40 +32,6 @@ public class TransactionCrudController {
         transactionCrudService.updateTransactionAmount(transactionId, amount);
 
         return ResponseEntity.noContent().build();
-    }
-
-    @PostMapping("/sale")
-    public ResponseEntity<Long> createTransactionSale(@RequestBody TransactionCreateDTO transactionCreateDTO) {
-        Transaction transaction = transactionMapper.transactionCreateDTOToTransaction(transactionCreateDTO);
-        Transaction savedTransaction = transactionCrudService.createSaleTransaction(transaction,
-                transactionCreateDTO.getProductId());
-        return ResponseEntity.ok(savedTransaction.getId());
-    }
-
-    @PostMapping("/purchase")
-    public ResponseEntity<Long> createTransactionPurchase(@RequestBody TransactionCreateDTO transactionCreateDTO) {
-        Transaction transaction = transactionMapper.transactionCreateDTOToTransaction(transactionCreateDTO);
-        Transaction savedTransaction = transactionCrudService.createPurchaseTransaction(transaction,
-                transactionCreateDTO.getProductId());
-        return ResponseEntity.ok(savedTransaction.getId());
-    }
-
-    @PreAuthorize("hasAuthority('finance:balance_edit')")
-    @PostMapping("/deposit")
-    public ResponseEntity<Long> createDepositTransaction(
-            @RequestBody TransactionOperationsDTO transactionOperationsDTO) {
-        Transaction transaction = transactionMapper.transactionOperationsDTOToTransaction(transactionOperationsDTO);
-        Transaction savedTransaction = transactionCrudService.createDepositTransaction(transaction);
-        return ResponseEntity.ok(savedTransaction.getId());
-    }
-
-    @PreAuthorize("hasAuthority('finance:balance_edit')")
-    @PostMapping("/withdraw")
-    public ResponseEntity<Long> createWithdrawTransaction(
-            @RequestBody TransactionOperationsDTO transactionOperationsDTO) {
-        Transaction transaction = transactionMapper.transactionOperationsDTOToTransaction(transactionOperationsDTO);
-        Transaction savedTransaction = transactionCrudService.createWithdrawTransaction(transaction);
-        return ResponseEntity.ok(savedTransaction.getId());
     }
 
     @PreAuthorize("hasAuthority('transaction:delete')")
@@ -104,7 +68,8 @@ public class TransactionCrudController {
                 updateDTO.getCategoryId(),
                 updateDTO.getDescription(),
                 updateDTO.getAmount(),
-                updateDTO.getExchangeRate()
+                updateDTO.getExchangeRate(),
+                updateDTO.getCommission()
         );
         TransactionDTO response = transactionMapper.transactionToTransactionDTO(updated);
         return ResponseEntity.ok(response);

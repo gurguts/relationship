@@ -44,7 +44,7 @@ public class WarehouseReceipt {
     @Column(name = "total_cost_eur", precision = 20, scale = 6)
     private BigDecimal totalCostEur;
 
-    @Column(name = "entry_date", nullable = false)
+    @Column(name = "entry_date")
     private LocalDate entryDate;
 
     @ManyToOne(fetch = FetchType.EAGER)

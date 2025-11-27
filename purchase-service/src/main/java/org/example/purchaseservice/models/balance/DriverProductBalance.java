@@ -63,9 +63,9 @@ public class DriverProductBalance {
         this.quantity = newQuantity;
         this.totalCostEur = newTotalCost;
         
-        // Recalculate average price
+        // Recalculate average price (round up to avoid loss of precision)
         if (newQuantity.compareTo(BigDecimal.ZERO) > 0) {
-            this.averagePriceEur = newTotalCost.divide(newQuantity, 6, RoundingMode.HALF_UP);
+            this.averagePriceEur = newTotalCost.divide(newQuantity, 6, RoundingMode.CEILING);
         }
     }
     
@@ -93,9 +93,9 @@ public class DriverProductBalance {
         this.quantity = newQuantity;
         this.totalCostEur = newTotalCost;
         
-        // Recalculate average price based on remaining products
+        // Recalculate average price based on remaining products (round up to avoid loss of precision)
         if (newQuantity.compareTo(BigDecimal.ZERO) > 0) {
-            this.averagePriceEur = newTotalCost.divide(newQuantity, 6, RoundingMode.HALF_UP);
+            this.averagePriceEur = newTotalCost.divide(newQuantity, 6, RoundingMode.CEILING);
         } else {
             this.averagePriceEur = BigDecimal.ZERO;
             this.totalCostEur = BigDecimal.ZERO;
@@ -117,8 +117,8 @@ public class DriverProductBalance {
         if (newQuantity != null && newQuantity.compareTo(BigDecimal.ZERO) > 0 && newTotalPrice != null) {
             addProduct(newQuantity, newTotalPrice);
         } else if (this.quantity.compareTo(BigDecimal.ZERO) > 0) {
-            // Recalculate average price if quantity > 0
-            this.averagePriceEur = this.totalCostEur.divide(this.quantity, 6, RoundingMode.HALF_UP);
+            // Recalculate average price if quantity > 0 (round up to avoid loss of precision)
+            this.averagePriceEur = this.totalCostEur.divide(this.quantity, 6, RoundingMode.CEILING);
         } else {
             // Reset if quantity becomes 0
             this.quantity = BigDecimal.ZERO;

@@ -106,8 +106,9 @@ public class WarehouseReceiptService implements IWarehouseReceiptService {
         BigDecimal driverUnitPrice = driverBalance.getAveragePriceEur();   // Average price per unit from driver in EUR
         
         // Calculate warehouse unit price (total cost distributed over received quantity)
-        // If received 19kg for 400 UAH total → 400/19 = 21.05 UAH/kg
-        BigDecimal warehouseUnitPrice = totalDriverCost.divide(receivedQuantity, 6, java.math.RoundingMode.HALF_UP);
+        // Round up to avoid loss of precision when converting back to total cost
+        // If received 19kg for 400 EUR total → 400/19 = 21.052632... → 21.052633 EUR/kg
+        BigDecimal warehouseUnitPrice = totalDriverCost.divide(receivedQuantity, 6, java.math.RoundingMode.CEILING);
         
         // Set prices and driver balance in receipt
         warehouseReceipt.setDriverBalanceQuantity(purchasedQuantity);  // Store how much driver had
@@ -115,9 +116,20 @@ public class WarehouseReceiptService implements IWarehouseReceiptService {
         warehouseReceipt.setTotalCostEur(totalDriverCost);     // Full driver cost goes to warehouse in EUR
         warehouseReceipt.setExecutorUserId(executorUserId);
         
+        // Set entryDate to current date if not already set (will be set from createdAt after save)
+        if (warehouseReceipt.getEntryDate() == null) {
+            warehouseReceipt.setEntryDate(LocalDate.now());
+        }
+        
         // Always create new receipt - never merge with existing ones
         // This allows tracking multiple deliveries per day from the same driver
         WarehouseReceipt savedReceipt = warehouseReceiptRepository.save(warehouseReceipt);
+        
+        // Update entryDate from createdAt after save to ensure consistency
+        if (savedReceipt.getCreatedAt() != null) {
+            savedReceipt.setEntryDate(savedReceipt.getCreatedAt().toLocalDate());
+            savedReceipt = warehouseReceiptRepository.save(savedReceipt);
+        }
         
         // Create discrepancy record if received quantity differs from purchased quantity
         if (purchasedQuantity.compareTo(receivedQuantity) != 0) {
@@ -125,7 +137,7 @@ public class WarehouseReceiptService implements IWarehouseReceiptService {
                     savedReceipt.getId(),
                     driverBalance,
                     warehouseReceipt.getWarehouseId(),
-                    warehouseReceipt.getEntryDate(),
+                    savedReceipt.getEntryDate() != null ? savedReceipt.getEntryDate() : savedReceipt.getCreatedAt().toLocalDate(),
                     receivedQuantity,
                     executorUserId,
                     null  // Could add comment from receipt if needed

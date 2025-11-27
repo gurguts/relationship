@@ -47,9 +47,6 @@
             <li id="nav-inventory"><a href="/inventory">
                 Баланс тари
             </a></li>
-            <li id="nav-balance"><a href="/balance">
-                Баланс грошовий
-            </a></li>
             <li id="nav-finance"><a href="/finance">
                 Фінанси
             </a></li>
@@ -80,7 +77,6 @@
         <button class="tab-btn active" data-tab="finance-categories">Категорії фінансів</button>
         <button class="tab-btn" data-tab="branches">Філії</button>
         <button class="tab-btn" data-tab="accounts">Рахунки</button>
-        <button class="tab-btn" data-tab="exchange-rates">Курси валют</button>
         <button class="tab-btn" data-tab="business">Бізнеси</button>
         <button class="tab-btn" data-tab="region">Регіони</button>
         <button class="tab-btn" data-tab="source">Джерела</button>
@@ -249,25 +245,6 @@
         </div>
     </div>
 
-    <!-- Exchange Rates Tab -->
-    <div id="exchange-rates-tab" class="tab-content">
-        <div class="info-section" style="margin-bottom: 20px; padding: 15px; background-color: #f0f0f0; border-radius: 5px;">
-            <p><strong>Інформація:</strong> Курси валют використовуються для конвертації закупок у EUR. Встановіть курс UAH до EUR та USD до EUR.</p>
-        </div>
-        <div class="table-container">
-            <table id="exchange-rates-table" class="data-table">
-                <thead>
-                <tr>
-                    <th>Валюта</th>
-                    <th>Курс до EUR</th>
-                    <th>Оновлено</th>
-                    <th>Дії</th>
-                </tr>
-                </thead>
-                <tbody id="exchange-rates-body"></tbody>
-            </table>
-        </div>
-    </div>
 </div>
 
 <!-- Create/Edit Category Modal -->
@@ -379,22 +356,6 @@
                 </div>
             </div>
             <button type="submit" class="btn-primary" id="account-submit-btn">Створити</button>
-        </form>
-    </div>
-</div>
-
-<!-- Edit Exchange Rate Modal -->
-<div id="edit-exchange-rate-modal" class="modal">
-    <div class="modal-content">
-        <span class="close">&times;</span>
-        <h2 id="exchange-rate-modal-title">Оновити курс валют</h2>
-        <form id="exchange-rate-form">
-            <input type="hidden" id="exchange-rate-currency">
-            <div class="form-group">
-                <label for="exchange-rate-value">Курс до EUR:</label>
-                <input type="number" id="exchange-rate-value" step="0.000001" min="0.000001" required>
-            </div>
-            <button type="submit" class="btn-primary" id="exchange-rate-submit-btn">Оновити</button>
         </form>
     </div>
 </div>

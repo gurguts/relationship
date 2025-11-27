@@ -277,7 +277,8 @@ public class WarehouseProductBalanceService {
 
         BigDecimal updatedAverage;
         if (updatedQuantity.compareTo(BigDecimal.ZERO) > 0) {
-            updatedAverage = updatedTotalCost.divide(updatedQuantity, 6, RoundingMode.HALF_UP);
+            // Round up to avoid loss of precision when converting back to total cost
+            updatedAverage = updatedTotalCost.divide(updatedQuantity, 6, RoundingMode.CEILING);
         } else {
             updatedAverage = BigDecimal.ZERO.setScale(6, RoundingMode.HALF_UP);
             updatedTotalCost = BigDecimal.ZERO.setScale(6, RoundingMode.HALF_UP);
@@ -328,7 +329,8 @@ public class WarehouseProductBalanceService {
         if (totalCost == null) {
             return BigDecimal.ZERO.setScale(6, RoundingMode.HALF_UP);
         }
-        return totalCost.divide(quantity, 6, RoundingMode.HALF_UP);
+        // Round up to avoid loss of precision
+        return totalCost.divide(quantity, 6, RoundingMode.CEILING);
     }
 }
 

@@ -127,13 +127,34 @@ public class AccountTransactionService {
             throw new TransactionException("Source and destination accounts cannot be the same");
         }
 
-        // Transfer money between accounts
-        accountBalanceService.transferAmount(
+        BigDecimal amount = transaction.getAmount();
+        BigDecimal commission = transaction.getCommission();
+        
+        // If commission is provided, validate it
+        if (commission != null) {
+            if (commission.compareTo(BigDecimal.ZERO) < 0) {
+                throw new TransactionException("Commission cannot be negative");
+            }
+            if (commission.compareTo(amount) >= 0) {
+                throw new TransactionException("Commission cannot be greater than or equal to the transfer amount");
+            }
+        }
+
+        // Calculate amount to transfer (amount minus commission if commission exists)
+        BigDecimal transferAmount = commission != null ? amount.subtract(commission) : amount;
+
+        // Subtract full amount from source account (including commission)
+        accountBalanceService.subtractAmount(
                 transaction.getFromAccountId(),
                 transaction.getCurrency(),
+                amount
+        );
+
+        // Add transfer amount (amount minus commission) to destination account
+        accountBalanceService.addAmount(
                 transaction.getToAccountId(),
                 transaction.getCurrency(),
-                transaction.getAmount()
+                transferAmount
         );
 
         return transactionRepository.save(transaction);
@@ -263,12 +284,13 @@ public class AccountTransactionService {
     }
 
     @Transactional
-    public Transaction updateTransaction(Long transactionId, Long categoryId, String description, BigDecimal newAmount, BigDecimal newExchangeRate) {
+    public Transaction updateTransaction(Long transactionId, Long categoryId, String description, BigDecimal newAmount, BigDecimal newExchangeRate, BigDecimal newCommission) {
         Transaction transaction = transactionRepository.findById(transactionId)
                 .orElseThrow(() -> new TransactionException(
                         String.format("Transaction with ID %d not found", transactionId)));
 
         BigDecimal oldAmount = transaction.getAmount();
+        BigDecimal oldCommission = transaction.getCommission();
         BigDecimal oldExchangeRate = transaction.getExchangeRate();
         TransactionType type = transaction.getType();
 
@@ -285,6 +307,26 @@ public class AccountTransactionService {
             transaction.setDescription(description);
         }
 
+        // Update commission if provided (only for internal transfer)
+        boolean commissionChanged = false;
+        if (type == TransactionType.INTERNAL_TRANSFER && newCommission != null) {
+            if (newCommission.compareTo(BigDecimal.ZERO) < 0) {
+                throw new TransactionException("Commission cannot be negative");
+            }
+            BigDecimal currentAmount = newAmount != null ? newAmount : oldAmount;
+            if (newCommission.compareTo(currentAmount) >= 0) {
+                throw new TransactionException("Commission cannot be greater than or equal to the transfer amount");
+            }
+            if (oldCommission == null || newCommission.compareTo(oldCommission) != 0) {
+                transaction.setCommission(newCommission);
+                commissionChanged = true;
+            }
+        } else if (type == TransactionType.INTERNAL_TRANSFER && newCommission == null && oldCommission != null) {
+            // Allow removing commission by setting it to null
+            transaction.setCommission(null);
+            commissionChanged = true;
+        }
+
         // Update exchange rate if provided (only for currency conversion)
         boolean exchangeRateChanged = false;
         if (type == TransactionType.CURRENCY_CONVERSION && newExchangeRate != null && 
@@ -299,15 +341,24 @@ public class AccountTransactionService {
             transaction.setAmount(newAmount);
         }
 
-        // Revert old transaction effect and apply new amount/exchange rate
-        if (amountChanged || exchangeRateChanged) {
+        // Revert old transaction effect and apply new amount/exchange rate/commission
+        if (amountChanged || exchangeRateChanged || commissionChanged) {
             if (type == TransactionType.INTERNAL_TRANSFER) {
-                // Revert: add to from, subtract from to
+                // Calculate old transfer amount (amount minus commission)
+                BigDecimal oldTransferAmount = oldCommission != null ? oldAmount.subtract(oldCommission) : oldAmount;
+                
+                // Revert: add full amount to from, subtract transfer amount from to
                 accountBalanceService.addAmount(transaction.getFromAccountId(), transaction.getCurrency(), oldAmount);
-                accountBalanceService.subtractAmount(transaction.getToAccountId(), transaction.getCurrency(), oldAmount);
-                // Apply new: subtract from from, add to to
-                accountBalanceService.subtractAmount(transaction.getFromAccountId(), transaction.getCurrency(), newAmount);
-                accountBalanceService.addAmount(transaction.getToAccountId(), transaction.getCurrency(), newAmount);
+                accountBalanceService.subtractAmount(transaction.getToAccountId(), transaction.getCurrency(), oldTransferAmount);
+                
+                // Calculate new values
+                BigDecimal currentAmount = amountChanged ? newAmount : oldAmount;
+                BigDecimal currentCommission = commissionChanged ? newCommission : oldCommission;
+                BigDecimal newTransferAmount = currentCommission != null ? currentAmount.subtract(currentCommission) : currentAmount;
+                
+                // Apply new: subtract full amount from from, add transfer amount to to
+                accountBalanceService.subtractAmount(transaction.getFromAccountId(), transaction.getCurrency(), currentAmount);
+                accountBalanceService.addAmount(transaction.getToAccountId(), transaction.getCurrency(), newTransferAmount);
             } else if (type == TransactionType.EXTERNAL_INCOME) {
                 // Revert: subtract from to
                 accountBalanceService.subtractAmount(transaction.getToAccountId(), transaction.getCurrency(), oldAmount);

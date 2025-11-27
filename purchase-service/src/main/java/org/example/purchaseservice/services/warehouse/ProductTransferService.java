@@ -126,12 +126,21 @@ public class ProductTransferService {
         transfer.setQuantity(transferDTO.getQuantity());
         transfer.setUnitPriceEur(unitPrice);
         transfer.setTotalCostEur(totalCost);
-        transfer.setTransferDate(transferDTO.getTransferDate());
+        // Set transferDate to current date if not already set (will be set from createdAt after save)
+        if (transfer.getTransferDate() == null) {
+            transfer.setTransferDate(LocalDate.now());
+        }
         transfer.setUserId(userId);
         transfer.setReason(reason);
         transfer.setDescription(transferDTO.getDescription());
         
         ProductTransfer savedTransfer = productTransferRepository.save(transfer);
+        
+        // Update transferDate from createdAt after save to ensure consistency
+        if (savedTransfer.getCreatedAt() != null) {
+            savedTransfer.setTransferDate(savedTransfer.getCreatedAt().toLocalDate());
+            savedTransfer = productTransferRepository.save(savedTransfer);
+        }
         
         log.info("Product transfer completed. Transfer record created: id={}", savedTransfer.getId());
         
@@ -416,7 +425,8 @@ public class ProductTransferService {
 
         if (quantity != null && quantity.compareTo(BigDecimal.ZERO) > 0
                 && totalCost != null && totalCost.compareTo(BigDecimal.ZERO) > 0) {
-            return totalCost.divide(quantity, 6, RoundingMode.HALF_UP);
+            // Round up to avoid loss of precision
+            return totalCost.divide(quantity, 6, RoundingMode.CEILING);
         }
 
         throw new PurchaseException("TRANSFER_PRICE_MISSING",

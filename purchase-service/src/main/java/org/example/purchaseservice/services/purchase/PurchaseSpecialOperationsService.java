@@ -497,7 +497,7 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
                         Collectors.collectingAndThen(
                                 Collectors.averagingDouble(p ->
                                         p.getQuantity().compareTo(BigDecimal.ZERO) > 0
-                                                ? p.getTotalPrice().divide(p.getQuantity(), 6, RoundingMode.HALF_UP).doubleValue()
+                                                ? p.getTotalPrice().divide(p.getQuantity(), 6, RoundingMode.CEILING).doubleValue()
                                                 : 0.0
                                 ),
                                 avg -> avg

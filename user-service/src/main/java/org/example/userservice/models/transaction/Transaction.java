@@ -57,4 +57,7 @@ public class Transaction {
 
     @Column(name = "converted_amount", precision = 20, scale = 2)
     private BigDecimal convertedAmount;
+
+    @Column(name = "commission", precision = 20, scale = 2)
+    private BigDecimal commission;
 }

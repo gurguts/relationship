@@ -67,7 +67,7 @@ public class ProductTransfer {
     /**
      * Date of transfer
      */
-    @Column(name = "transfer_date", nullable = false)
+    @Column(name = "transfer_date")
     private LocalDate transferDate;
     
     /**

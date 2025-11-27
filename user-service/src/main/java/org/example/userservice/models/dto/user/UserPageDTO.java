@@ -11,4 +11,5 @@ public class UserPageDTO {
     private String fullName;
     private List<String> authorities;
     private String role;
+    private String status;
 }

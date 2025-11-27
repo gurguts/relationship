@@ -44,6 +44,8 @@ function initializeTabs() {
                 populateTransactionFilters().then(() => {
                     loadTransactions();
                 });
+            } else if (targetTab === 'exchange-rates') {
+                loadExchangeRates();
             }
         });
     });
@@ -76,9 +78,8 @@ function setupEventListeners() {
 
     // Forms
     document.getElementById('transaction-form').addEventListener('submit', handleCreateTransaction);
-    // Account and Branch forms are still used for editing
-    document.getElementById('account-form').addEventListener('submit', handleCreateAccount);
-    document.getElementById('branch-form').addEventListener('submit', handleCreateBranch);
+    document.getElementById('exchange-rate-form')?.addEventListener('submit', handleUpdateExchangeRate);
+    // Account and Branch creation/editing moved to settings page
 
     // Transaction type change
     document.getElementById('transaction-type').addEventListener('change', handleTransactionTypeChange);
@@ -215,8 +216,7 @@ async function createBranchSection(branch, accounts) {
                 <span class="balance-value">${formatBranchBalance(branch.totalBalance)}</span>
             </div>
             <div class="branch-actions">
-                ${branch.canOperate ? `<button class="action-btn btn-edit" onclick="editBranch(${branch.id})">Редагувати</button>` : ''}
-                ${branch.canOperate ? `<button class="action-btn btn-delete" onclick="deleteBranch(${branch.id})">Видалити</button>` : ''}
+                <!-- Редагування та видалення філій перенесено на сторінку Налаштування -->
             </div>
         </div>
     `;
@@ -322,9 +322,8 @@ async function createAccountRow(account, isInBranch) {
             </div>
         </div>
         <div class="account-actions">
-            ${canOperateAccount ? `<button class="action-btn btn-edit" onclick="editAccount(${account.id})">Редагувати</button>` : ''}
-            ${canOperateAccount ? `<button class="action-btn btn-delete" onclick="deleteAccount(${account.id})">Видалити</button>` : ''}
             ${!canOperateAccount ? `<span class="no-permission-hint">Немає прав на операції</span>` : ''}
+            <!-- Редагування та видалення рахунків перенесено на сторінку Налаштування -->
         </div>
     `;
     
@@ -485,10 +484,7 @@ function renderBranches(branches) {
             <td>${branch.description || '-'}</td>
             <td>${formatBranchBalance(branch.totalBalance)}</td>
             <td>
-                <div class="action-buttons-table">
-                    <button class="action-btn btn-edit" onclick="editBranch(${branch.id})">Редагувати</button>
-                    <button class="action-btn btn-delete" onclick="deleteBranch(${branch.id})">Видалити</button>
-                </div>
+                <!-- Редагування та видалення філій перенесено на сторінку Налаштування -->
             </td>
         `;
         tbody.appendChild(row);
@@ -612,9 +608,13 @@ function renderTransactions(transactions) {
         const description = transaction.description || '—';
 
         // For currency conversion, show converted amount
+        // For internal transfer, show commission if exists
         let amountDisplay = amount;
         if (transaction.type === 'CURRENCY_CONVERSION' && transaction.convertedAmount) {
             amountDisplay = `${amount} → ${formatNumber(transaction.convertedAmount)} ${transaction.convertedCurrency || ''}`;
+        } else if (transaction.type === 'INTERNAL_TRANSFER' && transaction.commission) {
+            const transferAmount = parseFloat(transaction.amount) - parseFloat(transaction.commission);
+            amountDisplay = `${amount} (комісія: ${formatNumber(transaction.commission)}, переказ: ${formatNumber(transferAmount)})`;
         }
 
         row.innerHTML = `
@@ -687,6 +687,17 @@ async function openEditTransactionModal(transactionId) {
             exchangeRateInput.value = '';
         }
         
+        // Show/hide commission field for internal transfer
+        const commissionGroup = document.getElementById('edit-commission-group');
+        const commissionInput = document.getElementById('edit-transaction-commission');
+        if (typeStr === 'INTERNAL_TRANSFER') {
+            commissionGroup.style.display = 'block';
+            commissionInput.value = transaction.commission || '';
+        } else {
+            commissionGroup.style.display = 'none';
+            commissionInput.value = '';
+        }
+        
         // Load categories for this transaction type
         const categorySelect = document.getElementById('edit-transaction-category');
         categorySelect.innerHTML = '<option value="">Без категорії</option>';
@@ -741,6 +752,22 @@ async function handleUpdateTransaction(e) {
         updateData.exchangeRate = exchangeRate;
     }
     
+    // Add commission for internal transfer
+    const commissionInput = document.getElementById('edit-transaction-commission');
+    if (commissionInput && commissionInput.style.display !== 'none') {
+        const commissionValue = commissionInput.value;
+        if (commissionValue && commissionValue.trim() !== '') {
+            const commission = parseFloat(commissionValue);
+            if (!isNaN(commission) && commission >= 0) {
+                updateData.commission = commission;
+            } else {
+                updateData.commission = null;
+            }
+        } else {
+            updateData.commission = null;
+        }
+    }
+    
     try {
         const response = await fetch(`${API_BASE}/transaction/${transactionId}`, {
             method: 'PUT',
@@ -757,7 +784,21 @@ async function handleUpdateTransaction(e) {
         
         showFinanceMessage('Транзакцію успішно оновлено', 'success');
         closeEditTransactionModal();
-        loadTransactions(); // Reload transactions list
+        
+        // Reload data based on active tab
+        const activeTab = document.querySelector('.tab-btn.active');
+        if (activeTab) {
+            const activeTabName = activeTab.getAttribute('data-tab');
+            if (activeTabName === 'transactions') {
+                loadTransactions(); // Reload transactions list
+            } else if (activeTabName === 'accounts') {
+                // Reload accounts and balances to reflect changes
+                await loadAccountsAndBranches();
+            }
+        } else {
+            // Default: reload transactions if no active tab detected
+            loadTransactions();
+        }
     } catch (error) {
         console.error('Error updating transaction:', error);
         showFinanceMessage('Помилка оновлення транзакції: ' + error.message, 'error');
@@ -984,6 +1025,8 @@ function handleTransactionTypeChange() {
         toAccountGroup.style.display = 'block';
         currencyGroup.style.display = 'block';
         amountGroup.style.display = 'block';
+        const commissionGroup = document.getElementById('commission-group');
+        if (commissionGroup) commissionGroup.style.display = 'block';
     } else if (type === 'EXTERNAL_INCOME') {
         toAccountGroup.style.display = 'block';
         currencyGroup.style.display = 'block';
@@ -1009,6 +1052,13 @@ function handleTransactionTypeChange() {
             if (label) label.textContent = 'З валюту:';
         }
     }
+    
+    // Hide commission group for all types except INTERNAL_TRANSFER
+    const commissionGroup = document.getElementById('commission-group');
+    if (commissionGroup && type !== 'INTERNAL_TRANSFER') {
+        commissionGroup.style.display = 'none';
+        document.getElementById('transaction-commission').value = '';
+    }
 }
 
 
@@ -1026,6 +1076,13 @@ async function handleCreateTransaction(e) {
     if (type === 'INTERNAL_TRANSFER') {
         formData.fromAccountId = parseInt(document.getElementById('from-account').value);
         formData.toAccountId = parseInt(document.getElementById('to-account').value);
+        const commissionValue = document.getElementById('transaction-commission').value;
+        if (commissionValue && commissionValue.trim() !== '') {
+            const commission = parseFloat(commissionValue);
+            if (commission > 0) {
+                formData.commission = commission;
+            }
+        }
     } else if (type === 'EXTERNAL_INCOME') {
         formData.toAccountId = parseInt(document.getElementById('to-account').value);
     } else if (type === 'EXTERNAL_EXPENSE') {
@@ -1083,10 +1140,17 @@ async function handleCreateTransaction(e) {
         const clientHidden = document.getElementById('transaction-client-id');
         if (clientInput) clientInput.value = '';
         if (clientHidden) clientHidden.value = '';
-        // Reload transactions if on transactions tab
+        
+        // Reload data based on active tab
         const activeTab = document.querySelector('.tab-btn.active');
-        if (activeTab && activeTab.getAttribute('data-tab') === 'transactions') {
-            loadTransactions();
+        if (activeTab) {
+            const activeTabName = activeTab.getAttribute('data-tab');
+            if (activeTabName === 'transactions') {
+                loadTransactions();
+            } else if (activeTabName === 'accounts') {
+                // Reload accounts and balances to reflect changes
+                await loadAccountsAndBranches();
+            }
         }
     } catch (error) {
         console.error('Error creating transaction:', error);
@@ -1094,124 +1158,7 @@ async function handleCreateTransaction(e) {
     }
 }
 
-function openCreateAccountModal() {
-    document.getElementById('account-id').value = '';
-    document.getElementById('account-modal-title').textContent = 'Створити рахунок';
-    document.getElementById('account-submit-btn').textContent = 'Створити';
-    const modal = document.getElementById('create-account-modal');
-    populateAccountForm();
-    modal.style.display = 'block';
-}
-
-function populateAccountForm() {
-    const userSelect = document.getElementById('account-user');
-    userSelect.innerHTML = '<option value="">Без користувача</option>';
-    usersCache.forEach(user => {
-        const option = document.createElement('option');
-        option.value = user.id;
-        option.textContent = user.fullName || user.name;
-        userSelect.appendChild(option);
-    });
-
-    const branchSelect = document.getElementById('account-branch');
-    branchSelect.innerHTML = '<option value="">Без філії</option>';
-    branchesCache.forEach(branch => {
-        const option = document.createElement('option');
-        option.value = branch.id;
-        option.textContent = branch.name;
-        branchSelect.appendChild(option);
-    });
-}
-
-async function handleCreateAccount(e) {
-    e.preventDefault();
-    const accountId = document.getElementById('account-id').value;
-    const currencies = Array.from(document.querySelectorAll('input[name="currency"]:checked'))
-        .map(cb => cb.value);
-
-    if (currencies.length === 0) {
-        showFinanceMessage('Виберіть хоча б одну валюту', 'error');
-        return;
-    }
-
-    const formData = {
-        name: document.getElementById('account-name').value,
-        description: document.getElementById('account-description').value,
-        userId: document.getElementById('account-user').value || null,
-        branchId: document.getElementById('account-branch').value || null,
-        currencies: currencies
-    };
-
-    try {
-        const url = accountId 
-            ? `${API_BASE}/accounts/${accountId}`
-            : `${API_BASE}/accounts`;
-        const method = accountId ? 'PUT' : 'POST';
-        
-        const response = await fetch(url, {
-            method: method,
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(formData)
-        });
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || `Failed to ${accountId ? 'update' : 'create'} account`);
-        }
-        showFinanceMessage(`Рахунок успішно ${accountId ? 'оновлено' : 'створено'}`, 'success');
-        document.getElementById('create-account-modal').style.display = 'none';
-        document.getElementById('account-form').reset();
-        document.getElementById('account-id').value = '';
-        document.getElementById('account-modal-title').textContent = 'Створити рахунок';
-        document.getElementById('account-submit-btn').textContent = 'Створити';
-        loadAccountsAndBranches();
-    } catch (error) {
-        console.error(`Error ${accountId ? 'updating' : 'creating'} account:`, error);
-        showFinanceMessage(error.message || `Помилка ${accountId ? 'оновлення' : 'створення'} рахунку`, 'error');
-    }
-}
-
-function openCreateBranchModal() {
-    document.getElementById('branch-id').value = '';
-    document.getElementById('branch-modal-title').textContent = 'Створити філію';
-    document.getElementById('branch-submit-btn').textContent = 'Створити';
-    document.getElementById('create-branch-modal').style.display = 'block';
-}
-
-async function handleCreateBranch(e) {
-    e.preventDefault();
-    const branchId = document.getElementById('branch-id').value;
-    const formData = {
-        name: document.getElementById('branch-name').value,
-        description: document.getElementById('branch-description').value
-    };
-
-    try {
-        const url = branchId 
-            ? `${API_BASE}/branches/${branchId}`
-            : `${API_BASE}/branches`;
-        const method = branchId ? 'PUT' : 'POST';
-        
-        const response = await fetch(url, {
-            method: method,
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(formData)
-        });
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || `Failed to ${branchId ? 'update' : 'create'} branch`);
-        }
-        showFinanceMessage(`Філію успішно ${branchId ? 'оновлено' : 'створено'}`, 'success');
-        document.getElementById('create-branch-modal').style.display = 'none';
-        document.getElementById('branch-form').reset();
-        document.getElementById('branch-id').value = '';
-        document.getElementById('branch-modal-title').textContent = 'Створити філію';
-        document.getElementById('branch-submit-btn').textContent = 'Створити';
-        loadAccountsAndBranches();
-    } catch (error) {
-        console.error(`Error ${branchId ? 'updating' : 'creating'} branch:`, error);
-        showFinanceMessage(error.message || `Помилка ${branchId ? 'оновлення' : 'створення'} філії`, 'error');
-    }
-}
+// Account and Branch creation/editing functions moved to settings page
 
 
 // ========== HELPER FUNCTIONS ==========
@@ -1264,110 +1211,109 @@ function showFinanceMessage(message, type = 'info') {
     }
 }
 
-// Edit/Delete functions
-async function editAccount(id) {
+// ========== EXCHANGE RATES FUNCTIONS ==========
+
+async function loadExchangeRates() {
     try {
-        const response = await fetch(`${API_BASE}/accounts/${id}`);
-        if (!response.ok) throw new Error('Failed to load account');
-        
-        const account = await response.json();
-        
-        // First populate form options (users and branches)
-        populateAccountForm();
-        
-        // Then set values after options are populated
-        document.getElementById('account-id').value = account.id;
-        document.getElementById('account-name').value = account.name;
-        document.getElementById('account-description').value = account.description || '';
-        
-        // Set user and branch values (convert to string for select comparison)
-        const userIdSelect = document.getElementById('account-user');
-        const branchIdSelect = document.getElementById('account-branch');
-        
-        if (account.userId) {
-            userIdSelect.value = String(account.userId);
-        } else {
-            userIdSelect.value = '';
-        }
-        
-        if (account.branchId) {
-            branchIdSelect.value = String(account.branchId);
-        } else {
-            branchIdSelect.value = '';
-        }
-        
-        // Set currencies
-        document.querySelectorAll('input[name="currency"]').forEach(cb => {
-            cb.checked = account.currencies && account.currencies.includes(cb.value);
-        });
-        
-        document.getElementById('account-modal-title').textContent = 'Редагувати рахунок';
-        document.getElementById('account-submit-btn').textContent = 'Зберегти';
-        
-        document.getElementById('create-account-modal').style.display = 'block';
+        const response = await fetch(`${API_BASE}/exchange-rates`);
+        if (!response.ok) throw new Error('Failed to load exchange rates');
+        const rates = await response.json();
+        renderExchangeRates(rates);
     } catch (error) {
-        console.error('Error loading account:', error);
-        showFinanceMessage('Помилка завантаження рахунку', 'error');
+        console.error('Error loading exchange rates:', error);
+        showFinanceMessage('Помилка завантаження курсів валют', 'error');
     }
 }
 
-async function deleteAccount(id) {
-    if (!confirm('Ви впевнені, що хочете видалити цей рахунок? Ця дія незворотна.')) return;
+function renderExchangeRates(rates) {
+    const tbody = document.getElementById('exchange-rates-body');
+    if (!tbody) return;
+    
+    tbody.innerHTML = '';
+    
+    // Expected currencies: UAH and USD
+    const expectedCurrencies = ['UAH', 'USD'];
+    
+    expectedCurrencies.forEach(currency => {
+        const rate = rates.find(r => r.fromCurrency === currency);
+        const row = document.createElement('tr');
+        
+        const updatedAt = rate && rate.updatedAt 
+            ? new Date(rate.updatedAt).toLocaleString('uk-UA')
+            : 'Не встановлено';
+        
+        row.innerHTML = `
+            <td>${currency}</td>
+            <td>${rate ? rate.rate.toFixed(6) : 'Не встановлено'}</td>
+            <td>${updatedAt}</td>
+            <td>
+                <button class="action-btn btn-edit" onclick="openEditExchangeRateModal('${currency}', ${rate ? rate.rate : 'null'})">
+                    ${rate ? 'Оновити' : 'Встановити'}
+                </button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+function openEditExchangeRateModal(currency, currentRate) {
+    const modal = document.getElementById('edit-exchange-rate-modal');
+    const form = document.getElementById('exchange-rate-form');
+    const title = document.getElementById('exchange-rate-modal-title');
+    const currencyInput = document.getElementById('exchange-rate-currency');
+    const rateInput = document.getElementById('exchange-rate-value');
+    
+    if (!modal || !form || !title || !currencyInput || !rateInput) {
+        console.error('Exchange rate modal elements not found');
+        return;
+    }
+    
+    title.textContent = `Оновити курс ${currency} до EUR`;
+    currencyInput.value = currency;
+    rateInput.value = currentRate || '';
+    
+    modal.style.display = 'block';
+}
+
+async function handleUpdateExchangeRate(event) {
+    event.preventDefault();
+    
+    const currency = document.getElementById('exchange-rate-currency').value;
+    const rate = parseFloat(document.getElementById('exchange-rate-value').value);
+    
+    if (!rate || rate <= 0) {
+        showFinanceMessage('Курс повинен бути більше нуля', 'error');
+        return;
+    }
     
     try {
-        const response = await fetch(`${API_BASE}/accounts/${id}`, {
-            method: 'DELETE'
+        const response = await fetch(`${API_BASE}/exchange-rates/${currency}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                fromCurrency: currency,
+                rate: rate
+            })
         });
+        
         if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || 'Failed to delete account');
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Failed to update exchange rate');
         }
-        showFinanceMessage('Рахунок успішно видалено', 'success');
-        loadAccountsAndBranches();
+        
+        const modal = document.getElementById('edit-exchange-rate-modal');
+        modal.style.display = 'none';
+        
+        showFinanceMessage('Курс валют успішно оновлено', 'success');
+        loadExchangeRates();
     } catch (error) {
-        console.error('Error deleting account:', error);
-        showFinanceMessage(error.message || 'Помилка видалення рахунку', 'error');
+        console.error('Error updating exchange rate:', error);
+        showFinanceMessage(`Помилка оновлення курсу: ${error.message}`, 'error');
     }
 }
 
-async function editBranch(id) {
-    try {
-        const response = await fetch(`${API_BASE}/branches/${id}`);
-        if (!response.ok) throw new Error('Failed to load branch');
-        
-        const branch = await response.json();
-        
-        document.getElementById('branch-id').value = branch.id;
-        document.getElementById('branch-name').value = branch.name;
-        document.getElementById('branch-description').value = branch.description || '';
-        
-        document.getElementById('branch-modal-title').textContent = 'Редагувати філію';
-        document.getElementById('branch-submit-btn').textContent = 'Зберегти';
-        
-        document.getElementById('create-branch-modal').style.display = 'block';
-    } catch (error) {
-        console.error('Error loading branch:', error);
-        showFinanceMessage('Помилка завантаження філії', 'error');
-    }
-}
-
-async function deleteBranch(id) {
-    if (!confirm('Ви впевнені, що хочете видалити цю філію? Ця дія незворотна.')) return;
-    
-    try {
-        const response = await fetch(`${API_BASE}/branches/${id}`, {
-            method: 'DELETE'
-        });
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || 'Failed to delete branch');
-        }
-        showFinanceMessage('Філію успішно видалено', 'success');
-        loadAccountsAndBranches();
-    } catch (error) {
-        console.error('Error deleting branch:', error);
-        showFinanceMessage(error.message || 'Помилка видалення філії', 'error');
-    }
-}
+// Edit/Delete functions moved to settings page
 
 

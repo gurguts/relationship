@@ -10,5 +10,6 @@ public class TransactionUpdateDTO {
     private String description;
     private BigDecimal amount;
     private BigDecimal exchangeRate;
+    private BigDecimal commission;
 }
 

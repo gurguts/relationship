@@ -4,8 +4,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import jakarta.validation.ConstraintViolationException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.example.userservice.exceptions.balance.BalanceException;
-import org.example.userservice.exceptions.balance.BalanceNotFoundException;
 import org.example.userservice.exceptions.transaction.TransactionException;
 import org.example.userservice.exceptions.transaction.TransactionNotFoundException;
 import org.example.userservice.exceptions.user.UserException;
@@ -101,30 +99,6 @@ public class GlobalExceptionAdvice {
         return new ErrorResponse(
                 "USER_NOT_FOUND",
                 messageSource.getMessage("user.notfound", null, ex.getMessage(), locale),
-                null
-        );
-    }
-
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    @ExceptionHandler(BalanceException.class)
-    public ErrorResponse handleBalanceException(BalanceException ex, Locale locale) {
-        log.warn("Balance error: message={}", ex.getMessage());
-        String message = messageSource.getMessage(
-                String.format("balance.error.%s", ex.getErrorCode().toUpperCase()),
-                null,
-                ex.getMessage(),
-                locale
-        );
-        return new ErrorResponse(ex.getErrorCode(), message, null);
-    }
-
-    @ResponseStatus(HttpStatus.NOT_FOUND)
-    @ExceptionHandler(BalanceNotFoundException.class)
-    public ErrorResponse handleBalanceNotFoundException(BalanceNotFoundException ex, Locale locale) {
-        log.warn("Balance not found: {}", ex.getMessage());
-        return new ErrorResponse(
-                "BALANCE_NOT_FOUND",
-                messageSource.getMessage("balance.notfound", null, ex.getMessage(), locale),
                 null
         );
     }

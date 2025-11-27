@@ -63,9 +63,9 @@ public class WarehouseProductBalance {
         this.quantity = newQuantity;
         this.totalCostEur = newTotalCost;
         
-        // Recalculate average price from total cost and quantity
+        // Recalculate average price from total cost and quantity (round up to avoid loss of precision)
         if (newQuantity.compareTo(BigDecimal.ZERO) > 0) {
-            this.averagePriceEur = newTotalCost.divide(newQuantity, 6, RoundingMode.HALF_UP);
+            this.averagePriceEur = newTotalCost.divide(newQuantity, 6, RoundingMode.CEILING);
         }
     }
     
@@ -130,9 +130,9 @@ public class WarehouseProductBalance {
         this.quantity = newQuantity;
         this.totalCostEur = newTotalCost;
         
-        // Recalculate average price
+        // Recalculate average price (round up to avoid loss of precision)
         if (newQuantity.compareTo(BigDecimal.ZERO) > 0) {
-            this.averagePriceEur = newTotalCost.divide(newQuantity, 6, RoundingMode.HALF_UP);
+            this.averagePriceEur = newTotalCost.divide(newQuantity, 6, RoundingMode.CEILING);
         } else {
             // If quantity becomes 0, reset all
             this.averagePriceEur = BigDecimal.ZERO;
@@ -157,7 +157,7 @@ public class WarehouseProductBalance {
         this.totalCostEur = newTotalCost;
 
         if (this.quantity.compareTo(BigDecimal.ZERO) > 0) {
-            this.averagePriceEur = newTotalCost.divide(this.quantity, 6, RoundingMode.HALF_UP);
+            this.averagePriceEur = newTotalCost.divide(this.quantity, 6, RoundingMode.CEILING);
         } else {
             // no quantity -> reset cost as well
             this.totalCostEur = BigDecimal.ZERO;

@@ -48,7 +48,6 @@ function showHideElements(authorities) {
         'nav-sale': ['sale:view'],
         'nav-containers': ['container:view'],
         'nav-inventory': ['inventory:view'],
-        'nav-balance': ['finance:view'],
         'nav-finance': ['finance:view'],
         'nav-warehouse': ['warehouse:view'],
         'actions-container-transfer': ['container:transfer'],

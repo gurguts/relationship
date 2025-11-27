@@ -108,25 +108,78 @@ public class WarehouseDiscrepancyController {
     }
     
     /**
-     * Get discrepancy statistics
+     * Get discrepancy statistics with optional filters
      */
     @PreAuthorize("hasAuthority('purchase:view')")
     @GetMapping("/statistics")
-    public ResponseEntity<DiscrepancyStatistics> getStatistics() {
-        BigDecimal totalLosses = discrepancyRepository.getTotalLossesValue();
-        BigDecimal totalGains = discrepancyRepository.getTotalGainsValue();
+    public ResponseEntity<DiscrepancyStatistics> getStatistics(
+            @RequestParam(required = false) String type,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo) {
         
-        long lossCount = discrepancyRepository.findByType(WarehouseDiscrepancy.DiscrepancyType.LOSS).size();
-        long gainCount = discrepancyRepository.findByType(WarehouseDiscrepancy.DiscrepancyType.GAIN).size();
+        // Build specification for filtering
+        Specification<WarehouseDiscrepancy> spec = buildSpecification(type, dateFrom, dateTo);
+        
+        // Get filtered discrepancies
+        List<WarehouseDiscrepancy> filteredDiscrepancies = discrepancyRepository.findAll(spec);
+        
+        // Calculate statistics from filtered data
+        BigDecimal totalLosses = filteredDiscrepancies.stream()
+                .filter(d -> d.getType() == WarehouseDiscrepancy.DiscrepancyType.LOSS)
+                .map(WarehouseDiscrepancy::getDiscrepancyValueEur)
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .abs(); // Make positive for display
+        
+        BigDecimal totalGains = filteredDiscrepancies.stream()
+                .filter(d -> d.getType() == WarehouseDiscrepancy.DiscrepancyType.GAIN)
+                .map(WarehouseDiscrepancy::getDiscrepancyValueEur)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        
+        long lossCount = filteredDiscrepancies.stream()
+                .filter(d -> d.getType() == WarehouseDiscrepancy.DiscrepancyType.LOSS)
+                .count();
+        
+        long gainCount = filteredDiscrepancies.stream()
+                .filter(d -> d.getType() == WarehouseDiscrepancy.DiscrepancyType.GAIN)
+                .count();
         
         DiscrepancyStatistics stats = new DiscrepancyStatistics();
-        stats.setTotalLossesValue(totalLosses.abs()); // Make positive for display
+        stats.setTotalLossesValue(totalLosses);
         stats.setTotalGainsValue(totalGains);
         stats.setLossCount(lossCount);
         stats.setGainCount(gainCount);
-        stats.setNetValue(totalGains.add(totalLosses)); // totalLosses is negative
+        stats.setNetValue(totalGains.add(totalLosses.negate())); // totalLosses is positive, so subtract it
         
         return ResponseEntity.ok(stats);
+    }
+    
+    /**
+     * Build specification for filtering discrepancies
+     */
+    private Specification<WarehouseDiscrepancy> buildSpecification(String type, LocalDate dateFrom, LocalDate dateTo) {
+        return (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            
+            if (type != null && !type.isEmpty()) {
+                try {
+                    WarehouseDiscrepancy.DiscrepancyType discrepancyType = 
+                            WarehouseDiscrepancy.DiscrepancyType.valueOf(type.toUpperCase());
+                    predicates.add(cb.equal(root.get("type"), discrepancyType));
+                } catch (IllegalArgumentException e) {
+                    // Invalid type, ignore
+                }
+            }
+            
+            if (dateFrom != null) {
+                predicates.add(cb.greaterThanOrEqualTo(root.get("receiptDate"), dateFrom));
+            }
+            
+            if (dateTo != null) {
+                predicates.add(cb.lessThanOrEqualTo(root.get("receiptDate"), dateTo));
+            }
+            
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
     }
     
     /**

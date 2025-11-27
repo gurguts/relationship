@@ -60,6 +60,7 @@ const allPermissions = [
     'settings_client:delete',
     'settings_finance:create',
     'settings_finance:edit',
+    'settings_exchange:edit',
     'settings_finance:delete',
 
     'administration:view',
@@ -167,6 +168,7 @@ function formatPermissionName(permission) {
         'settings_client:delete': 'Разрешение удалять поля для клиента',
         'settings_finance:create': 'Разрешение создавать поля для финансов',
         'settings_finance:edit': 'Разрешение изменять поля для финансов',
+        'settings_exchange:edit': 'Разрешение изменять курс валют',
         'settings_finance:delete': 'Разрешение удалять поля для финансов',
 
         'administration:view': 'Отображение администраторской',
@@ -200,51 +202,73 @@ document.getElementById('savePermissionsButton').addEventListener('click',
 });
 
 document.addEventListener('DOMContentLoaded', function () {
-    const showUsersBtn = document.getElementById('showUsersBtn');
+    const adminContainers = [
+        'userListContainer',
+        'addUserContainer',
+        'oilTypeListContainer',
+        'addOilTypeContainer',
+        'containerListContainer',
+        'addContainerContainer',
+        'storageListContainer',
+        'addStorageContainer',
+        'withdrawalReasonListContainer',
+        'addWithdrawalReasonContainer',
+        'product-list',
+        'create-product',
+        'client-product-list',
+        'client-create-product',
+        'branchPermissionsContainer'
+    ];
+    let activeAdminButton = null;
+
+    function hideAllAdminSections() {
+        adminContainers.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.style.display = 'none';
+            }
+        });
+        document.querySelectorAll('.admin-tabs .tab-btn').forEach(btn => btn.classList.remove('active'));
+    }
+
+    hideAllAdminSections();
+
+    function setupAdminTab(buttonId, onShow) {
+        const button = document.getElementById(buttonId);
+        if (!button) {
+            return;
+        }
+        button.addEventListener('click', async () => {
+            const isActive = activeAdminButton === buttonId;
+            hideAllAdminSections();
+            if (isActive) {
+                activeAdminButton = null;
+                return;
+            }
+            activeAdminButton = buttonId;
+            button.classList.add('active');
+            if (onShow) {
+                try {
+                    await onShow();
+                } catch (error) {
+                    console.error(`Error opening section ${buttonId}:`, error);
+                }
+            }
+        });
+    }
+
     const addUserBtn = document.getElementById('addUserBtn');
     const addUserContainer = document.getElementById('addUserContainer');
 
-
-    showUsersBtn.addEventListener('click', async function () {
+    setupAdminTab('showUsersBtn', async () => {
         const userListContainer = document.getElementById('userListContainer');
-        userListContainer.style.display = userListContainer.style.display === 'none' ? 'block' : 'none';
-
-        if (userListContainer.style.display === 'block') {
-            try {
-                const response = await fetch('/api/v1/user/page');
-                const users = await response.json();
-                const userList = document.getElementById('userList');
-                userList.innerHTML = '';
-
-                users.forEach(user => {
-                    const listItem = document.createElement('li');
-                    listItem.textContent = `${user.fullName} - ${user.id} - ${user.login} - ${user.role} `;
-
-                    // Create Edit button
-                    const editBtn = document.createElement('button');
-                    editBtn.textContent = 'Змінити';
-                    editBtn.addEventListener('click', () => showEditForm(user, listItem));
-
-                    const permissionsBtn = document.createElement('button');
-                    permissionsBtn.textContent = 'Редагувати дозволи';
-                    permissionsBtn.className = 'edit-permissions';
-                    permissionsBtn.addEventListener('click', () => showUserPermissionsModal(user));
-
-                    // Create Delete button
-                    const deleteBtn = document.createElement('button');
-                    deleteBtn.textContent = 'Видалити';
-                    deleteBtn.addEventListener('click', () => deleteUser(user.id));
-
-                    // Append buttons to the list item
-                    listItem.appendChild(editBtn);
-                    listItem.appendChild(deleteBtn);
-                    listItem.appendChild(permissionsBtn);
-                    userList.appendChild(listItem);
-                });
-            } catch (error) {
-                console.error('Error fetching users:', error);
-            }
+        if (userListContainer) {
+            userListContainer.style.display = 'block';
         }
+        if (addUserContainer) {
+            addUserContainer.style.display = 'none';
+        }
+        await renderUserList();
     });
 
     function showEditForm(user, listItem) {
@@ -327,48 +351,60 @@ document.addEventListener('DOMContentLoaded', function () {
         listItem.appendChild(cancelBtn);
     }
 
-    function deleteUser(userId) {
-        fetch(`/api/v1/user/${userId}`, {
-            method: 'DELETE'
-        })
-            .then(response => {
-                if (response.ok) {
-                    loadUsers();
-                } else {
-                    console.error('Error deleting user');
+    async function toggleUserStatus(userId, newStatus) {
+        try {
+            // First get current user data
+            const getUserResponse = await fetch(`/api/v1/user/page`);
+            if (!getUserResponse.ok) throw new Error('Failed to get user');
+            const users = await getUserResponse.json();
+            const user = users.find(u => u.id === userId);
+            if (!user) throw new Error('User not found');
+            
+            // Update user with new status
+            const updatedUser = {
+                login: user.login,
+                fullName: user.fullName,
+                role: user.role,
+                status: newStatus
+            };
+            
+            const response = await fetch(`/api/v1/user/${userId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(updatedUser)
+            });
+            
+            if (response.ok) {
+                showMessage(`Користувач ${newStatus === 'ACTIVE' ? 'активовано' : 'деактивовано'}`, 'info');
+                if (activeAdminButton === 'showUsersBtn') {
+                    await renderUserList();
                 }
-            })
-            .catch(error => console.error('Error:', error));
+            } else {
+                const error = await response.json().catch(() => ({}));
+                throw new Error(error.message || 'Failed to update user status');
+            }
+        } catch (error) {
+            console.error('Error toggling user status:', error);
+            showMessage('Помилка зміни статусу користувача: ' + error.message, 'error');
+        }
     }
 
-    async function loadUsers() {
+    async function deleteUser(userId) {
         try {
-            const response = await fetch('/api/v1/user');
-            if (!response.ok) new Error('Network response was not ok');
-            const users = await response.json();
-            const userList = document.getElementById('userList');
-            userList.innerHTML = '';
-
-            users.forEach(user => {
-                const listItem = document.createElement('li');
-                listItem.setAttribute('data-user-id', user.id);
-                listItem.textContent = `${user.fullName} - ${user.id} - ${user.login} - ${user.role}`;
-
-                const editButton = document.createElement('button');
-                editButton.textContent = 'Змінити';
-                editButton.onclick = () => showEditForm(user, listItem);
-
-                const deleteButton = document.createElement('button');
-                deleteButton.textContent = 'Видалити';
-                deleteButton.onclick = () => deleteUser(user.id);
-
-
-                listItem.appendChild(editButton);
-                listItem.appendChild(deleteButton);
-                userList.appendChild(listItem);
+            const response = await fetch(`/api/v1/user/${userId}`, {
+                method: 'DELETE'
             });
+            if (response.ok) {
+                if (activeAdminButton === 'showUsersBtn') {
+                    await renderUserList();
+                }
+            } else {
+                console.error('Error deleting user');
+            }
         } catch (error) {
-            console.error('Ошибка при получении пользователей:', error);
+            console.error('Error:', error);
         }
     }
 
@@ -392,6 +428,48 @@ document.addEventListener('DOMContentLoaded', function () {
     addUserBtn.addEventListener('click', function () {
         addUserContainer.style.display = addUserContainer.style.display === 'none' ? 'block' : 'none';
     });
+
+    async function renderUserList() {
+        try {
+            const response = await fetch('/api/v1/user/page');
+            const users = await response.json();
+            const userList = document.getElementById('userList');
+            userList.innerHTML = '';
+
+            users.forEach(user => {
+                const listItem = document.createElement('li');
+                const statusText = user.status === 'BANNED' ? '❌ Заблокований' : '✅ Активний';
+                listItem.textContent = `${user.fullName} - ${user.id} - ${user.login} - ${user.role} - ${statusText} `;
+
+                const editBtn = document.createElement('button');
+                editBtn.textContent = 'Змінити';
+                editBtn.addEventListener('click', () => showEditForm(user, listItem));
+
+                const permissionsBtn = document.createElement('button');
+                permissionsBtn.textContent = 'Редагувати дозволи';
+                permissionsBtn.className = 'edit-permissions';
+                permissionsBtn.addEventListener('click', () => showUserPermissionsModal(user));
+
+                const statusBtn = document.createElement('button');
+                const nextStatus = user.status === 'BANNED' ? 'ACTIVE' : 'BANNED';
+                statusBtn.textContent = user.status === 'BANNED' ? 'Активувати' : 'Деактивувати';
+                statusBtn.className = user.status === 'BANNED' ? 'btn-activate' : 'btn-deactivate';
+                statusBtn.addEventListener('click', () => toggleUserStatus(user.id, nextStatus));
+
+                const deleteBtn = document.createElement('button');
+                deleteBtn.textContent = 'Видалити';
+                deleteBtn.addEventListener('click', () => deleteUser(user.id));
+
+                listItem.appendChild(editBtn);
+                listItem.appendChild(statusBtn);
+                listItem.appendChild(deleteBtn);
+                listItem.appendChild(permissionsBtn);
+                userList.appendChild(listItem);
+            });
+        } catch (error) {
+            console.error('Error fetching users:', error);
+        }
+    }
 
     document.getElementById('createUserBtn').addEventListener('click',
         async function () {
@@ -422,7 +500,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
             alert('Користувач успішно створений!');
 
-            await loadUsers();
+            if (activeAdminButton === 'showUsersBtn') {
+                await renderUserList();
+            }
 
             document.getElementById('newLogin').value = '';
             document.getElementById('newPassword').value = '';
@@ -433,132 +513,14 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    /*----------oilType----------*/
-
-    document.getElementById('showOilTypesBtn').addEventListener('click',
-        async function () {
-        const oilTypeListContainer = document.getElementById('oilTypeListContainer');
-        const addOilTypeContainer = document.getElementById('addOilTypeContainer');
-        oilTypeListContainer.style.display = oilTypeListContainer.style.display === 'none' ? 'block' : 'none';
-        addOilTypeContainer.style.display = addOilTypeContainer.style.display === 'none' ? 'block' : 'none';
-        if (oilTypeListContainer.style.display === 'block') {
-            loadOilTypes();
-        }
-    });
-
-    async function loadOilTypes() {
-        try {
-            const response = await fetch('/api/v1/oil/type');
-            if (!response.ok) new Error('Error fetching oilTypes');
-            const oilTypes = await response.json();
-            const oilTypeList = document.getElementById('oilTypeList');
-            oilTypeList.innerHTML = '';
-
-            oilTypes.forEach(oilType => {
-                const listItem = document.createElement('li');
-                listItem.classList.add('oilType-item');
-                listItem.setAttribute('data-oilType-id', oilType.id);
-
-                const oilTypeText = document.createElement('span');
-                oilTypeText.textContent = `${oilType.id} - ${oilType.name}`;
-                listItem.appendChild(oilTypeText);
-
-                const editButton = document.createElement('button');
-                editButton.textContent = 'Змінити';
-                editButton.onclick = () => editOilType(oilType);
-                listItem.appendChild(editButton);
-
-                const deleteButton = document.createElement('button');
-                deleteButton.textContent = 'Видалити';
-                deleteButton.onclick = () => deleteOilType(oilType.id);
-                listItem.appendChild(deleteButton);
-
-                oilTypeList.appendChild(listItem);
-            });
-        } catch (error) {
-            console.error('Error loading oilTypes:', error);
-        }
-    }
-
-    function editOilType(oilType) {
-        const newName = prompt('Введіть нове ім’я області:', oilType.name);
-        if (newName !== null) {
-            updateOilType(oilType.id, newName);
-        }
-    }
-
-    async function updateOilType(id, name) {
-        try {
-            const response = await fetch(`/api/v1/oil/type/${id}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({id, name})
-            });
-
-            if (!response.ok) new Error('Error updating oilType');
-            alert('Область оновлено!');
-            loadOilTypes();
-        } catch (error) {
-            console.error('Error updating oilType:', error);
-        }
-    }
-
-    async function deleteOilType(id) {
-        try {
-            const response = await fetch(`/api/v1/oil/type/${id}`, {
-                method: 'DELETE'
-            });
-
-            if (!response.ok) new Error('Error deleting oilType');
-            alert('Область видалено!');
-            loadOilTypes();
-        } catch (error) {
-            console.error('Error deleting oilType:', error);
-        }
-    }
-
-    document.getElementById('createOilTypeBtn').addEventListener('click',
-        async function () {
-        const name = document.getElementById('newOilTypeName').value;
-        /*const id = document.getElementById('newRouteId').value;*/
-
-        if (!name /*|| !id*/) {
-            alert('Будь ласка, введіть всі дані для створення товара.');
-            return;
-        }
-
-        try {
-            const response = await fetch('/api/v1/oil/type', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({name})
-            });
-
-            if (!response.ok) new Error('Error creating oilType');
-            alert('Область створений!');
-            document.getElementById('newOilTypeName').value = '';
-            /*document.getElementById('newRouteId').value = '';*/
-            loadOilTypes();
-        } catch (error) {
-            console.error('Error creating oilType:', error);
-        }
-    });
-
     /*----------container----------*/
 
-    document.getElementById('showContainersBtn').addEventListener('click',
-        async function () {
-        const containerListContainer = document.getElementById('containerListContainer');
-        const addContainerContainer = document.getElementById('addContainerContainer');
-        containerListContainer.style.display = containerListContainer.style.display === 'none' ? 'block' : 'none';
-        addContainerContainer.style.display = addContainerContainer.style.display === 'none' ? 'block' : 'none';
-        if (containerListContainer.style.display === 'block') {
-            loadContainers();
-        }
+    setupAdminTab('showContainersBtn', async () => {
+        const list = document.getElementById('containerListContainer');
+        const form = document.getElementById('addContainerContainer');
+        if (list) list.style.display = 'block';
+        if (form) form.style.display = 'block';
+        await loadContainers();
     });
 
     async function loadContainers() {
@@ -665,28 +627,22 @@ document.addEventListener('DOMContentLoaded', function () {
 
     /*----------Storage----------*/
 
-    document.getElementById('showStoragesBtn').addEventListener('click',
-        async function () {
-        const storageListContainer = document.getElementById('storageListContainer');
-        const addStorageContainer = document.getElementById('addStorageContainer');
-        storageListContainer.style.display = storageListContainer.style.display === 'none' ? 'block' : 'none';
-        addStorageContainer.style.display = addStorageContainer.style.display === 'none' ? 'block' : 'none';
-        if (storageListContainer.style.display === 'block') {
-            loadStorages();
-        }
+    setupAdminTab('showStoragesBtn', async () => {
+        const list = document.getElementById('storageListContainer');
+        const form = document.getElementById('addStorageContainer');
+        if (list) list.style.display = 'block';
+        if (form) form.style.display = 'block';
+        await loadStorages();
     });
 
     /*----------WithdrawalReason----------*/
 
-    document.getElementById('showWithdrawalReasonsBtn').addEventListener('click',
-        async function () {
-        const withdrawalReasonListContainer = document.getElementById('withdrawalReasonListContainer');
-        const addWithdrawalReasonContainer = document.getElementById('addWithdrawalReasonContainer');
-        withdrawalReasonListContainer.style.display = withdrawalReasonListContainer.style.display === 'none' ? 'block' : 'none';
-        addWithdrawalReasonContainer.style.display = addWithdrawalReasonContainer.style.display === 'none' ? 'block' : 'none';
-        if (withdrawalReasonListContainer.style.display === 'block') {
-            loadWithdrawalReasons();
-        }
+    setupAdminTab('showWithdrawalReasonsBtn', async () => {
+        const list = document.getElementById('withdrawalReasonListContainer');
+        const form = document.getElementById('addWithdrawalReasonContainer');
+        if (list) list.style.display = 'block';
+        if (form) form.style.display = 'block';
+        await loadWithdrawalReasons();
     });
 
     async function loadStorages() {
@@ -902,7 +858,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const productList = document.getElementById('product-list');
     const productsTableBody = document.getElementById('products-table-body');
-    const showProductsBtn = document.getElementById('show-products');
     const createProductForm = document.getElementById('create-product-form');
     const createProduct = document.getElementById('create-product');
     const editProductModal = document.getElementById('edit-product-modal');
@@ -911,9 +866,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const apiBaseUrl = '/api/v1/product';
 
-    showProductsBtn.addEventListener('click', () => {
-        productList.style.display = 'block';
-        createProduct.style.display = 'block';
+    setupAdminTab('show-products', () => {
+        if (productList) productList.style.display = 'block';
+        if (createProduct) createProduct.style.display = 'block';
         fetchProducts();
     });
 
@@ -1023,7 +978,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const clientProductList = document.getElementById('client-product-list');
     const clientProductsTableBody = document.getElementById('client-products-table-body');
-    const clientShowProductsBtn = document.getElementById('show-client-products');
     const clientCreateProductForm = document.getElementById('client-create-product-form');
     const clientCreateProduct = document.getElementById('client-create-product');
     const clientEditProductModal = document.getElementById('client-edit-product-modal');
@@ -1032,9 +986,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const apiBaseClientProductUrl = '/api/v1/clientProduct';
 
-    clientShowProductsBtn.addEventListener('click', () => {
-        clientProductList.style.display = 'block';
-        clientCreateProduct.style.display = 'block';
+    setupAdminTab('show-client-products', () => {
+        if (clientProductList) clientProductList.style.display = 'block';
+        if (clientCreateProduct) clientCreateProduct.style.display = 'block';
         fetchClientProducts();
     });
 
@@ -1139,8 +1093,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
     // Branch Permissions
-    document.getElementById('showBranchPermissionsBtn').addEventListener('click', function () {
-        showBranchPermissions();
+    setupAdminTab('showBranchPermissionsBtn', async () => {
+        const container = document.getElementById('branchPermissionsContainer');
+        if (container) container.style.display = 'block';
+        await initializeBranchPermissionsSection();
     });
 
     document.getElementById('add-branch-permission-btn').addEventListener('click', function () {
@@ -1173,15 +1129,10 @@ let usersCacheForPermissions = [];
 let branchesCacheForPermissions = [];
 let branchPermissionsCache = [];
 
-async function showBranchPermissions() {
-    const container = document.getElementById('branchPermissionsContainer');
-    container.style.display = container.style.display === 'none' ? 'block' : 'none';
-    
-    if (container.style.display === 'block') {
-        await loadUsersForPermissions();
-        await loadBranchesForPermissions();
-        await loadBranchPermissions();
-    }
+async function initializeBranchPermissionsSection() {
+    await loadUsersForPermissions();
+    await loadBranchesForPermissions();
+    await loadBranchPermissions();
 }
 
 async function loadUsersForPermissions() {

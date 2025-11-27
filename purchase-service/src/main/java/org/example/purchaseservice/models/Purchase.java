@@ -76,7 +76,8 @@ public class Purchase {
 
     public void calculateAndSetUnitPrice() {
         if (quantity != null && totalPrice != null && quantity.compareTo(BigDecimal.ZERO) != 0) {
-            this.unitPrice = totalPrice.divide(quantity, 6, RoundingMode.HALF_UP);
+            // Round up to avoid loss of precision when converting back to total price
+            this.unitPrice = totalPrice.divide(quantity, 6, RoundingMode.CEILING);
         } else {
             this.unitPrice = BigDecimal.ZERO;
         }
@@ -104,9 +105,9 @@ public class Purchase {
                 // Convert total price: totalPrice * exchangeRate = totalPrice in EUR
                 this.totalPriceEur = totalPrice.multiply(exchangeRateToEur).setScale(6, RoundingMode.HALF_UP);
                 
-                // Calculate unit price in EUR: totalPriceEur / quantity
+                // Calculate unit price in EUR: totalPriceEur / quantity (round up to avoid loss of precision)
                 if (quantity.compareTo(BigDecimal.ZERO) != 0) {
-                    this.unitPriceEur = this.totalPriceEur.divide(quantity, 6, RoundingMode.HALF_UP);
+                    this.unitPriceEur = this.totalPriceEur.divide(quantity, 6, RoundingMode.CEILING);
                 } else {
                     this.unitPriceEur = BigDecimal.ZERO;
                 }

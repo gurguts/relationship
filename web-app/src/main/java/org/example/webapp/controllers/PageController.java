@@ -50,12 +50,6 @@ public class PageController {
     }
 
     @PreAuthorize("hasAuthority('finance:view')")
-    @GetMapping("/balance")
-    public String getBalancePage() {
-        return "balance";
-    }
-
-    @PreAuthorize("hasAuthority('finance:view')")
     @GetMapping("/finance")
     public String getFinancePage() {
         return "finance";

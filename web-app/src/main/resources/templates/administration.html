@@ -50,9 +50,6 @@
             <li id="nav-inventory"><a href="/inventory">
                 Баланс тари
             </a></li>
-            <li id="nav-balance"><a href="/balance">
-                Баланс грошовий
-            </a></li>
             <li id="nav-stock"><a href="/stock">
                 Склад
             </a></li>
@@ -71,305 +68,308 @@
     </nav>
 </header>
 
-<h1>Administration</h1>
-
-<div>
-    <button id="showUsersBtn">Користувачі</button>
-    <button id="showOilTypesBtn">Товар</button>
-    <button id="showContainersBtn">Тара</button>
-    <button id="showStoragesBtn">Склади</button>
-    <button id="showWithdrawalReasonsBtn">Причини списання</button>
-    <button id="show-products">Продукты</button>
-    <button id="show-client-products">Продукты клиентов</button>
-    <button id="showBranchPermissionsBtn">Права доступу до філій</button>
-
-</div>
-
-<!--user-->
-
-<div id="userListContainer" style="display: none;">
-    <h3>Список користувачів</h3>
-    <ul id="userList"></ul>
-    <button id="addUserBtn">Додати користувача</button>
-</div>
-
-<div id="addUserContainer" style="display: none;">
-    <h3>Створити нового користувача</h3>
-    <div class="form-field">
-        <label for="newFullName">ПІБ:</label>
-        <input type="text" id="newFullName" required>
+<div class="administration-container">
+    <div class="administration-header">
+        <h1>Адміністрування</h1>
+        <p>Управляйте користувачами, довідниками та правами доступу в єдиному інтерфейсі</p>
     </div>
-    <div class="form-field">
-        <label for="newLogin">Логін:</label>
-        <input type="text" id="newLogin" required>
+
+    <div class="admin-tabs">
+        <button id="showUsersBtn" class="tab-btn">Користувачі</button>
+        <button id="showContainersBtn" class="tab-btn">Тара</button>
+        <button id="showStoragesBtn" class="tab-btn">Склади</button>
+        <button id="showWithdrawalReasonsBtn" class="tab-btn">Причини списання</button>
+        <button id="show-products" class="tab-btn">Продукти</button>
+        <button id="show-client-products" class="tab-btn">Продукти клієнтів</button>
+        <button id="showBranchPermissionsBtn" class="tab-btn">Права доступу до філій</button>
     </div>
-    <div class="form-field">
-        <label for="newPassword">Пароль:</label>
-        <input type="password" id="newPassword" required>
-    </div>
-    <div class="form-field">
-        <label for="newRole">Роль:</label>
-        <select id="newRole">
-            <option value="MANAGER">Менеджер</option>
-            <option value="DRIVER">Водій</option>
-            <option value="STOREKEEPER">Комірник</option>
-            <option value="LEADER">Керівник</option>
-            <option value="ACCOUNTANT">Бухгалтер</option>
-        </select>
-    </div>
-    <button id="createUserBtn">Створити користувача</button>
-</div>
 
-<div id="userPermissionsModal" class="userPermissionsModal" style="display: none;">
-    <div class="modal-content-user-permission">
-        <span class="close-permissions">×</span>
-        <h2>Редагувати дозволи користувача</h2>
-        <div id="permissionsList">
-            <!-- Чекбоксы будут добавлены через JS -->
-        </div>
-        <button id="savePermissionsButton">Зберегти</button>
-    </div>
-</div>
-
-<!--oilType-->
-
-<div id="oilTypeListContainer" style="display: none;">
-    <h3>Список типів товару</h3>
-    <ul id="oilTypeList"></ul>
-</div>
-
-<div id="addOilTypeContainer" style="display: none;">
-    <h3>Створити новий товар</h3>
-    <div class="form-field">
-        <label for="newOilTypeName">Назва:</label>
-        <input type="text" id="newOilTypeName" required>
-    </div>
-    <button id="createOilTypeBtn">Додати товар</button>
-</div>
-
-<!--barrelType-->
-
-<div id="containerListContainer" style="display: none;">
-    <h3>Список типів тар</h3>
-    <ul id="barrelTypeList"></ul>
-</div>
-
-<div id="addContainerContainer" style="display: none;">
-    <h3>Створити новий тип тари</h3>
-    <div class="form-field">
-        <label for="newBarrelTypeName">Назва:</label>
-        <input type="text" id="newBarrelTypeName" required>
-    </div>
-    <button id="createBarrelTypeBtn">Додати тип тари</button>
-</div>
-
-
-<!--Storage-->
-
-<div id="storageListContainer" style="display: none;">
-    <h3>Список cкладів</h3>
-    <ul id="storageList"></ul>
-</div>
-
-<div id="addStorageContainer" style="display: none;">
-    <h3>Створити новий cклад</h3>
-    <div class="form-field">
-        <label for="newStorageName">Назва:</label>
-        <input type="text" id="newStorageName" required>
-    </div>
-    <div class="form-field">
-        <label for="newStorageDescription">Опис:</label>
-        <input type="text" id="newStorageDescription">
-    </div>
-    <button id="createStorageBtn">Створити cклад</button>
-</div>
-
-<!--WithdrawalReason-->
-
-<div id="withdrawalReasonListContainer" style="display: none;">
-    <h3>Список причин списання</h3>
-    <ul id="withdrawalReasonList"></ul>
-</div>
-
-<div id="addWithdrawalReasonContainer" style="display: none;">
-    <h3>Створити нову причину списання</h3>
-    <div class="form-field">
-        <label for="newWithdrawalReasonName">Назва:</label>
-        <input type="text" id="newWithdrawalReasonName" required>
-    </div>
-    <div class="form-field">
-        <label for="newWithdrawalReasonPurpose">Призначення:</label>
-        <select id="newWithdrawalReasonPurpose" required>
-            <option value="ADDING">Пополнення</option>
-            <option value="REMOVING">Сняття</option>
-            <option value="BOTH">Загальний</option>
-        </select>
-    </div>
-    <button id="createWithdrawalReasonBtn">Створити причину списання</button>
-</div>
-
-<!--product-->
-
-<div id="product-list" class="product-list" style="display: none;">
-    <h2>Список продуктов</h2>
-    <table>
-        <thead>
-        <tr>
-            <th>ID</th>
-            <th>Название</th>
-            <th>Использование</th>
-            <th>Действия</th>
-        </tr>
-        </thead>
-        <tbody id="products-table-body"></tbody>
-    </table>
-</div>
-
-<div id="create-product" class="create-product" style="display: none;">
-    <h2>Создать новый продукт</h2>
-    <form id="create-product-form">
-        <div class="form-group">
-            <label for="create-name">Название:</label>
-            <input type="text" id="create-name" name="name" required>
-        </div>
-        <div class="form-group">
-            <label for="create-usage">Использование:</label>
-            <select id="create-usage" name="usage" required>
-                <option value="SALE_ONLY">Только для продажи</option>
-                <option value="PURCHASE_ONLY">Только для закупки</option>
-                <option value="BOTH">Оба</option>
-            </select>
-        </div>
-        <button type="submit">Создать</button>
-    </form>
-</div>
-
-<div id="edit-product-modal" class="modal" style="display: none;">
-    <div class="modal-content">
-        <h2>Редактировать продукт</h2>
-        <form id="edit-product-form">
-            <input type="hidden" id="edit-id" name="id">
-            <div class="form-group">
-                <label for="edit-name">Название:</label>
-                <input type="text" id="edit-name" name="name" required>
+    <div class="admin-content">
+        <!-- Users -->
+        <section id="users-section" class="admin-section">
+            <div id="userListContainer" class="admin-card" style="display: none;">
+                <div class="section-header">
+                    <h3>Список користувачів</h3>
+                    <button id="addUserBtn" class="btn-primary">Додати користувача</button>
+                </div>
+                <ul id="userList" class="list"></ul>
             </div>
-            <div class="form-group">
-                <label for="edit-usage">Использование:</label>
-                <select id="edit-usage" name="usage" required>
-                    <option value="SALE_ONLY">Только для продажи</option>
-                    <option value="PURCHASE_ONLY">Только для закупки</option>
-                    <option value="BOTH">Оба</option>
-                </select>
-            </div>
-            <button type="submit">Сохранить</button>
-            <button type="button" id="cancel-edit">Отмена</button>
-        </form>
-    </div>
-</div>
 
-<!--client-product-->
-
-<div id="client-product-list" class="client-product-list" style="display: none;">
-    <h2>Список продуктов клиентов</h2>
-    <table>
-        <thead>
-        <tr>
-            <th>ID</th>
-            <th>Название</th>
-            <th>Действия</th>
-        </tr>
-        </thead>
-        <tbody id="client-products-table-body"></tbody>
-    </table>
-</div>
-
-<div id="client-create-product" class="client-create-product" style="display: none;">
-    <h2>Создать новый продукт клиента</h2>
-    <form id="client-create-product-form">
-        <div class="form-group">
-            <label for="client-create-name">Название:</label>
-            <input type="text" id="client-create-name" name="name" required>
-        </div>
-        <button type="submit">Создать</button>
-    </form>
-</div>
-
-<div id="client-edit-product-modal" class="modal" style="display: none;">
-    <div class="modal-content">
-        <h2>Редактировать продукт</h2>
-        <form id="client-edit-product-form">
-            <input type="hidden" id="client-edit-id" name="id">
-            <div class="form-group">
-                <label for="client-edit-name">Название:</label>
-                <input type="text" id="client-edit-name" name="name" required>
+            <div id="addUserContainer" class="admin-card" style="display: none;">
+                <h3>Створити нового користувача</h3>
+                <div class="form-field">
+                    <label for="newFullName">ПІБ:</label>
+                    <input type="text" id="newFullName" required>
+                </div>
+                <div class="form-field">
+                    <label for="newLogin">Логін:</label>
+                    <input type="text" id="newLogin" required>
+                </div>
+                <div class="form-field">
+                    <label for="newPassword">Пароль:</label>
+                    <input type="password" id="newPassword" required>
+                </div>
+                <div class="form-field">
+                    <label for="newRole">Роль:</label>
+                    <select id="newRole">
+                        <option value="MANAGER">Менеджер</option>
+                        <option value="DRIVER">Водій</option>
+                        <option value="STOREKEEPER">Комірник</option>
+                        <option value="LEADER">Керівник</option>
+                        <option value="ACCOUNTANT">Бухгалтер</option>
+                    </select>
+                </div>
+                <button id="createUserBtn" class="btn-primary">Створити користувача</button>
             </div>
-            <button type="submit">Сохранить</button>
-            <button type="button" id="client-cancel-edit">Отмена</button>
-        </form>
-    </div>
-</div>
 
-<!-- Branch Permissions -->
-<div id="branchPermissionsContainer" style="display: none;">
-    <h3>Управління правами доступу до філій</h3>
-    <div class="filter-section">
-        <label for="branch-permissions-user-filter">Користувач:</label>
-        <select id="branch-permissions-user-filter">
-            <option value="">Всі користувачі</option>
-        </select>
-        <label for="branch-permissions-branch-filter">Філія:</label>
-        <select id="branch-permissions-branch-filter">
-            <option value="">Всі філії</option>
-        </select>
-    </div>
-    <div class="table-container">
-        <table id="branch-permissions-table" class="data-table">
-            <thead>
-            <tr>
-                <th>Користувач</th>
-                <th>Філія</th>
-                <th>Може переглядати</th>
-                <th>Може виконувати операції</th>
-                <th>Дії</th>
-            </tr>
-            </thead>
-            <tbody id="branch-permissions-body"></tbody>
-        </table>
-    </div>
-    <button id="add-branch-permission-btn" class="btn-primary">Додати права</button>
-</div>
+            <div id="userPermissionsModal" class="modal userPermissionsModal" style="display: none;">
+                <div class="modal-content modal-content-user-permission">
+                    <span class="close-permissions close">×</span>
+                    <h2>Редагувати дозволи користувача</h2>
+                    <div id="permissionsList"></div>
+                    <button id="savePermissionsButton" class="btn-primary">Зберегти</button>
+                </div>
+            </div>
+        </section>
 
-<!-- Add/Edit Branch Permission Modal -->
-<div id="branch-permission-modal" class="modal" style="display: none;">
-    <div class="modal-content">
-        <span class="close">&times;</span>
-        <h2 id="branch-permission-modal-title">Додати права доступу</h2>
-        <form id="branch-permission-form">
-            <input type="hidden" id="branch-permission-id">
-            <div class="form-group">
-                <label for="branch-permission-user">Користувач:</label>
-                <select id="branch-permission-user" required>
-                    <option value="">Виберіть користувача</option>
-                </select>
+        <!-- Containers -->
+        <section id="containers-section" class="admin-section">
+            <div id="containerListContainer" class="admin-card" style="display: none;">
+                <h3>Список типів тар</h3>
+                <ul id="barrelTypeList" class="list"></ul>
             </div>
-            <div class="form-group">
-                <label for="branch-permission-branch">Філія:</label>
-                <select id="branch-permission-branch" required>
-                    <option value="">Виберіть філію</option>
-                </select>
+
+            <div id="addContainerContainer" class="admin-card" style="display: none;">
+                <h3>Створити новий тип тари</h3>
+                <div class="form-field">
+                    <label for="newBarrelTypeName">Назва:</label>
+                    <input type="text" id="newBarrelTypeName" required>
+                </div>
+                <button id="createBarrelTypeBtn" class="btn-primary">Додати тип тари</button>
             </div>
-            <div class="form-group">
-                <label>
-                    <input type="checkbox" id="branch-permission-can-view" checked> Може переглядати
-                </label>
+        </section>
+
+        <!-- Storages -->
+        <section id="storages-section" class="admin-section">
+            <div id="storageListContainer" class="admin-card" style="display: none;">
+                <h3>Список складів</h3>
+                <ul id="storageList" class="list"></ul>
             </div>
-            <div class="form-group">
-                <label>
-                    <input type="checkbox" id="branch-permission-can-operate"> Може виконувати операції
-                </label>
+
+            <div id="addStorageContainer" class="admin-card" style="display: none;">
+                <h3>Створити новий склад</h3>
+                <div class="form-field">
+                    <label for="newStorageName">Назва:</label>
+                    <input type="text" id="newStorageName" required>
+                </div>
+                <div class="form-field">
+                    <label for="newStorageDescription">Опис:</label>
+                    <input type="text" id="newStorageDescription">
+                </div>
+                <button id="createStorageBtn" class="btn-primary">Створити склад</button>
             </div>
-            <button type="submit" class="btn-primary" id="branch-permission-submit-btn">Додати</button>
-        </form>
+        </section>
+
+        <!-- Withdrawal Reasons -->
+        <section id="withdrawal-section" class="admin-section">
+            <div id="withdrawalReasonListContainer" class="admin-card" style="display: none;">
+                <h3>Список причин списання</h3>
+                <ul id="withdrawalReasonList" class="list"></ul>
+            </div>
+
+            <div id="addWithdrawalReasonContainer" class="admin-card" style="display: none;">
+                <h3>Створити нову причину списання</h3>
+                <div class="form-field">
+                    <label for="newWithdrawalReasonName">Назва:</label>
+                    <input type="text" id="newWithdrawalReasonName" required>
+                </div>
+                <div class="form-field">
+                    <label for="newWithdrawalReasonPurpose">Призначення:</label>
+                    <select id="newWithdrawalReasonPurpose" required>
+                        <option value="ADDING">Поповнення</option>
+                        <option value="REMOVING">Списання</option>
+                        <option value="BOTH">Обидва</option>
+                    </select>
+                </div>
+                <button id="createWithdrawalReasonBtn" class="btn-primary">Створити причину</button>
+            </div>
+        </section>
+
+        <!-- Products -->
+        <section id="products-section" class="admin-section">
+            <div id="product-list" class="admin-card" style="display: none;">
+                <h3>Список продуктів</h3>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Назва</th>
+                            <th>Використання</th>
+                            <th>Дії</th>
+                        </tr>
+                        </thead>
+                        <tbody id="products-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="create-product" class="admin-card" style="display: none;">
+                <h3>Створити новий продукт</h3>
+                <form id="create-product-form">
+                    <div class="form-group">
+                        <label for="create-name">Назва:</label>
+                        <input type="text" id="create-name" name="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="create-usage">Використання:</label>
+                        <select id="create-usage" name="usage" required>
+                            <option value="SALE_ONLY">Тільки продаж</option>
+                            <option value="PURCHASE_ONLY">Тільки закупівля</option>
+                            <option value="BOTH">Обидва</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn-primary">Створити</button>
+                </form>
+            </div>
+
+            <div id="edit-product-modal" class="modal" style="display: none;">
+                <div class="modal-content">
+                    <h2>Редагувати продукт</h2>
+                    <form id="edit-product-form">
+                        <input type="hidden" id="edit-id" name="id">
+                        <div class="form-group">
+                            <label for="edit-name">Назва:</label>
+                            <input type="text" id="edit-name" name="name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-usage">Використання:</label>
+                            <select id="edit-usage" name="usage" required>
+                                <option value="SALE_ONLY">Тільки продаж</option>
+                                <option value="PURCHASE_ONLY">Тільки закупівля</option>
+                                <option value="BOTH">Обидва</option>
+                            </select>
+                        </div>
+                        <div class="modal-actions">
+                            <button type="submit" class="btn-primary">Зберегти</button>
+                            <button type="button" id="cancel-edit" class="btn-secondary">Скасувати</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <!-- Client Products -->
+        <section id="client-products-section" class="admin-section">
+            <div id="client-product-list" class="admin-card" style="display: none;">
+                <h3>Список продуктів клієнтів</h3>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Назва</th>
+                            <th>Дії</th>
+                        </tr>
+                        </thead>
+                        <tbody id="client-products-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="client-create-product" class="admin-card" style="display: none;">
+                <h3>Створити новий продукт клієнта</h3>
+                <form id="client-create-product-form">
+                    <div class="form-group">
+                        <label for="client-create-name">Назва:</label>
+                        <input type="text" id="client-create-name" name="name" required>
+                    </div>
+                    <button type="submit" class="btn-primary">Створити</button>
+                </form>
+            </div>
+
+            <div id="client-edit-product-modal" class="modal" style="display: none;">
+                <div class="modal-content">
+                    <h2>Редагувати продукт клієнта</h2>
+                    <form id="client-edit-product-form">
+                        <input type="hidden" id="client-edit-id" name="id">
+                        <div class="form-group">
+                            <label for="client-edit-name">Назва:</label>
+                            <input type="text" id="client-edit-name" name="name" required>
+                        </div>
+                        <div class="modal-actions">
+                            <button type="submit" class="btn-primary">Зберегти</button>
+                            <button type="button" id="client-cancel-edit" class="btn-secondary">Скасувати</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <!-- Branch Permissions -->
+        <section id="branch-permissions-section" class="admin-section">
+            <div id="branchPermissionsContainer" class="admin-card" style="display: none;">
+                <h3>Управління правами доступу до філій</h3>
+                <div class="filter-section">
+                    <label for="branch-permissions-user-filter">Користувач:</label>
+                    <select id="branch-permissions-user-filter">
+                        <option value="">Всі користувачі</option>
+                    </select>
+                    <label for="branch-permissions-branch-filter">Філія:</label>
+                    <select id="branch-permissions-branch-filter">
+                        <option value="">Всі філії</option>
+                    </select>
+                </div>
+                <div class="table-container">
+                    <table id="branch-permissions-table" class="data-table">
+                        <thead>
+                        <tr>
+                            <th>Користувач</th>
+                            <th>Філія</th>
+                            <th>Може переглядати</th>
+                            <th>Може виконувати операції</th>
+                            <th>Дії</th>
+                        </tr>
+                        </thead>
+                        <tbody id="branch-permissions-body"></tbody>
+                    </table>
+                </div>
+                <button id="add-branch-permission-btn" class="btn-primary">Додати права</button>
+            </div>
+
+            <div id="branch-permission-modal" class="modal" style="display: none;">
+                <div class="modal-content">
+                    <span class="close">&times;</span>
+                    <h2 id="branch-permission-modal-title">Додати права доступу</h2>
+                    <form id="branch-permission-form">
+                        <input type="hidden" id="branch-permission-id">
+                        <div class="form-group">
+                            <label for="branch-permission-user">Користувач:</label>
+                            <select id="branch-permission-user" required>
+                                <option value="">Виберіть користувача</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="branch-permission-branch">Філія:</label>
+                            <select id="branch-permission-branch" required>
+                                <option value="">Виберіть філію</option>
+                            </select>
+                        </div>
+                        <div class="form-group checkbox-field">
+                            <label>
+                                <input type="checkbox" id="branch-permission-can-view" checked> Може переглядати
+                            </label>
+                        </div>
+                        <div class="form-group checkbox-field">
+                            <label>
+                                <input type="checkbox" id="branch-permission-can-operate"> Може виконувати операції
+                            </label>
+                        </div>
+                        <button type="submit" class="btn-primary" id="branch-permission-submit-btn">Додати</button>
+                    </form>
+                </div>
+            </div>
+        </section>
     </div>
 </div>
 

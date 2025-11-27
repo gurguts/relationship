@@ -32,7 +32,7 @@ public class ExchangeRateController {
         return ResponseEntity.ok(dtos);
     }
     
-    @PreAuthorize("hasAuthority('purchase:edit')")
+    @PreAuthorize("hasAuthority('settings_exchange:edit')")
     @PutMapping("/{currency}")
     public ResponseEntity<ExchangeRateDTO> updateExchangeRate(
             @PathVariable String currency,

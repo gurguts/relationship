@@ -50,9 +50,6 @@
             <li id="nav-inventory"><a href="/inventory">
                 Баланс тари
             </a></li>
-            <li id="nav-balance"><a href="/balance">
-                Баланс грошовий
-            </a></li>
             <li id="nav-stock"><a class="selected-nav" href="/stock">
                 Склад
             </a></li>
@@ -317,9 +314,6 @@
         <span class="close">×</span>
         <h3>Списання балансу</h3>
         <form id="withdraw-form">
-            <label for="withdrawal-date">Дата списання:</label>
-            <input type="date" id="withdrawal-date" required>
-
             <label for="withdrawal-reason-id">Причина списання:</label>
             <select id="withdrawal-reason-id" required>
                 <option value="">Оберіть причину</option>
@@ -378,6 +372,50 @@
     </div>
 </div>
 
+<!-- Edit Transfer Modal -->
+<div id="edit-transfer-modal" class="modal">
+    <div class="modal-content">
+        <span class="close">×</span>
+        <h3>Редагувати переміщення</h3>
+        <form id="edit-transfer-form">
+            <input type="hidden" id="edit-transfer-id">
+            
+            <div class="readonly-field">
+                <span class="readonly-label">Дата переміщення:</span>
+                <span id="edit-transfer-date" class="readonly-value"></span>
+            </div>
+            
+            <div class="readonly-field">
+                <span class="readonly-label">Склад:</span>
+                <span id="edit-transfer-warehouse" class="readonly-value"></span>
+            </div>
+            
+            <div class="readonly-field">
+                <span class="readonly-label">З товару:</span>
+                <span id="edit-transfer-from-product" class="readonly-value"></span>
+            </div>
+            
+            <div class="readonly-field">
+                <span class="readonly-label">До товару:</span>
+                <span id="edit-transfer-to-product" class="readonly-value"></span>
+            </div>
+
+            <label for="edit-transfer-reason-id">Причина переміщення:</label>
+            <select id="edit-transfer-reason-id" required>
+                <option value="">Оберіть причину</option>
+            </select>
+
+            <label for="edit-transfer-quantity">Кількість (кг):</label>
+            <input type="number" id="edit-transfer-quantity" step="0.01" min="0" placeholder="Кількість (кг)" required>
+
+            <label for="edit-transfer-description">Додатковий опис:</label>
+            <textarea id="edit-transfer-description" placeholder="Додатковий опис"></textarea>
+
+            <button type="submit" class="button">Зберегти</button>
+        </form>
+    </div>
+</div>
+
 <div id="move-modal" class="modal">
     <div class="modal-content">
         <span class="close">×</span>
@@ -385,9 +423,6 @@
         <form id="move-form">
             <label for="move-warehouse-id">Склад:</label>
             <select id="move-warehouse-id" name="warehouse_id" required></select>
-
-            <label for="move-date">Дата:</label>
-            <input type="date" id="move-date" name="move_date" required>
 
             <label for="move-executor-id">Виконавець:</label>
             <select id="move-executor-id" name="executor_id" required></select>
@@ -420,14 +455,29 @@
             <label for="entry-warehouse-id">Склад:</label>
             <select id="entry-warehouse-id" name="warehouse_id" required></select>
 
-            <label for="entry-date">Дата:</label>
-            <input type="date" id="entry-date" name="entry_date" required>
-
             <label for="entry-user-id">Водій:</label>
             <select id="entry-user-id" name="user_id" required></select>
 
             <label for="entry-product-id">Товар:</label>
             <select id="entry-product-id" name="product_id" required></select>
+
+            <!-- Driver Balance Info -->
+            <div id="driver-balance-info" style="display: none; margin: 15px 0; padding: 10px; background-color: #e8f5e9; border-radius: 5px; border: 1px solid #4caf50;">
+                <strong style="color: #2e7d32;">Баланс користувача:</strong>
+                <div style="margin-top: 5px;">
+                    <span>Кількість: <strong id="driver-balance-quantity">0</strong> кг</span><br>
+                    <span>Середня ціна: <strong id="driver-balance-price">0</strong> EUR/кг</span><br>
+                    <span>Загальна вартість: <strong id="driver-balance-total">0</strong> EUR</span>
+                </div>
+            </div>
+            
+            <!-- No Balance Warning -->
+            <div id="driver-no-balance-warning" style="display: none; margin: 15px 0; padding: 10px; background-color: #fff3cd; border-radius: 5px; border: 1px solid #ffc107;">
+                <strong style="color: #856404;">⚠️ Увага:</strong>
+                <div style="margin-top: 5px; color: #856404;">
+                    У обраного користувача немає цього товару на балансі.
+                </div>
+            </div>
 
             <label for="entry-type-id">Тип:</label>
             <select id="entry-type-id" name="type_id" required></select>
@@ -567,37 +617,27 @@
     </div>
 </div>
 
-<div id="driver-balances-modal" class="modal">
-    <div class="modal-content">
-        <span class="close">×</span>
-        <h3>Баланси водіїв</h3>
-        <div id="driver-balances-container"></div>
-    </div>
-</div>
-
-<!-- Discrepancies Modal -->
-<div id="discrepancies-modal" class="modal">
-    <div class="modal-content">
-        <span class="close">×</span>
+<div id="discrepancies-container" class="discrepancies-container" style="display: none;">
+    <div class="discrepancies-header">
         <h3>Втрати та придбання при прийманні товару</h3>
+    </div>
 
-        <div class="discrepancies-body-content">
-
+    <div class="discrepancies-body-content">
         <!-- Statistics -->
         <div id="discrepancies-stats">
-                <div class="discrepancy-stat-card loss">
-                    <div class="discrepancy-stat-label">Загальні втрати</div>
-                    <div class="discrepancy-stat-value" id="total-losses-value">0 грн</div>
-                    <div class="discrepancy-stat-count" id="total-losses-count">0 записів</div>
-                </div>
-                <div class="discrepancy-stat-card gain">
-                    <div class="discrepancy-stat-label">Загальні придбання</div>
-                    <div class="discrepancy-stat-value" id="total-gains-value">0 грн</div>
-                    <div class="discrepancy-stat-count" id="total-gains-count">0 записів</div>
-                </div>
+            <div class="discrepancy-stat-card loss">
+                <div class="discrepancy-stat-label">Загальні втрати</div>
+                <div class="discrepancy-stat-value" id="total-losses-value">0 EUR</div>
+                <div class="discrepancy-stat-count" id="total-losses-count">0 записів</div>
+            </div>
+            <div class="discrepancy-stat-card gain">
+                <div class="discrepancy-stat-label">Загальні придбання</div>
+                <div class="discrepancy-stat-value" id="total-gains-value">0 EUR</div>
+                <div class="discrepancy-stat-count" id="total-gains-count">0 записів</div>
+            </div>
             <div class="discrepancy-stat-card net">
                 <div class="discrepancy-stat-label">Чистий результат</div>
-                <div class="discrepancy-stat-value" id="net-value">0 грн</div>
+                <div class="discrepancy-stat-value" id="net-value">0 EUR</div>
             </div>
         </div>
         
@@ -629,7 +669,7 @@
         </div>
         
         <!-- Table -->
-        <div id="discrepancies-container">
+        <div id="discrepancies-table-container">
             <table class="balance-table">
                 <thead>
                     <tr>
@@ -662,9 +702,17 @@
                 <button id="discrepancies-next" class="button">Наступна</button>
             </div>
         </div>
-        </div>
     </div>
 </div>
+
+<div id="driver-balances-modal" class="modal">
+    <div class="modal-content">
+        <span class="close">×</span>
+        <h3>Баланси водіїв</h3>
+        <div id="driver-balances-container"></div>
+    </div>
+</div>
+
 
 <div id="shipments-container" class="shipments-container" style="display: none;">
         <div class="shipments-header">
