@@ -34,18 +34,18 @@ public class ClientSearchService implements IClientSearchService {
 
     @Override
     public Page<Client> searchClients(String query, Pageable pageable, Map<String, List<String>> filterParams,
-                                      String excludedStatuses) {
+                                      String excludedStatuses, Long clientTypeId) {
         validateQuery(query);
         validateFilterParams(filterParams);
 
         List<Long> excludeStatusIds = parseExcludedStatuses(excludedStatuses);
 
         if (query == null || query.trim().isEmpty()) {
-            return fetchClients(null, filterParams, null, excludeStatusIds, pageable);
+            return fetchClients(null, filterParams, null, excludeStatusIds, pageable, clientTypeId);
         }
 
         FilterIds filterIds = fetchFilterIds(query);
-        return fetchClients(query, filterParams, filterIds, excludeStatusIds, pageable);
+        return fetchClients(query, filterParams, filterIds, excludeStatusIds, pageable, clientTypeId);
     }
 
     @Override
@@ -78,8 +78,8 @@ public class ClientSearchService implements IClientSearchService {
         Set<String> validKeys = Set.of("createdAtFrom", "createdAtTo", "updatedAtFrom", "updatedAtTo",
                 "business", "route", "region", "status", "source", "clientProduct");
         for (String key : filterParams.keySet()) {
-            if (!validKeys.contains(key)) {
-                throw new ClientException(String.format("Invalid filter key: %s", key));
+            if (!validKeys.contains(key) && !key.endsWith("From") && !key.endsWith("To")) {
+                log.warn("Unknown filter key: {}, skipping", key);
             }
         }
     }
@@ -133,8 +133,7 @@ public class ClientSearchService implements IClientSearchService {
     }
 
     private Page<Client> fetchClients(String query, Map<String, List<String>> filterParams, FilterIds filterIds,
-                                      List<Long> excludeStatusIds, Pageable pageable) {
-
+                                      List<Long> excludeStatusIds, Pageable pageable, Long clientTypeId) {
         Page<Client> clientPage = clientRepository.findAll(new ClientSpecification(
                 query,
                 filterParams,
@@ -144,7 +143,8 @@ public class ClientSearchService implements IClientSearchService {
                 filterIds != null ? filterIds.regionIds() : null,
                 filterIds != null ? filterIds.businessIds() : null,
                 filterIds != null ? filterIds.clientProductIds() : null,
-                excludeStatusIds
+                excludeStatusIds,
+                clientTypeId
         ), pageable);
 
         if (!clientPage.getContent().isEmpty()) {
@@ -166,6 +166,10 @@ public class ClientSearchService implements IClientSearchService {
     }
 
     private List<Client> fetchClients(String query, Map<String, List<String>> filterParams, FilterIds filterIds) {
+        Long clientTypeId = filterParams != null && filterParams.containsKey("clientTypeId") 
+            ? Long.parseLong(filterParams.get("clientTypeId").get(0)) 
+            : null;
+
         List<Client> clients = clientRepository.findAll(new ClientSpecification(
                 query,
                 filterParams,
@@ -175,7 +179,8 @@ public class ClientSearchService implements IClientSearchService {
                 filterIds != null ? filterIds.regionIds() : null,
                 filterIds != null ? filterIds.businessIds() : null,
                 filterIds != null ? filterIds.clientProductIds() : null,
-                null
+                null,
+                clientTypeId
         ));
 
         if (!clients.isEmpty()) {

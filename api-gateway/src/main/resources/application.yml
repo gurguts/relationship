@@ -42,7 +42,7 @@ spring:
         - id: client-service
           uri: http://localhost:8084
           predicates:
-            - Path=/api/v1/client/**,/api/v1/business/**,/api/v1/region/**,/api/v1/route/**,/api/v1/source/**,/api/v1/status/**,/api/v1/entities/**,/api/v1/clientProduct/**
+            - Path=/api/v1/client/**,/api/v1/business/**,/api/v1/region/**,/api/v1/route/**,/api/v1/source/**,/api/v1/status/**,/api/v1/entities/**,/api/v1/clientProduct/**,/api/v1/client-type/**
           filters:
             - CustomTokenRelayFilterFactory
 

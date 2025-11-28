@@ -54,7 +54,8 @@ public class ClientSearchController {
             @RequestParam(name = "sort", defaultValue = "updatedAt") String sortProperty,
             @RequestParam(name = "direction", defaultValue = "DESC") Sort.Direction sortDirection,
             @RequestParam(name = "filters", required = false) String filtersJson,
-            @RequestParam(name = "excludeStatuses", required = false) String excludeStatuses
+            @RequestParam(name = "excludeStatuses", required = false) String excludeStatuses,
+            @RequestParam(name = "clientTypeId", required = false) Long clientTypeId
     ) {
 
         if (query != null) {
@@ -62,10 +63,10 @@ public class ClientSearchController {
         }
 
         Map<String, List<String>> filters = parseFilters(filtersJson);
-
+        
         Pageable pageable = PageRequest.of(page, size, Sort.by(sortDirection, sortProperty));
 
-        Page<ClientDTO> clients = clientService.searchClients(query, pageable, filters, excludeStatuses)
+        Page<ClientDTO> clients = clientService.searchClients(query, pageable, filters, excludeStatuses, clientTypeId)
                 .map(clientMapper::clientToClientDTO);
 
         PageResponse<ClientDTO> response = new PageResponse<>(clients);

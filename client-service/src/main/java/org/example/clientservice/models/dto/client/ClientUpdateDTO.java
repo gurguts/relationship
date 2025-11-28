@@ -3,6 +3,7 @@ package org.example.clientservice.models.dto.client;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
+import org.example.clientservice.models.dto.clienttype.ClientFieldValueCreateDTO;
 
 import java.util.List;
 
@@ -51,4 +52,6 @@ public class ClientUpdateDTO {
     private Long sourceId;
 
     private Long clientProductId;
+
+    private List<ClientFieldValueCreateDTO> fieldValues;
 }

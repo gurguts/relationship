@@ -34,6 +34,371 @@ let pageSize = 50;
 
 const tableBody = document.getElementById('client-table-body');
 
+let currentClientTypeId = null;
+let currentClientType = null;
+let clientTypeFields = [];
+let visibleFields = [];
+let searchableFields = [];
+let filterableFields = [];
+let visibleInCreateFields = [];
+
+document.addEventListener('DOMContentLoaded', async () => {
+    const savedFilters = localStorage.getItem('selectedFilters');
+    let parsedFilters;
+    if (savedFilters) {
+        try {
+            parsedFilters = JSON.parse(savedFilters);
+            const normalizedFilters = {};
+            Object.keys(parsedFilters).forEach(key => {
+                const normalizedKey = key.toLowerCase();
+                if (normalizedKey === 'status' || normalizedKey === 'region' || 
+                    normalizedKey === 'route' || normalizedKey === 'business' || 
+                    normalizedKey === 'source' || normalizedKey === 'clientproduct' ||
+                    normalizedKey.endsWith('from') || normalizedKey.endsWith('to') ||
+                    normalizedKey === 'createdatfrom' || normalizedKey === 'createdatto' ||
+                    normalizedKey === 'updatedatfrom' || normalizedKey === 'updatedatto') {
+                    normalizedFilters[normalizedKey] = parsedFilters[key];
+                }
+            });
+            parsedFilters = normalizedFilters;
+        } catch (e) {
+            console.error('Invalid selectedFilters in localStorage:', e);
+            parsedFilters = {};
+        }
+    } else {
+        parsedFilters = {};
+    }
+    window.selectedFilters = parsedFilters;
+
+    const savedSearchTerm = localStorage.getItem('searchTerm');
+    if (savedSearchTerm) {
+        const searchInput = document.getElementById('inputSearch');
+        if (searchInput) {
+            searchInput.value = savedSearchTerm;
+        }
+    }
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const typeId = urlParams.get('type');
+    
+    const savedClientTypeId = localStorage.getItem('currentClientTypeId');
+    const staticFilterKeys = ['createdAtFrom', 'createdAtTo', 'updatedAtFrom', 'updatedAtTo', 
+                              'business', 'route', 'region', 'status', 'source', 'clientProduct'];
+    
+    if (typeId) {
+        const newClientTypeId = parseInt(typeId);
+        
+        if (savedClientTypeId && parseInt(savedClientTypeId) !== newClientTypeId) {
+            const cleanedFilters = {};
+            Object.keys(window.selectedFilters).forEach(key => {
+                if (staticFilterKeys.includes(key) || key.endsWith('From') || key.endsWith('To')) {
+                    cleanedFilters[key] = window.selectedFilters[key];
+                }
+            });
+            window.selectedFilters = cleanedFilters;
+            localStorage.setItem('selectedFilters', JSON.stringify(cleanedFilters));
+        }
+        
+        localStorage.setItem('currentClientTypeId', newClientTypeId.toString());
+        currentClientTypeId = newClientTypeId;
+        await loadClientType(currentClientTypeId);
+        await loadClientTypeFields(currentClientTypeId);
+        buildDynamicTable();
+        buildDynamicFilters();
+        
+        const validFieldNames = new Set(filterableFields.map(f => f.fieldName));
+        const staticFilterKeys = ['createdAtFrom', 'createdAtTo', 'updatedAtFrom', 'updatedAtTo', 
+                                  'business', 'route', 'region', 'status', 'source', 'clientProduct'];
+        
+        const cleanedFilters = {};
+        Object.keys(window.selectedFilters).forEach(key => {
+            const normalizedKey = key.toLowerCase();
+            if (staticFilterKeys.includes(normalizedKey) || normalizedKey.endsWith('from') || normalizedKey.endsWith('to')) {
+                const value = window.selectedFilters[key];
+                if (value !== null && value !== undefined && value !== '' && 
+                    !(Array.isArray(value) && value.length === 0)) {
+                    cleanedFilters[normalizedKey] = value;
+                }
+            } else if (validFieldNames.has(key)) {
+                const value = window.selectedFilters[key];
+                if (value !== null && value !== undefined && value !== '' && 
+                    !(Array.isArray(value) && (value.length === 0 || (value.length === 1 && (value[0] === '' || value[0] === 'null'))))) {
+                    cleanedFilters[key] = value;
+                }
+            }
+        });
+        window.selectedFilters = cleanedFilters;
+        if (Object.keys(cleanedFilters).length === 0) {
+            localStorage.removeItem('selectedFilters');
+        } else {
+            localStorage.setItem('selectedFilters', JSON.stringify(cleanedFilters));
+        }
+        
+        filterableFields.forEach(field => {
+            const filterId = `filter-${field.fieldName}`;
+            if (window.selectedFilters[field.fieldName]) {
+                if (field.fieldType === 'DATE') {
+                    const fromInput = document.getElementById(`${filterId}-from`);
+                    const toInput = document.getElementById(`${filterId}-to`);
+                    if (fromInput && window.selectedFilters[`${field.fieldName}From`]) {
+                        fromInput.value = window.selectedFilters[`${field.fieldName}From`][0] || '';
+                    }
+                    if (toInput && window.selectedFilters[`${field.fieldName}To`]) {
+                        toInput.value = window.selectedFilters[`${field.fieldName}To`][0] || '';
+                    }
+                } else if (field.fieldType === 'LIST') {
+                    if (customSelects[filterId] && window.selectedFilters[field.fieldName]) {
+                        const savedValues = window.selectedFilters[field.fieldName];
+                        if (Array.isArray(savedValues) && savedValues.length > 0) {
+                            const validValues = savedValues.filter(v => v !== null && v !== undefined && v !== '' && v !== 'null');
+                            if (validValues.length > 0) {
+                                customSelects[filterId].setValue(validValues);
+                            }
+                        }
+                    }
+                } else if (field.fieldType === 'BOOLEAN') {
+                    const select = document.getElementById(filterId);
+                    if (select && window.selectedFilters[field.fieldName] && window.selectedFilters[field.fieldName].length > 0) {
+                        const savedValue = window.selectedFilters[field.fieldName][0];
+                        if (savedValue && savedValue !== '' && savedValue !== 'null') {
+                            select.value = savedValue;
+                            if (customSelects[filterId]) {
+                                customSelects[filterId].setValue(savedValue);
+                            }
+                        }
+                    }
+                } else {
+                    const input = document.getElementById(filterId);
+                    if (input && window.selectedFilters[field.fieldName]) {
+                        input.value = Array.isArray(window.selectedFilters[field.fieldName]) 
+                            ? window.selectedFilters[field.fieldName][0] 
+                            : window.selectedFilters[field.fieldName];
+                    }
+                }
+            }
+        });
+        updateFilterCounter();
+    } else {
+        await loadDefaultClientData();
+    }
+    
+    await loadEntitiesAndApplyFilters();
+    
+    loadDataWithSort(currentPage, pageSize, currentSort, currentDirection);
+});
+
+async function loadEntitiesAndApplyFilters() {
+    try {
+        const response = await fetch('/api/v1/entities');
+        if (!response.ok) return;
+        
+        const data = await response.json();
+        availableStatuses = data.statuses || [];
+        availableRegions = data.regions || [];
+        availableSources = data.sources || [];
+        availableRoutes = data.routes || [];
+        availableBusiness = data.businesses || [];
+        availableUsers = data.users || [];
+        availableProducts = data.products || [];
+        availableClientProducts = data.clientProducts || [];
+
+        statusMap = new Map(availableStatuses.map(item => [item.id, item.name]));
+        regionMap = new Map(availableRegions.map(item => [item.id, item.name]));
+        sourceMap = new Map(availableSources.map(item => [item.id, item.name]));
+        routeMap = new Map(availableRoutes.map(item => [item.id, item.name]));
+        businessMap = new Map(availableBusiness.map(item => [item.id, item.name]));
+        clientProductMap = new Map(availableClientProducts.map(item => [item.id, item.name]));
+        userMap = new Map(availableUsers.map(item => [item.id, item.name]));
+        productMap = new Map(availableProducts.map(item => [item.id, item.name]));
+
+        const filterForm = document.getElementById('filterForm');
+        if (filterForm) {
+            if (window.selectedFilters['createdAtFrom']) {
+                const fromInput = filterForm.querySelector('#createdAtFrom');
+                if (fromInput) fromInput.value = window.selectedFilters['createdAtFrom'][0];
+            }
+            if (window.selectedFilters['createdAtTo']) {
+                const toInput = filterForm.querySelector('#createdAtTo');
+                if (toInput) toInput.value = window.selectedFilters['createdAtTo'][0];
+            }
+            if (window.selectedFilters['updatedAtFrom']) {
+                const fromInput = filterForm.querySelector('#updatedAtFrom');
+                if (fromInput) fromInput.value = window.selectedFilters['updatedAtFrom'][0];
+            }
+            if (window.selectedFilters['updatedAtTo']) {
+                const toInput = filterForm.querySelector('#updatedAtTo');
+                if (toInput) toInput.value = window.selectedFilters['updatedAtTo'][0];
+            }
+        }
+    } catch (error) {
+        console.error('Error loading entities:', error);
+    }
+}
+
+async function loadClientType(typeId) {
+    try {
+        const response = await fetch(`/api/v1/client-type/${typeId}`);
+        if (!response.ok) throw new Error('Failed to load client type');
+        currentClientType = await response.json();
+        document.title = currentClientType.name;
+    } catch (error) {
+        console.error('Error loading client type:', error);
+    }
+}
+
+async function loadClientTypeFields(typeId) {
+    try {
+        const [fieldsRes, visibleRes, searchableRes, filterableRes, visibleInCreateRes] = await Promise.all([
+            fetch(`/api/v1/client-type/${typeId}/field`),
+            fetch(`/api/v1/client-type/${typeId}/field/visible`),
+            fetch(`/api/v1/client-type/${typeId}/field/searchable`),
+            fetch(`/api/v1/client-type/${typeId}/field/filterable`),
+            fetch(`/api/v1/client-type/${typeId}/field/visible-in-create`)
+        ]);
+        
+        clientTypeFields = await fieldsRes.json();
+        visibleFields = await visibleRes.json();
+        searchableFields = await searchableRes.json();
+        filterableFields = await filterableRes.json();
+        visibleInCreateFields = await visibleInCreateRes.json();
+    } catch (error) {
+        console.error('Error loading fields:', error);
+    }
+}
+
+async function loadDefaultClientData() {
+    try {
+        const [statusesRes, regionsRes, sourcesRes, routesRes, businessRes, clientProductsRes] = await Promise.all([
+            fetch('/api/v1/status'),
+            fetch('/api/v1/region'),
+            fetch('/api/v1/source'),
+            fetch('/api/v1/route'),
+            fetch('/api/v1/business'),
+            fetch('/api/v1/clientProduct')
+        ]);
+        
+        availableStatuses = await statusesRes.json();
+        availableRegions = await regionsRes.json();
+        availableSources = await sourcesRes.json();
+        availableRoutes = await routesRes.json();
+        availableBusiness = await businessRes.json();
+        availableClientProducts = await clientProductsRes.json();
+        
+        statusMap = new Map(availableStatuses.map(s => [s.id, s.name]));
+        regionMap = new Map(availableRegions.map(r => [r.id, r.name]));
+        sourceMap = new Map(availableSources.map(s => [s.id, s.name]));
+        routeMap = new Map(availableRoutes.map(r => [r.id, r.name]));
+        businessMap = new Map(availableBusiness.map(b => [b.id, b.name]));
+        clientProductMap = new Map(availableClientProducts.map(cp => [cp.id, cp.name]));
+    } catch (error) {
+        console.error('Error loading default data:', error);
+    }
+}
+
+function buildDynamicTable() {
+    if (!currentClientType || !visibleFields.length) return;
+    
+    const thead = document.querySelector('#client-list table thead tr');
+    if (!thead) return;
+    
+    thead.innerHTML = '';
+    
+    const nameTh = document.createElement('th');
+    nameTh.textContent = currentClientType.nameFieldLabel || 'Компанія';
+    nameTh.setAttribute('data-sort', 'company');
+    thead.appendChild(nameTh);
+    
+    visibleFields.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+    visibleFields.forEach(field => {
+        const th = document.createElement('th');
+        th.textContent = field.fieldLabel;
+        if (field.isSearchable) {
+            th.setAttribute('data-sort', field.fieldName);
+        }
+        thead.appendChild(th);
+    });
+}
+
+function buildDynamicFilters() {
+    if (!filterForm || !filterableFields.length) return;
+    
+    const existingFilters = filterForm.querySelectorAll('h2, .filter-block, .select-section-item');
+    existingFilters.forEach(el => el.remove());
+    
+    filterableFields.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+    filterableFields.forEach(field => {
+        if (field.fieldType === 'DATE') {
+            const h2 = document.createElement('h2');
+            h2.textContent = field.fieldLabel + ':';
+            filterForm.appendChild(h2);
+            
+            const filterBlock = document.createElement('div');
+            filterBlock.className = 'filter-block';
+            filterBlock.innerHTML = `
+                <label class="from-to-style" for="filter-${field.fieldName}-from">Від:</label>
+                <input type="date" id="filter-${field.fieldName}-from" name="${field.fieldName}From"><br><br>
+                <label class="from-to-style" for="filter-${field.fieldName}-to">До:</label>
+                <input type="date" id="filter-${field.fieldName}-to" name="${field.fieldName}To"><br><br>
+            `;
+            filterForm.appendChild(filterBlock);
+        } else if (field.fieldType === 'LIST') {
+            const selectItem = document.createElement('div');
+            selectItem.className = 'select-section-item';
+            selectItem.innerHTML = `
+                <br>
+                <label class="select-label-style" for="filter-${field.fieldName}">${field.fieldLabel}:</label>
+                <select id="filter-${field.fieldName}" name="${field.fieldName}" ${field.allowMultiple ? 'multiple' : ''}>
+                </select>
+            `;
+            filterForm.appendChild(selectItem);
+            
+            const select = selectItem.querySelector('select');
+            if (field.listValues && field.listValues.length > 0) {
+                field.listValues.forEach(listValue => {
+                    const option = document.createElement('option');
+                    option.value = listValue.id;
+                    option.textContent = listValue.value;
+                    select.appendChild(option);
+                });
+            }
+            
+            if (select && !customSelects[`filter-${field.fieldName}`]) {
+                customSelects[`filter-${field.fieldName}`] = createCustomSelect(select);
+            }
+        } else if (field.fieldType === 'TEXT' || field.fieldType === 'PHONE' || field.fieldType === 'NUMBER') {
+            const selectItem = document.createElement('div');
+            selectItem.className = 'select-section-item';
+            selectItem.innerHTML = `
+                <br>
+                <label class="select-label-style" for="filter-${field.fieldName}">${field.fieldLabel}:</label>
+                <input type="${field.fieldType === 'NUMBER' ? 'number' : 'text'}" 
+                       id="filter-${field.fieldName}" 
+                       name="${field.fieldName}" 
+                       placeholder="Пошук...">
+            `;
+            filterForm.appendChild(selectItem);
+        } else if (field.fieldType === 'BOOLEAN') {
+            const selectItem = document.createElement('div');
+            selectItem.className = 'select-section-item';
+            selectItem.innerHTML = `
+                <br>
+                <label class="select-label-style" for="filter-${field.fieldName}">${field.fieldLabel}:</label>
+                <select id="filter-${field.fieldName}" name="${field.fieldName}">
+                    <option value="">Всі</option>
+                    <option value="true">Так</option>
+                    <option value="false">Ні</option>
+                </select>
+            `;
+            filterForm.appendChild(selectItem);
+            
+            const select = selectItem.querySelector('select');
+            if (select && !customSelects[`filter-${field.fieldName}`]) {
+                customSelects[`filter-${field.fieldName}`] = createCustomSelect(select);
+            }
+        }
+    });
+}
+
 prevPageButton.addEventListener('click', () => {
     if (currentPage > 0) {
         currentPage--;
@@ -69,15 +434,73 @@ const findNameByIdFromMap = (map, id) => {
     return name || '';
 };
 
-function renderClients(clients) {
+async function renderClients(clients) {
     tableBody.innerHTML = '';
+    
+    if (currentClientTypeId && visibleFields.length > 0) {
+        await renderClientsWithDynamicFields(clients);
+    } else {
+        renderClientsWithDefaultFields(clients);
+    }
+}
+
+async function renderClientsWithDynamicFields(clients) {
+    const fieldValuesPromises = clients.map(client => loadClientFieldValues(client.id));
+    const allFieldValues = await Promise.all(fieldValuesPromises);
+    
+    clients.forEach((client, index) => {
+        const row = document.createElement('tr');
+        row.classList.add('client-row');
+        
+        const nameFieldLabel = currentClientType ? currentClientType.nameFieldLabel : 'Компанія';
+        let html = `<td data-label="${nameFieldLabel}" class="company-cell" style="cursor: pointer;">${client.company || ''}</td>`;
+        
+        const fieldValues = allFieldValues[index];
+        const fieldValuesMap = new Map();
+        fieldValues.forEach(fv => {
+            if (!fieldValuesMap.has(fv.fieldId)) {
+                fieldValuesMap.set(fv.fieldId, []);
+            }
+            fieldValuesMap.get(fv.fieldId).push(fv);
+        });
+        
+        client._fieldValues = fieldValues;
+        
+        visibleFields.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+        visibleFields.forEach(field => {
+            const values = fieldValuesMap.get(field.id) || [];
+            let cellValue = '';
+            
+            if (values.length > 0) {
+                if (field.allowMultiple) {
+                    cellValue = values.map(v => formatFieldValue(v, field)).join('<br>');
+                } else {
+                    cellValue = formatFieldValue(values[0], field);
+                }
+            }
+            
+            html += `<td data-label="${field.fieldLabel}">${cellValue}</td>`;
+        });
+        
+        row.innerHTML = html;
+        tableBody.appendChild(row);
+        
+        const companyCell = row.querySelector('.company-cell');
+        if (companyCell) {
+            companyCell.addEventListener('click', () => {
+                loadClientDetails(client);
+            });
+        }
+    });
+}
+
+function renderClientsWithDefaultFields(clients) {
     clients.forEach(client => {
         const row = document.createElement('tr');
         row.classList.add('client-row');
 
         row.innerHTML = `
-            <td><input type="checkbox" class="client-checkbox" data-client-id="${client.id}">
-            <td data-label="Компанія" data-sort="company" class="company-cell">${client.company}</td>
+            <td data-label="Компанія" data-sort="company" class="company-cell" style="cursor: pointer;">${client.company || ''}</td>
             <td data-label="Область">${findNameByIdFromMap(regionMap, client.regionId)}</td>
             <td data-label="Статус">${findNameByIdFromMap(statusMap, client.statusId)}</td>
             <td data-label="Телефони">${client.phoneNumbers ? client.phoneNumbers.map(number =>
@@ -86,13 +509,72 @@ function renderClients(clients) {
             <td data-label="Маршруты">${findNameByIdFromMap(routeMap, client.routeId)}</td>
             <td data-label="Коментар">${client.comment ? client.comment : ''}</td>
             <td data-label="Адреса" data-sort="location">${client.location ? client.location : ''}</td>
-
         `;
         tableBody.appendChild(row);
-        row.querySelector('.company-cell').addEventListener('click', () => {
-            loadClientDetails(client);
-        });
+        const companyCell = row.querySelector('.company-cell');
+        if (companyCell) {
+            companyCell.addEventListener('click', () => {
+                loadClientDetails(client);
+            });
+        }
     });
+}
+
+function formatFieldValue(fieldValue, field) {
+    if (!fieldValue) return '';
+    
+    switch (field.fieldType) {
+        case 'TEXT':
+        case 'PHONE':
+            return fieldValue.valueText || '';
+        case 'NUMBER':
+            return fieldValue.valueNumber || '';
+        case 'DATE':
+            return fieldValue.valueDate || '';
+        case 'BOOLEAN':
+            if (fieldValue.valueBoolean === true) return 'Так';
+            if (fieldValue.valueBoolean === false) return 'Ні';
+            return '';
+        case 'LIST':
+            return fieldValue.valueListValue || '';
+        default:
+            return '';
+    }
+}
+
+function formatFieldValueForModal(fieldValue, field) {
+    if (!fieldValue) return '';
+    
+    switch (field.fieldType) {
+        case 'TEXT':
+            return fieldValue.valueText || '';
+        case 'PHONE':
+            const phone = fieldValue.valueText || '';
+            return phone ? `<a href="tel:${phone}">${phone}</a>` : '';
+        case 'NUMBER':
+            return fieldValue.valueNumber || '';
+        case 'DATE':
+            return fieldValue.valueDate || '';
+        case 'BOOLEAN':
+            if (fieldValue.valueBoolean === true) return 'Так';
+            if (fieldValue.valueBoolean === false) return 'Ні';
+            return '';
+        case 'LIST':
+            return fieldValue.valueListValue || '';
+        default:
+            return '';
+    }
+}
+
+async function loadClientFieldValues(clientId) {
+    try {
+        const response = await fetch(`/api/v1/client/${clientId}/field-values`);
+        if (!response.ok) return [];
+        return await response.json();
+    } catch (error) {
+        console.error('Error loading field values:', error);
+        return [];
+    }
 }
 
 document.querySelectorAll('th[data-sort]').forEach(th => {
@@ -116,16 +598,34 @@ async function loadDataWithSort(page, size, sort, direction) {
     const searchTerm = searchInput ? searchInput.value : '';
     let queryParams = `page=${page}&size=${size}&sort=${sort}&direction=${direction}`;
 
+    if (currentClientTypeId) {
+        queryParams += `&clientTypeId=${currentClientTypeId}`;
+    }
+
     if (searchTerm) {
         queryParams += `&q=${encodeURIComponent(searchTerm)}`;
     }
 
-    if (Object.keys(selectedFilters).length > 0) {
-        queryParams += `&filters=${encodeURIComponent(JSON.stringify(selectedFilters))}`;
+    const cleanedFilters = {};
+    Object.keys(selectedFilters).forEach(key => {
+        const value = selectedFilters[key];
+        if (value !== null && value !== undefined) {
+            if (Array.isArray(value)) {
+                const filteredArray = value.filter(v => v !== null && v !== undefined && v !== '');
+                if (filteredArray.length > 0) {
+                    cleanedFilters[key] = filteredArray;
+                }
+            } else if (typeof value === 'string' && value.trim() !== '') {
+                cleanedFilters[key] = value;
+            } else if (typeof value !== 'string') {
+                cleanedFilters[key] = value;
+            }
+        }
+    });
+    
+    if (Object.keys(cleanedFilters).length > 0) {
+        queryParams += `&filters=${encodeURIComponent(JSON.stringify(cleanedFilters))}`;
     }
-
-    /*    const excludeStatuses = [];
-        queryParams += `&excludeStatuses=${encodeURIComponent(excludeStatuses.join(','))}`;*/
 
     try {
         const response = await fetch(`${API_URL}/search?${queryParams}`);
@@ -141,7 +641,7 @@ async function loadDataWithSort(page, size, sort, direction) {
 
         updatePagination(data.totalElements, data.content.length, data.totalPages, currentPage);
     } catch (error) {
-        console.error('Error creating client:', error);
+        console.error('Error loading clients:', error);
         handleError(error);
     } finally {
         loaderBackdrop.style.display = 'none';
@@ -153,49 +653,116 @@ function loadClientDetails(client) {
     showClientModal(client);
 }
 
-function showClientModal(client) {
+async function showClientModal(client) {
     document.getElementById('client-modal').setAttribute('data-client-id', client.id);
 
     document.getElementById('modal-client-id').innerText = client.id;
+    
+    const modalContent = document.querySelector('.modal-content-client');
+    const existingFields = modalContent.querySelectorAll('p[data-field-id]');
+    existingFields.forEach(el => el.remove());
+    
+    const nameFieldLabel = currentClientType ? currentClientType.nameFieldLabel : 'Компанія';
+    document.getElementById('modal-client-company').parentElement.querySelector('strong').textContent = nameFieldLabel + ':';
     document.getElementById('modal-client-company').innerText = client.company;
-    document.getElementById('modal-client-person').innerText = client.person || '';
-    document.getElementById('modal-client-phone').innerText = client.phoneNumbers || '';
-    document.getElementById('modal-client-location').innerText = client.location || '';
-    document.getElementById('modal-client-price-purchase').innerText = client.pricePurchase || '';
-    document.getElementById('modal-client-price-sale').innerText = client.priceSale || '';
-    if (client.vat === true) {
-        document.getElementById('modal-client-vat').innerHTML =
-            `<input type="checkbox" id="edit-vat" checked disabled />`;
-    } else if (client.vat === false || client.vat === null || client.vat === undefined) {
-        document.getElementById('modal-client-vat').innerHTML =
-            `<input type="checkbox" id="edit-vat" disabled />`;
+    
+    if (currentClientTypeId && clientTypeFields.length > 0) {
+        const oldFields = ['person', 'phone', 'location', 'price-purchase', 'price-sale', 'vat', 'volumeMonth', 
+                          'edrpou', 'enterpriseName', 'business', 'route', 'region', 'status', 'source', 
+                          'clientProduct', 'comment', 'urgently'];
+        oldFields.forEach(fieldId => {
+            const fieldElement = document.getElementById(`modal-client-${fieldId}`)?.parentElement;
+            if (fieldElement) {
+                fieldElement.style.display = 'none';
+            }
+        });
+        
+        let fieldValues = client._fieldValues;
+        if (!fieldValues) {
+            fieldValues = await loadClientFieldValues(client.id);
+        }
+        const fieldValuesMap = new Map();
+        fieldValues.forEach(fv => {
+            if (!fieldValuesMap.has(fv.fieldId)) {
+                fieldValuesMap.set(fv.fieldId, []);
+            }
+            fieldValuesMap.get(fv.fieldId).push(fv);
+        });
+        
+        const companyP = document.getElementById('modal-client-company').parentElement;
+        
+        clientTypeFields.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+        clientTypeFields.forEach(field => {
+            const values = fieldValuesMap.get(field.id) || [];
+            const fieldP = document.createElement('p');
+            fieldP.setAttribute('data-field-id', field.id);
+            
+            let fieldValue = '';
+            if (values.length > 0) {
+                if (field.allowMultiple) {
+                    fieldValue = values.map(v => formatFieldValueForModal(v, field)).join('<br>');
+                } else {
+                    fieldValue = formatFieldValueForModal(values[0], field);
+                }
+            }
+            
+            fieldP.innerHTML = `
+                <strong>${field.fieldLabel}:</strong>
+                <span id="modal-field-${field.id}" class="${!fieldValue ? 'empty-value' : ''}">${fieldValue || '—'}</span>
+                <button class="edit-icon" onclick="enableEditField(${field.id}, '${field.fieldType}', ${field.allowMultiple || false})" data-field-id="${field.id}" title="Редагувати">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                    </svg>
+                </button>
+            `;
+            fieldP.setAttribute('data-field-type', field.fieldType);
+            
+            companyP.insertAdjacentElement('afterend', fieldP);
+        });
     } else {
-        document.getElementById('modal-client-vat').innerHTML = '';
+        const oldFields = ['person', 'phone', 'location', 'price-purchase', 'price-sale', 'vat', 'volumeMonth', 
+                          'edrpou', 'enterpriseName', 'business', 'route', 'region', 'status', 'source', 
+                          'clientProduct', 'comment', 'urgently'];
+        oldFields.forEach(fieldId => {
+            const fieldElement = document.getElementById(`modal-client-${fieldId}`)?.parentElement;
+            if (fieldElement) {
+                fieldElement.style.display = '';
+            }
+        });
+        document.getElementById('modal-client-person').innerText = client.person || '';
+        document.getElementById('modal-client-phone').innerText = client.phoneNumbers || '';
+        document.getElementById('modal-client-location').innerText = client.location || '';
+        document.getElementById('modal-client-price-purchase').innerText = client.pricePurchase || '';
+        document.getElementById('modal-client-price-sale').innerText = client.priceSale || '';
+        if (client.vat === true) {
+            document.getElementById('modal-client-vat').innerHTML =
+                `<input type="checkbox" id="edit-vat" checked disabled />`;
+        } else if (client.vat === false || client.vat === null || client.vat === undefined) {
+            document.getElementById('modal-client-vat').innerHTML =
+                `<input type="checkbox" id="edit-vat" disabled />`;
+        } else {
+            document.getElementById('modal-client-vat').innerHTML = '';
+        }
+        document.getElementById('modal-client-volumeMonth').innerText = client.volumeMonth || '';
+        document.getElementById('modal-client-edrpou').innerText = client.edrpou || '';
+        document.getElementById('modal-client-enterpriseName').innerText = client.enterpriseName || '';
+        document.getElementById('modal-client-business').innerText =
+            findNameByIdFromMap(businessMap, client.businessId);
+        document.getElementById('modal-client-clientProduct').innerText =
+            findNameByIdFromMap(clientProductMap, client.clientProductId);
+        document.getElementById('modal-client-route').innerText =
+            findNameByIdFromMap(routeMap, client.routeId);
+        document.getElementById('modal-client-region').innerText =
+            findNameByIdFromMap(regionMap, client.regionId);
+        document.getElementById('modal-client-status').innerText =
+            findNameByIdFromMap(statusMap, client.statusId);
+        document.getElementById('modal-client-source').innerText =
+            findNameByIdFromMap(sourceMap, client.sourceId);
+        document.getElementById('modal-client-comment').innerText = client.comment || '';
     }
-    document.getElementById('modal-client-volumeMonth').innerText = client.volumeMonth || '';
-    document.getElementById('modal-client-edrpou').innerText = client.edrpou || '';
-    document.getElementById('modal-client-enterpriseName').innerText = client.enterpriseName || '';
-    document.getElementById('modal-client-business').innerText =
-        findNameByIdFromMap(businessMap, client.businessId);
-    document.getElementById('modal-client-clientProduct').innerText =
-        findNameByIdFromMap(clientProductMap, client.clientProductId);
-    document.getElementById('modal-client-route').innerText =
-        findNameByIdFromMap(routeMap, client.routeId);
-    document.getElementById('modal-client-region').innerText =
-        findNameByIdFromMap(regionMap, client.regionId);
-    document.getElementById('modal-client-status').innerText =
-        findNameByIdFromMap(statusMap, client.statusId);
-    document.getElementById('modal-client-source').innerText =
-        findNameByIdFromMap(sourceMap, client.sourceId);
-    document.getElementById('modal-client-comment').innerText = client.comment || '';
+    
     document.getElementById('modal-client-created').innerText = client.createdAt || '';
     document.getElementById('modal-client-updated').innerText = client.updatedAt || '';
-
-    const urgentlyCheckbox = document.getElementById('modal-client-urgently');
-    urgentlyCheckbox.checked = client.urgently;
-    urgentlyCheckbox.addEventListener('change', function () {
-        toggleUrgently(client.id);
-    });
 
     const modal = document.getElementById('client-modal');
     modal.style.display = 'flex';
@@ -263,28 +830,6 @@ function showClientModal(client) {
 
 }
 
-async function toggleUrgently(clientId) {
-    loaderBackdrop.style.display = 'flex';
-
-    try {
-        const response = await fetch(`${API_URL}/urgently/${clientId}`, {method: 'PATCH'});
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            handleError(new ErrorResponse(errorData.error, errorData.message, errorData.details));
-            return;
-        }
-
-        showMessage('Статус терміновості успішно оновлено', 'info');
-
-        loadDataWithSort(currentPage, pageSize, currentSort, currentDirection);
-    } catch (error) {
-        console.error('Ошибка обновления статуса терміновості:', error);
-        handleError(error);
-    } finally {
-        loaderBackdrop.style.display = 'none';
-    }
-}
 
 /*-------create client-------*/
 
@@ -294,6 +839,11 @@ var span = document.getElementsByClassName("create-client-close")[0];
 let editing = false;
 
 btn.onclick = function () {
+    if (!currentClientTypeId) {
+        showMessage('Будь ласка, виберіть тип клієнта з навігації', 'error');
+        return;
+    }
+    buildDynamicCreateForm();
     modal.classList.remove('hide');
     modal.style.display = "flex";
     setTimeout(() => {
@@ -329,25 +879,193 @@ window.onclick = function (event) {
     }
 }
 
+function buildDynamicCreateForm() {
+    if (!currentClientTypeId || !visibleInCreateFields || visibleInCreateFields.length === 0) {
+        return;
+    }
+
+    const form = document.getElementById('client-form');
+    form.innerHTML = '';
+
+    const nameFieldLabel = currentClientType ? currentClientType.nameFieldLabel : 'Компанія';
+    
+    const nameFieldDiv = document.createElement('div');
+    nameFieldDiv.className = 'form-group';
+    const nameLabel = document.createElement('label');
+    nameLabel.setAttribute('for', 'company');
+    nameLabel.textContent = nameFieldLabel + ' *';
+    const nameInput = document.createElement('input');
+    nameInput.type = 'text';
+    nameInput.id = 'company';
+    nameInput.name = 'company';
+    nameInput.required = true;
+    nameInput.placeholder = nameFieldLabel;
+    nameFieldDiv.appendChild(nameLabel);
+    nameFieldDiv.appendChild(nameInput);
+    form.appendChild(nameFieldDiv);
+
+    visibleInCreateFields.forEach((field, index) => {
+        const fieldDiv = document.createElement('div');
+        fieldDiv.className = 'form-group';
+        fieldDiv.setAttribute('data-field-id', field.id);
+        fieldDiv.setAttribute('data-field-type', field.fieldType);
+
+        const label = document.createElement('label');
+        label.setAttribute('for', `field-${field.id}`);
+        label.textContent = field.fieldLabel + (field.isRequired ? ' *' : '');
+        fieldDiv.appendChild(label);
+
+        let input;
+        if (field.fieldType === 'TEXT') {
+            input = document.createElement('input');
+            input.type = 'text';
+            input.id = `field-${field.id}`;
+            input.name = `field-${field.id}`;
+            input.required = field.isRequired || false;
+            input.placeholder = field.fieldLabel;
+        } else if (field.fieldType === 'NUMBER') {
+            input = document.createElement('input');
+            input.type = 'number';
+            input.id = `field-${field.id}`;
+            input.name = `field-${field.id}`;
+            input.required = field.isRequired || false;
+            input.placeholder = field.fieldLabel;
+        } else if (field.fieldType === 'DATE') {
+            input = document.createElement('input');
+            input.type = 'date';
+            input.id = `field-${field.id}`;
+            input.name = `field-${field.id}`;
+            input.required = field.isRequired || false;
+        } else if (field.fieldType === 'PHONE') {
+            input = document.createElement('input');
+            input.type = 'text';
+            input.id = `field-${field.id}`;
+            input.name = `field-${field.id}`;
+            input.required = field.isRequired || false;
+            input.placeholder = field.allowMultiple ? 'Телефони (розділяємо комою)' : 'Телефон';
+            if (field.validationPattern) {
+                input.pattern = field.validationPattern;
+            }
+            if (field.allowMultiple) {
+                const outputDiv = document.createElement('div');
+                outputDiv.id = `output-${field.id}`;
+                outputDiv.className = 'phone-output';
+                fieldDiv.appendChild(outputDiv);
+                input.addEventListener('input', () => updatePhoneOutput(field.id, input.value));
+            }
+        } else if (field.fieldType === 'LIST') {
+            input = document.createElement('select');
+            input.id = `field-${field.id}`;
+            input.name = `field-${field.id}`;
+            input.required = field.isRequired || false;
+            if (field.allowMultiple) {
+                input.multiple = true;
+            }
+            if (field.listValues && field.listValues.length > 0) {
+                field.listValues.forEach(listValue => {
+                    const option = document.createElement('option');
+                    option.value = listValue.id;
+                    option.textContent = listValue.value;
+                    if (!field.allowMultiple) {
+                        option.selected = false;
+                    }
+                    input.appendChild(option);
+                });
+            }
+            if (!field.allowMultiple) {
+                input.selectedIndex = -1;
+            }
+            fieldDiv.appendChild(input);
+            form.appendChild(fieldDiv);
+            setTimeout(() => {
+                if (typeof createCustomSelect === 'function') {
+                    const customSelect = createCustomSelect(input);
+                    customSelects[`field-${field.id}`] = customSelect;
+                    if (field.listValues && field.listValues.length > 0) {
+                        const listData = field.listValues.map(lv => ({
+                            id: lv.id,
+                            name: lv.value
+                        }));
+                        customSelect.populate(listData);
+                    }
+                    if (!field.allowMultiple) {
+                        customSelect.reset();
+                    }
+                }
+            }, 0);
+            return;
+        } else if (field.fieldType === 'BOOLEAN') {
+            input = document.createElement('select');
+            input.id = `field-${field.id}`;
+            input.name = `field-${field.id}`;
+            input.required = field.isRequired || false;
+            const defaultOption = document.createElement('option');
+            defaultOption.value = '';
+            defaultOption.textContent = 'Виберіть...';
+            defaultOption.disabled = true;
+            defaultOption.selected = true;
+            input.appendChild(defaultOption);
+            const yesOption = document.createElement('option');
+            yesOption.value = 'true';
+            yesOption.textContent = 'Так';
+            input.appendChild(yesOption);
+            const noOption = document.createElement('option');
+            noOption.value = 'false';
+            noOption.textContent = 'Ні';
+            input.appendChild(noOption);
+        }
+        fieldDiv.appendChild(input);
+        form.appendChild(fieldDiv);
+    });
+
+    const submitButton = document.createElement('button');
+    submitButton.type = 'submit';
+    submitButton.id = 'save-button';
+    submitButton.textContent = 'Зберегти';
+    form.appendChild(submitButton);
+
+    const companyInput = document.getElementById('company');
+    if (companyInput) {
+        const validateForm = () => {
+            const isCompanyFilled = companyInput.value.trim() !== '';
+            submitButton.disabled = !isCompanyFilled;
+        };
+        companyInput.addEventListener('input', validateForm);
+        validateForm();
+    }
+}
+
+function updatePhoneOutput(fieldId, value) {
+    const outputDiv = document.getElementById(`output-${fieldId}`);
+    if (!outputDiv) return;
+    outputDiv.innerHTML = '';
+
+    let formattedNumbers = value.split(',')
+        .map(num => num.trim())
+        .filter(num => num.length > 0)
+        .map(formatPhoneNumber)
+        .filter(num => num !== null);
+
+    if (formattedNumbers.length > 0) {
+        const formattedNumbersList = document.createElement('ul');
+        formattedNumbersList.className = 'phone-numbers-list';
+        formattedNumbers.forEach(num => {
+            const listItem = document.createElement('li');
+            listItem.className = 'phone-number-item';
+            listItem.textContent = num;
+            formattedNumbersList.appendChild(listItem);
+        });
+        outputDiv.appendChild(formattedNumbersList);
+    }
+}
+
 function resetForm() {
     const form = document.getElementById('client-form');
-    form.reset();
-
-    ['region', 'status', 'source', 'route', 'business'].forEach(selectId => {
-        const select = document.getElementById(selectId);
-        select.selectedIndex = 0;
-        const customSelectId = `${selectId}-custom`;
-        if (customSelects[customSelectId]) {
-            customSelects[customSelectId].reset();
-            let defaultValue = defaultValues[selectId];
-            if (typeof defaultValue === 'function') {
-                defaultValue = defaultValue();
-            }
-            if (defaultValue && select.querySelector(`option[value="${defaultValue}"]`)) {
-                customSelects[customSelectId].setValue(defaultValue);
-            }
-        }
-    });
+    if (currentClientTypeId) {
+        buildDynamicCreateForm();
+    } else {
+        form.reset();
+    }
 }
 
 const defaultValues = {
@@ -381,7 +1099,6 @@ const userSourceMapping = {
 
 
 const phonePattern = /^\+380\d{9}$/;
-document.getElementById('phoneNumbers').addEventListener('input', updateOutput);
 
 function formatPhoneNumber(num) {
     const cleanedNum = num.replace(/[^\d+]/g, '');
@@ -427,19 +1144,74 @@ document.getElementById('client-form').addEventListener('submit',
     async function (event) {
         event.preventDefault();
 
+        if (!currentClientTypeId) {
+            showMessage('Будь ласка, виберіть тип клієнта з навігації', 'error');
+            return;
+        }
+
         loaderBackdrop.style.display = 'flex';
 
         const formData = new FormData(this);
-        const clientData = {};
+        const clientData = {
+            clientTypeId: currentClientTypeId,
+            company: formData.get('company'),
+            fieldValues: []
+        };
 
-        formData.forEach((value, key) => clientData[key] = value);
-
-        clientData.phoneNumbers = clientData.phoneNumbers
-            .split(',')
-            .map(num => num.trim())
-            .filter(num => num.length > 0)
-            .map(num => formatPhoneNumber(num))
-            .filter(num => num !== null);
+        visibleInCreateFields.forEach(field => {
+            const fieldValue = formData.get(`field-${field.id}`);
+            const fieldValueMultiple = formData.getAll(`field-${field.id}`);
+            
+            if (field.fieldType === 'PHONE' && field.allowMultiple) {
+                const phoneValue = formData.get(`field-${field.id}`);
+                if (phoneValue) {
+                    const phones = phoneValue.split(',')
+                        .map(num => num.trim())
+                        .filter(num => num.length > 0)
+                        .map(formatPhoneNumber)
+                        .filter(num => num !== null);
+                    
+                    phones.forEach((phone, index) => {
+                        clientData.fieldValues.push({
+                            fieldId: field.id,
+                            valueText: phone,
+                            displayOrder: index
+                        });
+                    });
+                }
+            } else if (field.fieldType === 'LIST' && field.allowMultiple) {
+                if (fieldValueMultiple && fieldValueMultiple.length > 0) {
+                    fieldValueMultiple.forEach((value, index) => {
+                        if (value) {
+                            clientData.fieldValues.push({
+                                fieldId: field.id,
+                                valueListId: parseInt(value),
+                                displayOrder: index
+                            });
+                        }
+                    });
+                }
+            } else if (fieldValue) {
+                const fieldValueData = {
+                    fieldId: field.id,
+                    displayOrder: 0
+                };
+                
+                if (field.fieldType === 'TEXT' || field.fieldType === 'PHONE') {
+                    fieldValueData.valueText = fieldValue;
+                } else if (field.fieldType === 'NUMBER') {
+                    fieldValueData.valueNumber = parseFloat(fieldValue);
+                } else if (field.fieldType === 'DATE') {
+                    fieldValueData.valueDate = fieldValue;
+                } else if (field.fieldType === 'BOOLEAN') {
+                    fieldValueData.valueBoolean = fieldValue === 'true';
+                } else if (field.fieldType === 'LIST') {
+                    fieldValueData.valueListId = parseInt(fieldValue);
+                }
+                
+                clientData.fieldValues.push(fieldValueData);
+            }
+        });
 
         try {
             const response = await fetch('/api/v1/client', {
@@ -543,13 +1315,14 @@ function updateSelectedFilters() {
     Object.keys(selectedFilters).forEach(key => delete selectedFilters[key]);
 
     Object.keys(customSelects).forEach(selectId => {
-        if (selectId.endsWith('-filter')) {
+        if (selectId.startsWith('filter-')) {
             const select = document.getElementById(selectId);
             if (select) {
                 const name = select.name;
                 const values = customSelects[selectId].getValue();
-                if (values.length > 0) {
-                    selectedFilters[name] = values;
+                const filteredValues = values.filter(v => v !== null && v !== undefined && v !== '' && v !== 'null');
+                if (filteredValues.length > 0) {
+                    selectedFilters[name] = filteredValues;
                 }
             }
         }
@@ -567,6 +1340,33 @@ function updateSelectedFilters() {
     if (createdAtTo) selectedFilters['createdAtTo'] = [createdAtTo];
     if (updatedAtFrom) selectedFilters['updatedAtFrom'] = [updatedAtFrom];
     if (updatedAtTo) selectedFilters['updatedAtTo'] = [updatedAtTo];
+
+    filterableFields.forEach(field => {
+        if (field.fieldType === 'DATE') {
+            const fromValue = formData.get(`${field.fieldName}From`);
+            const toValue = formData.get(`${field.fieldName}To`);
+            if (fromValue) selectedFilters[`${field.fieldName}From`] = [fromValue];
+            if (toValue) selectedFilters[`${field.fieldName}To`] = [toValue];
+        } else if (field.fieldType === 'TEXT' || field.fieldType === 'PHONE' || field.fieldType === 'NUMBER') {
+            const value = formData.get(field.fieldName);
+            if (value && value.trim() !== '') {
+                selectedFilters[field.fieldName] = value.trim();
+            }
+        } else if (field.fieldType === 'BOOLEAN') {
+            const value = formData.get(field.fieldName);
+            if (value && value !== '' && value !== 'null') {
+                selectedFilters[field.fieldName] = [value];
+            }
+        } else if (field.fieldType === 'LIST') {
+            const select = document.getElementById(`filter-${field.fieldName}`);
+            if (select && customSelects[`filter-${field.fieldName}`]) {
+                const selectedValues = customSelects[`filter-${field.fieldName}`].getValue();
+                if (selectedValues && selectedValues.length > 0) {
+                    selectedFilters[field.fieldName] = selectedValues;
+                }
+            }
+        }
+    });
 
     localStorage.setItem('selectedFilters', JSON.stringify(selectedFilters));
     updateFilterCounter();
@@ -608,17 +1408,24 @@ function clearFilters() {
     if (filterForm) {
         filterForm.reset();
         Object.keys(customSelects).forEach(selectId => {
-            if (selectId.endsWith('-filter')) {
-                customSelects[selectId].reset();
+            if (selectId.startsWith('filter-')) {
+                if (customSelects[selectId] && typeof customSelects[selectId].reset === 'function') {
+                    customSelects[selectId].reset();
+                } else if (customSelects[selectId] && typeof customSelects[selectId].setValue === 'function') {
+                    customSelects[selectId].setValue([]);
+                }
             }
         });
     }
 
     const searchInput = document.getElementById('inputSearch');
-    searchInput.value = '';
+    if (searchInput) {
+        searchInput.value = '';
+    }
 
     localStorage.removeItem('selectedFilters');
     localStorage.removeItem('searchTerm');
+    window.selectedFilters = {};
 
     updateFilterCounter();
     loadDataWithSort(currentPage, pageSize, currentSort, currentDirection);
@@ -666,123 +1473,6 @@ function populateSelect(selectId, data) {
     }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    const savedFilters = localStorage.getItem('selectedFilters');
-    let parsedFilters;
-    if (savedFilters) {
-        try {
-            parsedFilters = JSON.parse(savedFilters);
-        } catch (e) {
-            console.error('Invalid selectedFilters in localStorage:', e);
-            parsedFilters = {};
-        }
-    } else {
-        parsedFilters = {};
-    }
-    window.selectedFilters = parsedFilters;
-
-    const savedSearchTerm = localStorage.getItem('searchTerm');
-    if (savedSearchTerm) {
-        const searchInput = document.getElementById('inputSearch');
-        searchInput.value = savedSearchTerm;
-    }
-
-    const companyInput = document.getElementById('company');
-    const saveButton = document.getElementById('save-button');
-
-    const validateForm = () => {
-        const isCompanyFilled = companyInput.value.trim() !== '';
-        saveButton.disabled = !isCompanyFilled;
-    };
-
-    companyInput.addEventListener('input', validateForm);
-    validateForm();
-
-    fetch('/api/v1/entities')
-        .then(response => response.json())
-        .then(data => {
-            availableStatuses = data.statuses || [];
-            availableRegions = data.regions || [];
-            availableSources = data.sources || [];
-            availableRoutes = data.routes || [];
-            availableBusiness = data.businesses || [];
-            availableUsers = data.users || [];
-            availableProducts = data.products || [];
-            availableClientProducts = data.clientProducts || [];
-
-            statusMap = new Map(availableStatuses.map(item => [item.id, item.name]));
-            regionMap = new Map(availableRegions.map(item => [item.id, item.name]));
-            sourceMap = new Map(availableSources.map(item => [item.id, item.name]));
-            routeMap = new Map(availableRoutes.map(item => [item.id, item.name]));
-            businessMap = new Map(availableBusiness.map(item => [item.id, item.name]));
-            clientProductMap = new Map(availableClientProducts.map(item => [item.id, item.name]));
-            userMap = new Map(availableUsers.map(item => [item.id, item.name]));
-            productMap = new Map(availableProducts.map(item => [item.id, item.name]));
-
-            populateSelect('status', availableStatuses);
-            populateSelect('status-filter', availableStatuses);
-            populateSelect('region', availableRegions);
-            populateSelect('region-filter', availableRegions);
-            populateSelect('source', availableSources);
-            populateSelect('source-filter', availableSources);
-            populateSelect('route', availableRoutes);
-            populateSelect('route-filter', availableRoutes);
-            populateSelect('business', availableBusiness);
-            populateSelect('business-filter', availableBusiness);
-            populateSelect('clientProduct', availableClientProducts);
-            populateSelect('client-product-filter', availableClientProducts);
-
-            ['region', 'status', 'source', 'route', 'business', 'clientProduct'].forEach(selectId => {
-                const select = document.getElementById(selectId);
-                if (select && !customSelects[`${selectId}-custom`]) {
-                    customSelects[`${selectId}-custom`] = createCustomSelect(select);
-                }
-            });
-
-            ['region-filter', 'status-filter', 'source-filter', 'route-filter', 'business-filter', 'client-product-filter']
-                .forEach(selectId => {
-                    const select = document.getElementById(selectId);
-                    if (select && !customSelects[selectId]) {
-                        customSelects[selectId] = createCustomSelect(select);
-                    }
-                });
-
-            ['region-filter', 'status-filter', 'source-filter', 'route-filter', 'business-filter', 'client-product-filter']
-                .forEach(selectId => {
-                    const select = document.getElementById(selectId);
-                    if (select && customSelects[selectId]) {
-                        const name = select.name;
-                        if (window.selectedFilters[name] && Array.isArray(window.selectedFilters[name])) {
-                            customSelects[selectId].setValue(window.selectedFilters[name]);
-                        }
-                    }
-                });
-
-            const filterForm = document.getElementById('filterForm');
-            if (filterForm) {
-                if (window.selectedFilters['createdAtFrom']) {
-                    filterForm.querySelector('#createdAtFrom').value = window.selectedFilters['createdAtFrom'];
-                }
-                if (window.selectedFilters['createdAtTo']) {
-                    filterForm.querySelector('#createdAtTo').value = window.selectedFilters['createdAtTo'];
-                }
-                if (window.selectedFilters['updatedAtFrom']) {
-                    filterForm.querySelector('#updatedAtFrom').value = window.selectedFilters['updatedAtFrom'];
-                }
-                if (window.selectedFilters['updatedAtTo']) {
-                    filterForm.querySelector('#updatedAtTo').value = window.selectedFilters['updatedAtTo'];
-                }
-            }
-
-            updateSelectedFilters();
-
-            loadDataWithSort(currentPage, pageSize, currentSort, currentDirection);
-        })
-        .catch(error => {
-            console.error(error);
-            handleError(error);
-        });
-});
 
 
 

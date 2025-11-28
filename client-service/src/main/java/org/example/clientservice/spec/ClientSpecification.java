@@ -31,12 +31,13 @@ public class ClientSpecification implements Specification<Client> {
     private final List<Long> businessIds;
     private final List<Long> clientProductIds;
     private final List<Long> excludedStatusIds;
+    private final Long clientTypeId;
 
     public ClientSpecification(String query, Map<String, List<String>> filterParams,
                                List<Long> statusIds, List<Long> sourceIds,
                                List<Long> routeIds, List<Long> regionIds,
                                List<Long> businessIds, List<Long> clientProductIds,
-                               List<Long> excludedStatusIds) {
+                               List<Long> excludedStatusIds, Long clientTypeId) {
         this.query = query;
         this.filterParams = filterParams;
         this.statusIds = statusIds;
@@ -46,6 +47,7 @@ public class ClientSpecification implements Specification<Client> {
         this.businessIds = businessIds;
         this.clientProductIds = clientProductIds;
         this.excludedStatusIds = excludedStatusIds;
+        this.clientTypeId = clientTypeId;
     }
 
     @Override
@@ -57,6 +59,11 @@ public class ClientSpecification implements Specification<Client> {
         }
 
         predicate = criteriaBuilder.and(predicate, criteriaBuilder.isTrue(root.get("isActive")));
+
+        if (clientTypeId != null) {
+            predicate = criteriaBuilder.and(predicate, 
+                criteriaBuilder.equal(root.get("clientType").get("id"), clientTypeId));
+        }
 
         if (excludedStatusIds != null && !excludedStatusIds.isEmpty()) {
             predicate = criteriaBuilder.and(predicate, createStatusPredicate(root, criteriaBuilder));

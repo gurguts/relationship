@@ -32,9 +32,14 @@
     </div>
     <nav>
         <ul>
-            <li id="nav-clients"><a class="selected-nav" href="/clients">
-                Клієнти
-            </a></li>
+            <li id="nav-clients" class="dropdown">
+                <a class="selected-nav" href="#" onclick="return false;">
+                    Клієнти
+                    <span class="dropdown-arrow">▼</span>
+                </a>
+                <ul id="client-types-dropdown" class="dropdown-menu" style="display: none;">
+                </ul>
+            </li>
             <li id="nav-routes"><a href="/routes">
                 Маршрути
             </a></li>
@@ -132,48 +137,6 @@
             </div>
 
             <div class="select-section-items">
-
-                <div class="select-section-item">
-                    <br>
-                    <label class="select-label-style" for="business-filter">Тип бізнесу:</label>
-                    <select id="business-filter" name="business" multiple>
-                    </select>
-                </div>
-
-                <div class="select-section-item">
-                    <br>
-                    <label class="select-label-style" for="route-filter">Маршрут:</label>
-                    <select id="route-filter" name="route" multiple>
-                    </select>
-                </div>
-
-                <div class="select-section-item">
-                    <br>
-                    <label class="select-label-style" for="region-filter">Область:</label>
-                    <select id="region-filter" name="region" multiple>
-                    </select>
-                </div>
-
-                <div class="select-section-item">
-                    <br>
-                    <label class="select-label-style" for="status-filter">Статус:</label>
-                    <select id="status-filter" name="status" multiple>
-                    </select>
-                </div>
-
-                <div class="select-section-item">
-                    <br>
-                    <label class="select-label-style" for="source-filter">Залучення:</label>
-                    <select id="source-filter" name="source" multiple>
-                    </select>
-                </div>
-
-                <div class="select-section-item">
-                    <br>
-                    <label class="select-label-style" for="client-product-filter">Товар:</label>
-                    <select id="client-product-filter" name="clientProduct" multiple>
-                    </select>
-                </div>
             </div>
 
         </form>
@@ -217,17 +180,6 @@
     <table>
         <thead>
         <tr>
-            <th>
-                <label style="display: none" for="select-all"></label>
-                <input type="checkbox" id="select-all"></th>
-            <th data-sort="company">Компанія</th>
-            <th data-sort="region">Область</th>
-            <th data-sort="status">Статус</th>
-            <th>Телефони</th>
-            <th data-sort="source">Залучення</th>
-            <th data-sort="route">Маршрут</th>
-            <th data-sort="comment">Коментар</th>
-            <th data-sort="location">Адреса</th>
         </tr>
         </thead>
         <tbody id="client-table-body">
@@ -267,7 +219,7 @@
 <div id="client-modal" style="display: none;" data-source-id="" data-client-id="">
     <div class="modal-content-client">
         <span id="close-modal-client" class="close">&times;</span>
-        <h1><span id="modal-client-id"></span></h1>
+        <h1>Клієнт #<span id="modal-client-id"></span></h1>
         <div class="section-client-buttons">
             <div class="section-client-buttons-block">
                 <button id="show-purchases-client" class="client-action-info-button">Закупівлі</button>
@@ -275,99 +227,166 @@
                 <button id="show-containers-client" class="client-action-info-button">Тара</button>
             </div>
         </div>
+        <div class="client-fields-container">
         <p>
             <strong>Компанія:</strong>
             <span id="modal-client-company"></span>
-            <i class="edit-icon" onclick="enableEdit('company')">✏️</i>
+            <button class="edit-icon" onclick="enableEdit('company')" title="Редагувати">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                </svg>
+            </button>
         </p>
         <p>
             <strong>Контактна особа:</strong>
             <span id="modal-client-person"></span>
-            <i class="edit-icon" onclick="enableEdit('person')">✏️</i>
+            <button class="edit-icon" onclick="enableEdit('person')" title="Редагувати">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                </svg>
+            </button>
         </p>
         <p>
             <strong>Телефони:</strong>
             <span id="modal-client-phone"></span>
-            <i class="edit-icon" onclick="enableEdit('phone')">✏️</i>
+            <button class="edit-icon" onclick="enableEdit('phone')" title="Редагувати">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                </svg>
+            </button>
         </p>
         <p>
             <strong>Адреса:</strong>
             <span id="modal-client-location"></span>
-            <i class="edit-icon" onclick="enableEdit('location')">✏️</i>
+            <button class="edit-icon" onclick="enableEdit('location')" title="Редагувати">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                </svg>
+            </button>
         </p>
         <p>
             <strong>Ціна закупівлі:</strong>
             <span id="modal-client-price-purchase"></span>
-            <i class="edit-icon" onclick="enableEdit('price-purchase')">✏️</i>
+            <button class="edit-icon" onclick="enableEdit('price-purchase')" title="Редагувати">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                </svg>
+            </button>
         </p>
         <p>
             <strong>Ціна продажу:</strong>
             <span id="modal-client-price-sale"></span>
-            <i class="edit-icon" onclick="enableEdit('price-sale')">✏️</i>
+            <button class="edit-icon" onclick="enableEdit('price-sale')" title="Редагувати">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                </svg>
+            </button>
         </p>
         <p>
             <strong>ПДВ:</strong>
             <span id="modal-client-vat"></span>
             <label style="display: none" for="edit-vat"></label>
             <input type="checkbox" id="edit-vat" style="display: none;">
-            <i class="edit-icon" onclick="enableEdit('vat')">✏️</i>
+            <button class="edit-icon" onclick="enableEdit('vat')" title="Редагувати">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                </svg>
+            </button>
         </p>
 
         <p>
             <strong>Об'єм на місяць:</strong>
             <span id="modal-client-volumeMonth"></span>
-            <i class="edit-icon" onclick="enableEdit('volumeMonth')">✏️</i>
+            <button class="edit-icon" onclick="enableEdit('volumeMonth')" title="Редагувати">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                </svg>
+            </button>
         </p>
         <p>
             <strong>ЄДРПОУ:</strong>
             <span id="modal-client-edrpou"></span>
-            <i class="edit-icon" onclick="enableEdit('edrpou')">✏️</i>
+            <button class="edit-icon" onclick="enableEdit('edrpou')" title="Редагувати">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                </svg>
+            </button>
         </p>
         <p>
             <strong>Назва підриємства:</strong>
             <span id="modal-client-enterpriseName"></span>
-            <i class="edit-icon" onclick="enableEdit('enterpriseName')">✏️</i>
+            <button class="edit-icon" onclick="enableEdit('enterpriseName')" title="Редагувати">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                </svg>
+            </button>
         </p>
         <p>
             <strong>Тип бізнесу:</strong>
             <span id="modal-client-business"></span>
-            <i class="edit-icon" onclick="enableSelect('business', availableBusiness)">✏️</i>
+            <button class="edit-icon" onclick="enableSelect('business', availableBusiness)" title="Редагувати">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                </svg>
+            </button>
         </p>
         <p>
             <strong>Маршрут:</strong>
             <span id="modal-client-route"></span>
-            <i class="edit-icon" onclick="enableSelect('route', availableRoutes)">✏️</i>
+            <button class="edit-icon" onclick="enableSelect('route', availableRoutes)" title="Редагувати">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                </svg>
+            </button>
         </p>
         <p>
             <strong>Область:</strong>
             <span id="modal-client-region"></span>
-            <i class="edit-icon" onclick="enableSelect('region', availableRegions)">✏️</i>
+            <button class="edit-icon" onclick="enableSelect('region', availableRegions)" title="Редагувати">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                </svg>
+            </button>
         </p>
         <p>
             <strong>Статус:</strong>
             <span id="modal-client-status"></span>
-            <i class="edit-icon" onclick="enableSelect('status', availableStatuses)">✏️</i>
+            <button class="edit-icon" onclick="enableSelect('status', availableStatuses)" title="Редагувати">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                </svg>
+            </button>
         </p>
         <p class="modal-content-p-source">
             <strong>Залучення:</strong>
             <span id="modal-client-source"></span>
-            <i id="edit-source" class="edit-icon" onclick="enableSelect('source', availableSources)">✏️</i>
+            <button id="edit-source" class="edit-icon" onclick="enableSelect('source', availableSources)" title="Редагувати">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                </svg>
+            </button>
         </p>
         <p class="modal-content-client-product">
             <strong>Товар:</strong>
             <span id="modal-client-clientProduct"></span>
-            <i id="edit-clientProduct" class="edit-icon" onclick="enableSelect('clientProduct', availableClientProducts)">✏️</i>
+            <button id="edit-clientProduct" class="edit-icon" onclick="enableSelect('clientProduct', availableClientProducts)" title="Редагувати">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                </svg>
+            </button>
         </p>
         <p>
             <strong>Коментар:</strong>
             <span id="modal-client-comment"></span>
-            <i class="edit-icon" onclick="enableEdit('comment')">✏️</i>
+            <button class="edit-icon" onclick="enableEdit('comment')" title="Редагувати">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                </svg>
+            </button>
         </p>
-        <p><strong>Терміновий заїзд:</strong>
-            <label style="display: none" for="modal-client-urgently"></label>
-            <input type="checkbox" id="modal-client-urgently"></p>
         <p><strong>Створено:</strong> <span id="modal-client-created"></span></p>
         <p><strong>Оновлено:</strong> <span id="modal-client-updated"></span></p>
+        </div>
 
         <div class="section-client-buttons">
 
@@ -389,33 +408,6 @@
         <span class="create-client-close">&times;</span>
         <h1>Створення нового клієнта</h1>
         <form id="client-form">
-            <input type="text" id="company" name="company" placeholder="Компанія">
-            <input type="text" id="person" name="person" placeholder="Контактна особа">
-            <input type="text" id="phoneNumbers" name="phoneNumbers" placeholder="Телефони (розділяємо комою)">
-            <div id="output"></div>
-            <input type="text" id="location" name="location" placeholder="Адреса">
-            <input type="text" id="comment" name="comment" placeholder="Коментар">
-            <select id="region" name="regionId">
-                <option value="" disabled selected>Область</option>
-            </select>
-            <select id="status" name="statusId">
-                <option value="" disabled selected>Статус</option>
-            </select>
-            <select id="source" name="sourceId">
-                <option value="" disabled selected>Залучення</option>
-            </select>
-            <select id="clientProduct" name="clientProductId">
-                <option value="" disabled selected>Товар</option>
-            </select>
-            <select id="route" name="routeId">
-                <option value="" disabled selected>Маршрут</option>
-            </select>
-            <select id="business" name="businessId">
-                <option value="" disabled selected>Тип бізнесу</option>
-            </select>
-            <input type="text" id="volumeMonth" name="volumeMonth" placeholder="Орієнтований об'єм">
-
-            <button type="submit" id="save-button" disabled>Зберегти</button>
         </form>
     </div>
 </div>

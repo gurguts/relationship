@@ -76,6 +76,7 @@
 
     <div class="admin-tabs">
         <button id="showUsersBtn" class="tab-btn">Користувачі</button>
+        <button id="showClientTypesBtn" class="tab-btn">Типи клієнтів</button>
         <button id="showContainersBtn" class="tab-btn">Тара</button>
         <button id="showStoragesBtn" class="tab-btn">Склади</button>
         <button id="showWithdrawalReasonsBtn" class="tab-btn">Причини списання</button>
@@ -307,6 +308,29 @@
         </section>
 
         <!-- Branch Permissions -->
+        <section id="client-types-section" class="admin-section">
+            <div id="client-types-list-container" class="admin-card" style="display: none;">
+                <div class="section-header">
+                    <h3>Типи клієнтів</h3>
+                    <button id="addClientTypeBtn" class="btn-primary">Додати тип клієнта</button>
+                </div>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Назва</th>
+                            <th>Мітка поля назви</th>
+                            <th>Активний</th>
+                            <th>Дії</th>
+                        </tr>
+                        </thead>
+                        <tbody id="client-types-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
         <section id="branch-permissions-section" class="admin-section">
             <div id="branchPermissionsContainer" class="admin-card" style="display: none;">
                 <h3>Управління правами доступу до філій</h3>
@@ -375,6 +399,198 @@
 
 <div id="loader-backdrop" class="loader-backdrop" style="display: none;">
     <div id="loader" class="loader"></div>
+</div>
+
+<!-- Client Type Modals -->
+<div id="add-client-type-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <span class="close-modal">&times;</span>
+        <h2>Створити тип клієнта</h2>
+        <form id="create-client-type-form">
+            <div class="form-group">
+                <label for="client-type-name">Назва:</label>
+                <input type="text" id="client-type-name" name="name" required>
+            </div>
+            <div class="form-group">
+                <label for="client-type-name-field-label">Мітка поля назви:</label>
+                <input type="text" id="client-type-name-field-label" name="nameFieldLabel" value="Компанія">
+            </div>
+            <div class="modal-actions">
+                <button type="submit" class="btn-primary">Створити</button>
+                <button type="button" class="btn-secondary close-modal">Скасувати</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="edit-client-type-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <span class="close-modal">&times;</span>
+        <h2>Редагувати тип клієнта</h2>
+        <form id="edit-client-type-form">
+            <input type="hidden" id="edit-client-type-id" name="id">
+            <div class="form-group">
+                <label for="edit-client-type-name">Назва:</label>
+                <input type="text" id="edit-client-type-name" name="name" required>
+            </div>
+            <div class="form-group">
+                <label for="edit-client-type-name-field-label">Мітка поля назви:</label>
+                <input type="text" id="edit-client-type-name-field-label" name="nameFieldLabel">
+            </div>
+            <div class="form-group">
+                <label for="edit-client-type-active">Активний:</label>
+                <input type="checkbox" id="edit-client-type-active" name="isActive">
+            </div>
+            <div class="modal-actions">
+                <button type="submit" class="btn-primary">Зберегти</button>
+                <button type="button" class="btn-secondary close-modal">Скасувати</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="manage-fields-modal" class="modal" style="display: none;">
+    <div class="modal-content" style="max-width: 90%;">
+        <span class="close-modal">&times;</span>
+        <h2>Управління полями</h2>
+        <button id="addFieldBtn" class="btn-primary" style="margin-bottom: 1em;">Додати поле</button>
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                <tr>
+                    <th>Мітка</th>
+                    <th>Тип</th>
+                    <th>Обов'язкове</th>
+                    <th>Пошук</th>
+                    <th>Фільтр</th>
+                    <th>В таблиці</th>
+                    <th>Порядок</th>
+                    <th>Дії</th>
+                </tr>
+                </thead>
+                <tbody id="fields-table-body"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div id="add-field-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <span class="close-modal">&times;</span>
+        <h2>Додати поле</h2>
+        <form id="create-field-form">
+            <input type="hidden" id="field-client-type-id" name="clientTypeId">
+            <div class="form-group">
+                <label for="field-name">Назва поля (латиниця):</label>
+                <input type="text" id="field-name" name="fieldName" required pattern="[a-zA-Z0-9_]+">
+            </div>
+            <div class="form-group">
+                <label for="field-label">Мітка поля:</label>
+                <input type="text" id="field-label" name="fieldLabel" required>
+            </div>
+            <div class="form-group">
+                <label for="field-type">Тип поля:</label>
+                <select id="field-type" name="fieldType" required>
+                    <option value="TEXT">Текст</option>
+                    <option value="NUMBER">Число</option>
+                    <option value="DATE">Дата</option>
+                    <option value="PHONE">Телефон</option>
+                    <option value="LIST">Список</option>
+                    <option value="BOOLEAN">Так/Ні</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="field-required">Обов'язкове:</label>
+                <input type="checkbox" id="field-required" name="isRequired">
+            </div>
+            <div class="form-group">
+                <label for="field-searchable">Доступне для пошуку:</label>
+                <input type="checkbox" id="field-searchable" name="isSearchable" checked>
+            </div>
+            <div class="form-group">
+                <label for="field-filterable">Доступне для фільтрації:</label>
+                <input type="checkbox" id="field-filterable" name="isFilterable">
+            </div>
+            <div class="form-group">
+                <label for="field-visible">Видиме в таблиці:</label>
+                <input type="checkbox" id="field-visible" name="isVisibleInTable" checked>
+            </div>
+            <div class="form-group">
+                <label for="field-visible-in-create">Видиме при створенні:</label>
+                <input type="checkbox" id="field-visible-in-create" name="isVisibleInCreate" checked>
+            </div>
+            <div class="form-group" id="field-validation-pattern-group" style="display: none;">
+                <label for="field-validation-pattern">Шаблон валідації:</label>
+                <input type="text" id="field-validation-pattern" name="validationPattern" placeholder="Наприклад: ^\\+?[0-9]{10,15}$">
+            </div>
+            <div class="form-group" id="field-list-values-group" style="display: none;">
+                <label for="field-list-values">Значення списку (по одному на рядок):</label>
+                <textarea id="field-list-values" name="listValues" rows="5"></textarea>
+            </div>
+            <div class="form-group">
+                <label for="field-allow-multiple">Дозволити множинні значення:</label>
+                <input type="checkbox" id="field-allow-multiple" name="allowMultiple">
+            </div>
+            <div class="modal-actions">
+                <button type="submit" class="btn-primary">Створити</button>
+                <button type="button" class="btn-secondary close-modal">Скасувати</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="edit-field-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <span class="close-modal">&times;</span>
+        <h2>Редагувати поле</h2>
+        <form id="edit-field-form">
+            <input type="hidden" id="edit-field-id" name="id">
+            <div class="form-group">
+                <label for="edit-field-label">Мітка поля:</label>
+                <input type="text" id="edit-field-label" name="fieldLabel" required>
+            </div>
+            <div class="form-group">
+                <label for="edit-field-required">Обов'язкове:</label>
+                <input type="checkbox" id="edit-field-required" name="isRequired">
+            </div>
+            <div class="form-group">
+                <label for="edit-field-searchable">Доступне для пошуку:</label>
+                <input type="checkbox" id="edit-field-searchable" name="isSearchable">
+            </div>
+            <div class="form-group">
+                <label for="edit-field-filterable">Доступне для фільтрації:</label>
+                <input type="checkbox" id="edit-field-filterable" name="isFilterable">
+            </div>
+            <div class="form-group">
+                <label for="edit-field-visible">Видиме в таблиці:</label>
+                <input type="checkbox" id="edit-field-visible" name="isVisibleInTable">
+            </div>
+            <div class="form-group">
+                <label for="edit-field-visible-in-create">Видиме при створенні:</label>
+                <input type="checkbox" id="edit-field-visible-in-create" name="isVisibleInCreate">
+            </div>
+            <div class="form-group">
+                <label for="edit-field-display-order">Порядок відображення:</label>
+                <input type="number" id="edit-field-display-order" name="displayOrder" min="0">
+            </div>
+            <div class="form-group" id="edit-field-validation-pattern-group" style="display: none;">
+                <label for="edit-field-validation-pattern">Шаблон валідації:</label>
+                <input type="text" id="edit-field-validation-pattern" name="validationPattern">
+            </div>
+            <div class="form-group" id="edit-field-list-values-group" style="display: none;">
+                <label for="edit-field-list-values">Значення списку (по одному на рядок):</label>
+                <textarea id="edit-field-list-values" name="listValues" rows="5"></textarea>
+            </div>
+            <div class="form-group">
+                <label for="edit-field-allow-multiple">Дозволити множинні значення:</label>
+                <input type="checkbox" id="edit-field-allow-multiple" name="allowMultiple">
+            </div>
+            <div class="modal-actions">
+                <button type="submit" class="btn-primary">Зберегти</button>
+                <button type="button" class="btn-secondary close-modal">Скасувати</button>
+            </div>
+        </form>
+    </div>
 </div>
 
 <script src="/js/administration.js"></script>

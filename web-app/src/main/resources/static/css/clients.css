@@ -745,7 +745,7 @@ input.custom-select-placeholder {
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.5);
+    background: rgba(0, 0, 0, 0.6);
     display: none;
     justify-content: center;
     align-items: center;
@@ -754,6 +754,7 @@ input.custom-select-placeholder {
     font-size: var(--rem);
     opacity: 0;
     transition: opacity 0.3s ease;
+    backdrop-filter: blur(2px);
 }
 
 #createClientModal.show {
@@ -767,13 +768,14 @@ input.custom-select-placeholder {
 
 #createClientModal-content {
     background: white;
-    padding: 1em;
-    border-radius: 8px;
-    width: 50%;
+    padding: 2em;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 600px;
     position: relative;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
     overflow-y: auto;
-    max-height: 90%;
+    max-height: 90vh;
     transform: scale(0.9);
     transition: transform 0.3s ease;
 }
@@ -786,106 +788,390 @@ input.custom-select-placeholder {
     transform: scale(0.9);
 }
 
-
 #createClientModal-content h1 {
-    font-size: 1.5rem;
+    font-size: 1.8rem;
     text-align: center;
     text-transform: uppercase;
     color: var(--dark-green);
+    margin: 0 0 1.5em 0;
+    font-weight: 600;
+    letter-spacing: 0.5px;
 }
 
 .create-client-close {
     position: absolute;
-    top: 10px;
-    right: 15px;
+    top: 15px;
+    right: 20px;
     cursor: pointer;
     font-size: 2em;
     font-weight: bold;
-    color: #333;
-    transition: color 0.3s ease;
+    color: #666;
+    transition: color 0.3s ease, transform 0.2s ease;
+    line-height: 1;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
 }
 
 .create-client-close:hover {
-    color: red;
+    color: #ff4444;
+    background-color: #ffebee;
+    transform: rotate(90deg);
 }
 
 #createClientModal form {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    gap: 0.5em;
-}
-
-#createClientModal input,
-#createClientModal select {
-    padding: 0.2em;
-    font-size: var(--base-text-size);
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    margin: 0;
-    font-family: inherit;
+    gap: 1.2em;
     width: 100%;
 }
 
+#createClientModal .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5em;
+    width: 100%;
+}
+
+#createClientModal .form-group label {
+    font-size: 0.95em;
+    font-weight: 600;
+    color: var(--dark-blue);
+    margin-bottom: 0.3em;
+    display: block;
+}
+
+#createClientModal .form-group label::after {
+    content: '';
+    display: inline-block;
+}
+
+#createClientModal input[type="text"],
+#createClientModal input[type="number"],
+#createClientModal input[type="date"],
+#createClientModal select {
+    padding: 0.75em 1em;
+    font-size: 1em;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    margin: 0;
+    font-family: inherit;
+    width: 100%;
+    box-sizing: border-box;
+    background-color: #fff;
+    transition: all 0.3s ease;
+    color: #333;
+}
+
+#createClientModal input[type="text"]:focus,
+#createClientModal input[type="number"]:focus,
+#createClientModal input[type="date"]:focus,
+#createClientModal select:focus {
+    outline: none;
+    border-color: var(--dark-green);
+    box-shadow: 0 0 0 3px rgba(73, 115, 10, 0.1);
+}
+
+#createClientModal input[type="text"]:hover,
+#createClientModal input[type="number"]:hover,
+#createClientModal input[type="date"]:hover,
+#createClientModal select:hover {
+    border-color: #bdbdbd;
+}
+
 #createClientModal input::placeholder {
-    color: var(--main-grey);
-    font-style: italic;
+    color: #9e9e9e;
+    font-style: normal;
 }
 
 #createClientModal input.custom-select-placeholder {
-    color: black;
+    color: #333;
 }
 
 #createClientModal select {
     cursor: pointer;
-    font-size: var(--base-text-size);
-    color: #333;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23333' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 1em center;
+    padding-right: 2.5em;
+}
+
+#createClientModal select[multiple] {
+    min-height: 120px;
+    padding: 0.75em;
+    background-image: none;
+}
+
+#createClientModal select option {
+    padding: 0.5em;
+    font-size: 1em;
+}
+
+#createClientModal select option:checked {
+    background-color: var(--dark-green);
+    color: white;
+}
+
+.phone-output {
+    margin-top: 0.5em;
+    padding: 0.5em;
+    background-color: #f5f5f5;
+    border-radius: 6px;
+    min-height: 40px;
 }
 
 .phone-numbers-list {
     list-style-type: none;
     padding: 0;
     margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5em;
 }
 
 .phone-number-item {
-    padding: 5px 10px;
-    border-bottom: 1px solid #ccc;
+    padding: 0.4em 0.8em;
+    background-color: var(--dark-green);
+    color: white;
+    border-radius: 6px;
+    font-size: 0.9em;
+    display: inline-block;
 }
 
-.phone-number-item:last-child {
-    border-bottom: none;
-}
-
-
-#createClientModal button:not(.custom-select-tag-remove) {
-    padding: 12px;
-    background: linear-gradient(135deg, var(--bright-blue), var(--dark-blue), var(--bright-blue));
-    background-size: 200% 200%;
+#createClientModal button[type="submit"] {
+    padding: 0.9em 2em;
+    background: linear-gradient(135deg, var(--dark-green), var(--bright-green));
     color: white;
     border: none;
     border-radius: 8px;
     cursor: pointer;
-    font-size: 1rem;
-    font-weight: bold;
-    transition: background-position 0.3s ease, transform 0.2s ease;
-    background-position: 0 50%;
-    display: inline-block;
+    font-size: 1.1em;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    margin-top: 0.5em;
+    width: 100%;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
-#createClientModal button:not(.custom-select-tag-remove):hover {
-    background-position: 100% 50%;
-    transform: scale(1.05);
+#createClientModal button[type="submit"]:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+    background: linear-gradient(135deg, var(--bright-green), var(--dark-green));
 }
 
-#createClientModal button:not(.custom-select-tag-remove):active {
-    transform: scale(0.95);
+#createClientModal button[type="submit"]:active:not(:disabled) {
+    transform: translateY(0);
 }
 
-#createClientModal button:not(.custom-select-tag-remove):disabled {
+#createClientModal button[type="submit"]:disabled {
     background: #ccc;
     cursor: not-allowed;
     color: #666;
+    transform: none;
+    box-shadow: none;
+}
+
+#createClientModal .custom-select-container {
+    width: 100%;
+    margin-top: 0;
+}
+
+#createClientModal .custom-select-trigger {
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    background-color: #fff;
+    transition: all 0.3s ease;
+    padding: 0.75em 1em;
+    min-height: 2.5em;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5em;
+    cursor: pointer;
+}
+
+#createClientModal .custom-select-trigger:focus,
+#createClientModal .custom-select-trigger:focus-within {
+    outline: none;
+    border-color: var(--dark-green);
+    box-shadow: 0 0 0 3px rgba(73, 115, 10, 0.1);
+}
+
+#createClientModal .custom-select-trigger:hover {
+    border-color: #bdbdbd;
+}
+
+#createClientModal .custom-select-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5em;
+    padding: 0;
+    min-height: auto;
+    flex: 1;
+}
+
+#createClientModal .custom-select-tag {
+    background-color: var(--dark-green);
+    color: white;
+    padding: 0.4em 0.7em;
+    border-radius: 6px;
+    font-size: 0.9em;
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+}
+
+#createClientModal .custom-select-tag-remove {
+    background: rgba(255, 255, 255, 0.3);
+    border: none;
+    color: white;
+    cursor: pointer;
+    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8em;
+    padding: 0;
+    transition: background-color 0.2s ease;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+#createClientModal .custom-select-tag-remove:hover {
+    background: rgba(255, 255, 255, 0.5);
+}
+
+#createClientModal .custom-select-placeholder {
+    border: none;
+    outline: none;
+    flex: 1;
+    padding: 0;
+    font-size: 1em;
+    min-width: 100px;
+    background: transparent;
+    color: #9e9e9e;
+}
+
+#createClientModal .custom-select-dropdown {
+    border: 2px solid var(--dark-green);
+    border-top: none;
+    border-radius: 0 0 8px 8px;
+    background-color: white;
+    max-height: 200px;
+    overflow-y: auto;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-top: 2px;
+    z-index: 1000;
+}
+
+#createClientModal .custom-select-search {
+    padding: 0.5em;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+#createClientModal .custom-select-search input {
+    width: 100%;
+    padding: 0.5em;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    font-size: 0.95em;
+    box-sizing: border-box;
+}
+
+#createClientModal .custom-select-search input:focus {
+    outline: none;
+    border-color: var(--dark-green);
+}
+
+#createClientModal .custom-select-option {
+    padding: 0.75em 1em;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    font-size: 1em;
+}
+
+#createClientModal .custom-select-option:hover {
+    background-color: #f5f5f5;
+}
+
+#createClientModal .custom-select-option.selected {
+    background-color: var(--dark-green);
+    color: white;
+}
+
+#createClientModal input[type="date"] {
+    cursor: pointer;
+}
+
+#createClientModal input[type="date"]::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+}
+
+#createClientModal input[type="date"]::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
+}
+
+#createClientModal input:invalid {
+    border-color: #ff6b6b;
+}
+
+#createClientModal input:invalid:focus {
+    border-color: #ff6b6b;
+    box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.1);
+}
+
+#createClientModal select:invalid {
+    border-color: #ff6b6b;
+}
+
+#createClientModal select:invalid:focus {
+    border-color: #ff6b6b;
+    box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.1);
+}
+
+#createClientModal .form-group label::after {
+    content: '';
+}
+
+#createClientModal .form-group label:has(+ input[required])::after,
+#createClientModal .form-group label:has(+ select[required])::after {
+    content: ' *';
+    color: #ff6b6b;
+    font-weight: bold;
+}
+
+@media (max-width: 768px) {
+    #createClientModal-content {
+        width: 95%;
+        padding: 1.5em;
+        max-height: 95vh;
+    }
+    
+    #createClientModal-content h1 {
+        font-size: 1.5rem;
+    }
+    
+    #createClientModal .form-group {
+        gap: 0.4em;
+    }
+    
+    #createClientModal input[type="text"],
+    #createClientModal input[type="number"],
+    #createClientModal input[type="date"],
+    #createClientModal select {
+        padding: 0.6em 0.8em;
+        font-size: 0.95em;
+    }
 }
 
 /*--clientModal--*/
@@ -898,13 +1184,16 @@ input.custom-select-placeholder {
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
+    background-color: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
     justify-content: center;
     align-items: center;
     z-index: 11;
     overflow: hidden;
     opacity: 0;
     transition: opacity 0.3s ease-in-out;
+    padding: 1em;
+    box-sizing: border-box;
 }
 
 #client-modal.open {
@@ -918,14 +1207,17 @@ input.custom-select-placeholder {
 
 .modal-content-client {
     background-color: white;
-    padding: 1em;
-    border-radius: 8px 0 0 8px;
-    width: 70%;
-    height: 90%;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    padding: 1.2em;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 900px;
+    max-height: 95vh;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
     overflow-y: auto;
     font-family: sans-serif;
     position: relative;
+    display: flex;
+    flex-direction: column;
 }
 
 #client-modal.open .modal-content-client {
@@ -960,13 +1252,34 @@ input.custom-select-placeholder {
     text-align: center;
     color: var(--dark-blue);
     font-size: 1.4em;
+    font-weight: 600;
+    border-bottom: 2px solid var(--dark-green);
+}
+
+.modal-content-client .client-fields-container {
+    flex: 1;
+    overflow-y: auto;
+    padding-right: 0.3em;
 }
 
 .modal-content-client p {
-    margin: 0 0;
-    padding: 0.1em 0;
-    border-bottom: 1px solid #bebebe;
-    font-size: 1em;
+    margin: 0.1em 0;
+    padding: 0.5em 0.8em;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    font-size: 0.95em;
+    background-color: #fafafa;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.4em;
+    flex-wrap: wrap;
+}
+
+.modal-content-client p.editing {
+    background-color: #fff;
+    border-color: var(--dark-green);
+    box-shadow: 0 2px 8px rgba(73, 115, 10, 0.15);
 }
 
 .modal-content-p-source {
@@ -974,56 +1287,121 @@ input.custom-select-placeholder {
 }
 
 .modal-content-client strong {
-    font-size: 1em;
+    font-size: 0.9em;
     display: inline-block;
-    min-width: 15em;
+    min-width: 11em;
     color: var(--dark-blue);
-    text-transform: uppercase;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+    .modal-content-client strong {
+        min-width: 100%;
+        margin-bottom: 0.2em;
+    }
 }
 
 #close-modal-client {
     position: absolute;
-    top: 10px;
-    right: 10px;
+    top: 0.5em;
+    right: 0.8em;
     cursor: pointer;
-    font-size: 2em;
+    font-size: 1.8em;
     font-weight: bold;
-    color: #333;
-    transition: color 0.3s ease;
+    color: #666;
+    transition: all 0.3s ease;
     border: none;
     background: none;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    z-index: 1;
+    touch-action: manipulation;
 }
 
-#close-modal-client:hover {
+#close-modal-client:hover,
+#close-modal-client:active {
     color: #c00;
+    background-color: rgba(204, 0, 0, 0.1);
+    transform: scale(1.1);
+}
+
+@media (max-width: 768px) {
+    #close-modal-client {
+        width: 44px;
+        height: 44px;
+        font-size: 2.2em;
+    }
 }
 
 .edit-icon {
-    margin-left: 0.3em;
+    margin-left: auto;
     cursor: pointer;
-    font-size: 1.2em;
-    color: #555;
-    visibility: hidden;
-    transition: visibility 0.2s ease, opacity 0.2s ease;
-    opacity: 0;
+    color: var(--dark-green);
+    visibility: visible;
+    opacity: 0.7;
+    transition: all 0.2s ease;
+    padding: 0.2em;
+    border-radius: 4px;
+    flex-shrink: 0;
+    min-width: 20px;
+    min-height: 20px;
+    width: 20px;
+    height: 20px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    touch-action: manipulation;
+    background: none;
+    border: none;
 }
 
-.modal-content-client p:hover .edit-icon {
-    visibility: visible;
+.edit-icon svg {
+    width: 100%;
+    height: 100%;
+    fill: currentColor;
+}
+
+.edit-icon:hover,
+.edit-icon:active {
     opacity: 1;
+    background-color: rgba(73, 115, 10, 0.1);
+    transform: scale(1.1);
 }
 
 .modal-content-client p:hover {
-    background-color: #f9f9f9;
+    background-color: #f5f5f5;
+}
+
+@media (max-width: 768px) {
+    .edit-icon {
+        visibility: visible;
+        opacity: 1;
+        font-size: 1.5em;
+        min-width: 40px;
+        min-height: 40px;
+    }
 }
 
 .modal-content-client span {
-    color: black;
-    font-size: 1em;
+    color: #333;
+    font-size: 0.95em;
     display: inline-block;
     white-space: normal;
     word-wrap: break-word;
     word-break: break-word;
+    flex: 1;
+    min-width: 0;
+    line-height: 1.4;
+}
+
+.modal-content-client span.empty-value {
+    color: #999;
+    font-style: italic;
 }
 
 .modal-content-client i.edit-icon:hover {
@@ -1033,21 +1411,33 @@ input.custom-select-placeholder {
 
 .modal-content-client input,
 .modal-content-client textarea {
-    font-size: 1em;
-    color: black;
+    font-size: 0.95em;
+    color: #333;
     background-color: #fff;
-    padding: 0.5em;
-    border: 1px solid #ddd;
-    border-radius: 4px;
+    padding: 0.5em 0.6em;
+    border: 2px solid #ddd;
+    border-radius: 6px;
     font-family: 'Arial', sans-serif;
-    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    transition: all 0.3s ease;
+    flex: 1;
+    min-width: 200px;
+    box-sizing: border-box;
 }
 
 .modal-content-client input:focus,
 .modal-content-client textarea:focus {
-    border-color: #2980b9;
+    border-color: var(--dark-green);
     outline: none;
-    box-shadow: 0 0 8px rgba(41, 128, 185, 0.5);
+    box-shadow: 0 0 0 3px rgba(73, 115, 10, 0.1);
+}
+
+@media (max-width: 768px) {
+    .modal-content-client input,
+    .modal-content-client textarea {
+        width: 100%;
+        min-width: 100%;
+        font-size: 16px;
+    }
 }
 
 .edit-number {
@@ -1093,19 +1483,45 @@ input.custom-select-placeholder {
     outline: none;
 }
 
+.section-client-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6em;
+    justify-content: space-between;
+}
+
+.section-client-buttons-block {
+    display: flex;
+    gap: 0.5em;
+    flex-wrap: wrap;
+}
+
 #save-client, #cancel-client, #delete-client, #full-delete-client {
-    display: inline-block;
-    padding: 0.5em 1em;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5em 1.2em;
     border: none;
-    border-radius: 5px;
+    border-radius: 6px;
     cursor: pointer;
-    font-size: 1em;
+    font-size: 0.9em;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    min-height: 36px;
+    touch-action: manipulation;
 }
 
 #save-client {
     display: none;
-    background-color: var(--bright-green);
+    background-color: var(--dark-green);
     color: white;
+}
+
+#save-client:hover,
+#save-client:active {
+    background-color: var(--bright-green);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(73, 115, 10, 0.3);
 }
 
 .delete-btn {
@@ -1113,10 +1529,41 @@ input.custom-select-placeholder {
     color: white;
 }
 
+.delete-btn:hover,
+.delete-btn:active {
+    background-color: #d32f2f;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(244, 67, 54, 0.3);
+}
+
 #cancel-client {
     display: none;
-    background-color: #ffcc00;
+    background-color: #ff9800;
     color: white;
+}
+
+#cancel-client:hover,
+#cancel-client:active {
+    background-color: #f57c00;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 152, 0, 0.3);
+}
+
+@media (max-width: 768px) {
+    .section-client-buttons {
+        flex-direction: column;
+    }
+    
+    .section-client-buttons-block {
+        width: 100%;
+        flex-direction: column;
+    }
+    
+    #save-client, #cancel-client, #delete-client, #full-delete-client {
+        width: 100%;
+        padding: 1em;
+        font-size: 1.1em;
+    }
 }
 
 #modal-client-vat input {
@@ -1252,21 +1699,22 @@ input.custom-select-placeholder {
 
 .section-client-buttons-block {
     display: flex;
-    margin: 0.5em auto;
-    gap: 1em;
+    margin: 0.3em auto;
+    gap: 0.6em;
 }
 
 .client-action-info-button {
     --color: var(--dark-blue);
     font-family: inherit;
     display: inline-block;
-    width: 6em;
-    height: 2.3em;
+    width: 5.5em;
+    height: 2em;
     position: relative;
     cursor: pointer;
     overflow: hidden;
     border: 2px solid var(--color);
     transition: color 0.3s;
+    font-size: 0.9em;
     z-index: 1;
     font-size: 1.3rem;
     border-radius: 6px;
@@ -1503,32 +1951,78 @@ input.custom-select-placeholder {
         max-height: 90%;
     }
 
+    #client-modal {
+        padding: 0.5em;
+    }
+
     .modal-content-client {
-        padding: 1em;
-        width: 85%;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        overflow-y: auto;
-        font-family: sans-serif;
-        position: relative;
-        max-height: 93%;
+        padding: 1.5em;
+        width: 100%;
+        max-width: 100%;
+        max-height: 100vh;
+        border-radius: 8px;
+    }
+
+    .modal-content-client h1 {
+        font-size: 1.5em;
+        margin-bottom: 1em;
+    }
+
+    .modal-content-client p {
+        padding: 0.8em;
+        flex-direction: column;
+        align-items: flex-start;
     }
 
     .modal-content-client strong {
-        display: inline;
-    }
-
-    .edit-textarea {
-        width: 17em;
-        max-height: 20em;
+        display: block;
+        width: 100%;
+        margin-bottom: 0.5em;
+        font-size: 0.9em;
     }
 
     .modal-content-client span {
         display: block;
+        width: 100%;
         margin-top: 0.3em;
     }
 
+    .edit-icon {
+        align-self: flex-end;
+        margin-top: 0.5em;
+    }
+
+    .edit-textarea {
+        width: 100%;
+        min-width: 100%;
+        max-height: 15em;
+    }
+
     .modal-content-p-source {
-        display: inline;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .section-client-buttons {
+        flex-direction: column;
+    }
+
+    .section-client-buttons-block {
+        width: 100%;
+    }
+
+    #save-client, #cancel-client, #delete-client, #full-delete-client {
+        width: 100%;
+        padding: 1em;
+        font-size: 1.1em;
+        min-height: 48px;
+    }
+
+    .client-action-info-button {
+        width: 100%;
+        padding: 0.8em;
+        font-size: 1em;
+        min-height: 44px;
     }
 
     #filter-clear {

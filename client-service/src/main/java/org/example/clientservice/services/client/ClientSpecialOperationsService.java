@@ -165,6 +165,10 @@ public class ClientSpecialOperationsService implements IClientSpecialOperationsS
 
     private List<Client> fetchClients(String query, Map<String, List<String>> filterParams, FilterIds filterIds,
                                       List<Long> excludeStatusIds, Sort sort) {
+        Long clientTypeId = filterParams != null && filterParams.containsKey("clientTypeId") 
+            ? Long.parseLong(filterParams.get("clientTypeId").get(0)) 
+            : null;
+
         return clientRepository.findAll(new ClientSpecification(
                 query,
                 filterParams,
@@ -174,7 +178,8 @@ public class ClientSpecialOperationsService implements IClientSpecialOperationsS
                 filterIds.regionIds(),
                 filterIds.businessIds(),
                 filterIds.clientProductIds,
-                excludeStatusIds
+                excludeStatusIds,
+                clientTypeId
         ), sort);
     }
 

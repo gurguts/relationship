@@ -3,19 +3,27 @@ package org.example.clientservice.mappers;
 import lombok.RequiredArgsConstructor;
 import org.example.clientservice.models.client.Client;
 import org.example.clientservice.models.client.PhoneNumber;
+import org.example.clientservice.models.clienttype.ClientFieldValue;
+import org.example.clientservice.models.clienttype.ClientType;
 import org.example.clientservice.models.dto.client.*;
+import org.example.clientservice.models.dto.clienttype.ClientFieldValueCreateDTO;
 import org.example.clientservice.models.dto.fields.*;
 import org.example.clientservice.models.field.*;
+import org.example.clientservice.services.clienttype.ClientTypeService;
+import org.example.clientservice.services.clienttype.ClientTypeFieldService;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
 public class ClientMapper {
+    private final ClientTypeService clientTypeService;
+    private final ClientTypeFieldService clientTypeFieldService;
 
 
     public ClientDTO clientToClientDTO(Client client) {
@@ -75,11 +83,42 @@ public class ClientMapper {
 
     public Client clientCreateDTOToClient(ClientCreateDTO clientCreateDTO) {
         Client client = new Client();
+        mapClientTypeFromCreateDTO(clientCreateDTO, client);
         mapBasicFieldsFromCreateDTO(clientCreateDTO, client);
         mapPhoneNumbersFromCreateDTO(clientCreateDTO, client);
         mapExternalDataFromCreateDTO(clientCreateDTO, client);
+        mapFieldValuesFromCreateDTO(clientCreateDTO, client);
 
         return client;
+    }
+
+    private void mapClientTypeFromCreateDTO(ClientCreateDTO clientCreateDTO, Client client) {
+        if (clientCreateDTO.getClientTypeId() != null) {
+            ClientType clientType = clientTypeService.getClientTypeById(clientCreateDTO.getClientTypeId());
+            client.setClientType(clientType);
+        }
+    }
+
+    private void mapFieldValuesFromCreateDTO(ClientCreateDTO clientCreateDTO, Client client) {
+        if (clientCreateDTO.getFieldValues() != null && !clientCreateDTO.getFieldValues().isEmpty()) {
+            List<ClientFieldValue> fieldValues = clientCreateDTO.getFieldValues().stream()
+                    .map(dto -> {
+                        ClientFieldValue fieldValue = new ClientFieldValue();
+                        fieldValue.setClient(client);
+                        fieldValue.setField(clientTypeFieldService.getFieldById(dto.getFieldId()));
+                        fieldValue.setValueText(dto.getValueText());
+                        fieldValue.setValueNumber(dto.getValueNumber());
+                        fieldValue.setValueDate(dto.getValueDate());
+                        fieldValue.setValueBoolean(dto.getValueBoolean());
+                        if (dto.getValueListId() != null) {
+                            fieldValue.setValueList(clientTypeService.getListValueById(dto.getValueListId()));
+                        }
+                        fieldValue.setDisplayOrder(dto.getDisplayOrder() != null ? dto.getDisplayOrder() : 0);
+                        return fieldValue;
+                    })
+                    .collect(Collectors.toList());
+            client.setFieldValues(fieldValues);
+        }
     }
 
     private void mapBasicFieldsFromCreateDTO(ClientCreateDTO clientCreateDTO, Client client) {
@@ -93,15 +132,19 @@ public class ClientMapper {
     }
 
     private void mapPhoneNumbersFromCreateDTO(ClientCreateDTO clientCreateDTO, Client client) {
-        List<PhoneNumber> phoneNumbers = clientCreateDTO.getPhoneNumbers().stream()
-                .map(number -> {
-                    PhoneNumber phoneNumber = new PhoneNumber();
-                    phoneNumber.setNumber(number);
-                    phoneNumber.setClient(client);
-                    return phoneNumber;
-                })
-                .collect(Collectors.toList());
-        client.setPhoneNumbers(phoneNumbers);
+        if (clientCreateDTO.getPhoneNumbers() != null && !clientCreateDTO.getPhoneNumbers().isEmpty()) {
+            List<PhoneNumber> phoneNumbers = clientCreateDTO.getPhoneNumbers().stream()
+                    .map(number -> {
+                        PhoneNumber phoneNumber = new PhoneNumber();
+                        phoneNumber.setNumber(number);
+                        phoneNumber.setClient(client);
+                        return phoneNumber;
+                    })
+                    .collect(Collectors.toList());
+            client.setPhoneNumbers(phoneNumbers);
+        } else {
+            client.setPhoneNumbers(new ArrayList<>());
+        }
     }
 
     private void mapExternalDataFromCreateDTO(ClientCreateDTO clientCreateDTO, Client client) {
@@ -119,6 +162,7 @@ public class ClientMapper {
         mapPhoneNumbersFromUpdateDTO(clientUpdateDTO, client);
         mapExternalDataFromUpdateDTO(clientUpdateDTO, client);
         mapAdditionalFieldsFromUpdateDTO(clientUpdateDTO, client);
+        mapFieldValuesFromUpdateDTO(clientUpdateDTO, client);
 
         return client;
     }
@@ -158,6 +202,30 @@ public class ClientMapper {
         client.setEdrpou(clientUpdateDTO.getEdrpou());
         client.setEnterpriseName(clientUpdateDTO.getEnterpriseName());
         client.setVat(clientUpdateDTO.getVat());
+    }
+
+    private void mapFieldValuesFromUpdateDTO(ClientUpdateDTO clientUpdateDTO, Client client) {
+        if (clientUpdateDTO.getFieldValues() != null && !clientUpdateDTO.getFieldValues().isEmpty()) {
+            List<ClientFieldValue> fieldValues = clientUpdateDTO.getFieldValues().stream()
+                    .map(dto -> {
+                        ClientFieldValue fieldValue = new ClientFieldValue();
+                        fieldValue.setClient(client);
+                        fieldValue.setField(clientTypeFieldService.getFieldById(dto.getFieldId()));
+                        fieldValue.setValueText(dto.getValueText());
+                        fieldValue.setValueNumber(dto.getValueNumber());
+                        fieldValue.setValueDate(dto.getValueDate());
+                        fieldValue.setValueBoolean(dto.getValueBoolean());
+                        if (dto.getValueListId() != null) {
+                            fieldValue.setValueList(clientTypeService.getListValueById(dto.getValueListId()));
+                        }
+                        fieldValue.setDisplayOrder(dto.getDisplayOrder() != null ? dto.getDisplayOrder() : 0);
+                        return fieldValue;
+                    })
+                    .collect(Collectors.toList());
+            client.setFieldValues(fieldValues);
+        } else {
+            client.setFieldValues(new ArrayList<>());
+        }
     }
 
     public ClientListDTO clientToClientListDTO(Client client, ExternalClientDataCache cache) {

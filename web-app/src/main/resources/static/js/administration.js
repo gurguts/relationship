@@ -205,6 +205,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const adminContainers = [
         'userListContainer',
         'addUserContainer',
+        'client-types-list-container',
         'oilTypeListContainer',
         'addOilTypeContainer',
         'containerListContainer',
@@ -1093,6 +1094,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
     // Branch Permissions
+    setupAdminTab('showClientTypesBtn', async () => {
+        document.getElementById('client-types-list-container').style.display = 'block';
+        await loadClientTypes();
+    });
+
     setupAdminTab('showBranchPermissionsBtn', async () => {
         const container = document.getElementById('branchPermissionsContainer');
         if (container) container.style.display = 'block';
@@ -1371,3 +1377,323 @@ function showMessage(message, type = 'info') {
         }, 1000);
     }
 }
+
+let currentClientTypeId = null;
+
+async function loadClientTypes() {
+    try {
+        const response = await fetch('/api/v1/client-type?page=0&size=1000');
+        if (!response.ok) throw new Error('Failed to load client types');
+        const data = await response.json();
+        renderClientTypes(data.content || data);
+    } catch (error) {
+        console.error('Error loading client types:', error);
+        showMessage('Помилка завантаження типів клієнтів', 'error');
+    }
+}
+
+function renderClientTypes(clientTypes) {
+    const tbody = document.getElementById('client-types-table-body');
+    tbody.innerHTML = '';
+    clientTypes.forEach(type => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${type.id}</td>
+            <td>${type.name}</td>
+            <td>${type.nameFieldLabel}</td>
+            <td>${type.isActive ? 'Так' : 'Ні'}</td>
+            <td>
+                <button class="btn-activate" onclick="openEditClientTypeModal(${type.id})">Редагувати</button>
+                <button class="btn-activate" onclick="manageClientTypeFields(${type.id})">Поля</button>
+                <button class="btn-deactivate" onclick="deleteClientType(${type.id})">Видалити</button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+document.getElementById('addClientTypeBtn')?.addEventListener('click', () => {
+    document.getElementById('add-client-type-modal').style.display = 'flex';
+});
+
+document.getElementById('create-client-type-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = {
+        name: document.getElementById('client-type-name').value,
+        nameFieldLabel: document.getElementById('client-type-name-field-label').value || 'Компанія'
+    };
+    try {
+        const response = await fetch('/api/v1/client-type', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(formData)
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to create client type');
+        }
+        showMessage('Тип клієнта успішно створено', 'success');
+        document.getElementById('add-client-type-modal').style.display = 'none';
+        document.getElementById('create-client-type-form').reset();
+        loadClientTypes();
+    } catch (error) {
+        console.error('Error creating client type:', error);
+        showMessage(error.message || 'Помилка створення типу клієнта', 'error');
+    }
+});
+
+async function openEditClientTypeModal(id) {
+    try {
+        const response = await fetch(`/api/v1/client-type/${id}`);
+        if (!response.ok) throw new Error('Failed to load client type');
+        const type = await response.json();
+        document.getElementById('edit-client-type-id').value = type.id;
+        document.getElementById('edit-client-type-name').value = type.name;
+        document.getElementById('edit-client-type-name-field-label').value = type.nameFieldLabel;
+        document.getElementById('edit-client-type-active').checked = type.isActive;
+        document.getElementById('edit-client-type-modal').style.display = 'flex';
+    } catch (error) {
+        console.error('Error loading client type:', error);
+        showMessage('Помилка завантаження типу клієнта', 'error');
+    }
+}
+
+document.getElementById('edit-client-type-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = document.getElementById('edit-client-type-id').value;
+    const formData = {
+        name: document.getElementById('edit-client-type-name').value,
+        nameFieldLabel: document.getElementById('edit-client-type-name-field-label').value,
+        isActive: document.getElementById('edit-client-type-active').checked
+    };
+    try {
+        const response = await fetch(`/api/v1/client-type/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(formData)
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to update client type');
+        }
+        showMessage('Тип клієнта успішно оновлено', 'success');
+        document.getElementById('edit-client-type-modal').style.display = 'none';
+        loadClientTypes();
+    } catch (error) {
+        console.error('Error updating client type:', error);
+        showMessage(error.message || 'Помилка оновлення типу клієнта', 'error');
+    }
+});
+
+async function deleteClientType(id) {
+    if (!confirm('Ви впевнені, що хочете видалити цей тип клієнта?')) return;
+    try {
+        const response = await fetch(`/api/v1/client-type/${id}`, {
+            method: 'DELETE'
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to delete client type');
+        }
+        showMessage('Тип клієнта успішно видалено', 'success');
+        loadClientTypes();
+    } catch (error) {
+        console.error('Error deleting client type:', error);
+        showMessage(error.message || 'Помилка видалення типу клієнта', 'error');
+    }
+}
+
+async function manageClientTypeFields(clientTypeId) {
+    currentClientTypeId = clientTypeId;
+    document.getElementById('manage-fields-modal').style.display = 'flex';
+    await loadClientTypeFields(clientTypeId);
+}
+
+async function loadClientTypeFields(clientTypeId) {
+    try {
+        const response = await fetch(`/api/v1/client-type/${clientTypeId}/field`);
+        if (!response.ok) throw new Error('Failed to load fields');
+        const fields = await response.json();
+        renderFields(fields);
+    } catch (error) {
+        console.error('Error loading fields:', error);
+        showMessage('Помилка завантаження полів', 'error');
+    }
+}
+
+function renderFields(fields) {
+    const tbody = document.getElementById('fields-table-body');
+    tbody.innerHTML = '';
+    fields.forEach(field => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${field.fieldLabel}</td>
+            <td>${getFieldTypeLabel(field.fieldType)}</td>
+            <td>${field.isRequired ? 'Так' : 'Ні'}</td>
+            <td>${field.isSearchable ? 'Так' : 'Ні'}</td>
+            <td>${field.isFilterable ? 'Так' : 'Ні'}</td>
+            <td>${field.isVisibleInTable ? 'Так' : 'Ні'}</td>
+            <td>${field.isVisibleInCreate ? 'Так' : 'Ні'}</td>
+            <td>${field.displayOrder}</td>
+            <td>
+                <button class="btn-activate" onclick="openEditFieldModal(${field.id})">Редагувати</button>
+                <button class="btn-deactivate" onclick="deleteField(${field.id})">Видалити</button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+function getFieldTypeLabel(type) {
+    const labels = {
+        'TEXT': 'Текст',
+        'NUMBER': 'Число',
+        'DATE': 'Дата',
+        'PHONE': 'Телефон',
+        'LIST': 'Список',
+        'BOOLEAN': 'Так/Ні'
+    };
+    return labels[type] || type;
+}
+
+document.getElementById('addFieldBtn')?.addEventListener('click', () => {
+    document.getElementById('field-client-type-id').value = currentClientTypeId;
+    document.getElementById('add-field-modal').style.display = 'flex';
+});
+
+document.getElementById('field-type')?.addEventListener('change', (e) => {
+    const type = e.target.value;
+    const validationGroup = document.getElementById('field-validation-pattern-group');
+    const listValuesGroup = document.getElementById('field-list-values-group');
+    if (validationGroup) validationGroup.style.display = type === 'PHONE' ? 'block' : 'none';
+    if (listValuesGroup) listValuesGroup.style.display = type === 'LIST' ? 'block' : 'none';
+});
+
+document.getElementById('create-field-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const listValuesText = document.getElementById('field-list-values').value;
+    const formData = {
+        fieldName: document.getElementById('field-name').value,
+        fieldLabel: document.getElementById('field-label').value,
+        fieldType: document.getElementById('field-type').value,
+        isRequired: document.getElementById('field-required').checked,
+        isSearchable: document.getElementById('field-searchable').checked,
+        isFilterable: document.getElementById('field-filterable').checked,
+        isVisibleInTable: document.getElementById('field-visible').checked,
+        isVisibleInCreate: document.getElementById('field-visible-in-create').checked,
+        validationPattern: document.getElementById('field-validation-pattern').value || null,
+        allowMultiple: document.getElementById('field-allow-multiple').checked,
+        listValues: listValuesText ? listValuesText.split('\n').filter(v => v.trim()).map(v => v.trim()) : []
+    };
+    try {
+        const response = await fetch(`/api/v1/client-type/${currentClientTypeId}/field`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(formData)
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to create field');
+        }
+        showMessage('Поле успішно створено', 'success');
+        document.getElementById('add-field-modal').style.display = 'none';
+        document.getElementById('create-field-form').reset();
+        loadClientTypeFields(currentClientTypeId);
+    } catch (error) {
+        console.error('Error creating field:', error);
+        showMessage(error.message || 'Помилка створення поля', 'error');
+    }
+});
+
+async function openEditFieldModal(fieldId) {
+    try {
+        const response = await fetch(`/api/v1/client-type/field/${fieldId}`);
+        if (!response.ok) throw new Error('Failed to load field');
+        const field = await response.json();
+        document.getElementById('edit-field-id').value = field.id;
+        document.getElementById('edit-field-label').value = field.fieldLabel;
+        document.getElementById('edit-field-required').checked = field.isRequired;
+        document.getElementById('edit-field-searchable').checked = field.isSearchable;
+        document.getElementById('edit-field-filterable').checked = field.isFilterable;
+        document.getElementById('edit-field-visible').checked = field.isVisibleInTable;
+        document.getElementById('edit-field-display-order').value = field.displayOrder;
+        document.getElementById('edit-field-validation-pattern').value = field.validationPattern || '';
+        document.getElementById('edit-field-allow-multiple').checked = field.allowMultiple;
+        if (field.listValues && field.listValues.length > 0) {
+            document.getElementById('edit-field-list-values').value = field.listValues.map(lv => lv.value).join('\n');
+            document.getElementById('edit-field-list-values-group').style.display = 'block';
+        }
+        if (field.fieldType === 'PHONE') {
+            document.getElementById('edit-field-validation-pattern-group').style.display = 'block';
+        }
+        document.getElementById('edit-field-modal').style.display = 'flex';
+    } catch (error) {
+        console.error('Error loading field:', error);
+        showMessage('Помилка завантаження поля', 'error');
+    }
+}
+
+document.getElementById('edit-field-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fieldId = document.getElementById('edit-field-id').value;
+    const listValuesText = document.getElementById('edit-field-list-values').value;
+    const formData = {
+        fieldLabel: document.getElementById('edit-field-label').value,
+        isRequired: document.getElementById('edit-field-required').checked,
+        isSearchable: document.getElementById('edit-field-searchable').checked,
+        isFilterable: document.getElementById('edit-field-filterable').checked,
+        isVisibleInTable: document.getElementById('edit-field-visible').checked,
+        isVisibleInCreate: document.getElementById('edit-field-visible-in-create').checked,
+        displayOrder: parseInt(document.getElementById('edit-field-display-order').value) || 0,
+        validationPattern: document.getElementById('edit-field-validation-pattern').value || null,
+        allowMultiple: document.getElementById('edit-field-allow-multiple').checked,
+        listValues: listValuesText ? listValuesText.split('\n').filter(v => v.trim()).map(v => v.trim()) : []
+    };
+    try {
+        const response = await fetch(`/api/v1/client-type/field/${fieldId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(formData)
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to update field');
+        }
+        showMessage('Поле успішно оновлено', 'success');
+        document.getElementById('edit-field-modal').style.display = 'none';
+        loadClientTypeFields(currentClientTypeId);
+    } catch (error) {
+        console.error('Error updating field:', error);
+        showMessage(error.message || 'Помилка оновлення поля', 'error');
+    }
+});
+
+async function deleteField(fieldId) {
+    if (!confirm('Ви впевнені, що хочете видалити це поле?')) return;
+    try {
+        const response = await fetch(`/api/v1/client-type/field/${fieldId}`, {
+            method: 'DELETE'
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to delete field');
+        }
+        showMessage('Поле успішно видалено', 'success');
+        loadClientTypeFields(currentClientTypeId);
+    } catch (error) {
+        console.error('Error deleting field:', error);
+        showMessage(error.message || 'Помилка видалення поля', 'error');
+    }
+}
+
+document.querySelectorAll('.close-modal').forEach(btn => {
+    btn.addEventListener('click', function() {
+        this.closest('.modal').style.display = 'none';
+    });
+});
+
+window.openEditClientTypeModal = openEditClientTypeModal;
+window.manageClientTypeFields = manageClientTypeFields;
+window.openEditFieldModal = openEditFieldModal;
+window.deleteField = deleteField;
+window.deleteClientType = deleteClientType;

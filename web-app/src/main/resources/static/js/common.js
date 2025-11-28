@@ -102,7 +102,46 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     document.getElementById('logout').addEventListener('click', resetFiltersOnPageChange);
+    
+    loadClientTypesDropdown();
 });
+
+async function loadClientTypesDropdown() {
+    const dropdown = document.getElementById('client-types-dropdown');
+    const navClients = document.getElementById('nav-clients');
+    if (!dropdown || !navClients) return;
+
+    try {
+        const response = await fetch('/api/v1/client-type/active');
+        if (!response.ok) return;
+        const clientTypes = await response.json();
+        
+        dropdown.innerHTML = '';
+        clientTypes.forEach(type => {
+            const li = document.createElement('li');
+            const a = document.createElement('a');
+            a.href = `/clients?type=${type.id}`;
+            a.textContent = type.name;
+            li.appendChild(a);
+            dropdown.appendChild(li);
+        });
+
+        const navLink = navClients.querySelector('a');
+        navLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            const isVisible = dropdown.style.display === 'block';
+            dropdown.style.display = isVisible ? 'none' : 'block';
+        });
+
+        document.addEventListener('click', function(e) {
+            if (!navClients.contains(e.target)) {
+                dropdown.style.display = 'none';
+            }
+        });
+    } catch (error) {
+        console.error('Error loading client types:', error);
+    }
+}
 
 function resetFiltersOnPageChange() {
     Object.keys(selectedFilters).forEach(key => delete selectedFilters[key]);

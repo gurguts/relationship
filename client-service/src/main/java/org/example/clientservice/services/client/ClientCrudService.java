@@ -45,7 +45,10 @@ public class ClientCrudService implements IClientCrudService {
 
         String fullName = getFullName();
 
-        String sourceName = sourceService.getSource(existingClient.getSource()).getName();
+        String sourceName = null;
+        if (existingClient.getSource() != null) {
+            sourceName = sourceService.getSource(existingClient.getSource()).getName();
+        }
 
         updateExistingClient(existingClient, client, fullName, sourceName);
 
@@ -99,7 +102,7 @@ public class ClientCrudService implements IClientCrudService {
         boolean canEditData = SecurityContextHolder.getContext().getAuthentication().getAuthorities().stream()
                 .anyMatch(auth -> "client:edit_strangers".equals(auth.getAuthority()));
 
-        if (fullName.equals(sourceName) || canEditData) {
+        if ((sourceName != null && fullName.equals(sourceName)) || canEditData) {
             existingClient.setCompany(updatedClient.getCompany());
             existingClient.setPerson(updatedClient.getPerson());
             existingClient.setPricePurchase(updatedClient.getPricePurchase());
@@ -145,6 +148,14 @@ public class ClientCrudService implements IClientCrudService {
                     throw new ClientException("Only users with crm:edit_source can update sourceId");
                 }
                 existingClient.setSource(updatedClient.getSource());
+            }
+
+            if (updatedClient.getFieldValues() != null) {
+                existingClient.getFieldValues().clear();
+                updatedClient.getFieldValues().forEach(fieldValue -> {
+                    fieldValue.setClient(existingClient);
+                    existingClient.getFieldValues().add(fieldValue);
+                });
             }
         }
     }

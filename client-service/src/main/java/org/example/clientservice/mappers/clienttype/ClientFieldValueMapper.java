@@ -1,0 +1,31 @@
+package org.example.clientservice.mappers.clienttype;
+
+import org.example.clientservice.models.clienttype.ClientFieldValue;
+import org.example.clientservice.models.dto.clienttype.ClientFieldValueDTO;
+import org.springframework.stereotype.Component;
+
+@Component
+public class ClientFieldValueMapper {
+
+    public ClientFieldValueDTO toDTO(ClientFieldValue fieldValue) {
+        if (fieldValue == null) {
+            return null;
+        }
+
+        ClientFieldValueDTO dto = new ClientFieldValueDTO();
+        dto.setId(fieldValue.getId());
+        dto.setFieldId(fieldValue.getField().getId());
+        dto.setFieldName(fieldValue.getField().getFieldName());
+        dto.setFieldLabel(fieldValue.getField().getFieldLabel());
+        dto.setFieldType(fieldValue.getField().getFieldType().name());
+        dto.setValueText(fieldValue.getValueText());
+        dto.setValueNumber(fieldValue.getValueNumber());
+        dto.setValueDate(fieldValue.getValueDate());
+        dto.setValueBoolean(fieldValue.getValueBoolean());
+        dto.setValueListId(fieldValue.getValueList() != null ? fieldValue.getValueList().getId() : null);
+        dto.setValueListValue(fieldValue.getValueList() != null ? fieldValue.getValueList().getValue() : null);
+        dto.setDisplayOrder(fieldValue.getDisplayOrder());
+        return dto;
+    }
+}
+

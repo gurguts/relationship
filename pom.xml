@@ -11,7 +11,7 @@
     <module>client-service</module>
     <module>container-service</module>
     <module>purchase-service</module>
-    <module>sale-service</module>
+    <!--<module>sale-service</module>-->
     <module>user-service</module>
     <module>web-app</module>
   </modules>
