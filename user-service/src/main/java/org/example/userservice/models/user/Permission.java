@@ -14,6 +14,7 @@ public enum Permission {
     CLIENT_CREATE("client:create"),
     CLIENT_EDIT("client:edit"),
     CLIENT_EDIT_STRANGERS("client:edit_strangers"),
+    CLIENT_STRANGER_EDIT("client_stranger:edit"),
     CLIENT_DELETE("client:delete"),
     CLIENT_FULL_DELETE("client:full_delete"),
     CLIENT_EDIT_SOURCE("client:edit_source"),

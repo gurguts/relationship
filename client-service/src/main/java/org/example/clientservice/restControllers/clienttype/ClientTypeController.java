@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.clientservice.mappers.clienttype.ClientTypeMapper;
+import org.example.clientservice.models.client.PageResponse;
 import org.example.clientservice.models.clienttype.ClientType;
 import org.example.clientservice.models.dto.clienttype.ClientTypeCreateDTO;
 import org.example.clientservice.models.dto.clienttype.ClientTypeDTO;
@@ -31,7 +32,7 @@ public class ClientTypeController {
     private final IClientTypeService clientTypeService;
     private final ClientTypeMapper clientTypeMapper;
 
-    @PreAuthorize("hasAuthority('administration:view')")
+    @PreAuthorize("hasAuthority('administration:edit')")
     @PostMapping
     public ResponseEntity<ClientTypeDTO> createClientType(@RequestBody @Valid ClientTypeCreateDTO dto) {
         ClientType clientType = clientTypeService.createClientType(dto);
@@ -43,9 +44,9 @@ public class ClientTypeController {
         return ResponseEntity.created(location).body(response);
     }
 
-    @PreAuthorize("hasAuthority('administration:view')")
+    @PreAuthorize("hasAuthority('client:view')")
     @GetMapping
-    public ResponseEntity<Page<ClientTypeDTO>> getAllClientTypes(
+    public ResponseEntity<PageResponse<ClientTypeDTO>> getAllClientTypes(
             @PageableDefault(size = 20) Pageable pageable,
             @RequestParam(required = false) Boolean activeOnly) {
         Page<ClientType> clientTypes;
@@ -54,7 +55,8 @@ public class ClientTypeController {
         } else {
             clientTypes = clientTypeService.getAllClientTypes(pageable);
         }
-        Page<ClientTypeDTO> response = clientTypes.map(clientTypeMapper::clientTypeToDTO);
+        Page<ClientTypeDTO> clientTypesPage = clientTypes.map(clientTypeMapper::clientTypeToDTO);
+        PageResponse<ClientTypeDTO> response = new PageResponse<>(clientTypesPage);
         return ResponseEntity.ok(response);
     }
 
@@ -67,7 +69,7 @@ public class ClientTypeController {
         return ResponseEntity.ok(response);
     }
 
-    @PreAuthorize("hasAuthority('administration:view')")
+    @PreAuthorize("hasAuthority('client:view')")
     @GetMapping("/{id}")
     public ResponseEntity<ClientTypeDTO> getClientTypeById(@PathVariable Long id) {
         ClientType clientType = clientTypeService.getClientTypeByIdWithFields(id);
@@ -75,7 +77,7 @@ public class ClientTypeController {
         return ResponseEntity.ok(response);
     }
 
-    @PreAuthorize("hasAuthority('administration:view')")
+    @PreAuthorize("hasAuthority('administration:edit')")
     @PutMapping("/{id}")
     public ResponseEntity<ClientTypeDTO> updateClientType(
             @PathVariable Long id,
@@ -85,7 +87,7 @@ public class ClientTypeController {
         return ResponseEntity.ok(response);
     }
 
-    @PreAuthorize("hasAuthority('administration:view')")
+    @PreAuthorize("hasAuthority('administration:edit')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteClientType(@PathVariable Long id) {
         clientTypeService.deleteClientType(id);

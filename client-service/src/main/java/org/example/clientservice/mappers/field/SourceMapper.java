@@ -13,18 +13,21 @@ public class SourceMapper {
         SourceDTO sourceDTO = new SourceDTO();
         sourceDTO.setName(source.getName());
         sourceDTO.setId(source.getId());
+        sourceDTO.setUserId(source.getUserId());
         return sourceDTO;
     }
 
     public Source sourceCreateDTOtoSource(SourceCreateDTO dto) {
         Source source = new Source();
         source.setName(dto.getName());
+        source.setUserId(dto.getUserId());
         return source;
     }
 
     public Source sourceUpdateDTOtoSource(SourceUpdateDTO dto) {
         Source source = new Source();
         source.setName(dto.getName());
+        source.setUserId(dto.getUserId());
         return source;
     }
 }

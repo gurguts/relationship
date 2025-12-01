@@ -77,11 +77,7 @@
         <button class="tab-btn active" data-tab="finance-categories">Категорії фінансів</button>
         <button class="tab-btn" data-tab="branches">Філії</button>
         <button class="tab-btn" data-tab="accounts">Рахунки</button>
-        <button class="tab-btn" data-tab="business">Бізнеси</button>
-        <button class="tab-btn" data-tab="region">Регіони</button>
         <button class="tab-btn" data-tab="source">Джерела</button>
-        <button class="tab-btn" data-tab="route">Маршрути</button>
-        <button class="tab-btn" data-tab="status">Статуси клієнтів</button>
     </div>
 
     <!-- Finance Categories Tab -->
@@ -114,42 +110,6 @@
         </div>
     </div>
 
-    <!-- Business Tab -->
-    <div id="business-tab" class="tab-content">
-        <div class="filter-section">
-            <button id="create-business-btn" class="btn-primary">Створити бізнес</button>
-        </div>
-        <div class="table-container">
-            <table id="business-table" class="data-table">
-                <thead>
-                <tr>
-                    <th>Назва</th>
-                    <th>Дії</th>
-                </tr>
-                </thead>
-                <tbody id="business-body"></tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- Region Tab -->
-    <div id="region-tab" class="tab-content">
-        <div class="filter-section">
-            <button id="create-region-btn" class="btn-primary">Створити регіон</button>
-        </div>
-        <div class="table-container">
-            <table id="region-table" class="data-table">
-                <thead>
-                <tr>
-                    <th>Назва</th>
-                    <th>Дії</th>
-                </tr>
-                </thead>
-                <tbody id="region-body"></tbody>
-            </table>
-        </div>
-    </div>
-
     <!-- Source Tab -->
     <div id="source-tab" class="tab-content">
         <div class="filter-section">
@@ -160,46 +120,11 @@
                 <thead>
                 <tr>
                     <th>Назва</th>
+                    <th>Користувач</th>
                     <th>Дії</th>
                 </tr>
                 </thead>
                 <tbody id="source-body"></tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- Route Tab -->
-    <div id="route-tab" class="tab-content">
-        <div class="filter-section">
-            <button id="create-route-btn" class="btn-primary">Створити маршрут</button>
-        </div>
-        <div class="table-container">
-            <table id="route-table" class="data-table">
-                <thead>
-                <tr>
-                    <th>Назва</th>
-                    <th>Дії</th>
-                </tr>
-                </thead>
-                <tbody id="route-body"></tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- Status Tab -->
-    <div id="status-tab" class="tab-content">
-        <div class="filter-section">
-            <button id="create-status-btn" class="btn-primary">Створити статус</button>
-        </div>
-        <div class="table-container">
-            <table id="status-table" class="data-table">
-                <thead>
-                <tr>
-                    <th>Назва</th>
-                    <th>Дії</th>
-                </tr>
-                </thead>
-                <tbody id="status-body"></tbody>
             </table>
         </div>
     </div>
@@ -294,6 +219,12 @@
             <div class="form-group">
                 <label for="field-name">Назва:</label>
                 <input type="text" id="field-name" required>
+            </div>
+            <div class="form-group" id="field-user-group" style="display: none;">
+                <label for="field-user">Користувач:</label>
+                <select id="field-user">
+                    <option value="">Не закріплено</option>
+                </select>
             </div>
             <button type="submit" class="btn-primary" id="field-submit-btn">Створити</button>
         </form>

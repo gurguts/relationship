@@ -47,6 +47,9 @@ public class SourceService implements ISourceService {
     public Source updateSource(Long id, Source source) {
         Source existingSource = findSource(id);
         existingSource.setName(source.getName());
+        if (source.getUserId() != null) {
+            existingSource.setUserId(source.getUserId());
+        }
         return sourceRepository.save(existingSource);
     }
 

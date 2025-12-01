@@ -43,16 +43,8 @@ function initializeTabs() {
                 loadBranches();
             } else if (targetTab === 'accounts') {
                 loadAccounts();
-            } else if (targetTab === 'business') {
-                loadBusinesses();
-            } else if (targetTab === 'region') {
-                loadRegions();
             } else if (targetTab === 'source') {
                 loadSources();
-            } else if (targetTab === 'route') {
-                loadRoutes();
-            } else if (targetTab === 'status') {
-                loadStatuses();
             }
         });
     });
@@ -89,21 +81,8 @@ function setupEventListeners() {
     // Category type filter
     document.getElementById('category-type-filter').addEventListener('change', loadCategories);
 
-    // Field buttons
-    document.getElementById('create-business-btn').addEventListener('click', () => {
-        openCreateFieldModal('business', 'бізнес');
-    });
-    document.getElementById('create-region-btn').addEventListener('click', () => {
-        openCreateFieldModal('region', 'регіон');
-    });
     document.getElementById('create-source-btn').addEventListener('click', () => {
         openCreateFieldModal('source', 'джерело');
-    });
-    document.getElementById('create-route-btn').addEventListener('click', () => {
-        openCreateFieldModal('route', 'маршрут');
-    });
-    document.getElementById('create-status-btn').addEventListener('click', () => {
-        openCreateFieldModal('status', 'статус');
     });
 
     // Branch and Account buttons
@@ -292,56 +271,17 @@ async function deleteCategory(id) {
 // ========== FIELDS (Business, Region, Source, Route, Status) ==========
 
 const fieldConfig = {
-    business: {
-        endpoint: 'business',
-        name: 'бізнес',
-        namePlural: 'бізнеси',
-        cache: []
-    },
-    region: {
-        endpoint: 'region',
-        name: 'регіон',
-        namePlural: 'регіони',
-        cache: []
-    },
     source: {
         endpoint: 'source',
         name: 'джерело',
         namePlural: 'джерела',
         cache: []
-    },
-    route: {
-        endpoint: 'route',
-        name: 'маршрут',
-        namePlural: 'маршрути',
-        cache: []
-    },
-    status: {
-        endpoint: 'status',
-        name: 'статус',
-        namePlural: 'статуси',
-        cache: []
     }
 };
 
-async function loadBusinesses() {
-    await loadField('business');
-}
-
-async function loadRegions() {
-    await loadField('region');
-}
-
 async function loadSources() {
+    await loadUsers();
     await loadField('source');
-}
-
-async function loadRoutes() {
-    await loadField('route');
-}
-
-async function loadStatuses() {
-    await loadField('status');
 }
 
 async function loadField(fieldType) {
@@ -368,8 +308,16 @@ function renderField(fieldType, items) {
 
     items.forEach(item => {
         const row = document.createElement('tr');
+        let userCell = '';
+        if (fieldType === 'source') {
+            const userName = item.userId 
+                ? (usersCache.find(u => u.id === item.userId)?.fullName || usersCache.find(u => u.id === item.userId)?.name || `User ${item.userId}`)
+                : 'Не закріплено';
+            userCell = `<td>${userName}</td>`;
+        }
         row.innerHTML = `
             <td>${item.name}</td>
+            ${userCell}
             <td>
                 <div class="action-buttons-table">
                     <button class="action-btn btn-edit" onclick="editField('${fieldType}', ${item.id})">Редагувати</button>
@@ -381,13 +329,31 @@ function renderField(fieldType, items) {
     });
 }
 
-function openCreateFieldModal(fieldType, fieldName) {
+async function openCreateFieldModal(fieldType, fieldName) {
     const config = fieldConfig[fieldType];
     document.getElementById('field-id').value = '';
     document.getElementById('field-type').value = fieldType;
     document.getElementById('field-modal-title').textContent = `Створити ${fieldName}`;
     document.getElementById('field-submit-btn').textContent = 'Створити';
     document.getElementById('field-name').value = '';
+
+    const userGroup = document.getElementById('field-user-group');
+    const userSelect = document.getElementById('field-user');
+    if (fieldType === 'source') {
+        await loadUsers();
+        userSelect.innerHTML = '<option value="">Не закріплено</option>';
+        usersCache.forEach(user => {
+            const option = document.createElement('option');
+            option.value = user.id;
+            option.textContent = user.fullName || user.name;
+            userSelect.appendChild(option);
+        });
+        userGroup.style.display = 'block';
+        userSelect.value = '';
+    } else {
+        userGroup.style.display = 'none';
+    }
+    
     document.getElementById('create-field-modal').style.display = 'block';
 }
 
@@ -400,6 +366,11 @@ async function handleCreateField(e) {
     const formData = {
         name: document.getElementById('field-name').value
     };
+
+    if (fieldType === 'source') {
+        const userIdValue = document.getElementById('field-user').value;
+        formData.userId = userIdValue ? parseInt(userIdValue) : null;
+    }
 
     try {
         const url = fieldId 
@@ -443,6 +414,24 @@ async function editField(fieldType, id) {
         document.getElementById('field-name').value = item.name;
         document.getElementById('field-modal-title').textContent = `Редагувати ${config.name}`;
         document.getElementById('field-submit-btn').textContent = 'Зберегти';
+        
+        // Загружаем пользователей и устанавливаем значение для source
+        const userGroup = document.getElementById('field-user-group');
+        const userSelect = document.getElementById('field-user');
+        if (fieldType === 'source') {
+            await loadUsers();
+            userSelect.innerHTML = '<option value="">Не закріплено</option>';
+            usersCache.forEach(user => {
+                const option = document.createElement('option');
+                option.value = user.id;
+                option.textContent = user.fullName || user.name;
+                userSelect.appendChild(option);
+            });
+            userGroup.style.display = 'block';
+            userSelect.value = item.userId || '';
+        } else {
+            userGroup.style.display = 'none';
+        }
         
         document.getElementById('create-field-modal').style.display = 'block';
     } catch (error) {

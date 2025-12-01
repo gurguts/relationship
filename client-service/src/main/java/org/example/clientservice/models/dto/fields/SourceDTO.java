@@ -10,4 +10,5 @@ import lombok.NoArgsConstructor;
 public class SourceDTO {
     private Long id;
     private String name;
+    private Long userId;
 }

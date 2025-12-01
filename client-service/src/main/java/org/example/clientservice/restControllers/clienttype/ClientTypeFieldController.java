@@ -28,7 +28,7 @@ import java.util.stream.Collectors;
 public class ClientTypeFieldController {
     private final IClientTypeFieldService fieldService;
 
-    @PreAuthorize("hasAuthority('administration:view')")
+    @PreAuthorize("hasAuthority('administration:edit')")
     @PostMapping("/{clientTypeId}/field")
     public ResponseEntity<ClientTypeFieldDTO> createField(
             @PathVariable Long clientTypeId,
@@ -42,7 +42,7 @@ public class ClientTypeFieldController {
         return ResponseEntity.created(location).body(response);
     }
 
-    @PreAuthorize("hasAuthority('administration:view')")
+    @PreAuthorize("hasAuthority('client:view')")
     @GetMapping("/{clientTypeId}/field")
     public ResponseEntity<List<ClientTypeFieldDTO>> getFieldsByClientTypeId(@PathVariable Long clientTypeId) {
         List<ClientTypeField> fields = fieldService.getFieldsByClientTypeId(clientTypeId);
@@ -89,7 +89,7 @@ public class ClientTypeFieldController {
         return ResponseEntity.ok(response);
     }
 
-    @PreAuthorize("hasAuthority('administration:view')")
+    @PreAuthorize("hasAuthority('client:view')")
     @GetMapping("/field/{fieldId}")
     public ResponseEntity<ClientTypeFieldDTO> getFieldById(@PathVariable Long fieldId) {
         ClientTypeField field = fieldService.getFieldById(fieldId);
@@ -97,7 +97,7 @@ public class ClientTypeFieldController {
         return ResponseEntity.ok(response);
     }
 
-    @PreAuthorize("hasAuthority('administration:view')")
+    @PreAuthorize("hasAuthority('administration:edit')")
     @PutMapping("/field/{fieldId}")
     public ResponseEntity<ClientTypeFieldDTO> updateField(
             @PathVariable Long fieldId,
@@ -107,14 +107,14 @@ public class ClientTypeFieldController {
         return ResponseEntity.ok(response);
     }
 
-    @PreAuthorize("hasAuthority('administration:view')")
+    @PreAuthorize("hasAuthority('administration:edit')")
     @DeleteMapping("/field/{fieldId}")
     public ResponseEntity<Void> deleteField(@PathVariable Long fieldId) {
         fieldService.deleteField(fieldId);
         return ResponseEntity.noContent().build();
     }
 
-    @PreAuthorize("hasAuthority('administration:view')")
+    @PreAuthorize("hasAuthority('administration:edit')")
     @PostMapping("/{clientTypeId}/field/reorder")
     public ResponseEntity<Void> reorderFields(
             @PathVariable Long clientTypeId,

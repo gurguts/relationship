@@ -13,4 +13,7 @@ public class Source {
 
     @Column(nullable = false, name = "name")
     private String name;
+
+    @Column(name = "user_id")
+    private Long userId;
 }

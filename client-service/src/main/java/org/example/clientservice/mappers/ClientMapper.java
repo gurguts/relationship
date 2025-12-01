@@ -289,7 +289,11 @@ public class ClientMapper {
 
         Source source = cache.getSourceMap().get(client.getSource());
         if (source != null) {
-            clientDTO.setSource(new SourceDTO(source.getId(), source.getName()));
+            SourceDTO sourceDTO = new SourceDTO();
+            sourceDTO.setId(source.getId());
+            sourceDTO.setName(source.getName());
+            sourceDTO.setUserId(source.getUserId());
+            clientDTO.setSource(sourceDTO);
         }
 
         ClientProduct clientProduct = cache.getClientProductMap().get(client.getClientProduct());

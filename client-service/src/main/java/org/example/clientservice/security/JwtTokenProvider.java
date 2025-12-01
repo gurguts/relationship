@@ -49,6 +49,7 @@ public class JwtTokenProvider {
     public Authentication getAuthentication(String token) {
         Claims claims = jwtParser.parseSignedClaims(token).getPayload();
         String username = claims.getSubject();
+        Long userId = claims.get("userId", Long.class);
 
         List<GrantedAuthority> authorities = new ArrayList<>();
         Object authoritiesClaim = claims.get("authorities");
@@ -63,6 +64,10 @@ public class JwtTokenProvider {
             throw new IllegalArgumentException("Authorities claim is not a list of strings");
         }
 
-        return new UsernamePasswordAuthenticationToken(username, token, authorities);
+        UsernamePasswordAuthenticationToken authentication =
+                new UsernamePasswordAuthenticationToken(username, token, authorities);
+        authentication.setDetails(userId);
+
+        return authentication;
     }
 }

@@ -10,6 +10,8 @@ import org.example.clientservice.models.field.Source;
 import org.example.clientservice.services.impl.ISourceService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
@@ -43,6 +45,14 @@ public class SourceController {
     @PreAuthorize("hasAuthority('settings_client:create')")
     @PostMapping
     public ResponseEntity<SourceDTO> createSource(@RequestBody SourceCreateDTO sourceCreateDTO) {
+        // Если userId не передан, устанавливаем его из текущего пользователя
+        if (sourceCreateDTO.getUserId() == null) {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            Long currentUserId = authentication != null && authentication.getDetails() instanceof Long ? 
+                    (Long) authentication.getDetails() : null;
+            sourceCreateDTO.setUserId(currentUserId);
+        }
+        
         Source source = sourceMapper.sourceCreateDTOtoSource(sourceCreateDTO);
         SourceDTO createdSource = sourceMapper.sourceToSourceDTO(sourceService.createSource(source));
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()

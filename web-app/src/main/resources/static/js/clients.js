@@ -27,6 +27,140 @@ let productMap;
 const userId = localStorage.getItem('userId');
 const selectedFilters = {};
 
+// Функция для проверки прав доступа на редактирование клиента
+function canEditClient(client) {
+    const authorities = localStorage.getItem('authorities');
+    let userAuthorities = [];
+    try {
+        if (authorities) {
+            userAuthorities = authorities.startsWith('[')
+                ? JSON.parse(authorities)
+                : authorities.split(',').map(auth => auth.trim());
+        }
+    } catch (error) {
+        console.error('Failed to parse authorities:', error);
+        return false;
+    }
+    
+    // Проверяем, есть ли право редактировать чужих клиентов
+    const canEditStrangers = userAuthorities.includes('client_stranger:edit') || 
+                             userAuthorities.includes('system:admin');
+    
+    if (canEditStrangers) {
+        return true;
+    }
+    
+    // Логика проверки прав доступа:
+    // 1. Если у клиента нет source - можно редактировать
+    // 2. Если у клиента есть source:
+    //    - Если source закреплен за текущим пользователем - можно редактировать
+    //    - Если source не закреплен или закреплен за другим - можно редактировать ТОЛЬКО с правом client_stranger:edit
+    
+    if (!client.sourceId) {
+        // Если у клиента нет source, разрешаем редактирование
+        return true;
+    }
+    
+    // Находим source в availableSources
+    if (!availableSources || availableSources.length === 0) {
+        // Если sources еще не загружены, разрешаем редактирование (чтобы не блокировать пользователя)
+        return true;
+    }
+    
+    const sourceId = Number(client.sourceId);
+    const source = availableSources.find(s => Number(s.id) === sourceId);
+    if (!source) {
+        // Если source не найден, запрещаем редактирование (на всякий случай)
+        return false;
+    }
+    
+    // Если source закреплен за текущим пользователем, разрешаем редактирование
+    const currentUserId = userId ? Number(userId) : null;
+    const sourceUserId = (source.userId !== null && source.userId !== undefined) ? Number(source.userId) : null;
+    
+    if (currentUserId != null && sourceUserId != null && Number(sourceUserId) === Number(currentUserId)) {
+        return true;
+    }
+    
+    // Если source не закреплен или закреплен за другим - запрещаем редактирование
+    // (можно редактировать только с правом client_stranger:edit, которое уже проверено выше)
+    return false;
+}
+
+// Функция для проверки прав на редактирование названия клиента (company)
+function canEditCompany(client) {
+    const authorities = localStorage.getItem('authorities');
+    let userAuthorities = [];
+    try {
+        if (authorities) {
+            userAuthorities = authorities.startsWith('[')
+                ? JSON.parse(authorities)
+                : authorities.split(',').map(auth => auth.trim());
+        }
+    } catch (error) {
+        console.error('Failed to parse authorities:', error);
+        return false;
+    }
+    
+    // Проверяем, есть ли право редактировать чужих клиентов
+    const canEditStrangers = userAuthorities.includes('client_stranger:edit') || 
+                             userAuthorities.includes('system:admin');
+    
+    if (canEditStrangers) {
+        return true;
+    }
+    
+    // Название клиента можно редактировать только для "своих" клиентов
+    // (клиент без source или source закреплен за текущим пользователем)
+    
+    if (!client.sourceId) {
+        // Если у клиента нет source, разрешаем редактирование названия
+        return true;
+    }
+    
+    // Находим source в availableSources
+    if (!availableSources || availableSources.length === 0) {
+        // Если sources еще не загружены, разрешаем редактирование названия (чтобы не блокировать пользователя)
+        return true;
+    }
+    
+    const sourceId = Number(client.sourceId);
+    const source = availableSources.find(s => Number(s.id) === sourceId);
+    if (!source) {
+        // Если source не найден, запрещаем редактирование
+        return false;
+    }
+    
+    // Если source закреплен за текущим пользователем, разрешаем редактирование названия
+    const currentUserId = userId ? Number(userId) : null;
+    const sourceUserId = (source.userId !== null && source.userId !== undefined) ? Number(source.userId) : null;
+    if (currentUserId != null && sourceUserId != null && Number(sourceUserId) === Number(currentUserId)) {
+        return true;
+    }
+    
+    // Если source не закреплен или закреплен за другим - запрещаем редактирование названия
+    return false;
+}
+
+// Функция для проверки прав на изменение source
+function canEditSource() {
+    const authorities = localStorage.getItem('authorities');
+    let userAuthorities = [];
+    try {
+        if (authorities) {
+            userAuthorities = authorities.startsWith('[')
+                ? JSON.parse(authorities)
+                : authorities.split(',').map(auth => auth.trim());
+        }
+    } catch (error) {
+        console.error('Failed to parse authorities:', error);
+        return false;
+    }
+    
+    return userAuthorities.includes('client_stranger:edit') || 
+           userAuthorities.includes('system:admin');
+}
+
 const API_URL = '/api/v1/client';
 
 let currentPage = 0;
@@ -317,6 +451,11 @@ function buildDynamicTable() {
         }
         thead.appendChild(th);
     });
+    
+    // Добавляем заголовок для колонки source
+    const sourceTh = document.createElement('th');
+    sourceTh.textContent = 'Залучення';
+    thead.appendChild(sourceTh);
 }
 
 function buildDynamicFilters() {
@@ -481,6 +620,9 @@ async function renderClientsWithDynamicFields(clients) {
             
             html += `<td data-label="${field.fieldLabel}">${cellValue}</td>`;
         });
+        
+        // Добавляем колонку source после динамических полей
+        html += `<td data-label="Залучення">${findNameByIdFromMap(sourceMap, client.sourceId)}</td>`;
         
         row.innerHTML = html;
         tableBody.appendChild(row);
@@ -706,19 +848,57 @@ async function showClientModal(client) {
                 }
             }
             
-            fieldP.innerHTML = `
-                <strong>${field.fieldLabel}:</strong>
-                <span id="modal-field-${field.id}" class="${!fieldValue ? 'empty-value' : ''}">${fieldValue || '—'}</span>
+            const canEdit = canEditClient(client);
+            const editButtonHtml = canEdit ? `
                 <button class="edit-icon" onclick="enableEditField(${field.id}, '${field.fieldType}', ${field.allowMultiple || false})" data-field-id="${field.id}" title="Редагувати">
                     <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                         <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
                     </svg>
                 </button>
+            ` : '';
+            
+            fieldP.innerHTML = `
+                <strong>${field.fieldLabel}:</strong>
+                <span id="modal-field-${field.id}" class="${!fieldValue ? 'empty-value' : ''}">${fieldValue || '—'}</span>
+                ${editButtonHtml}
             `;
             fieldP.setAttribute('data-field-type', field.fieldType);
             
             companyP.insertAdjacentElement('afterend', fieldP);
         });
+        
+        // Показываем source после динамических полей
+        const sourceElement = document.getElementById('modal-client-source')?.parentElement;
+        if (sourceElement) {
+            sourceElement.style.display = '';
+            document.getElementById('modal-client-source').innerText =
+                findNameByIdFromMap(sourceMap, client.sourceId);
+        }
+        
+        // Скрываем кнопки редактирования в зависимости от прав доступа
+        const canEdit = canEditClient(client);
+        const canEditSourceField = canEditSource();
+        const canEditCompanyField = canEditCompany(client);
+        
+        // Скрываем кнопку редактирования для company, если нет прав на редактирование названия
+        const companyEditButton = document.querySelector(`button.edit-icon[onclick*="enableEdit('company')"]`);
+        if (companyEditButton) {
+            if (!canEditCompanyField) {
+                companyEditButton.style.display = 'none';
+            } else {
+                companyEditButton.style.display = '';
+            }
+        }
+        
+        // Скрываем кнопку редактирования source, если нет права client_stranger:edit
+        const sourceEditButton = document.getElementById('edit-source');
+        if (sourceEditButton) {
+            if (!canEditSourceField) {
+                sourceEditButton.style.display = 'none';
+            } else {
+                sourceEditButton.style.display = '';
+            }
+        }
     } else {
         const oldFields = ['person', 'phone', 'location', 'price-purchase', 'price-sale', 'vat', 'volumeMonth', 
                           'edrpou', 'enterpriseName', 'business', 'route', 'region', 'status', 'source', 
@@ -759,6 +939,45 @@ async function showClientModal(client) {
         document.getElementById('modal-client-source').innerText =
             findNameByIdFromMap(sourceMap, client.sourceId);
         document.getElementById('modal-client-comment').innerText = client.comment || '';
+        
+        // Скрываем кнопки редактирования в зависимости от прав доступа
+        const canEdit = canEditClient(client);
+        const canEditSourceField = canEditSource();
+        const canEditCompanyField = canEditCompany(client);
+        
+        // Скрываем кнопку редактирования для company, если нет прав на редактирование названия
+        const companyEditButton = document.querySelector(`button.edit-icon[onclick*="enableEdit('company')"]`);
+        if (companyEditButton) {
+            if (!canEditCompanyField) {
+                companyEditButton.style.display = 'none';
+            } else {
+                companyEditButton.style.display = '';
+            }
+        }
+        
+        // Скрываем все кнопки редактирования старых полей, если нет прав
+        const oldFieldIds = ['person', 'phone', 'location', 'price-purchase', 'price-sale', 
+                            'vat', 'volumeMonth', 'edrpou', 'enterpriseName', 'business', 'route', 
+                            'region', 'status', 'clientProduct', 'comment'];
+        oldFieldIds.forEach(fieldId => {
+            const editButton = document.querySelector(`button.edit-icon[onclick*="enableEdit('${fieldId}')"]`) ||
+                              document.querySelector(`button.edit-icon[onclick*="enableSelect('${fieldId}"]`);
+            if (editButton && !canEdit) {
+                editButton.style.display = 'none';
+            } else if (editButton && canEdit) {
+                editButton.style.display = '';
+            }
+        });
+        
+        // Скрываем кнопку редактирования source, если нет права client_stranger:edit
+        const sourceEditButton = document.getElementById('edit-source');
+        if (sourceEditButton) {
+            if (!canEditSourceField) {
+                sourceEditButton.style.display = 'none';
+            } else {
+                sourceEditButton.style.display = '';
+            }
+        }
     }
     
     document.getElementById('modal-client-created').innerText = client.createdAt || '';
@@ -893,7 +1112,7 @@ function buildDynamicCreateForm() {
     nameFieldDiv.className = 'form-group';
     const nameLabel = document.createElement('label');
     nameLabel.setAttribute('for', 'company');
-    nameLabel.textContent = nameFieldLabel + ' *';
+    nameLabel.textContent = nameFieldLabel;
     const nameInput = document.createElement('input');
     nameInput.type = 'text';
     nameInput.id = 'company';
@@ -1018,6 +1237,59 @@ function buildDynamicCreateForm() {
         form.appendChild(fieldDiv);
     });
 
+    // Добавляем поле source после динамических полей
+    const sourceFieldDiv = document.createElement('div');
+    sourceFieldDiv.className = 'form-group';
+    
+    const sourceLabel = document.createElement('label');
+    sourceLabel.setAttribute('for', 'source');
+    sourceLabel.textContent = 'Залучення *';
+    sourceFieldDiv.appendChild(sourceLabel);
+    
+    const sourceSelect = document.createElement('select');
+    sourceSelect.id = 'source';
+    sourceSelect.name = 'sourceId';
+    sourceSelect.required = true;
+    
+    const defaultSourceOption = document.createElement('option');
+    defaultSourceOption.value = '';
+    defaultSourceOption.textContent = 'Виберіть...';
+    defaultSourceOption.disabled = true;
+    defaultSourceOption.selected = true;
+    sourceSelect.appendChild(defaultSourceOption);
+    
+    availableSources.forEach(source => {
+        const option = document.createElement('option');
+        option.value = source.id;
+        option.textContent = source.name;
+        sourceSelect.appendChild(option);
+    });
+    
+    // Устанавливаем значение по умолчанию из userSourceMapping, если есть
+    const defaultSourceId = defaultValues.source ? defaultValues.source() : '';
+    if (defaultSourceId && sourceSelect.querySelector(`option[value="${defaultSourceId}"]`)) {
+        sourceSelect.value = defaultSourceId;
+    }
+    
+    sourceFieldDiv.appendChild(sourceSelect);
+    form.appendChild(sourceFieldDiv);
+    
+    // Инициализируем custom select для source
+    setTimeout(() => {
+        if (typeof createCustomSelect === 'function') {
+            const customSelect = createCustomSelect(sourceSelect);
+            customSelects['source-custom'] = customSelect;
+            const sourceData = availableSources.map(s => ({
+                id: s.id,
+                name: s.name
+            }));
+            customSelect.populate(sourceData);
+            if (defaultSourceId) {
+                customSelect.setValue(defaultSourceId);
+            }
+        }
+    }, 0);
+
     const submitButton = document.createElement('button');
     submitButton.type = 'submit';
     submitButton.id = 'save-button';
@@ -1065,6 +1337,19 @@ function resetForm() {
         buildDynamicCreateForm();
     } else {
         form.reset();
+        // Сбрасываем custom select для source
+        const sourceSelect = document.getElementById('source');
+        if (sourceSelect) {
+            sourceSelect.selectedIndex = 0;
+            const customSelectId = 'source-custom';
+            if (customSelects[customSelectId]) {
+                customSelects[customSelectId].reset();
+                const defaultSourceId = defaultValues.source ? defaultValues.source() : '';
+                if (defaultSourceId && sourceSelect.querySelector(`option[value="${defaultSourceId}"]`)) {
+                    customSelects[customSelectId].setValue(defaultSourceId);
+                }
+            }
+        }
     }
 }
 
@@ -1157,6 +1442,12 @@ document.getElementById('client-form').addEventListener('submit',
             company: formData.get('company'),
             fieldValues: []
         };
+        
+        // Добавляем sourceId, если он выбран
+        const sourceId = formData.get('sourceId');
+        if (sourceId) {
+            clientData.sourceId = parseInt(sourceId);
+        }
 
         visibleInCreateFields.forEach(field => {
             const fieldValue = formData.get(`field-${field.id}`);
