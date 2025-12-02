@@ -202,11 +202,10 @@
 
 .modal-content {
     background-color: #fff;
-    margin: 5% auto;
+    margin: 3%;
     padding: 2em;
     border-radius: 12px;
     width: 90%;
-    max-width: 620px;
     box-shadow: 0 12px 30px rgba(15, 23, 42, 0.25);
     position: relative;
 }

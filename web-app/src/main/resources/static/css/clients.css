@@ -251,20 +251,23 @@
 
 .filter-block {
     display: flex;
+    flex-wrap: wrap;
+    gap: 1em;
+    margin-bottom: 1em;
+    align-items: center;
 }
 
-
-#filterForm input[type="number"],
-#filterForm select {
+#filterForm input[type="number"] {
     font-size: 1em;
     width: 30%;
-    padding: 0.2em;
+    padding: 0.5em;
     margin: 0;
     box-sizing: border-box;
+    border: 1px solid #ddd;
+    border-radius: 5px;
 }
 
-#filterForm input[type="date"],
-#filterForm select {
+#filterForm input[type="date"] {
     font-size: 1em;
     padding: 0.5em;
     width: 30%;
@@ -312,7 +315,24 @@
 
 .select-section-item {
     box-sizing: border-box;
-    width: 18em;
+    width: 100%;
+    margin-bottom: 1em;
+    display: flex;
+    flex-direction: column;
+}
+
+.select-section-item label {
+    margin-bottom: 0.5em;
+}
+
+.select-section-item select,
+.select-section-item input[type="text"] {
+    width: 100%;
+    padding: 0.5em;
+    box-sizing: border-box;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 1em;
 }
 
 .custom-select-container {
@@ -553,17 +573,20 @@ input.custom-select-placeholder {
     position: fixed;
     font-size: var(--rem);
     margin: 0 auto;
-    max-width: 100%;
+    width: 100%;
     overflow-x: auto;
     overflow-y: auto;
     border-radius: 0;
     height: 90%;
+    -webkit-overflow-scrolling: touch;
 }
 
 #client-list table {
     table-layout: fixed;
-    width: 100%;
-    border-collapse: collapse;
+    min-width: 100%;
+    width: auto;
+    border-collapse: separate;
+    border-spacing: 0;
     text-align: left;
     font-size: var(--base-text-size);
     background-color: #fff;
@@ -594,6 +617,7 @@ input.custom-select-placeholder {
     overflow: hidden;
     text-overflow: ellipsis;
     font-size: 1em;
+    min-width: 0;
 }
 
 /*checkbox*/
@@ -658,6 +682,7 @@ input.custom-select-placeholder {
     border-bottom: 1px solid #ddd;
     vertical-align: middle;
     white-space: nowrap;
+    min-width: 0;
 }
 
 .client-checkbox {

@@ -450,12 +450,12 @@
 </div>
 
 <div id="manage-fields-modal" class="modal" style="display: none;">
-    <div class="modal-content" style="max-width: 90%;">
+    <div class="modal-content manage-fields-modal-content">
         <span class="close-modal">&times;</span>
         <h2>Управління полями</h2>
-        <button id="addFieldBtn" class="btn-primary" style="margin-bottom: 1em;">Додати поле</button>
-        <div class="table-container">
-            <table class="data-table">
+        <button id="addFieldBtn" class="btn-primary add-field-btn">Додати поле</button>
+        <div class="table-container fields-table-container">
+            <table class="data-table fields-table">
                 <thead>
                 <tr>
                     <th>Мітка</th>
@@ -464,6 +464,7 @@
                     <th>Пошук</th>
                     <th>Фільтр</th>
                     <th>В таблиці</th>
+                    <th>При створенні</th>
                     <th>Порядок</th>
                     <th>Дії</th>
                 </tr>
@@ -519,6 +520,10 @@
                 <label for="field-visible-in-create">Видиме при створенні:</label>
                 <input type="checkbox" id="field-visible-in-create" name="isVisibleInCreate" checked>
             </div>
+            <div class="form-group">
+                <label for="field-column-width">Ширина стовпця (px, за замовчуванням автоматично):</label>
+                <input type="number" id="field-column-width" name="columnWidth" min="50" placeholder="Автоматично">
+            </div>
             <div class="form-group" id="field-validation-pattern-group" style="display: none;">
                 <label for="field-validation-pattern">Шаблон валідації:</label>
                 <input type="text" id="field-validation-pattern" name="validationPattern" placeholder="Наприклад: ^\\+?[0-9]{10,15}$">
@@ -572,6 +577,10 @@
             <div class="form-group">
                 <label for="edit-field-display-order">Порядок відображення:</label>
                 <input type="number" id="edit-field-display-order" name="displayOrder" min="0">
+            </div>
+            <div class="form-group">
+                <label for="edit-field-column-width">Ширина стовпця (px, за замовчуванням автоматично):</label>
+                <input type="number" id="edit-field-column-width" name="columnWidth" min="50" placeholder="Автоматично">
             </div>
             <div class="form-group" id="edit-field-validation-pattern-group" style="display: none;">
                 <label for="edit-field-validation-pattern">Шаблон валідації:</label>

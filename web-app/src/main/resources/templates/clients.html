@@ -119,26 +119,7 @@
         <span class="close-filter">×</span>
         <h1>ФІЛЬТРИ</h1>
         <form id="filterForm">
-            <h2>Дата створення клієнта:</h2>
-            <div class="filter-block">
-                <label class="from-to-style" for="createdAtFrom">Від:</label>
-                <input type="date" id="createdAtFrom" name="createdAtFrom"><br><br>
-
-                <label class="from-to-style" for="createdAtTo">До:</label>
-                <input type="date" id="createdAtTo" name="createdAtTo"><br><br>
-            </div>
-            <h2>Дата останньої активності:</h2>
-            <div class="filter-block">
-                <label class="from-to-style" for="updatedAtFrom">Від:</label>
-                <input type="date" id="updatedAtFrom" name="updatedAtFrom"><br><br>
-
-                <label class="from-to-style" for="updatedAtTo">До:</label>
-                <input type="date" id="updatedAtTo" name="updatedAtTo"><br><br>
-            </div>
-
-            <div class="select-section-items">
-            </div>
-
+            <!-- Фильтры создаются динамически через JavaScript -->
         </form>
         <button id="modal-filter-button-submit" type="submit">Застосувати фільтри</button>
     </div>
@@ -495,6 +476,7 @@
 </div>
 
 <script src="/js/clients.js"></script>
+<script src="/js/columnResizer.js"></script>
 <script src="/js/createCustomSelect.js"></script>
 <script src="/js/common.js"></script>
 <script src="/js/editClient.js"></script>

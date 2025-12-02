@@ -16,6 +16,7 @@ public class ClientTypeFieldDTO {
     private Boolean isVisibleInTable;
     private Boolean isVisibleInCreate;
     private Integer displayOrder;
+    private Integer columnWidth;
     private String validationPattern;
     private Boolean allowMultiple;
     private List<ClientTypeFieldListValueDTO> listValues;

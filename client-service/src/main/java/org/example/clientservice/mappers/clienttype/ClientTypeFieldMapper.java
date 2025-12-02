@@ -36,6 +36,7 @@ public class ClientTypeFieldMapper {
         dto.setIsVisibleInTable(field.getIsVisibleInTable());
         dto.setIsVisibleInCreate(field.getIsVisibleInCreate());
         dto.setDisplayOrder(field.getDisplayOrder());
+        dto.setColumnWidth(field.getColumnWidth());
         dto.setValidationPattern(field.getValidationPattern());
         dto.setAllowMultiple(field.getAllowMultiple());
 
@@ -64,6 +65,7 @@ public class ClientTypeFieldMapper {
         field.setIsVisibleInTable(dto.getIsVisibleInTable() != null ? dto.getIsVisibleInTable() : true);
         field.setIsVisibleInCreate(dto.getIsVisibleInCreate() != null ? dto.getIsVisibleInCreate() : true);
         field.setDisplayOrder(dto.getDisplayOrder() != null ? dto.getDisplayOrder() : 0);
+        field.setColumnWidth(dto.getColumnWidth());
         field.setValidationPattern(dto.getValidationPattern());
         field.setAllowMultiple(dto.getAllowMultiple() != null ? dto.getAllowMultiple() : false);
 
@@ -115,6 +117,9 @@ public class ClientTypeFieldMapper {
         }
         if (dto.getDisplayOrder() != null) {
             field.setDisplayOrder(dto.getDisplayOrder());
+        }
+        if (dto.getColumnWidth() != null) {
+            field.setColumnWidth(dto.getColumnWidth());
         }
         if (dto.getValidationPattern() != null) {
             field.setValidationPattern(dto.getValidationPattern());

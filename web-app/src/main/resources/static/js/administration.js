@@ -1583,6 +1583,7 @@ document.getElementById('create-field-form')?.addEventListener('submit', async (
         isFilterable: document.getElementById('field-filterable').checked,
         isVisibleInTable: document.getElementById('field-visible').checked,
         isVisibleInCreate: document.getElementById('field-visible-in-create').checked,
+        columnWidth: document.getElementById('field-column-width').value ? parseInt(document.getElementById('field-column-width').value) : null,
         validationPattern: document.getElementById('field-validation-pattern').value || null,
         allowMultiple: document.getElementById('field-allow-multiple').checked,
         listValues: listValuesText ? listValuesText.split('\n').filter(v => v.trim()).map(v => v.trim()) : []
@@ -1609,25 +1610,53 @@ document.getElementById('create-field-form')?.addEventListener('submit', async (
 
 async function openEditFieldModal(fieldId) {
     try {
+        // Очищаем все поля формы перед заполнением
+        document.getElementById('edit-field-id').value = '';
+        document.getElementById('edit-field-label').value = '';
+        document.getElementById('edit-field-required').checked = false;
+        document.getElementById('edit-field-searchable').checked = false;
+        document.getElementById('edit-field-filterable').checked = false;
+        document.getElementById('edit-field-visible').checked = false;
+        document.getElementById('edit-field-visible-in-create').checked = false;
+        document.getElementById('edit-field-display-order').value = '';
+        document.getElementById('edit-field-column-width').value = '';
+        document.getElementById('edit-field-validation-pattern').value = '';
+        document.getElementById('edit-field-allow-multiple').checked = false;
+        document.getElementById('edit-field-list-values').value = '';
+        
+        // Скрываем группы полей, которые могут быть видны от предыдущего поля
+        document.getElementById('edit-field-list-values-group').style.display = 'none';
+        document.getElementById('edit-field-validation-pattern-group').style.display = 'none';
+        
+        // Загружаем данные поля
         const response = await fetch(`/api/v1/client-type/field/${fieldId}`);
         if (!response.ok) throw new Error('Failed to load field');
         const field = await response.json();
+        
+        // Заполняем форму данными поля
         document.getElementById('edit-field-id').value = field.id;
-        document.getElementById('edit-field-label').value = field.fieldLabel;
-        document.getElementById('edit-field-required').checked = field.isRequired;
-        document.getElementById('edit-field-searchable').checked = field.isSearchable;
-        document.getElementById('edit-field-filterable').checked = field.isFilterable;
-        document.getElementById('edit-field-visible').checked = field.isVisibleInTable;
-        document.getElementById('edit-field-display-order').value = field.displayOrder;
+        document.getElementById('edit-field-label').value = field.fieldLabel || '';
+        document.getElementById('edit-field-required').checked = field.isRequired || false;
+        document.getElementById('edit-field-searchable').checked = field.isSearchable || false;
+        document.getElementById('edit-field-filterable').checked = field.isFilterable || false;
+        document.getElementById('edit-field-visible').checked = field.isVisibleInTable || false;
+        document.getElementById('edit-field-visible-in-create').checked = field.isVisibleInCreate || false;
+        document.getElementById('edit-field-display-order').value = field.displayOrder || '';
+        document.getElementById('edit-field-column-width').value = field.columnWidth || '';
         document.getElementById('edit-field-validation-pattern').value = field.validationPattern || '';
-        document.getElementById('edit-field-allow-multiple').checked = field.allowMultiple;
+        document.getElementById('edit-field-allow-multiple').checked = field.allowMultiple || false;
+        
+        // Показываем и заполняем список значений, если поле типа LIST
         if (field.listValues && field.listValues.length > 0) {
             document.getElementById('edit-field-list-values').value = field.listValues.map(lv => lv.value).join('\n');
             document.getElementById('edit-field-list-values-group').style.display = 'block';
         }
+        
+        // Показываем поле валидации для типа PHONE
         if (field.fieldType === 'PHONE') {
             document.getElementById('edit-field-validation-pattern-group').style.display = 'block';
         }
+        
         document.getElementById('edit-field-modal').style.display = 'flex';
     } catch (error) {
         console.error('Error loading field:', error);
@@ -1647,6 +1676,7 @@ document.getElementById('edit-field-form')?.addEventListener('submit', async (e)
         isVisibleInTable: document.getElementById('edit-field-visible').checked,
         isVisibleInCreate: document.getElementById('edit-field-visible-in-create').checked,
         displayOrder: parseInt(document.getElementById('edit-field-display-order').value) || 0,
+        columnWidth: document.getElementById('edit-field-column-width').value ? parseInt(document.getElementById('edit-field-column-width').value) : null,
         validationPattern: document.getElementById('edit-field-validation-pattern').value || null,
         allowMultiple: document.getElementById('edit-field-allow-multiple').checked,
         listValues: listValuesText ? listValuesText.split('\n').filter(v => v.trim()).map(v => v.trim()) : []

@@ -54,6 +54,9 @@ public class ClientTypeField {
     @Column(name = "display_order")
     private Integer displayOrder = 0;
 
+    @Column(name = "column_width")
+    private Integer columnWidth;
+
     @Column(name = "validation_pattern", length = 500)
     private String validationPattern;
 

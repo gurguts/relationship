@@ -22,6 +22,8 @@ public class ClientTypeFieldUpdateDTO {
     
     private Integer displayOrder;
     
+    private Integer columnWidth;
+    
     @Size(max = 500)
     private String validationPattern;
     

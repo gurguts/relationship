@@ -172,6 +172,7 @@ let currentClientTypeId = null;
 let currentClientType = null;
 let clientTypeFields = [];
 let visibleFields = [];
+window.visibleFields = visibleFields;
 let searchableFields = [];
 let filterableFields = [];
 let visibleInCreateFields = [];
@@ -268,10 +269,21 @@ document.addEventListener('DOMContentLoaded', async () => {
             localStorage.setItem('selectedFilters', JSON.stringify(cleanedFilters));
         }
         
-        filterableFields.forEach(field => {
-            const filterId = `filter-${field.fieldName}`;
-            if (window.selectedFilters[field.fieldName]) {
+        if (filterableFields && filterableFields.length > 0) {
+            filterableFields.forEach(field => {
+                const filterId = `filter-${field.fieldName}`;
                 if (field.fieldType === 'DATE') {
+                    // Поля типа DATE - диапазон от-до
+                    const fromInput = document.getElementById(`${filterId}-from`);
+                    const toInput = document.getElementById(`${filterId}-to`);
+                    if (fromInput && window.selectedFilters[`${field.fieldName}From`]) {
+                        fromInput.value = window.selectedFilters[`${field.fieldName}From`][0] || '';
+                    }
+                    if (toInput && window.selectedFilters[`${field.fieldName}To`]) {
+                        toInput.value = window.selectedFilters[`${field.fieldName}To`][0] || '';
+                    }
+                } else if (field.fieldType === 'NUMBER') {
+                    // Поля типа NUMBER - диапазон от-до
                     const fromInput = document.getElementById(`${filterId}-from`);
                     const toInput = document.getElementById(`${filterId}-to`);
                     if (fromInput && window.selectedFilters[`${field.fieldName}From`]) {
@@ -281,6 +293,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                         toInput.value = window.selectedFilters[`${field.fieldName}To`][0] || '';
                     }
                 } else if (field.fieldType === 'LIST') {
+                    // Поля типа LIST - множественный выбор
+                    // Custom select уже создан в buildDynamicFilters, только восстанавливаем значения
                     if (customSelects[filterId] && window.selectedFilters[field.fieldName]) {
                         const savedValues = window.selectedFilters[field.fieldName];
                         if (Array.isArray(savedValues) && savedValues.length > 0) {
@@ -291,6 +305,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         }
                     }
                 } else if (field.fieldType === 'BOOLEAN') {
+                    // Поля типа BOOLEAN - выбор из списка
                     const select = document.getElementById(filterId);
                     if (select && window.selectedFilters[field.fieldName] && window.selectedFilters[field.fieldName].length > 0) {
                         const savedValue = window.selectedFilters[field.fieldName][0];
@@ -301,7 +316,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                             }
                         }
                     }
-                } else {
+                } else if (field.fieldType === 'TEXT' || field.fieldType === 'PHONE') {
+                    // Поля типа TEXT и PHONE - простой поиск
                     const input = document.getElementById(filterId);
                     if (input && window.selectedFilters[field.fieldName]) {
                         input.value = Array.isArray(window.selectedFilters[field.fieldName]) 
@@ -309,8 +325,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                             : window.selectedFilters[field.fieldName];
                     }
                 }
-            }
-        });
+            });
+        }
         updateFilterCounter();
     } else {
         await loadDefaultClientData();
@@ -392,6 +408,7 @@ async function loadClientTypeFields(typeId) {
         
         clientTypeFields = await fieldsRes.json();
         visibleFields = await visibleRes.json();
+        window.visibleFields = visibleFields;
         searchableFields = await searchableRes.json();
         filterableFields = await filterableRes.json();
         visibleInCreateFields = await visibleInCreateRes.json();
@@ -440,102 +457,271 @@ function buildDynamicTable() {
     const nameTh = document.createElement('th');
     nameTh.textContent = currentClientType.nameFieldLabel || 'Компанія';
     nameTh.setAttribute('data-sort', 'company');
+    // Устанавливаем начальную ширину для нединамичного поля
+    nameTh.style.width = '200px';
+    nameTh.style.minWidth = '200px';
+    nameTh.style.maxWidth = '200px';
+    // Фиксируем ширину столбца названия
+    nameTh.style.flexShrink = '0';
+    nameTh.style.flexGrow = '0';
     thead.appendChild(nameTh);
     
     visibleFields.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
     visibleFields.forEach(field => {
         const th = document.createElement('th');
         th.textContent = field.fieldLabel;
+        th.setAttribute('data-field-id', field.id);
         if (field.isSearchable) {
             th.setAttribute('data-sort', field.fieldName);
         }
+        // Применяем ширину из настроек поля, если есть
+        if (field.columnWidth) {
+            th.style.width = field.columnWidth + 'px';
+            th.style.minWidth = field.columnWidth + 'px';
+            th.style.maxWidth = field.columnWidth + 'px';
+        }
+        // Фиксируем ширину столбца
+        th.style.flexShrink = '0';
+        th.style.flexGrow = '0';
         thead.appendChild(th);
     });
     
     // Добавляем заголовок для колонки source
     const sourceTh = document.createElement('th');
     sourceTh.textContent = 'Залучення';
+    // Устанавливаем начальную ширину для нединамичного поля
+    sourceTh.style.width = '200px';
+    sourceTh.style.minWidth = '200px';
+    sourceTh.style.maxWidth = '200px';
+    // Фиксируем ширину столбца source
+    sourceTh.style.flexShrink = '0';
+    sourceTh.style.flexGrow = '0';
     thead.appendChild(sourceTh);
+    
+    // Инициализируем изменение ширины столбцов после построения таблицы
+    if (typeof initColumnResizer === 'function' && currentClientTypeId) {
+        setTimeout(() => {
+            initColumnResizer(currentClientTypeId);
+            // Применяем ширины столбцов после инициализации
+            if (typeof applyColumnWidths === 'function') {
+                applyColumnWidths(currentClientTypeId);
+            }
+        }, 0);
+    }
 }
 
 function buildDynamicFilters() {
-    if (!filterForm || !filterableFields.length) return;
+    if (!filterForm) return;
     
-    const existingFilters = filterForm.querySelectorAll('h2, .filter-block, .select-section-item');
-    existingFilters.forEach(el => el.remove());
+    // Защита от повторного вызова - проверяем, не идет ли уже построение
+    if (buildDynamicFilters._isBuilding) {
+        return;
+    }
+    buildDynamicFilters._isBuilding = true;
     
-    filterableFields.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
-    filterableFields.forEach(field => {
-        if (field.fieldType === 'DATE') {
-            const h2 = document.createElement('h2');
-            h2.textContent = field.fieldLabel + ':';
-            filterForm.appendChild(h2);
-            
-            const filterBlock = document.createElement('div');
-            filterBlock.className = 'filter-block';
-            filterBlock.innerHTML = `
-                <label class="from-to-style" for="filter-${field.fieldName}-from">Від:</label>
-                <input type="date" id="filter-${field.fieldName}-from" name="${field.fieldName}From"><br><br>
-                <label class="from-to-style" for="filter-${field.fieldName}-to">До:</label>
-                <input type="date" id="filter-${field.fieldName}-to" name="${field.fieldName}To"><br><br>
-            `;
-            filterForm.appendChild(filterBlock);
-        } else if (field.fieldType === 'LIST') {
-            const selectItem = document.createElement('div');
-            selectItem.className = 'select-section-item';
-            selectItem.innerHTML = `
-                <br>
-                <label class="select-label-style" for="filter-${field.fieldName}">${field.fieldLabel}:</label>
-                <select id="filter-${field.fieldName}" name="${field.fieldName}" ${field.allowMultiple ? 'multiple' : ''}>
-                </select>
-            `;
-            filterForm.appendChild(selectItem);
-            
-            const select = selectItem.querySelector('select');
-            if (field.listValues && field.listValues.length > 0) {
-                field.listValues.forEach(listValue => {
-                    const option = document.createElement('option');
-                    option.value = listValue.id;
-                    option.textContent = listValue.value;
-                    select.appendChild(option);
-                });
+    try {
+        // Удаляем старые custom selects для фильтров перед пересозданием
+        Object.keys(customSelects).forEach(selectId => {
+            if (selectId.startsWith('filter-')) {
+                // Очищаем custom select перед удалением
+                const customSelect = customSelects[selectId];
+                if (customSelect && typeof customSelect.reset === 'function') {
+                    try {
+                        customSelect.reset();
+                    } catch (e) {
+                        console.warn('Error resetting custom select:', e);
+                    }
+                }
+                delete customSelects[selectId];
             }
-            
-            if (select && !customSelects[`filter-${field.fieldName}`]) {
-                customSelects[`filter-${field.fieldName}`] = createCustomSelect(select);
-            }
-        } else if (field.fieldType === 'TEXT' || field.fieldType === 'PHONE' || field.fieldType === 'NUMBER') {
-            const selectItem = document.createElement('div');
-            selectItem.className = 'select-section-item';
-            selectItem.innerHTML = `
-                <br>
-                <label class="select-label-style" for="filter-${field.fieldName}">${field.fieldLabel}:</label>
-                <input type="${field.fieldType === 'NUMBER' ? 'number' : 'text'}" 
-                       id="filter-${field.fieldName}" 
-                       name="${field.fieldName}" 
-                       placeholder="Пошук...">
-            `;
-            filterForm.appendChild(selectItem);
-        } else if (field.fieldType === 'BOOLEAN') {
-            const selectItem = document.createElement('div');
-            selectItem.className = 'select-section-item';
-            selectItem.innerHTML = `
-                <br>
-                <label class="select-label-style" for="filter-${field.fieldName}">${field.fieldLabel}:</label>
-                <select id="filter-${field.fieldName}" name="${field.fieldName}">
-                    <option value="">Всі</option>
-                    <option value="true">Так</option>
-                    <option value="false">Ні</option>
-                </select>
-            `;
-            filterForm.appendChild(selectItem);
-            
-            const select = selectItem.querySelector('select');
-            if (select && !customSelects[`filter-${field.fieldName}`]) {
-                customSelects[`filter-${field.fieldName}`] = createCustomSelect(select);
-            }
+        });
+        
+        // Удаляем все существующие элементы фильтров
+        const existingFilters = filterForm.querySelectorAll('h2, .filter-block, .select-section-item');
+        existingFilters.forEach(el => {
+            // Удаляем также все дочерние элементы, чтобы избежать утечек памяти
+            const selects = el.querySelectorAll('select');
+            selects.forEach(sel => {
+                sel.innerHTML = '';
+            });
+            el.remove();
+        });
+        
+        // Добавляем стандартные поля: createdAt и updatedAt (всегда диапазон от-до)
+        const createdAtH2 = document.createElement('h2');
+        createdAtH2.textContent = 'Дата створення:';
+        filterForm.appendChild(createdAtH2);
+        
+        const createdAtBlock = document.createElement('div');
+        createdAtBlock.className = 'filter-block';
+        createdAtBlock.innerHTML = `
+            <label class="from-to-style" for="filter-createdAt-from">Від:</label>
+            <input type="date" id="filter-createdAt-from" name="createdAtFrom"><br><br>
+            <label class="from-to-style" for="filter-createdAt-to">До:</label>
+            <input type="date" id="filter-createdAt-to" name="createdAtTo"><br><br>
+        `;
+        filterForm.appendChild(createdAtBlock);
+        
+        const updatedAtH2 = document.createElement('h2');
+        updatedAtH2.textContent = 'Дата оновлення:';
+        filterForm.appendChild(updatedAtH2);
+        
+        const updatedAtBlock = document.createElement('div');
+        updatedAtBlock.className = 'filter-block';
+        updatedAtBlock.innerHTML = `
+            <label class="from-to-style" for="filter-updatedAt-from">Від:</label>
+            <input type="date" id="filter-updatedAt-from" name="updatedAtFrom"><br><br>
+            <label class="from-to-style" for="filter-updatedAt-to">До:</label>
+            <input type="date" id="filter-updatedAt-to" name="updatedAtTo"><br><br>
+        `;
+        filterForm.appendChild(updatedAtBlock);
+        
+        // Добавляем фильтруемые поля из настроек
+        if (filterableFields && filterableFields.length > 0) {
+            filterableFields.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+            filterableFields.forEach(field => {
+                if (field.fieldType === 'DATE') {
+                    // Поля типа DATE - всегда диапазон от-до
+                    const h2 = document.createElement('h2');
+                    h2.textContent = field.fieldLabel + ':';
+                    filterForm.appendChild(h2);
+                    
+                    const filterBlock = document.createElement('div');
+                    filterBlock.className = 'filter-block';
+                    filterBlock.innerHTML = `
+                        <label class="from-to-style" for="filter-${field.fieldName}-from">Від:</label>
+                        <input type="date" id="filter-${field.fieldName}-from" name="${field.fieldName}From"><br><br>
+                        <label class="from-to-style" for="filter-${field.fieldName}-to">До:</label>
+                        <input type="date" id="filter-${field.fieldName}-to" name="${field.fieldName}To"><br><br>
+                    `;
+                    filterForm.appendChild(filterBlock);
+                } else if (field.fieldType === 'NUMBER') {
+                    // Поля типа NUMBER - диапазон от-до
+                    const h2 = document.createElement('h2');
+                    h2.textContent = field.fieldLabel + ':';
+                    filterForm.appendChild(h2);
+                    
+                    const filterBlock = document.createElement('div');
+                    filterBlock.className = 'filter-block';
+                    filterBlock.innerHTML = `
+                        <label class="from-to-style" for="filter-${field.fieldName}-from">Від:</label>
+                        <input type="number" id="filter-${field.fieldName}-from" name="${field.fieldName}From" step="any" placeholder="Мінімум"><br><br>
+                        <label class="from-to-style" for="filter-${field.fieldName}-to">До:</label>
+                        <input type="number" id="filter-${field.fieldName}-to" name="${field.fieldName}To" step="any" placeholder="Максимум"><br><br>
+                    `;
+                    filterForm.appendChild(filterBlock);
+                } else if (field.fieldType === 'LIST') {
+                    // Поля типа LIST - множественный выбор (точно как в форме создания)
+                    const selectId = `filter-${field.fieldName}`;
+                    
+                    // Убеждаемся, что старый custom select удален
+                    if (customSelects[selectId]) {
+                        try {
+                            const oldSelect = customSelects[selectId];
+                            if (oldSelect && typeof oldSelect.reset === 'function') {
+                                oldSelect.reset();
+                            }
+                        } catch (e) {
+                            console.warn('Error cleaning up old custom select:', e);
+                        }
+                        delete customSelects[selectId];
+                    }
+                    
+                    // Удаляем старый selectContainer, если он существует
+                    const existingContainer = document.querySelector(`.custom-select-container[data-for="${selectId}"]`);
+                    if (existingContainer) {
+                        existingContainer.remove();
+                    }
+                    
+                    const selectItem = document.createElement('div');
+                    selectItem.className = 'select-section-item';
+                    selectItem.innerHTML = `
+                        <br>
+                        <label class="select-label-style" for="filter-${field.fieldName}">${field.fieldLabel}:</label>
+                        <select id="filter-${field.fieldName}" name="${field.fieldName}" multiple>
+                        </select>
+                    `;
+                    filterForm.appendChild(selectItem);
+                    
+                    const select = selectItem.querySelector('select');
+                    if (!select) {
+                        console.error('Select not found for field:', field.fieldName);
+                        return; // Пропускаем это поле
+                    }
+                    
+                    // Добавляем опции в select
+                    if (field.listValues && field.listValues.length > 0) {
+                        field.listValues.forEach(listValue => {
+                            const option = document.createElement('option');
+                            option.value = listValue.id;
+                            option.textContent = listValue.value;
+                            select.appendChild(option);
+                        });
+                    }
+                    
+                    // Создаем custom select и заполняем данными, точно как в форме создания
+                    setTimeout(() => {
+                        if (typeof createCustomSelect === 'function') {
+                            // Проверяем, что selectContainer еще не создан
+                            const existingContainer = document.querySelector(`.custom-select-container[data-for="${selectId}"]`);
+                            if (existingContainer) {
+                                console.warn('Custom select container already exists for:', selectId);
+                                return;
+                            }
+                            
+                            const customSelect = createCustomSelect(select, true);
+                            if (customSelect) {
+                                customSelects[selectId] = customSelect;
+                                
+                                if (field.listValues && field.listValues.length > 0) {
+                                    const listData = field.listValues.map(lv => ({
+                                        id: lv.id,
+                                        name: lv.value
+                                    }));
+                                    customSelect.populate(listData);
+                                }
+                            }
+                        }
+                    }, 0);
+                } else if (field.fieldType === 'TEXT' || field.fieldType === 'PHONE') {
+                    // Поля типа TEXT и PHONE - простой поиск
+                    const selectItem = document.createElement('div');
+                    selectItem.className = 'select-section-item';
+                    selectItem.innerHTML = `
+                        <br>
+                        <label class="select-label-style" for="filter-${field.fieldName}">${field.fieldLabel}:</label>
+                        <input type="text" 
+                               id="filter-${field.fieldName}" 
+                               name="${field.fieldName}" 
+                               placeholder="Пошук...">
+                    `;
+                    filterForm.appendChild(selectItem);
+                } else if (field.fieldType === 'BOOLEAN') {
+                    // Поля типа BOOLEAN - выбор из списка
+                    const selectItem = document.createElement('div');
+                    selectItem.className = 'select-section-item';
+                    selectItem.innerHTML = `
+                        <br>
+                        <label class="select-label-style" for="filter-${field.fieldName}">${field.fieldLabel}:</label>
+                        <select id="filter-${field.fieldName}" name="${field.fieldName}">
+                            <option value="">Всі</option>
+                            <option value="true">Так</option>
+                            <option value="false">Ні</option>
+                        </select>
+                    `;
+                    filterForm.appendChild(selectItem);
+                    
+                    const select = selectItem.querySelector('select');
+                    if (select && !customSelects[`filter-${field.fieldName}`]) {
+                        customSelects[`filter-${field.fieldName}`] = createCustomSelect(select);
+                    }
+                }
+            });
         }
-    });
+    } finally {
+        // Снимаем флаг после завершения
+        buildDynamicFilters._isBuilding = false;
+    }
 }
 
 prevPageButton.addEventListener('click', () => {
@@ -580,6 +766,13 @@ async function renderClients(clients) {
         await renderClientsWithDynamicFields(clients);
     } else {
         renderClientsWithDefaultFields(clients);
+    }
+    
+    // Применяем сохраненные ширины столбцов после рендеринга
+    if (typeof applyColumnWidths === 'function' && currentClientTypeId) {
+        setTimeout(() => {
+            applyColumnWidths(currentClientTypeId);
+        }, 0);
     }
 }
 
@@ -753,17 +946,19 @@ async function loadDataWithSort(page, size, sort, direction) {
         const value = selectedFilters[key];
         if (value !== null && value !== undefined) {
             if (Array.isArray(value)) {
-                const filteredArray = value.filter(v => v !== null && v !== undefined && v !== '');
+                const filteredArray = value.filter(v => v !== null && v !== undefined && v !== '' && v !== 'null');
                 if (filteredArray.length > 0) {
                     cleanedFilters[key] = filteredArray;
                 }
             } else if (typeof value === 'string' && value.trim() !== '') {
-                cleanedFilters[key] = value;
+                cleanedFilters[key] = [value.trim()];
             } else if (typeof value !== 'string') {
-                cleanedFilters[key] = value;
+                cleanedFilters[key] = [value];
             }
         }
     });
+    
+    console.log('Sending filters to backend:', cleanedFilters);
     
     if (Object.keys(cleanedFilters).length > 0) {
         queryParams += `&filters=${encodeURIComponent(JSON.stringify(cleanedFilters))}`;
@@ -834,6 +1029,8 @@ async function showClientModal(client) {
         const companyP = document.getElementById('modal-client-company').parentElement;
         
         clientTypeFields.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+        
+        let lastInsertedElement = companyP;
         clientTypeFields.forEach(field => {
             const values = fieldValuesMap.get(field.id) || [];
             const fieldP = document.createElement('p');
@@ -864,7 +1061,9 @@ async function showClientModal(client) {
             `;
             fieldP.setAttribute('data-field-type', field.fieldType);
             
-            companyP.insertAdjacentElement('afterend', fieldP);
+            // Вставляем каждое поле после предыдущего, чтобы сохранить правильный порядок
+            lastInsertedElement.insertAdjacentElement('afterend', fieldP);
+            lastInsertedElement = fieldP;
         });
         
         // Показываем source после динамических полей
@@ -1099,7 +1298,7 @@ window.onclick = function (event) {
 }
 
 function buildDynamicCreateForm() {
-    if (!currentClientTypeId || !visibleInCreateFields || visibleInCreateFields.length === 0) {
+    if (!currentClientTypeId) {
         return;
     }
 
@@ -1123,7 +1322,11 @@ function buildDynamicCreateForm() {
     nameFieldDiv.appendChild(nameInput);
     form.appendChild(nameFieldDiv);
 
-    visibleInCreateFields.forEach((field, index) => {
+    // Сортируем поля по displayOrder перед отображением
+    if (visibleInCreateFields && visibleInCreateFields.length > 0) {
+        visibleInCreateFields.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+        
+        visibleInCreateFields.forEach((field, index) => {
         const fieldDiv = document.createElement('div');
         fieldDiv.className = 'form-group';
         fieldDiv.setAttribute('data-field-id', field.id);
@@ -1235,7 +1438,8 @@ function buildDynamicCreateForm() {
         }
         fieldDiv.appendChild(input);
         form.appendChild(fieldDiv);
-    });
+        });
+    }
 
     // Добавляем поле source после динамических полей
     const sourceFieldDiv = document.createElement('div');
@@ -1605,23 +1809,10 @@ function updateSelectedFilters() {
 
     Object.keys(selectedFilters).forEach(key => delete selectedFilters[key]);
 
-    Object.keys(customSelects).forEach(selectId => {
-        if (selectId.startsWith('filter-')) {
-            const select = document.getElementById(selectId);
-            if (select) {
-                const name = select.name;
-                const values = customSelects[selectId].getValue();
-                const filteredValues = values.filter(v => v !== null && v !== undefined && v !== '' && v !== 'null');
-                if (filteredValues.length > 0) {
-                    selectedFilters[name] = filteredValues;
-                }
-            }
-        }
-    });
-
     const filterForm = document.getElementById('filterForm');
     const formData = new FormData(filterForm);
 
+    // Обрабатываем стандартные поля дат
     const createdAtFrom = formData.get('createdAtFrom');
     const createdAtTo = formData.get('createdAtTo');
     const updatedAtFrom = formData.get('updatedAtFrom');
@@ -1632,32 +1823,68 @@ function updateSelectedFilters() {
     if (updatedAtFrom) selectedFilters['updatedAtFrom'] = [updatedAtFrom];
     if (updatedAtTo) selectedFilters['updatedAtTo'] = [updatedAtTo];
 
-    filterableFields.forEach(field => {
-        if (field.fieldType === 'DATE') {
-            const fromValue = formData.get(`${field.fieldName}From`);
-            const toValue = formData.get(`${field.fieldName}To`);
-            if (fromValue) selectedFilters[`${field.fieldName}From`] = [fromValue];
-            if (toValue) selectedFilters[`${field.fieldName}To`] = [toValue];
-        } else if (field.fieldType === 'TEXT' || field.fieldType === 'PHONE' || field.fieldType === 'NUMBER') {
-            const value = formData.get(field.fieldName);
-            if (value && value.trim() !== '') {
-                selectedFilters[field.fieldName] = value.trim();
-            }
-        } else if (field.fieldType === 'BOOLEAN') {
-            const value = formData.get(field.fieldName);
-            if (value && value !== '' && value !== 'null') {
-                selectedFilters[field.fieldName] = [value];
-            }
-        } else if (field.fieldType === 'LIST') {
-            const select = document.getElementById(`filter-${field.fieldName}`);
-            if (select && customSelects[`filter-${field.fieldName}`]) {
-                const selectedValues = customSelects[`filter-${field.fieldName}`].getValue();
-                if (selectedValues && selectedValues.length > 0) {
-                    selectedFilters[field.fieldName] = selectedValues;
+    // Обрабатываем фильтруемые поля из настроек
+    if (filterableFields && filterableFields.length > 0) {
+        filterableFields.forEach(field => {
+            if (field.fieldType === 'DATE') {
+                // Поля типа DATE - диапазон от-до
+                const fromValue = formData.get(`${field.fieldName}From`);
+                const toValue = formData.get(`${field.fieldName}To`);
+                if (fromValue) selectedFilters[`${field.fieldName}From`] = [fromValue];
+                if (toValue) selectedFilters[`${field.fieldName}To`] = [toValue];
+            } else if (field.fieldType === 'NUMBER') {
+                // Поля типа NUMBER - диапазон от-до
+                const fromValue = formData.get(`${field.fieldName}From`);
+                const toValue = formData.get(`${field.fieldName}To`);
+                if (fromValue && fromValue.trim() !== '') {
+                    selectedFilters[`${field.fieldName}From`] = [fromValue.trim()];
+                }
+                if (toValue && toValue.trim() !== '') {
+                    selectedFilters[`${field.fieldName}To`] = [toValue.trim()];
+                }
+            } else if (field.fieldType === 'LIST') {
+                // Поля типа LIST - множественный выбор через custom select
+                const selectId = `filter-${field.fieldName}`;
+                if (customSelects[selectId]) {
+                    const selectedValues = customSelects[selectId].getValue();
+                    console.log('LIST field:', field.fieldName, 'selectedValues:', selectedValues);
+                    const filteredValues = selectedValues.filter(v => v !== null && v !== undefined && v !== '' && v !== 'null');
+                    if (filteredValues.length > 0) {
+                        selectedFilters[field.fieldName] = filteredValues;
+                        console.log('Added to selectedFilters:', field.fieldName, filteredValues);
+                    } else {
+                        console.log('No valid values for LIST field:', field.fieldName);
+                    }
+                } else {
+                    console.warn('Custom select not found for LIST field:', selectId);
+                }
+            } else if (field.fieldType === 'TEXT' || field.fieldType === 'PHONE') {
+                // Поля типа TEXT и PHONE - простой поиск
+                const value = formData.get(field.fieldName);
+                if (value && value.trim() !== '') {
+                    selectedFilters[field.fieldName] = [value.trim()];
+                }
+            } else if (field.fieldType === 'BOOLEAN') {
+                // Поля типа BOOLEAN - выбор из списка через custom select
+                const selectId = `filter-${field.fieldName}`;
+                if (customSelects[selectId]) {
+                    const selectedValues = customSelects[selectId].getValue();
+                    if (selectedValues && selectedValues.length > 0) {
+                        const value = selectedValues[0];
+                        if (value && value !== '' && value !== 'null') {
+                            selectedFilters[field.fieldName] = [value];
+                        }
+                    }
+                } else {
+                    // Fallback на обычный select, если custom select не создан
+                    const value = formData.get(field.fieldName);
+                    if (value && value !== '' && value !== 'null') {
+                        selectedFilters[field.fieldName] = [value];
+                    }
                 }
             }
-        }
-    });
+        });
+    }
 
     localStorage.setItem('selectedFilters', JSON.stringify(selectedFilters));
     updateFilterCounter();
@@ -1671,18 +1898,26 @@ function updateFilterCounter() {
 
     let totalFilters = 0;
 
-    totalFilters += Object.values(selectedFilters)
-        .filter(value => Array.isArray(value))
-        .reduce((count, values) => count + values.length, 0);
+    // Подсчитываем фильтры: для массивов считаем количество элементов, для остальных - 1
+    Object.keys(selectedFilters).forEach(key => {
+        const value = selectedFilters[key];
+        if (Array.isArray(value)) {
+            // Для массивов считаем количество непустых значений
+            const validValues = value.filter(v => v !== null && v !== undefined && v !== '' && v !== 'null');
+            totalFilters += validValues.length;
+        } else if (value !== null && value !== undefined && value !== '') {
+            // Для не-массивов считаем как 1 фильтр
+            totalFilters += 1;
+        }
+    });
 
-    totalFilters += Object.keys(selectedFilters)
-        .filter(key => !Array.isArray(selectedFilters[key]) && selectedFilters[key] !== '')
-        .length;
+    console.log('Total filters count:', totalFilters, 'selectedFilters:', selectedFilters);
 
     if (totalFilters > 0) {
         countElement.textContent = totalFilters;
         counterElement.style.display = 'inline-flex';
     } else {
+        countElement.textContent = '0';
         counterElement.style.display = 'none';
     }
 }

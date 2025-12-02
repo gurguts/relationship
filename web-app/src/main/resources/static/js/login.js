@@ -57,13 +57,13 @@ document.getElementById('loginForm').addEventListener('submit',
                         window.location.href = '/routes';
                         break;
                     case 'Бухгалтер':
-                        window.location.href = '/balance';
+                        window.location.href = '/finance';
                         break;
                     case 'Комірник':
-                        window.location.href = '/warehouse';
+                        window.location.href = '/stock';
                         break;
                     case 'Адміністратор':
-                        window.location.href = '/settings';
+                        window.location.href = '/administration';
                         break;
                     default:
                         console.error("Unknown user role:", data.role);

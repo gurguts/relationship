@@ -32,6 +32,8 @@ public class ClientTypeFieldCreateDTO {
     
     private Integer displayOrder = 0;
     
+    private Integer columnWidth;
+    
     @Size(max = 500)
     private String validationPattern;
     
