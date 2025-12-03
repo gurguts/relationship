@@ -4,10 +4,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.clientservice.exceptions.client.ClientException;
 import org.example.clientservice.models.client.Client;
-import org.example.clientservice.models.client.PhoneNumber;
 import org.example.clientservice.models.field.*;
 import org.example.clientservice.repositories.ClientRepository;
-import org.example.clientservice.repositories.PhoneNumberRepository;
 import org.example.clientservice.services.impl.*;
 import org.example.clientservice.models.client.FilterIds;
 import org.example.clientservice.spec.ClientSpecification;
@@ -16,7 +14,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -24,28 +21,20 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ClientSearchService implements IClientSearchService {
     private final ClientRepository clientRepository;
-    private final IBusinessService businessService;
-    private final IRegionService regionService;
-    private final IRouteService routeService;
     private final ISourceService sourceService;
-    private final IStatusClientService statusClientService;
-    private final IClientProductService clientProductService;
-    private final PhoneNumberRepository phoneNumberRepository;
 
     @Override
     public Page<Client> searchClients(String query, Pageable pageable, Map<String, List<String>> filterParams,
-                                      String excludedStatuses, Long clientTypeId) {
+                                      Long clientTypeId) {
         validateQuery(query);
         validateFilterParams(filterParams);
 
-        List<Long> excludeStatusIds = parseExcludedStatuses(excludedStatuses);
-
         if (query == null || query.trim().isEmpty()) {
-            return fetchClients(null, filterParams, null, excludeStatusIds, pageable, clientTypeId);
+            return fetchClients(null, filterParams, null, pageable, clientTypeId);
         }
 
         FilterIds filterIds = fetchFilterIds(query);
-        return fetchClients(query, filterParams, filterIds, excludeStatusIds, pageable, clientTypeId);
+        return fetchClients(query, filterParams, filterIds, pageable, clientTypeId);
     }
 
     @Override
@@ -75,8 +64,7 @@ public class ClientSearchService implements IClientSearchService {
         if (filterParams == null) {
             return;
         }
-        Set<String> validKeys = Set.of("createdAtFrom", "createdAtTo", "updatedAtFrom", "updatedAtTo",
-                "business", "route", "region", "status", "source", "clientProduct");
+        Set<String> validKeys = Set.of("createdAtFrom", "createdAtTo", "updatedAtFrom", "updatedAtTo", "source");
         for (String key : filterParams.keySet()) {
             if (!validKeys.contains(key) && !key.endsWith("From") && !key.endsWith("To")) {
                 log.warn("Unknown filter key: {}, skipping", key);
@@ -84,83 +72,21 @@ public class ClientSearchService implements IClientSearchService {
         }
     }
 
-    private List<Long> parseExcludedStatuses(String excludedStatuses) {
-        if (excludedStatuses == null || excludedStatuses.trim().isEmpty()) {
-            return null;
-        }
-        try {
-            return Arrays.stream(excludedStatuses.split(","))
-                    .map(String::trim)
-                    .map(Long::parseLong)
-                    .toList();
-        } catch (NumberFormatException e) {
-            throw new ClientException(String.format("Incorrect status format for exclusion: %s", excludedStatuses));
-        }
-    }
-
     private FilterIds fetchFilterIds(String query) {
-        List<Business> businessData = businessService.findByNameContaining(query);
-        List<Region> regionData = regionService.findByNameContaining(query);
-        List<Route> routeData = routeService.findByNameContaining(query);
         List<Source> sourceData = sourceService.findByNameContaining(query);
-        List<StatusClient> statusClientData = statusClientService.findByNameContaining(query);
-        List<ClientProduct> clientProductData = clientProductService.findByNameContaining(query);
+        List<Long> sourceIds = sourceData.stream().map(Source::getId).collect(Collectors.toList());
 
-        List<Long> businessIds = extractIds(businessData, Business::getId);
-        List<Long> regionIds = extractIds(regionData, Region::getId);
-        List<Long> routeIds = extractIds(routeData, Route::getId);
-        List<Long> sourceIds = extractIds(sourceData, Source::getId);
-        List<Long> statusClientIds = extractIds(statusClientData, StatusClient::getId);
-        List<Long> clientProductIds = extractIds(clientProductData, ClientProduct::getId);
-
-        return new FilterIds(
-                businessData, businessIds,
-                regionData, regionIds,
-                routeData, routeIds,
-                sourceData, sourceIds,
-                statusClientData, statusClientIds,
-                clientProductData, clientProductIds
-        );
-    }
-
-    private <T> List<Long> extractIds(List<T> dataList, Function<T, Long> idExtractor) {
-        if (dataList == null || dataList.isEmpty()) {
-            return Collections.emptyList();
-        }
-        return dataList.stream()
-                .map(idExtractor)
-                .collect(Collectors.toList());
+        return new FilterIds(sourceData, sourceIds);
     }
 
     private Page<Client> fetchClients(String query, Map<String, List<String>> filterParams, FilterIds filterIds,
-                                      List<Long> excludeStatusIds, Pageable pageable, Long clientTypeId) {
+                                      Pageable pageable, Long clientTypeId) {
         Page<Client> clientPage = clientRepository.findAll(new ClientSpecification(
                 query,
                 filterParams,
-                filterIds != null ? filterIds.statusIds() : null,
                 filterIds != null ? filterIds.sourceIds() : null,
-                filterIds != null ? filterIds.routeIds() : null,
-                filterIds != null ? filterIds.regionIds() : null,
-                filterIds != null ? filterIds.businessIds() : null,
-                filterIds != null ? filterIds.clientProductIds() : null,
-                excludeStatusIds,
                 clientTypeId
         ), pageable);
-
-        if (!clientPage.getContent().isEmpty()) {
-            List<Long> clientIds = clientPage.getContent().stream()
-                    .map(Client::getId)
-                    .collect(Collectors.toList());
-            List<PhoneNumber> phoneNumbers = phoneNumberRepository.findByClientIdIn(clientIds);
-
-            Map<Long, List<PhoneNumber>> phoneNumbersByClientId = phoneNumbers.stream()
-                    .collect(Collectors.groupingBy(phoneNumber -> phoneNumber.getClient().getId()));
-
-            clientPage.getContent().forEach(client -> {
-                List<PhoneNumber> clientPhoneNumbers = phoneNumbersByClientId.getOrDefault(client.getId(), new ArrayList<>());
-                client.setPhoneNumbers(clientPhoneNumbers);
-            });
-        }
 
         return clientPage;
     }
@@ -173,30 +99,9 @@ public class ClientSearchService implements IClientSearchService {
         List<Client> clients = clientRepository.findAll(new ClientSpecification(
                 query,
                 filterParams,
-                filterIds != null ? filterIds.statusIds() : null,
                 filterIds != null ? filterIds.sourceIds() : null,
-                filterIds != null ? filterIds.routeIds() : null,
-                filterIds != null ? filterIds.regionIds() : null,
-                filterIds != null ? filterIds.businessIds() : null,
-                filterIds != null ? filterIds.clientProductIds() : null,
-                null,
                 clientTypeId
         ));
-
-        if (!clients.isEmpty()) {
-            List<Long> clientIds = clients.stream()
-                    .map(Client::getId)
-                    .collect(Collectors.toList());
-            List<PhoneNumber> phoneNumbers = phoneNumberRepository.findByClientIdIn(clientIds);
-
-            Map<Long, List<PhoneNumber>> phoneNumbersByClientId = phoneNumbers.stream()
-                    .collect(Collectors.groupingBy(phoneNumber -> phoneNumber.getClient().getId()));
-
-            clients.forEach(client -> {
-                List<PhoneNumber> clientPhoneNumbers = phoneNumbersByClientId.getOrDefault(client.getId(), new ArrayList<>());
-                client.setPhoneNumbers(clientPhoneNumbers);
-            });
-        }
 
         return clients;
     }

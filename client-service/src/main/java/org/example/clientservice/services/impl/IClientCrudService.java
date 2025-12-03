@@ -12,8 +12,4 @@ public interface IClientCrudService {
     void fullDeleteClient(Long clientId);
 
     void deleteClient(Long clientId);
-
-    void markUrgentClient(Long clientId);
-
-    void setUrgentlyFalseAndRouteClient(Long clientId);
 }

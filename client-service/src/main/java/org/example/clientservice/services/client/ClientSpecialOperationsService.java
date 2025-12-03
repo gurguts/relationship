@@ -8,9 +8,7 @@ import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.example.clientservice.exceptions.client.ClientException;
 import org.example.clientservice.models.client.Client;
-import org.example.clientservice.models.client.PhoneNumber;
-import org.example.clientservice.models.field.*;
-import org.example.clientservice.models.field.StatusClient;
+import org.example.clientservice.models.field.Source;
 import org.example.clientservice.repositories.ClientRepository;
 import org.example.clientservice.services.impl.*;
 import org.example.clientservice.spec.ClientSpecification;
@@ -19,11 +17,9 @@ import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -31,18 +27,11 @@ import java.util.stream.Collectors;
 public class ClientSpecialOperationsService implements IClientSpecialOperationsService {
 
     private static final Set<String> VALID_FIELDS = Set.of(
-            "id", "company", "person", "phoneNumbers", "createdAt", "updatedAt", "status", "source",
-            "location", "pricePurchase", "priceSale", "volumeMonth", "route", "region", "business",
-            "edrpou", "enterpriseName", "vat", "comment", "clientProduct");
+            "id", "company", "createdAt", "updatedAt", "source");
 
 
     private final ClientRepository clientRepository;
-    private final IBusinessService businessService;
-    private final IRegionService regionService;
-    private final IRouteService routeService;
     private final ISourceService sourceService;
-    private final IStatusClientService statusClientService;
-    private final IClientProductService clientProductService;
 
     @Override
     public byte[] generateExcelFile(
@@ -50,16 +39,14 @@ public class ClientSpecialOperationsService implements IClientSpecialOperationsS
             String sortProperty,
             String query,
             Map<String, List<String>> filterParams,
-            List<String> selectedFields,
-            String excludedStatuses
+            List<String> selectedFields
     ) {
         validateInputs(query, filterParams, selectedFields);
 
         Sort sort = createSort(sortDirection, sortProperty);
-        List<Long> excludeStatusIds = parseExcludedStatuses(excludedStatuses);
         FilterIds filterIds = (query != null && !query.trim().isEmpty()) ? fetchFilterIds(query) : fetchFilterIds();
 
-        List<Client> clientList = fetchClients(query, filterParams, filterIds, excludeStatusIds, sort);
+        List<Client> clientList = fetchClients(query, filterParams, filterIds, sort);
 
         Workbook workbook = generateWorkbook(clientList, selectedFields, filterIds);
 
@@ -71,8 +58,7 @@ public class ClientSpecialOperationsService implements IClientSpecialOperationsS
             throw new ClientException("INVALID_QUERY", "Search query cannot exceed 255 characters");
         }
         if (filterParams != null) {
-            Set<String> validKeys = Set.of("createdAtFrom", "createdAtTo", "updatedAtFrom", "updated pisAtTo",
-                    "business", "route", "region", "status", "source", "clientProduct");
+            Set<String> validKeys = Set.of("createdAtFrom", "createdAtTo", "updatedAtFrom", "updatedAtTo", "source");
             for (String key : filterParams.keySet()) {
                 if (!validKeys.contains(key)) {
                     throw new ClientException("INVALID_FILTER", String.format("Invalid filter key: %s", key));
@@ -89,12 +75,7 @@ public class ClientSpecialOperationsService implements IClientSpecialOperationsS
     }
 
     private record FilterIds(
-            List<Business> businessDTOs, List<Long> businessIds,
-            List<Region> regionDTOs, List<Long> regionIds,
-            List<Route> routeDTOs, List<Long> routeIds,
-            List<Source> sourceDTOs, List<Long> sourceIds,
-            List<StatusClient> statusDTOs, List<Long> statusIds,
-            List<ClientProduct> clientProductDTOs, List<Long> clientProductIds
+            List<Source> sourceDTOs, List<Long> sourceIds
     ) {
     }
 
@@ -102,69 +83,22 @@ public class ClientSpecialOperationsService implements IClientSpecialOperationsS
         return Sort.by(sortDirection, sortProperty);
     }
 
-    private List<Long> parseExcludedStatuses(String excludedStatuses) {
-        if (excludedStatuses == null || excludedStatuses.trim().isEmpty()) {
-            return null;
-        }
-        try {
-            return Arrays.stream(excludedStatuses.split(","))
-                    .map(String::trim)
-                    .map(Long::parseLong)
-                    .toList();
-        } catch (NumberFormatException e) {
-            throw new ClientException("INVALID_STATUSES", String.format("Incorrect status format for exclusion: %s",
-                    excludedStatuses));
-        }
-    }
-
     private FilterIds fetchFilterIds(String query) {
-        List<Business> businessDTOs = businessService.findByNameContaining(query);
-        List<Long> businessIds = businessDTOs.stream().map(Business::getId).toList();
-
-        List<Region> regionDTOs = regionService.findByNameContaining(query);
-        List<Long> regionIds = regionDTOs.stream().map(Region::getId).toList();
-
-        List<Route> routeDTOs = routeService.findByNameContaining(query);
-        List<Long> routeIds = routeDTOs.stream().map(Route::getId).toList();
-
         List<Source> sourceDTOs = sourceService.findByNameContaining(query);
         List<Long> sourceIds = sourceDTOs.stream().map(Source::getId).toList();
 
-        List<StatusClient> statusDTOs = statusClientService.findByNameContaining(query);
-        List<Long> statusIds = statusDTOs.stream().map(StatusClient::getId).toList();
-
-        List<ClientProduct> clientProductDTOs = clientProductService.findByNameContaining(query);
-        List<Long> clientProductIds = clientProductDTOs.stream().map(ClientProduct::getId).toList();
-
-        return new FilterIds(businessDTOs, businessIds, regionDTOs, regionIds, routeDTOs, routeIds,
-                sourceDTOs, sourceIds, statusDTOs, statusIds, clientProductDTOs, clientProductIds);
+        return new FilterIds(sourceDTOs, sourceIds);
     }
 
     private FilterIds fetchFilterIds() {
-        List<Business> businessDTOs = businessService.getAllBusinesses();
-        List<Long> businessIds = businessDTOs.stream().map(Business::getId).toList();
-
-        List<Region> regionDTOs = regionService.getAllRegions();
-        List<Long> regionIds = regionDTOs.stream().map(Region::getId).toList();
-
-        List<Route> routeDTOs = routeService.getAllRoutes();
-        List<Long> routeIds = routeDTOs.stream().map(Route::getId).toList();
-
         List<Source> sourceDTOs = sourceService.getAllSources();
         List<Long> sourceIds = sourceDTOs.stream().map(Source::getId).toList();
 
-        List<StatusClient> statusDTOs = statusClientService.getAllStatusClients();
-        List<Long> statusIds = statusDTOs.stream().map(StatusClient::getId).toList();
-
-        List<ClientProduct> clientProductDTOs = clientProductService.getAllClientProducts();
-        List<Long> clientProductIds = clientProductDTOs.stream().map(ClientProduct::getId).toList();
-
-        return new FilterIds(businessDTOs, businessIds, regionDTOs, regionIds, routeDTOs, routeIds,
-                sourceDTOs, sourceIds, statusDTOs, statusIds, clientProductDTOs, clientProductIds);
+        return new FilterIds(sourceDTOs, sourceIds);
     }
 
     private List<Client> fetchClients(String query, Map<String, List<String>> filterParams, FilterIds filterIds,
-                                      List<Long> excludeStatusIds, Sort sort) {
+                                      Sort sort) {
         Long clientTypeId = filterParams != null && filterParams.containsKey("clientTypeId") 
             ? Long.parseLong(filterParams.get("clientTypeId").get(0)) 
             : null;
@@ -172,13 +106,7 @@ public class ClientSpecialOperationsService implements IClientSpecialOperationsS
         return clientRepository.findAll(new ClientSpecification(
                 query,
                 filterParams,
-                filterIds.statusIds(),
                 filterIds.sourceIds(),
-                filterIds.routeIds(),
-                filterIds.regionIds(),
-                filterIds.businessIds(),
-                filterIds.clientProductIds,
-                excludeStatusIds,
                 clientTypeId
         ), sort);
     }
@@ -242,51 +170,13 @@ public class ClientSpecialOperationsService implements IClientSpecialOperationsS
         return switch (field) {
             case "id" -> client.getId() != null ? String.valueOf(client.getId()) : "";
             case "company" -> client.getCompany() != null ? client.getCompany() : "";
-            case "person" -> client.getPerson() != null ? client.getPerson() : "";
-            case "phoneNumbers" -> client.getPhoneNumbers() != null
-                    ? client.getPhoneNumbers().stream().map(PhoneNumber::getNumber)
-                    .collect(Collectors.joining(", "))
-                    : "";
             case "createdAt" -> client.getCreatedAt() != null ? client.getCreatedAt().toString() : "";
             case "updatedAt" -> client.getUpdatedAt() != null ? client.getUpdatedAt().toString() : "";
-            case "location" -> client.getLocation() != null ? client.getLocation() : "";
-            case "pricePurchase" -> client.getPricePurchase() != null ? client.getPricePurchase() : "";
-            case "priceSale" -> client.getPriceSale() != null ? client.getPriceSale() : "";
-            case "volumeMonth" -> client.getVolumeMonth() != null ? client.getVolumeMonth() : "";
-            case "status" -> filterIds.statusDTOs().stream()
-                    .filter(status -> status.getId().equals(client.getStatus()))
-                    .findFirst()
-                    .map(StatusClient::getName)
-                    .orElse("");
             case "source" -> filterIds.sourceDTOs().stream()
                     .filter(source -> source.getId().equals(client.getSource()))
                     .findFirst()
                     .map(Source::getName)
                     .orElse("");
-            case "route" -> filterIds.routeDTOs().stream()
-                    .filter(route -> route.getId().equals(client.getRoute()))
-                    .findFirst()
-                    .map(Route::getName)
-                    .orElse("");
-            case "region" -> filterIds.regionDTOs().stream()
-                    .filter(region -> region.getId().equals(client.getRegion()))
-                    .findFirst()
-                    .map(Region::getName)
-                    .orElse("");
-            case "business" -> filterIds.businessDTOs().stream()
-                    .filter(region -> region.getId().equals(client.getRegion()))
-                    .findFirst()
-                    .map(Business::getName)
-                    .orElse("");
-            case "clientProduct" -> filterIds.clientProductDTOs().stream()
-                    .filter(clientProduct -> clientProduct.getId().equals(client.getClientProduct()))
-                    .findFirst()
-                    .map(ClientProduct::getName)
-                    .orElse("");
-            case "edrpou" -> client.getEdrpou() != null ? client.getEdrpou() : "";
-            case "enterpriseName" -> client.getEnterpriseName() != null ? client.getEnterpriseName() : "";
-            case "vat" -> Boolean.TRUE.equals(client.getVat()) ? "так" : "";
-            case "comment" -> client.getComment() != null ? client.getComment() : "";
             default -> "";
         };
     }

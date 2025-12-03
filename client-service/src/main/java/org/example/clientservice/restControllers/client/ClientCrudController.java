@@ -1,7 +1,6 @@
 package org.example.clientservice.restControllers.client;
 
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.clientservice.mappers.ClientMapper;
@@ -70,19 +69,6 @@ public class ClientCrudController {
     public ResponseEntity<Void> fullDeleteClientById(@PathVariable Long id) {
         log.info("Fully deleting client with ID: {}", id);
         clientService.fullDeleteClient(id);
-        return ResponseEntity.noContent().build();
-    }
-
-    @PreAuthorize("hasAuthority('client:edit')")
-    @PatchMapping("/urgently/{id}")
-    public ResponseEntity<Void> updateUrgentlyClient(@PathVariable Long id) {
-        clientService.markUrgentClient(id);
-        return ResponseEntity.noContent().build();
-    }
-
-    @PatchMapping("/urgently/false/{id}")
-    public ResponseEntity<Void> setUrgentlyFalseAndRouteClient(@PathVariable @Positive Long id) {
-        clientService.setUrgentlyFalseAndRouteClient(id);
         return ResponseEntity.noContent().build();
     }
 }

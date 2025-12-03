@@ -31,14 +31,6 @@ public class Client {
     @Column(nullable = false, name = "company")
     private String company;
 
-    @Column(name = "person")
-    private String person;
-
-    @JsonManagedReference
-    @EqualsAndHashCode.Exclude
-    @OneToMany(mappedBy = "client", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<PhoneNumber> phoneNumbers = new ArrayList<>();
-
     @JsonManagedReference
     @EqualsAndHashCode.Exclude
     @OneToMany(mappedBy = "client", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -52,51 +44,9 @@ public class Client {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    @Column(name = "location")
-    private String location;
-
-    @Column(name = "price_purchase")
-    private String pricePurchase;
-
-    @Column(name = "price_sale")
-    private String priceSale;
-
     @Column(name = "is_active")
     private Boolean isActive = true;
 
-    @Column(name = "volume_month")
-    private String volumeMonth;
-
-    @Column(name = "status_id")
-    private Long status;
-
     @Column(name = "source_id")
     private Long source;
-
-    @Column(name = "route_id")
-    private Long route;
-
-    @Column(name = "region_id")
-    private Long region;
-
-    @Column(name = "business_id")
-    private Long business;
-
-    @Column(name = "client_product_id")
-    private Long clientProduct;
-
-    @Column(name = "comment")
-    private String comment;
-
-    @Column(name = "urgently")
-    private Boolean urgently = false;
-
-    @Column(name = "edrpou")
-    private String edrpou;
-
-    @Column(name = "enterprise_name")
-    private String enterpriseName;
-
-    @Column(name = "vat")
-    private Boolean vat;
 }

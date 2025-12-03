@@ -38,12 +38,7 @@ public class ClientSearchController {
     private final IClientSearchService clientService;
     private final ClientMapper clientMapper;
     private final ObjectMapper objectMapper;
-    private final IRouteService routeService;
-    private final IRegionService regionService;
-    private final IStatusClientService statusClientService;
     private final ISourceService sourceService;
-    private final IBusinessService businessService;
-    private final IClientProductService clientProductService;
 
     @PreAuthorize("hasAuthority('client:view')")
     @GetMapping("/search")
@@ -54,7 +49,6 @@ public class ClientSearchController {
             @RequestParam(name = "sort", defaultValue = "updatedAt") String sortProperty,
             @RequestParam(name = "direction", defaultValue = "DESC") Sort.Direction sortDirection,
             @RequestParam(name = "filters", required = false) String filtersJson,
-            @RequestParam(name = "excludeStatuses", required = false) String excludeStatuses,
             @RequestParam(name = "clientTypeId", required = false) Long clientTypeId
     ) {
 
@@ -66,7 +60,7 @@ public class ClientSearchController {
         
         Pageable pageable = PageRequest.of(page, size, Sort.by(sortDirection, sortProperty));
 
-        Page<ClientDTO> clients = clientService.searchClients(query, pageable, filters, excludeStatuses, clientTypeId)
+        Page<ClientDTO> clients = clientService.searchClients(query, pageable, filters, clientTypeId)
                 .map(clientMapper::clientToClientDTO);
 
         PageResponse<ClientDTO> response = new PageResponse<>(clients);
@@ -90,12 +84,7 @@ public class ClientSearchController {
         List<Client> clients = clientService.searchClientsForPurchase(request.query(), request.filterParams());
 
         ExternalClientDataCache cache = new ExternalClientDataCache(
-                businessService.getAllBusinesses(),
-                routeService.getAllRoutes(),
-                regionService.getAllRegions(),
-                statusClientService.getAllStatusClients(),
-                sourceService.getAllSources(),
-                clientProductService.getAllClientProducts()
+                sourceService.getAllSources()
         );
 
         return clients.stream()

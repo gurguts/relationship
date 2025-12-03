@@ -34,8 +34,7 @@ public class ClientSpecialOperationsController {
             @RequestParam(name = "q", required = false) String query,
             @RequestParam(name = "sort", defaultValue = "updatedAt") String sortProperty,
             @RequestParam(name = "direction", defaultValue = "DESC") Sort.Direction sortDirection,
-            @RequestParam(name = "filters", required = false) String filtersJson,
-            @RequestParam(name = "excludeStatuses", required = false) String excludeStatuses
+            @RequestParam(name = "filters", required = false) String filtersJson
     ) {
         List<String> selectedFields = requestBody.get("fields");
         if (selectedFields == null || selectedFields.isEmpty()) {
@@ -49,7 +48,7 @@ public class ClientSpecialOperationsController {
         Map<String, List<String>> filters = parseFilters(filtersJson);
 
         byte[] excelData = clientService.generateExcelFile(
-                sortDirection, sortProperty, query, filters, selectedFields, excludeStatuses);
+                sortDirection, sortProperty, query, filters, selectedFields);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);

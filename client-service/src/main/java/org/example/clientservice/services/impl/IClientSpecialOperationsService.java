@@ -11,7 +11,6 @@ public interface IClientSpecialOperationsService {
             String sortProperty,
             String query,
             Map<String, List<String>> filterParams,
-            List<String> selectedFields,
-            String excludedStatuses
+            List<String> selectedFields
     );
 }

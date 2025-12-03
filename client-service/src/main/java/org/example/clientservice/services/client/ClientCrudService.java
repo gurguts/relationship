@@ -6,7 +6,6 @@ import org.example.clientservice.clients.UserClient;
 import org.example.clientservice.exceptions.client.ClientException;
 import org.example.clientservice.exceptions.client.ClientNotFoundException;
 import org.example.clientservice.models.client.Client;
-import org.example.clientservice.models.client.PhoneNumber;
 import org.example.clientservice.models.field.Source;
 import org.example.clientservice.repositories.ClientRepository;
 import org.example.clientservice.services.impl.IClientCrudService;
@@ -16,6 +15,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.Objects;
 
 @Slf4j
@@ -29,13 +29,7 @@ public class ClientCrudService implements IClientCrudService {
     @Override
     @Transactional
     public Client createClient(Client client) {
-        if (client.getPhoneNumbers() != null) {
-            for (PhoneNumber phoneNumber : client.getPhoneNumbers()) {
-                phoneNumber.setClient(client);
-            }
-        }
         log.info("Creating client: {}", client.getCompany());
-
         return clientRepository.save(client);
     }
 
@@ -85,23 +79,13 @@ public class ClientCrudService implements IClientCrudService {
         clientRepository.deactivateClientById(clientId);
     }
 
-    @Override
-    @Transactional
-    public void markUrgentClient(Long clientId) {
-        clientRepository.toggleUrgently(clientId);
-    }
-
-    @Override
-    @Transactional
-    public void setUrgentlyFalseAndRouteClient(Long clientId) {
-        clientRepository.setFalseUrgentlyAndUpdateRoute(clientId, 66L);
-    }
-
     private void updateExistingClient(Client existingClient, Client updatedClient, String fullName, String sourceName) {
-        existingClient.setComment(updatedClient.getComment());
-
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        Long currentUserId = authentication != null && authentication.getDetails() instanceof Long ? 
+        if (authentication == null) {
+            throw new ClientException("Authentication required");
+        }
+        
+        Long currentUserId = authentication.getDetails() instanceof Long ? 
                 (Long) authentication.getDetails() : null;
         
         boolean canEditStrangers = authentication.getAuthorities().stream()
@@ -146,45 +130,12 @@ public class ClientCrudService implements IClientCrudService {
         
         // Обновляем название клиента только если есть права
         if (isOwnClient || canEditStrangers) {
-            existingClient.setCompany(updatedClient.getCompany());
-        }
-        
-        // Обновляем остальные поля (кроме company)
-        existingClient.setPerson(updatedClient.getPerson());
-        existingClient.setPricePurchase(updatedClient.getPricePurchase());
-        existingClient.setPriceSale(updatedClient.getPriceSale());
-        existingClient.setLocation(updatedClient.getLocation());
-        existingClient.setVolumeMonth(updatedClient.getVolumeMonth());
-        existingClient.setEdrpou(updatedClient.getEdrpou());
-        existingClient.setEnterpriseName(updatedClient.getEnterpriseName());
-        existingClient.setVat(updatedClient.getVat());
-
-        if (updatedClient.getBusiness() != null) {
-            existingClient.setBusiness(updatedClient.getBusiness());
+            if (updatedClient.getCompany() != null) {
+                existingClient.setCompany(updatedClient.getCompany());
+            }
         }
 
-        if (updatedClient.getStatus() != null) {
-            existingClient.setStatus(updatedClient.getStatus());
-        }
-        if (updatedClient.getRegion() != null) {
-            existingClient.setRegion(updatedClient.getRegion());
-        }
-        if (updatedClient.getRoute() != null) {
-            existingClient.setRoute(updatedClient.getRoute());
-        }
-        if (updatedClient.getClientProduct() != null) {
-            existingClient.setClientProduct(updatedClient.getClientProduct());
-        }
-
-        if (updatedClient.getPhoneNumbers() != null) {
-            existingClient.getPhoneNumbers().clear();
-
-            updatedClient.getPhoneNumbers().forEach(phoneNumber -> {
-                phoneNumber.setClient(existingClient);
-                existingClient.getPhoneNumbers().add(phoneNumber);
-            });
-        }
-
+        // Обновляем source только если он передан и изменился
         if (updatedClient.getSource() != null && !Objects.equals(updatedClient.getSource(),
                 existingClient.getSource())) {
             // Изменять source могут только пользователи с правом client_stranger:edit
@@ -194,6 +145,7 @@ public class ClientCrudService implements IClientCrudService {
             existingClient.setSource(updatedClient.getSource());
         }
 
+        // Обновляем fieldValues только если они переданы
         if (updatedClient.getFieldValues() != null) {
             existingClient.getFieldValues().clear();
             updatedClient.getFieldValues().forEach(fieldValue -> {
@@ -201,6 +153,10 @@ public class ClientCrudService implements IClientCrudService {
                 existingClient.getFieldValues().add(fieldValue);
             });
         }
+        
+        // Явно обновляем updatedAt, чтобы @UpdateTimestamp сработал
+        // Это гарантирует, что поле обновится даже если изменены только fieldValues
+        existingClient.setUpdatedAt(LocalDateTime.now());
     }
 }
 

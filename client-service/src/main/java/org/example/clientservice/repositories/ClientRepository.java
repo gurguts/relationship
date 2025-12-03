@@ -21,11 +21,5 @@ public interface ClientRepository extends JpaRepository<Client, Long>, JpaSpecif
     @NonNull
     List<Client> findAll(Specification<Client> spec);
 
-    @Modifying
-    @Query("UPDATE Client c SET c.urgently = CASE WHEN c.urgently = TRUE THEN FALSE ELSE TRUE END WHERE c.id = :id")
-    void toggleUrgently(@Param("id") Long id);
-
-    @Modifying
-    @Query("UPDATE Client c SET c.urgently = FALSE, c.route = :routeId WHERE c.id = :id")
-    void setFalseUrgentlyAndUpdateRoute(@Param("id") Long id, @Param("routeId") Long routeId);
+    // Методы toggleUrgently и setFalseUrgentlyAndUpdateRoute удалены, так как поля urgently и route больше не существуют
 }

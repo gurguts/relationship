@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Map;
 
 public interface IClientSearchService {
-    Page<Client> searchClients(String query, Pageable pageable, Map<String, List<String>> filterParams, String excludedStatuses, Long clientTypeId);
+    Page<Client> searchClients(String query, Pageable pageable, Map<String, List<String>> filterParams, Long clientTypeId);
 
     List<Client> searchClientsForPurchase(String query, Map<String, List<String>> filterParams);
 

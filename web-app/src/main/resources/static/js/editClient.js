@@ -5,12 +5,7 @@ function enableEdit(fieldId) {
     const field = document.getElementById(`modal-client-${fieldId}`);
     const currentValue = field.innerText;
 
-    if (fieldId === 'vat') {
-        const isChecked = currentValue === 'true';
-        field.innerHTML = `<input type="checkbox" id="edit-${fieldId}" ${isChecked ? 'checked' : ''} />`;
-    } else {
-        field.innerHTML = `<textarea id="edit-${fieldId}" class="edit-textarea">${currentValue}</textarea>`;
-    }
+    field.innerHTML = `<textarea id="edit-${fieldId}" class="edit-textarea">${currentValue}</textarea>`;
 
     editing = true;
 }
@@ -105,48 +100,36 @@ async function saveClientChanges() {
         id: clientId,
         company: document.getElementById('edit-company')?.value ||
             document.getElementById('modal-client-company').innerText,
-        person: document.getElementById('edit-person')?.value ||
-            document.getElementById('modal-client-person').innerText,
-        phoneNumbers: document.getElementById('edit-phone')?.value.split(',') ||
-            document.getElementById('modal-client-phone').innerText.split(','),
-        location: document.getElementById('edit-location')?.value ||
-            document.getElementById('modal-client-location').innerText,
-        pricePurchase: document.getElementById('edit-price-purchase')?.value ||
-            document.getElementById('modal-client-price-purchase').innerText,
-        priceSale: document.getElementById('edit-price-sale')?.value ||
-            document.getElementById('modal-client-price-sale').innerText,
-        volumeMonth: document.getElementById('edit-volumeMonth')?.value ||
-            document.getElementById('modal-client-volumeMonth').innerText,
-        edrpou: document.getElementById('edit-edrpou')?.value ||
-            document.getElementById('modal-client-edrpou').innerText,
-        enterpriseName: document.getElementById('edit-enterpriseName')?.value ||
-            document.getElementById('modal-client-enterpriseName').innerText,
-        businessId: document.getElementById('edit-business')?.value ||
-            getSelectedId('modal-client-business', availableBusiness),
-        routeId: document.getElementById('edit-route')?.value ||
-            getSelectedId('modal-client-route', availableRoutes),
-        regionId: document.getElementById('edit-region')?.value ||
-            getSelectedId('modal-client-region', availableRegions),
-        statusId: document.getElementById('edit-status')?.value ||
-            getSelectedId('modal-client-status', availableStatuses),
         sourceId: document.getElementById('edit-source')?.value ||
-            getSelectedId('modal-client-source', availableSources),
-        clientProductId: document.getElementById('edit-clientProduct')?.value ||
-            getSelectedId('modal-client-clientProduct', availableClientProducts),
-        comment: document.getElementById('edit-comment')?.value ||
-            document.getElementById('modal-client-comment').innerText,
-        vat: document.getElementById('edit-vat')?.checked
+            getSelectedId('modal-client-source', availableSources)
     };
 
+    // Собираем все fieldValues - и отредактированные, и неотредактированные
     const fieldValues = [];
+    
     if (typeof clientTypeFields !== 'undefined' && clientTypeFields.length > 0) {
+        // Загружаем текущие значения клиента, если они еще не загружены
+        let currentFieldValues = [];
+        if (typeof loadClientFieldValues === 'function') {
+            currentFieldValues = await loadClientFieldValues(clientId);
+        }
+        
+        // Создаем Map для быстрого доступа к текущим значениям по fieldId
+        const currentFieldValuesMap = new Map();
+        currentFieldValues.forEach(fv => {
+            if (!currentFieldValuesMap.has(fv.fieldId)) {
+                currentFieldValuesMap.set(fv.fieldId, []);
+            }
+            currentFieldValuesMap.get(fv.fieldId).push(fv);
+        });
+        
         clientTypeFields.forEach(field => {
             const editInput = document.getElementById(`edit-field-${field.id}`);
+            
             if (editInput) {
-                let value = null;
-                
+                // Поле было отредактировано - используем новое значение
                 if (field.fieldType === 'TEXT' || field.fieldType === 'PHONE') {
-                    value = editInput.value.trim();
+                    const value = editInput.value.trim();
                     if (value) {
                         if (field.fieldType === 'PHONE') {
                             const phones = value.split(',').map(p => p.trim()).filter(p => p);
@@ -166,7 +149,7 @@ async function saveClientChanges() {
                         }
                     }
                 } else if (field.fieldType === 'NUMBER') {
-                    value = editInput.value.trim();
+                    const value = editInput.value.trim();
                     if (value) {
                         fieldValues.push({
                             fieldId: field.id,
@@ -175,7 +158,7 @@ async function saveClientChanges() {
                         });
                     }
                 } else if (field.fieldType === 'DATE') {
-                    value = editInput.value;
+                    const value = editInput.value;
                     if (value) {
                         fieldValues.push({
                             fieldId: field.id,
@@ -203,7 +186,7 @@ async function saveClientChanges() {
                         });
                     }
                 } else if (field.fieldType === 'BOOLEAN') {
-                    value = editInput.value;
+                    const value = editInput.value;
                     if (value === 'true' || value === 'false') {
                         fieldValues.push({
                             fieldId: field.id,
@@ -212,13 +195,28 @@ async function saveClientChanges() {
                         });
                     }
                 }
+            } else {
+                // Поле не было отредактировано - используем текущее значение из загруженных данных
+                const existingValues = currentFieldValuesMap.get(field.id);
+                if (existingValues && existingValues.length > 0) {
+                    existingValues.forEach(fv => {
+                        fieldValues.push({
+                            fieldId: field.id,
+                            valueText: fv.valueText,
+                            valueNumber: fv.valueNumber,
+                            valueDate: fv.valueDate,
+                            valueBoolean: fv.valueBoolean,
+                            valueListId: fv.valueListId,
+                            displayOrder: fv.displayOrder || 0
+                        });
+                    });
+                }
             }
         });
     }
     
-    if (fieldValues.length > 0) {
-        updatedClient.fieldValues = fieldValues;
-    }
+    // Всегда отправляем fieldValues, даже если пустой массив (для очистки всех полей, если нужно)
+    updatedClient.fieldValues = fieldValues;
 
     try {
         const response = await fetch(`/api/v1/client/${clientId}`, {

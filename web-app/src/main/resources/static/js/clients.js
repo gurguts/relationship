@@ -8,18 +8,7 @@ let currentDirection = 'DESC';
 const filterForm = document.getElementById('filterForm');
 const customSelects = {};
 
-let availableStatuses = [];
-let availableRegions = [];
 let availableSources = [];
-let availableRoutes = [];
-let availableBusiness = [];
-let availableClientProducts = [];
-
-let statusMap;
-let regionMap;
-let routeMap;
-let businessMap;
-let clientProductMap;
 let sourceMap;
 let userMap;
 let productMap;
@@ -186,9 +175,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const normalizedFilters = {};
             Object.keys(parsedFilters).forEach(key => {
                 const normalizedKey = key.toLowerCase();
-                if (normalizedKey === 'status' || normalizedKey === 'region' || 
-                    normalizedKey === 'route' || normalizedKey === 'business' || 
-                    normalizedKey === 'source' || normalizedKey === 'clientproduct' ||
+                if (normalizedKey === 'source' ||
                     normalizedKey.endsWith('from') || normalizedKey.endsWith('to') ||
                     normalizedKey === 'createdatfrom' || normalizedKey === 'createdatto' ||
                     normalizedKey === 'updatedatfrom' || normalizedKey === 'updatedatto') {
@@ -217,8 +204,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const typeId = urlParams.get('type');
     
     const savedClientTypeId = localStorage.getItem('currentClientTypeId');
-    const staticFilterKeys = ['createdAtFrom', 'createdAtTo', 'updatedAtFrom', 'updatedAtTo', 
-                              'business', 'route', 'region', 'status', 'source', 'clientProduct'];
+    const staticFilterKeys = ['createdAtFrom', 'createdAtTo', 'updatedAtFrom', 'updatedAtTo', 'source'];
     
     if (typeId) {
         const newClientTypeId = parseInt(typeId);
@@ -242,8 +228,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         buildDynamicFilters();
         
         const validFieldNames = new Set(filterableFields.map(f => f.fieldName));
-        const staticFilterKeys = ['createdAtFrom', 'createdAtTo', 'updatedAtFrom', 'updatedAtTo', 
-                                  'business', 'route', 'region', 'status', 'source', 'clientProduct'];
+        const staticFilterKeys = ['createdAtFrom', 'createdAtTo', 'updatedAtFrom', 'updatedAtTo', 'source'];
         
         const cleanedFilters = {};
         Object.keys(window.selectedFilters).forEach(key => {
@@ -305,15 +290,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                         }
                     }
                 } else if (field.fieldType === 'BOOLEAN') {
-                    // Поля типа BOOLEAN - выбор из списка
+                    // Поля типа BOOLEAN - выбор из списка (Так/Ні)
                     const select = document.getElementById(filterId);
                     if (select && window.selectedFilters[field.fieldName] && window.selectedFilters[field.fieldName].length > 0) {
                         const savedValue = window.selectedFilters[field.fieldName][0];
                         if (savedValue && savedValue !== '' && savedValue !== 'null') {
                             select.value = savedValue;
-                            if (customSelects[filterId]) {
-                                customSelects[filterId].setValue(savedValue);
-                            }
                         }
                     }
                 } else if (field.fieldType === 'TEXT' || field.fieldType === 'PHONE') {
@@ -343,23 +325,16 @@ async function loadEntitiesAndApplyFilters() {
         if (!response.ok) return;
         
         const data = await response.json();
-        availableStatuses = data.statuses || [];
-        availableRegions = data.regions || [];
         availableSources = data.sources || [];
-        availableRoutes = data.routes || [];
-        availableBusiness = data.businesses || [];
-        availableUsers = data.users || [];
-        availableProducts = data.products || [];
-        availableClientProducts = data.clientProducts || [];
-
-        statusMap = new Map(availableStatuses.map(item => [item.id, item.name]));
-        regionMap = new Map(availableRegions.map(item => [item.id, item.name]));
         sourceMap = new Map(availableSources.map(item => [item.id, item.name]));
-        routeMap = new Map(availableRoutes.map(item => [item.id, item.name]));
-        businessMap = new Map(availableBusiness.map(item => [item.id, item.name]));
-        clientProductMap = new Map(availableClientProducts.map(item => [item.id, item.name]));
-        userMap = new Map(availableUsers.map(item => [item.id, item.name]));
-        productMap = new Map(availableProducts.map(item => [item.id, item.name]));
+        
+        // Загружаем другие данные, если они нужны для других модулей
+        if (data.users) {
+            userMap = new Map(data.users.map(item => [item.id, item.name]));
+        }
+        if (data.products) {
+            productMap = new Map(data.products.map(item => [item.id, item.name]));
+        }
 
         const filterForm = document.getElementById('filterForm');
         if (filterForm) {
@@ -419,28 +394,9 @@ async function loadClientTypeFields(typeId) {
 
 async function loadDefaultClientData() {
     try {
-        const [statusesRes, regionsRes, sourcesRes, routesRes, businessRes, clientProductsRes] = await Promise.all([
-            fetch('/api/v1/status'),
-            fetch('/api/v1/region'),
-            fetch('/api/v1/source'),
-            fetch('/api/v1/route'),
-            fetch('/api/v1/business'),
-            fetch('/api/v1/clientProduct')
-        ]);
-        
-        availableStatuses = await statusesRes.json();
-        availableRegions = await regionsRes.json();
+        const sourcesRes = await fetch('/api/v1/source');
         availableSources = await sourcesRes.json();
-        availableRoutes = await routesRes.json();
-        availableBusiness = await businessRes.json();
-        availableClientProducts = await clientProductsRes.json();
-        
-        statusMap = new Map(availableStatuses.map(s => [s.id, s.name]));
-        regionMap = new Map(availableRegions.map(r => [r.id, r.name]));
         sourceMap = new Map(availableSources.map(s => [s.id, s.name]));
-        routeMap = new Map(availableRoutes.map(r => [r.id, r.name]));
-        businessMap = new Map(availableBusiness.map(b => [b.id, b.name]));
-        clientProductMap = new Map(availableClientProducts.map(cp => [cp.id, cp.name]));
     } catch (error) {
         console.error('Error loading default data:', error);
     }
@@ -697,7 +653,7 @@ function buildDynamicFilters() {
                     `;
                     filterForm.appendChild(selectItem);
                 } else if (field.fieldType === 'BOOLEAN') {
-                    // Поля типа BOOLEAN - выбор из списка
+                    // Поля типа BOOLEAN - выбор из списка (Так/Ні)
                     const selectItem = document.createElement('div');
                     selectItem.className = 'select-section-item';
                     selectItem.innerHTML = `
@@ -710,11 +666,7 @@ function buildDynamicFilters() {
                         </select>
                     `;
                     filterForm.appendChild(selectItem);
-                    
-                    const select = selectItem.querySelector('select');
-                    if (select && !customSelects[`filter-${field.fieldName}`]) {
-                        customSelects[`filter-${field.fieldName}`] = createCustomSelect(select);
-                    }
+                    // Не используем customSelect для BOOLEAN - используем обычный select
                 }
             });
         }
@@ -836,14 +788,7 @@ function renderClientsWithDefaultFields(clients) {
 
         row.innerHTML = `
             <td data-label="Компанія" data-sort="company" class="company-cell" style="cursor: pointer;">${client.company || ''}</td>
-            <td data-label="Область">${findNameByIdFromMap(regionMap, client.regionId)}</td>
-            <td data-label="Статус">${findNameByIdFromMap(statusMap, client.statusId)}</td>
-            <td data-label="Телефони">${client.phoneNumbers ? client.phoneNumbers.map(number =>
-            `<a href="tel:${number}">${number}</a>`).join('<br>') : ''}</td>
             <td data-label="Залучення">${findNameByIdFromMap(sourceMap, client.sourceId)}</td>
-            <td data-label="Маршруты">${findNameByIdFromMap(routeMap, client.routeId)}</td>
-            <td data-label="Коментар">${client.comment ? client.comment : ''}</td>
-            <td data-label="Адреса" data-sort="location">${client.location ? client.location : ''}</td>
         `;
         tableBody.appendChild(row);
         const companyCell = row.querySelector('.company-cell');
@@ -958,8 +903,6 @@ async function loadDataWithSort(page, size, sort, direction) {
         }
     });
     
-    console.log('Sending filters to backend:', cleanedFilters);
-    
     if (Object.keys(cleanedFilters).length > 0) {
         queryParams += `&filters=${encodeURIComponent(JSON.stringify(cleanedFilters))}`;
     }
@@ -1004,16 +947,6 @@ async function showClientModal(client) {
     document.getElementById('modal-client-company').innerText = client.company;
     
     if (currentClientTypeId && clientTypeFields.length > 0) {
-        const oldFields = ['person', 'phone', 'location', 'price-purchase', 'price-sale', 'vat', 'volumeMonth', 
-                          'edrpou', 'enterpriseName', 'business', 'route', 'region', 'status', 'source', 
-                          'clientProduct', 'comment', 'urgently'];
-        oldFields.forEach(fieldId => {
-            const fieldElement = document.getElementById(`modal-client-${fieldId}`)?.parentElement;
-            if (fieldElement) {
-                fieldElement.style.display = 'none';
-            }
-        });
-        
         let fieldValues = client._fieldValues;
         if (!fieldValues) {
             fieldValues = await loadClientFieldValues(client.id);
@@ -1099,45 +1032,14 @@ async function showClientModal(client) {
             }
         }
     } else {
-        const oldFields = ['person', 'phone', 'location', 'price-purchase', 'price-sale', 'vat', 'volumeMonth', 
-                          'edrpou', 'enterpriseName', 'business', 'route', 'region', 'status', 'source', 
-                          'clientProduct', 'comment', 'urgently'];
-        oldFields.forEach(fieldId => {
-            const fieldElement = document.getElementById(`modal-client-${fieldId}`)?.parentElement;
-            if (fieldElement) {
-                fieldElement.style.display = '';
-            }
-        });
-        document.getElementById('modal-client-person').innerText = client.person || '';
-        document.getElementById('modal-client-phone').innerText = client.phoneNumbers || '';
-        document.getElementById('modal-client-location').innerText = client.location || '';
-        document.getElementById('modal-client-price-purchase').innerText = client.pricePurchase || '';
-        document.getElementById('modal-client-price-sale').innerText = client.priceSale || '';
-        if (client.vat === true) {
-            document.getElementById('modal-client-vat').innerHTML =
-                `<input type="checkbox" id="edit-vat" checked disabled />`;
-        } else if (client.vat === false || client.vat === null || client.vat === undefined) {
-            document.getElementById('modal-client-vat').innerHTML =
-                `<input type="checkbox" id="edit-vat" disabled />`;
-        } else {
-            document.getElementById('modal-client-vat').innerHTML = '';
+        // Старые поля больше не используются - все данные теперь в динамических полях
+        // Показываем только source
+        const sourceElement = document.getElementById('modal-client-source')?.parentElement;
+        if (sourceElement) {
+            sourceElement.style.display = '';
+            document.getElementById('modal-client-source').innerText =
+                findNameByIdFromMap(sourceMap, client.sourceId);
         }
-        document.getElementById('modal-client-volumeMonth').innerText = client.volumeMonth || '';
-        document.getElementById('modal-client-edrpou').innerText = client.edrpou || '';
-        document.getElementById('modal-client-enterpriseName').innerText = client.enterpriseName || '';
-        document.getElementById('modal-client-business').innerText =
-            findNameByIdFromMap(businessMap, client.businessId);
-        document.getElementById('modal-client-clientProduct').innerText =
-            findNameByIdFromMap(clientProductMap, client.clientProductId);
-        document.getElementById('modal-client-route').innerText =
-            findNameByIdFromMap(routeMap, client.routeId);
-        document.getElementById('modal-client-region').innerText =
-            findNameByIdFromMap(regionMap, client.regionId);
-        document.getElementById('modal-client-status').innerText =
-            findNameByIdFromMap(statusMap, client.statusId);
-        document.getElementById('modal-client-source').innerText =
-            findNameByIdFromMap(sourceMap, client.sourceId);
-        document.getElementById('modal-client-comment').innerText = client.comment || '';
         
         // Скрываем кнопки редактирования в зависимости от прав доступа
         const canEdit = canEditClient(client);
@@ -1153,20 +1055,6 @@ async function showClientModal(client) {
                 companyEditButton.style.display = '';
             }
         }
-        
-        // Скрываем все кнопки редактирования старых полей, если нет прав
-        const oldFieldIds = ['person', 'phone', 'location', 'price-purchase', 'price-sale', 
-                            'vat', 'volumeMonth', 'edrpou', 'enterpriseName', 'business', 'route', 
-                            'region', 'status', 'clientProduct', 'comment'];
-        oldFieldIds.forEach(fieldId => {
-            const editButton = document.querySelector(`button.edit-icon[onclick*="enableEdit('${fieldId}')"]`) ||
-                              document.querySelector(`button.edit-icon[onclick*="enableSelect('${fieldId}"]`);
-            if (editButton && !canEdit) {
-                editButton.style.display = 'none';
-            } else if (editButton && canEdit) {
-                editButton.style.display = '';
-            }
-        });
         
         // Скрываем кнопку редактирования source, если нет права client_stranger:edit
         const sourceEditButton = document.getElementById('edit-source');
@@ -1203,6 +1091,10 @@ async function showClientModal(client) {
 
     const fullDeleteButton = document.getElementById('full-delete-client');
     fullDeleteButton.onclick = async () => {
+        if (!confirm('Ви впевнені, що хочете повністю видалити цього клієнта з бази даних? Ця дія незворотна!')) {
+            return;
+        }
+        
         loaderBackdrop.style.display = 'flex';
         try {
             const response = await fetch(`${API_URL}/${client.id}`, {method: 'DELETE'});
@@ -1211,7 +1103,7 @@ async function showClientModal(client) {
                 handleError(new ErrorResponse(errorData.error, errorData.message, errorData.details));
                 return;
             }
-            showMessage('Клієнт повністю видалений', 'info');
+            showMessage('Клієнт повністю видалений з бази даних', 'info');
             modal.style.display = 'none';
 
             loadDataWithSort(currentPage, pageSize, currentSort, currentDirection);
@@ -1226,6 +1118,10 @@ async function showClientModal(client) {
 
     const deleteButton = document.getElementById('delete-client');
     deleteButton.onclick = async () => {
+        if (!confirm('Ви впевнені, що хочете деактивувати цього клієнта? Клієнт буде прихований, але залишиться в базі даних.')) {
+            return;
+        }
+        
         loaderBackdrop.style.display = 'flex';
         try {
             const response = await fetch(`${API_URL}/active/${client.id}`, {method: 'DELETE'});
@@ -1234,12 +1130,12 @@ async function showClientModal(client) {
                 handleError(new ErrorResponse(errorData.error, errorData.message, errorData.details));
                 return;
             }
-            showMessage('Клієнт видалений', 'info');
+            showMessage('Клієнт деактивовано (isActive = false)', 'info');
             modal.style.display = 'none';
 
             loadDataWithSort(currentPage, pageSize, currentSort, currentDirection);
         } catch (error) {
-            console.error('Помилка вимкнення клієнта:', error);
+            console.error('Помилка деактивації клієнта:', error);
             handleError(error);
         } finally {
             loaderBackdrop.style.display = 'none';
@@ -1558,11 +1454,6 @@ function resetForm() {
 }
 
 const defaultValues = {
-    region: '136',
-    status: '24',
-    route: '66',
-    business: '1',
-    clientProduct: '1',
     source: () => {
         const userId = localStorage.getItem('userId');
         return userSourceMapping[userId] ? String(userSourceMapping[userId]) : '';
@@ -1603,31 +1494,6 @@ function formatPhoneNumber(num) {
         return null;
     }
 }
-
-function updateOutput() {
-    const input = document.getElementById('phoneNumbers').value;
-    const outputDiv = document.getElementById('output');
-    outputDiv.innerHTML = '';
-
-    let formattedNumbers = input.split(',')
-        .map(num => num.trim())
-        .filter(num => num.length > 0)
-        .map(formatPhoneNumber)
-        .filter(num => num !== null);
-
-    if (formattedNumbers.length > 0) {
-        const formattedNumbersList = document.createElement('ul');
-        formattedNumbersList.className = 'phone-numbers-list';
-        formattedNumbers.forEach(num => {
-            const listItem = document.createElement('li');
-            listItem.className = 'phone-number-item';
-            listItem.textContent = num;
-            formattedNumbersList.appendChild(listItem);
-        });
-        outputDiv.appendChild(formattedNumbersList);
-    }
-}
-
 
 document.getElementById('client-form').addEventListener('submit',
     async function (event) {
@@ -1847,16 +1713,10 @@ function updateSelectedFilters() {
                 const selectId = `filter-${field.fieldName}`;
                 if (customSelects[selectId]) {
                     const selectedValues = customSelects[selectId].getValue();
-                    console.log('LIST field:', field.fieldName, 'selectedValues:', selectedValues);
                     const filteredValues = selectedValues.filter(v => v !== null && v !== undefined && v !== '' && v !== 'null');
                     if (filteredValues.length > 0) {
                         selectedFilters[field.fieldName] = filteredValues;
-                        console.log('Added to selectedFilters:', field.fieldName, filteredValues);
-                    } else {
-                        console.log('No valid values for LIST field:', field.fieldName);
                     }
-                } else {
-                    console.warn('Custom select not found for LIST field:', selectId);
                 }
             } else if (field.fieldType === 'TEXT' || field.fieldType === 'PHONE') {
                 // Поля типа TEXT и PHONE - простой поиск
@@ -1865,22 +1725,10 @@ function updateSelectedFilters() {
                     selectedFilters[field.fieldName] = [value.trim()];
                 }
             } else if (field.fieldType === 'BOOLEAN') {
-                // Поля типа BOOLEAN - выбор из списка через custom select
-                const selectId = `filter-${field.fieldName}`;
-                if (customSelects[selectId]) {
-                    const selectedValues = customSelects[selectId].getValue();
-                    if (selectedValues && selectedValues.length > 0) {
-                        const value = selectedValues[0];
-                        if (value && value !== '' && value !== 'null') {
-                            selectedFilters[field.fieldName] = [value];
-                        }
-                    }
-                } else {
-                    // Fallback на обычный select, если custom select не создан
-                    const value = formData.get(field.fieldName);
-                    if (value && value !== '' && value !== 'null') {
-                        selectedFilters[field.fieldName] = [value];
-                    }
+                // Поля типа BOOLEAN - выбор из списка (Так/Ні)
+                const value = formData.get(field.fieldName);
+                if (value && value !== '' && value !== 'null') {
+                    selectedFilters[field.fieldName] = [value];
                 }
             }
         });
@@ -1910,8 +1758,6 @@ function updateFilterCounter() {
             totalFilters += 1;
         }
     });
-
-    console.log('Total filters count:', totalFilters, 'selectedFilters:', selectedFilters);
 
     if (totalFilters > 0) {
         countElement.textContent = totalFilters;
