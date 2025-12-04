@@ -15,11 +15,16 @@ public interface ClientRepository extends JpaRepository<Client, Long>, JpaSpecif
     @Query("UPDATE Client c SET c.isActive = false WHERE c.id = :clientId")
     void deactivateClientById(@Param("clientId") Long clientId);
 
+    @Modifying
+    @Query("UPDATE Client c SET c.isActive = true WHERE c.id = :clientId")
+    void activateClientById(@Param("clientId") Long clientId);
+
     @NonNull
     Page<Client> findAll(Specification<Client> spec, @NonNull Pageable pageable);
 
+    @EntityGraph(attributePaths = {"fieldValues", "fieldValues.field", "fieldValues.field.listValues", "fieldValues.valueList"})
     @NonNull
-    List<Client> findAll(Specification<Client> spec);
+    List<Client> findAll(@NonNull Specification<Client> spec);
 
     // Методы toggleUrgently и setFalseUrgentlyAndUpdateRoute удалены, так как поля urgently и route больше не существуют
 }

@@ -71,4 +71,12 @@ public class ClientCrudController {
         clientService.fullDeleteClient(id);
         return ResponseEntity.noContent().build();
     }
+
+    @PreAuthorize("hasAuthority('client:edit')")
+    @PatchMapping("/active/{id}")
+    public ResponseEntity<Void> activateClientById(@PathVariable Long id) {
+        log.info("Activating client with ID: {}", id);
+        clientService.activateClient(id);
+        return ResponseEntity.noContent().build();
+    }
 }

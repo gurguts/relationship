@@ -204,7 +204,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const typeId = urlParams.get('type');
     
     const savedClientTypeId = localStorage.getItem('currentClientTypeId');
-    const staticFilterKeys = ['createdAtFrom', 'createdAtTo', 'updatedAtFrom', 'updatedAtTo', 'source'];
+    const staticFilterKeys = ['createdAtFrom', 'createdAtTo', 'updatedAtFrom', 'updatedAtTo', 'source', 'showInactive'];
     
     if (typeId) {
         const newClientTypeId = parseInt(typeId);
@@ -228,7 +228,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         buildDynamicFilters();
         
         const validFieldNames = new Set(filterableFields.map(f => f.fieldName));
-        const staticFilterKeys = ['createdAtFrom', 'createdAtTo', 'updatedAtFrom', 'updatedAtTo', 'source'];
+        const staticFilterKeys = ['createdAtFrom', 'createdAtTo', 'updatedAtFrom', 'updatedAtTo', 'source', 'showInactive'];
         
         const cleanedFilters = {};
         Object.keys(window.selectedFilters).forEach(key => {
@@ -354,6 +354,39 @@ async function loadEntitiesAndApplyFilters() {
                 const toInput = filterForm.querySelector('#updatedAtTo');
                 if (toInput) toInput.value = window.selectedFilters['updatedAtTo'][0];
             }
+            
+            // Создаем custom select для source, если он еще не создан
+            const sourceSelect = filterForm.querySelector('#filter-source');
+            if (sourceSelect && !customSelects['filter-source'] && availableSources && availableSources.length > 0) {
+                const sourceData = availableSources.map(s => ({
+                    id: s.id,
+                    name: s.name
+                }));
+                if (typeof createCustomSelect === 'function') {
+                    const customSelect = createCustomSelect(sourceSelect, true);
+                    if (customSelect) {
+                        customSelects['filter-source'] = customSelect;
+                        customSelect.populate(sourceData);
+                    }
+                }
+            }
+            
+            // Восстанавливаем значение для source
+            if (window.selectedFilters['source'] && customSelects['filter-source']) {
+                const savedSources = window.selectedFilters['source'];
+                if (Array.isArray(savedSources) && savedSources.length > 0) {
+                    const validSources = savedSources.filter(v => v !== null && v !== undefined && v !== '' && v !== 'null');
+                    if (validSources.length > 0) {
+                        customSelects['filter-source'].setValue(validSources);
+                    }
+                }
+            }
+            
+            // Восстанавливаем значение для чекбокса неактивных клиентов
+            const showInactiveCheckbox = filterForm.querySelector('#filter-show-inactive');
+            if (showInactiveCheckbox && window.selectedFilters['showInactive'] && window.selectedFilters['showInactive'][0] === 'true') {
+                showInactiveCheckbox.checked = true;
+            }
         }
     } catch (error) {
         console.error('Error loading entities:', error);
@@ -382,6 +415,7 @@ async function loadClientTypeFields(typeId) {
         ]);
         
         clientTypeFields = await fieldsRes.json();
+        window.clientTypeFields = clientTypeFields; // Делаем доступным глобально для экспорта
         visibleFields = await visibleRes.json();
         window.visibleFields = visibleFields;
         searchableFields = await searchableRes.json();
@@ -477,8 +511,9 @@ function buildDynamicFilters() {
     
     try {
         // Удаляем старые custom selects для фильтров перед пересозданием
+        // НЕ удаляем filter-source, так как это стандартное поле
         Object.keys(customSelects).forEach(selectId => {
-            if (selectId.startsWith('filter-')) {
+            if (selectId.startsWith('filter-') && selectId !== 'filter-source') {
                 // Очищаем custom select перед удалением
                 const customSelect = customSelects[selectId];
                 if (customSelect && typeof customSelect.reset === 'function') {
@@ -492,7 +527,7 @@ function buildDynamicFilters() {
             }
         });
         
-        // Удаляем все существующие элементы фильтров
+        // Удаляем все существующие элементы фильтров (стандартные поля будут пересозданы)
         const existingFilters = filterForm.querySelectorAll('h2, .filter-block, .select-section-item');
         existingFilters.forEach(el => {
             // Удаляем также все дочерние элементы, чтобы избежать утечек памяти
@@ -502,6 +537,18 @@ function buildDynamicFilters() {
             });
             el.remove();
         });
+        
+        // Удаляем custom select для source, чтобы он был пересоздан
+        if (customSelects['filter-source']) {
+            try {
+                if (customSelects['filter-source'] && typeof customSelects['filter-source'].reset === 'function') {
+                    customSelects['filter-source'].reset();
+                }
+            } catch (e) {
+                console.warn('Error resetting source custom select:', e);
+            }
+            delete customSelects['filter-source'];
+        }
         
         // Добавляем стандартные поля: createdAt и updatedAt (всегда диапазон от-до)
         const createdAtH2 = document.createElement('h2');
@@ -531,6 +578,19 @@ function buildDynamicFilters() {
             <input type="date" id="filter-updatedAt-to" name="updatedAtTo"><br><br>
         `;
         filterForm.appendChild(updatedAtBlock);
+        
+        // Добавляем стандартное поле: source (залучення)
+        const sourceSelectItem = document.createElement('div');
+        sourceSelectItem.className = 'select-section-item';
+        sourceSelectItem.innerHTML = `
+            <br>
+            <label class="select-label-style" for="filter-source">Залучення:</label>
+            <select id="filter-source" name="source" multiple>
+            </select>
+        `;
+        filterForm.appendChild(sourceSelectItem);
+        
+        // Создаем custom select для source после загрузки данных (будет создан в loadEntitiesAndApplyFilters)
         
         // Добавляем фильтруемые поля из настроек
         if (filterableFields && filterableFields.length > 0) {
@@ -670,6 +730,17 @@ function buildDynamicFilters() {
                 }
             });
         }
+        
+        // Добавляем чекбокс для фильтрации неактивных клиентов в самом конце всех фильтров
+        const isActiveBlock = document.createElement('div');
+        isActiveBlock.className = 'filter-block';
+        isActiveBlock.innerHTML = `
+            <label style="display: flex; align-items: center; gap: 0.5em; margin: 0.5em 0;">
+                <input type="checkbox" id="filter-show-inactive" name="showInactive" value="true">
+                <span>Показати неактивних клієнтів</span>
+            </label>
+        `;
+        filterForm.appendChild(isActiveBlock);
     } finally {
         // Снимаем флаг после завершения
         buildDynamicFilters._isBuilding = false;
@@ -1117,6 +1188,19 @@ async function showClientModal(client) {
 
 
     const deleteButton = document.getElementById('delete-client');
+    const restoreButton = document.getElementById('restore-client');
+    
+    // Показываем/скрываем кнопки в зависимости от статуса клиента
+    if (client.isActive === false) {
+        // Клиент неактивен - показываем кнопку "Відновити" вместо "Видалити"
+        if (deleteButton) deleteButton.style.display = 'none';
+        if (restoreButton) restoreButton.style.display = 'block';
+    } else {
+        // Клиент активен - показываем кнопку "Видалити"
+        if (deleteButton) deleteButton.style.display = 'block';
+        if (restoreButton) restoreButton.style.display = 'none';
+    }
+    
     deleteButton.onclick = async () => {
         if (!confirm('Ви впевнені, що хочете деактивувати цього клієнта? Клієнт буде прихований, але залишиться в базі даних.')) {
             return;
@@ -1141,6 +1225,33 @@ async function showClientModal(client) {
             loaderBackdrop.style.display = 'none';
         }
     };
+    
+    if (restoreButton) {
+        restoreButton.onclick = async () => {
+            if (!confirm('Ви впевнені, що хочете відновити цього клієнта? Клієнт знову стане активним.')) {
+                return;
+            }
+            
+            loaderBackdrop.style.display = 'flex';
+            try {
+                const response = await fetch(`${API_URL}/active/${client.id}`, {method: 'PATCH'});
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    handleError(new ErrorResponse(errorData.error, errorData.message, errorData.details));
+                    return;
+                }
+                showMessage('Клієнт відновлено (isActive = true)', 'info');
+                modal.style.display = 'none';
+
+                loadDataWithSort(currentPage, pageSize, currentSort, currentDirection);
+            } catch (error) {
+                console.error('Помилка відновлення клієнта:', error);
+                handleError(error);
+            } finally {
+                loaderBackdrop.style.display = 'none';
+            }
+        };
+    }
 
 }
 
@@ -1256,14 +1367,60 @@ function buildDynamicCreateForm() {
             input.required = field.isRequired || false;
         } else if (field.fieldType === 'PHONE') {
             input = document.createElement('input');
-            input.type = 'text';
+            input.type = 'tel';
             input.id = `field-${field.id}`;
             input.name = `field-${field.id}`;
             input.required = field.isRequired || false;
-            input.placeholder = field.allowMultiple ? 'Телефони (розділяємо комою)' : 'Телефон';
-            if (field.validationPattern) {
-                input.pattern = field.validationPattern;
-            }
+            input.placeholder = field.allowMultiple ? 'Телефони (розділяємо комою, формат: +1234567890)' : 'Телефон (формат: +1234567890)';
+            input.title = field.allowMultiple 
+                ? 'Номери повинні починатися з + та містити від 1 до 15 цифр (формат E.164), розділяйте комою'
+                : 'Номер повинен починатися з + та містити від 1 до 15 цифр (формат E.164)';
+            
+            // Единая кастомная валидация для всех PHONE полей
+            const validatePhoneField = function() {
+                const value = this.value.trim();
+                if (!value) {
+                    if (this.required) {
+                        this.setCustomValidity('Це поле обов\'язкове для заповнення');
+                    } else {
+                        this.setCustomValidity('');
+                    }
+                    return;
+                }
+                
+                if (field.allowMultiple) {
+                    // Для множественных номеров проверяем каждый
+                    const phones = value.split(',').map(p => p.trim()).filter(p => p);
+                    if (phones.length === 0) {
+                        this.setCustomValidity('Введіть хоча б один номер телефону');
+                        return;
+                    }
+                    const normalizedPhones = phones.map(p => normalizePhoneNumber(p));
+                    const invalidPhones = normalizedPhones.filter(p => !validatePhoneNumber(p));
+                    if (invalidPhones.length > 0) {
+                        this.setCustomValidity('Деякі номери мають некоректний формат. Використовуйте формат E.164: +1234567890');
+                    } else {
+                        this.setCustomValidity('');
+                    }
+                } else {
+                    // Для одиночного номера
+                    const normalized = normalizePhoneNumber(value);
+                    if (!validatePhoneNumber(normalized)) {
+                        this.setCustomValidity('Номер має некоректний формат. Використовуйте формат E.164: +1234567890');
+                    } else {
+                        this.setCustomValidity('');
+                    }
+                }
+            };
+            
+            input.addEventListener('blur', validatePhoneField);
+            input.addEventListener('input', function() {
+                // При вводе очищаем ошибку, чтобы не мешать пользователю
+                if (this.value.trim() === '') {
+                    this.setCustomValidity('');
+                }
+            });
+            
             if (field.allowMultiple) {
                 const outputDiv = document.createElement('div');
                 outputDiv.id = `output-${field.id}`;
@@ -1415,8 +1572,8 @@ function updatePhoneOutput(fieldId, value) {
     let formattedNumbers = value.split(',')
         .map(num => num.trim())
         .filter(num => num.length > 0)
-        .map(formatPhoneNumber)
-        .filter(num => num !== null);
+        .map(normalizePhoneNumber)
+        .filter(phone => validatePhoneNumber(phone)); // Показываем только валидные номера
 
     if (formattedNumbers.length > 0) {
         const formattedNumbersList = document.createElement('ul');
@@ -1478,21 +1635,60 @@ const userSourceMapping = {
 };
 
 
-const phonePattern = /^\+380\d{9}$/;
-
-function formatPhoneNumber(num) {
-    const cleanedNum = num.replace(/[^\d+]/g, '');
-    if (phonePattern.test(cleanedNum)) {
-        return cleanedNum;
-    } else if (cleanedNum.length === 10 && cleanedNum.startsWith('0')) {
-        return "+380" + cleanedNum.substring(1);
-    } else if (cleanedNum.length === 12 && cleanedNum.startsWith('380')) {
-        return "+380" + cleanedNum.substring(3);
-    } else if (cleanedNum.length >= 12 && cleanedNum.startsWith('+380')) {
-        return "+380" + cleanedNum.substring(4);
-    } else {
-        return null;
+// Стандартная валидация для международных номеров телефонов (формат E.164)
+// Номер должен начинаться с + и содержать от 1 до 15 цифр после + (первая цифра не может быть 0)
+function validatePhoneNumber(phone) {
+    if (!phone || typeof phone !== 'string') {
+        return false;
     }
+    // Удаляем все символы кроме цифр и +
+    const cleaned = phone.replace(/[^\d+]/g, '');
+    // Проверяем формат E.164: начинается с +, затем от 1 до 15 цифр, первая цифра не 0
+    const e164Pattern = /^\+[1-9]\d{1,14}$/;
+    return e164Pattern.test(cleaned);
+}
+
+// Нормализация номера телефона (удаление лишних символов, добавление +, удаление ведущих нулей)
+function normalizePhoneNumber(phone) {
+    if (!phone || typeof phone !== 'string') {
+        return phone;
+    }
+    // Удаляем все символы кроме цифр и +
+    let cleaned = phone.replace(/[^\d+]/g, '');
+    
+    if (cleaned.length === 0) {
+        return phone; // Возвращаем исходное значение, если ничего не осталось
+    }
+    
+    // Если номер начинается с +, убираем его временно для обработки
+    let hasPlus = cleaned.startsWith('+');
+    if (hasPlus) {
+        cleaned = cleaned.substring(1);
+    }
+    
+    // Удаляем ведущие нули
+    cleaned = cleaned.replace(/^0+/, '');
+    
+    // Если после удаления нулей ничего не осталось, возвращаем исходное значение
+    if (cleaned.length === 0) {
+        return phone;
+    }
+    
+    // Проверяем, что первая цифра не 0 (требование E.164)
+    if (cleaned.startsWith('0')) {
+        cleaned = cleaned.replace(/^0+/, '');
+        if (cleaned.length === 0) {
+            return phone;
+        }
+    }
+    
+    // Ограничиваем длину до 15 цифр (максимум для E.164)
+    if (cleaned.length > 15) {
+        cleaned = cleaned.substring(0, 15);
+    }
+    
+    // Добавляем + в начало
+    return '+' + cleaned;
 }
 
 document.getElementById('client-form').addEventListener('submit',
@@ -1501,6 +1697,27 @@ document.getElementById('client-form').addEventListener('submit',
 
         if (!currentClientTypeId) {
             showMessage('Будь ласка, виберіть тип клієнта з навігації', 'error');
+            return;
+        }
+
+        // Валидация всех PHONE полей перед отправкой
+        let hasValidationErrors = false;
+        visibleInCreateFields.forEach(field => {
+            if (field.fieldType === 'PHONE') {
+                const phoneInput = document.getElementById(`field-${field.id}`);
+                if (phoneInput) {
+                    // Триггерим валидацию
+                    phoneInput.dispatchEvent(new Event('blur'));
+                    if (!phoneInput.validity.valid) {
+                        hasValidationErrors = true;
+                        phoneInput.reportValidity();
+                    }
+                }
+            }
+        });
+
+        if (hasValidationErrors) {
+            showMessage('Будь ласка, виправте помилки в полях телефонів', 'error');
             return;
         }
 
@@ -1529,8 +1746,8 @@ document.getElementById('client-form').addEventListener('submit',
                     const phones = phoneValue.split(',')
                         .map(num => num.trim())
                         .filter(num => num.length > 0)
-                        .map(formatPhoneNumber)
-                        .filter(num => num !== null);
+                        .map(normalizePhoneNumber)
+                        .filter(phone => validatePhoneNumber(phone)); // Фильтруем только валидные номера
                     
                     phones.forEach((phone, index) => {
                         clientData.fieldValues.push({
@@ -1559,7 +1776,18 @@ document.getElementById('client-form').addEventListener('submit',
                 };
                 
                 if (field.fieldType === 'TEXT' || field.fieldType === 'PHONE') {
-                    fieldValueData.valueText = fieldValue;
+                    // Для PHONE нормализуем номер и проверяем валидность
+                    if (field.fieldType === 'PHONE') {
+                        const normalizedValue = normalizePhoneNumber(fieldValue);
+                        if (validatePhoneNumber(normalizedValue)) {
+                            fieldValueData.valueText = normalizedValue;
+                        } else {
+                            // Если номер невалидный, пропускаем его (валидация уже была на фронте)
+                            return; // Пропускаем это поле
+                        }
+                    } else {
+                        fieldValueData.valueText = fieldValue;
+                    }
                 } else if (field.fieldType === 'NUMBER') {
                     fieldValueData.valueNumber = parseFloat(fieldValue);
                 } else if (field.fieldType === 'DATE') {
@@ -1688,6 +1916,22 @@ function updateSelectedFilters() {
     if (createdAtTo) selectedFilters['createdAtTo'] = [createdAtTo];
     if (updatedAtFrom) selectedFilters['updatedAtFrom'] = [updatedAtFrom];
     if (updatedAtTo) selectedFilters['updatedAtTo'] = [updatedAtTo];
+
+    // Обрабатываем стандартное поле source (залучення)
+    const sourceSelectId = 'filter-source';
+    if (customSelects[sourceSelectId]) {
+        const selectedSources = customSelects[sourceSelectId].getValue();
+        const filteredSources = selectedSources.filter(v => v !== null && v !== undefined && v !== '' && v !== 'null');
+        if (filteredSources.length > 0) {
+            selectedFilters['source'] = filteredSources;
+        }
+    }
+
+    // Обрабатываем чекбокс для неактивных клиентов
+    const showInactive = formData.get('showInactive');
+    if (showInactive === 'true') {
+        selectedFilters['showInactive'] = ['true'];
+    }
 
     // Обрабатываем фильтруемые поля из настроек
     if (filterableFields && filterableFields.length > 0) {

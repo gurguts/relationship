@@ -12,4 +12,6 @@ public interface IClientCrudService {
     void fullDeleteClient(Long clientId);
 
     void deleteClient(Long clientId);
+
+    void activateClient(Long clientId);
 }

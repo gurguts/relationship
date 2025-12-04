@@ -64,12 +64,11 @@ public class ClientSearchService implements IClientSearchService {
         if (filterParams == null) {
             return;
         }
-        Set<String> validKeys = Set.of("createdAtFrom", "createdAtTo", "updatedAtFrom", "updatedAtTo", "source");
-        for (String key : filterParams.keySet()) {
-            if (!validKeys.contains(key) && !key.endsWith("From") && !key.endsWith("To")) {
-                log.warn("Unknown filter key: {}, skipping", key);
-            }
-        }
+        // Валидация фильтров не требуется здесь, так как:
+        // 1. Стандартные фильтры обрабатываются в ClientSpecification
+        // 2. Динамические поля также обрабатываются в ClientSpecification
+        // 3. Невалидные фильтры просто не найдут совпадений в базе данных
+        // Если нужна строгая валидация, она должна быть на уровне контроллера или DTO
     }
 
     private FilterIds fetchFilterIds(String query) {

@@ -1407,12 +1407,78 @@ function renderClientTypes(clientTypes) {
             <td>
                 <button class="btn-activate" onclick="openEditClientTypeModal(${type.id})">Редагувати</button>
                 <button class="btn-activate" onclick="manageClientTypeFields(${type.id})">Поля</button>
+                <button class="btn-activate" onclick="downloadClientImportTemplate(${type.id})">Скачати шаблон</button>
+                <button class="btn-activate" onclick="openClientImportModal(${type.id})">Імпортувати клієнтів</button>
                 <button class="btn-deactivate" onclick="deleteClientType(${type.id})">Видалити</button>
             </td>
         `;
         tbody.appendChild(row);
     });
 }
+
+// Client Import Functions
+function downloadClientImportTemplate(clientTypeId) {
+    window.location.href = `/api/v1/client/import/template/${clientTypeId}`;
+}
+
+function openClientImportModal(clientTypeId) {
+    document.getElementById('import-client-type-id').value = clientTypeId;
+    document.getElementById('client-import-modal').style.display = 'flex';
+}
+
+document.getElementById('client-import-form')?.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const clientTypeId = document.getElementById('import-client-type-id').value;
+    const fileInput = document.getElementById('import-file');
+    const file = fileInput.files[0];
+    
+    if (!file) {
+        alert('Будь ласка, виберіть файл');
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    try {
+        loaderBackdrop.style.display = 'flex';
+        
+        const response = await fetch(`/api/v1/client/import/${clientTypeId}`, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        });
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(errorText || 'Помилка імпорту');
+        }
+        
+        const result = await response.text();
+        alert(result);
+        
+        // Закрываем модальное окно и очищаем форму
+        document.getElementById('client-import-modal').style.display = 'none';
+        document.getElementById('client-import-form').reset();
+        
+    } catch (error) {
+        console.error('Import error:', error);
+        alert('Помилка імпорту: ' + error.message);
+    } finally {
+        loaderBackdrop.style.display = 'none';
+    }
+});
+
+// Close modal handlers
+document.querySelectorAll('#client-import-modal .close-modal').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.getElementById('client-import-modal').style.display = 'none';
+        document.getElementById('client-import-form').reset();
+    });
+});
 
 document.getElementById('addClientTypeBtn')?.addEventListener('click', () => {
     document.getElementById('add-client-type-modal').style.display = 'flex';
@@ -1729,3 +1795,5 @@ window.manageClientTypeFields = manageClientTypeFields;
 window.openEditFieldModal = openEditFieldModal;
 window.deleteField = deleteField;
 window.deleteClientType = deleteClientType;
+window.downloadClientImportTemplate = downloadClientImportTemplate;
+window.openClientImportModal = openClientImportModal;

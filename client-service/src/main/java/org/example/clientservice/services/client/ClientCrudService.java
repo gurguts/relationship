@@ -79,6 +79,13 @@ public class ClientCrudService implements IClientCrudService {
         clientRepository.deactivateClientById(clientId);
     }
 
+    @Override
+    @Transactional
+    public void activateClient(Long clientId) {
+        getClient(clientId);
+        clientRepository.activateClientById(clientId);
+    }
+
     private void updateExistingClient(Client existingClient, Client updatedClient, String fullName, String sourceName) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null) {

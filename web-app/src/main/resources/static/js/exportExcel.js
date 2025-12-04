@@ -1,3 +1,71 @@
+// Функция для заполнения формы экспорта базовыми и динамическими полями
+function populateExportForm(formId) {
+    const form = document.getElementById(formId);
+    if (!form) return;
+    
+    // Очищаем форму от старых полей (кроме базовых)
+    const existingFields = form.querySelectorAll('label');
+    existingFields.forEach(label => {
+        const input = label.querySelector('input[type="checkbox"]');
+        if (input && !['id', 'company', 'createdAt', 'updatedAt', 'source'].includes(input.value)) {
+            label.remove();
+        }
+    });
+    
+    // Базовые поля (всегда включены по умолчанию)
+    const baseFields = [
+        { value: 'id', label: 'Id' },
+        { value: 'company', label: 'Компанія' },
+        { value: 'createdAt', label: 'Дата створення' },
+        { value: 'updatedAt', label: 'Дата оновлення' },
+        { value: 'source', label: 'Залучення' }
+    ];
+    
+    // Проверяем, есть ли уже базовые поля
+    const existingBaseFields = new Set();
+    form.querySelectorAll('input[type="checkbox"]').forEach(input => {
+        existingBaseFields.add(input.value);
+    });
+    
+    // Добавляем базовые поля, если их еще нет
+    baseFields.forEach(field => {
+        if (!existingBaseFields.has(field.value)) {
+            const label = document.createElement('label');
+            label.innerHTML = `<input type="checkbox" name="fields" value="${field.value}" checked> ${field.label}`;
+            label.innerHTML += '<br>';
+            form.appendChild(label);
+        }
+    });
+    
+    // Добавляем все динамические поля типа клиента (не только видимые)
+    // Используем window.clientTypeFields (все поля), если доступны, иначе window.visibleFields как fallback
+    let allFields = [];
+    if (typeof window.clientTypeFields !== 'undefined' && window.clientTypeFields && window.clientTypeFields.length > 0) {
+        allFields = window.clientTypeFields;
+    } else if (typeof window.visibleFields !== 'undefined' && window.visibleFields && window.visibleFields.length > 0) {
+        allFields = window.visibleFields;
+    }
+    
+    if (allFields.length > 0) {
+        // Сортируем поля по displayOrder
+        const sortedFields = [...allFields].sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+        
+        sortedFields.forEach(field => {
+            // Используем fieldName как идентификатор для динамических полей
+            const fieldValue = `field_${field.id}`;
+            const fieldLabel = field.fieldLabel || field.fieldName;
+            
+            // Проверяем, не добавлено ли уже это поле
+            if (!form.querySelector(`input[value="${fieldValue}"]`)) {
+                const label = document.createElement('label');
+                label.innerHTML = `<input type="checkbox" name="fields" value="${fieldValue}" checked> ${fieldLabel}`;
+                label.innerHTML += '<br>';
+                form.appendChild(label);
+            }
+        });
+    }
+}
+
 function initExcelExport(config) {
     const {
         triggerId = 'exportToExcelData',
@@ -11,6 +79,8 @@ function initExcelExport(config) {
 
     document.getElementById(triggerId).addEventListener('click', () => {
         const exportModal = document.getElementById(modalId);
+        // Заполняем форму экспорта динамическими полями
+        populateExportForm(formId);
         exportModal.classList.remove('hide');
         exportModal.style.display = 'flex';
         setTimeout(() => {
@@ -45,8 +115,14 @@ function initExcelExport(config) {
             queryParams += `&q=${encodeURIComponent(searchTerm)}`;
         }
 
-        if (Object.keys(selectedFilters).length > 0) {
-            queryParams += `&filters=${encodeURIComponent(JSON.stringify(selectedFilters))}`;
+        // Подготавливаем фильтры, добавляя clientTypeId если нужно
+        const cleanedFilters = Object.assign({}, selectedFilters);
+        if (typeof currentClientTypeId !== 'undefined' && currentClientTypeId) {
+            cleanedFilters.clientTypeId = [currentClientTypeId.toString()];
+        }
+        
+        if (Object.keys(cleanedFilters).length > 0) {
+            queryParams += `&filters=${encodeURIComponent(JSON.stringify(cleanedFilters))}`;
         }
 
         try {

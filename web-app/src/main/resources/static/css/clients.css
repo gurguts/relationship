@@ -316,7 +316,6 @@
 .select-section-item {
     box-sizing: border-box;
     width: 100%;
-    margin-bottom: 1em;
     display: flex;
     flex-direction: column;
 }
@@ -877,6 +876,7 @@ input.custom-select-placeholder {
 #createClientModal input[type="text"],
 #createClientModal input[type="number"],
 #createClientModal input[type="date"],
+#createClientModal input[type="tel"],
 #createClientModal select {
     padding: 0.75em 1em;
     font-size: 1em;
@@ -894,6 +894,7 @@ input.custom-select-placeholder {
 #createClientModal input[type="text"]:focus,
 #createClientModal input[type="number"]:focus,
 #createClientModal input[type="date"]:focus,
+#createClientModal input[type="tel"]:focus,
 #createClientModal select:focus {
     outline: none;
     border-color: var(--dark-green);
@@ -903,6 +904,7 @@ input.custom-select-placeholder {
 #createClientModal input[type="text"]:hover,
 #createClientModal input[type="number"]:hover,
 #createClientModal input[type="date"]:hover,
+#createClientModal input[type="tel"]:hover,
 #createClientModal select:hover {
     border-color: #bdbdbd;
 }
@@ -1193,6 +1195,7 @@ input.custom-select-placeholder {
     #createClientModal input[type="text"],
     #createClientModal input[type="number"],
     #createClientModal input[type="date"],
+    #createClientModal input[type="tel"],
     #createClientModal select {
         padding: 0.6em 0.8em;
         font-size: 0.95em;
@@ -1590,22 +1593,6 @@ input.custom-select-placeholder {
     }
 }
 
-#modal-client-vat input {
-    width: 20px;
-    height: 20px;
-    cursor: pointer;
-}
-
-#modal-client-urgently,
-#modal-client-vat {
-    width: 20px;
-    height: 20px;
-    cursor: pointer;
-}
-
-#modal-client-urgently:hover {
-    box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
-}
 
 /*--modal-purchase-client--*/
 

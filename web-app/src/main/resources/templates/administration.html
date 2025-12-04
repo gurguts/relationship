@@ -602,6 +602,25 @@
     </div>
 </div>
 
+<!-- Client Import Modal -->
+<div id="client-import-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <span class="close-modal">&times;</span>
+        <h2>Імпорт клієнтів з Excel</h2>
+        <form id="client-import-form">
+            <input type="hidden" id="import-client-type-id">
+            <div class="form-group">
+                <label for="import-file">Виберіть Excel файл:</label>
+                <input type="file" id="import-file" name="file" accept=".xlsx,.xls" required>
+            </div>
+            <div class="modal-actions">
+                <button type="submit" class="btn-primary">Імпортувати</button>
+                <button type="button" class="btn-secondary close-modal">Скасувати</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script src="/js/administration.js"></script>
 <script src="/js/common.js"></script>
 <script src="/js/error.js"></script>

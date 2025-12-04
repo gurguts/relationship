@@ -1,5 +1,61 @@
 /*--edit-client--*/
 
+// Стандартная валидация для международных номеров телефонов (формат E.164)
+// Номер должен начинаться с + и содержать от 1 до 15 цифр после + (первая цифра не может быть 0)
+function validatePhoneNumber(phone) {
+    if (!phone || typeof phone !== 'string') {
+        return false;
+    }
+    // Удаляем все символы кроме цифр и +
+    const cleaned = phone.replace(/[^\d+]/g, '');
+    // Проверяем формат E.164: начинается с +, затем от 1 до 15 цифр, первая цифра не 0
+    const e164Pattern = /^\+[1-9]\d{1,14}$/;
+    return e164Pattern.test(cleaned);
+}
+
+// Нормализация номера телефона (удаление лишних символов, добавление +, удаление ведущих нулей)
+function normalizePhoneNumber(phone) {
+    if (!phone || typeof phone !== 'string') {
+        return phone;
+    }
+    // Удаляем все символы кроме цифр и +
+    let cleaned = phone.replace(/[^\d+]/g, '');
+    
+    if (cleaned.length === 0) {
+        return phone; // Возвращаем исходное значение, если ничего не осталось
+    }
+    
+    // Если номер начинается с +, убираем его временно для обработки
+    let hasPlus = cleaned.startsWith('+');
+    if (hasPlus) {
+        cleaned = cleaned.substring(1);
+    }
+    
+    // Удаляем ведущие нули
+    cleaned = cleaned.replace(/^0+/, '');
+    
+    // Если после удаления нулей ничего не осталось, возвращаем исходное значение
+    if (cleaned.length === 0) {
+        return phone;
+    }
+    
+    // Проверяем, что первая цифра не 0 (требование E.164)
+    if (cleaned.startsWith('0')) {
+        cleaned = cleaned.replace(/^0+/, '');
+        if (cleaned.length === 0) {
+            return phone;
+        }
+    }
+    
+    // Ограничиваем длину до 15 цифр (максимум для E.164)
+    if (cleaned.length > 15) {
+        cleaned = cleaned.substring(0, 15);
+    }
+    
+    // Добавляем + в начало
+    return '+' + cleaned;
+}
+
 function enableEdit(fieldId) {
     showSaveCancelButtons();
     const field = document.getElementById(`modal-client-${fieldId}`);
@@ -131,16 +187,32 @@ async function saveClientChanges() {
                 if (field.fieldType === 'TEXT' || field.fieldType === 'PHONE') {
                     const value = editInput.value.trim();
                     if (value) {
-                        if (field.fieldType === 'PHONE') {
+                        if (field.fieldType === 'PHONE' && field.allowMultiple) {
+                            // Для множественных PHONE полей разбиваем по запятой
                             const phones = value.split(',').map(p => p.trim()).filter(p => p);
                             phones.forEach((phone, index) => {
+                                // Нормализуем номер телефона и проверяем валидность
+                                const normalizedPhone = normalizePhoneNumber(phone);
+                                if (validatePhoneNumber(normalizedPhone)) {
+                                    fieldValues.push({
+                                        fieldId: field.id,
+                                        valueText: normalizedPhone,
+                                        displayOrder: index
+                                    });
+                                }
+                            });
+                        } else if (field.fieldType === 'PHONE' && !field.allowMultiple) {
+                            // Для одиночных PHONE полей обрабатываем как одно значение
+                            const normalizedPhone = normalizePhoneNumber(value);
+                            if (validatePhoneNumber(normalizedPhone)) {
                                 fieldValues.push({
                                     fieldId: field.id,
-                                    valueText: phone,
-                                    displayOrder: index
+                                    valueText: normalizedPhone,
+                                    displayOrder: 0
                                 });
-                            });
+                            }
                         } else {
+                            // Для TEXT полей
                             fieldValues.push({
                                 fieldId: field.id,
                                 valueText: value,
@@ -261,15 +333,6 @@ async function enableEditField(fieldId, fieldType, allowMultiple) {
     let currentValue = fieldSpan.innerText.trim();
     const isEmpty = currentValue === '—' || !currentValue;
     
-    if (fieldSpan.innerHTML.includes('<a')) {
-        const phoneLinks = currentValue.match(/>([^<]+)</g);
-        if (phoneLinks) {
-            currentValue = phoneLinks.map(link => link.replace(/[<>]/g, '')).join(', ');
-        } else {
-            currentValue = fieldSpan.textContent.trim();
-        }
-    }
-    
     let inputElement = null;
     const originalValue = currentValue;
     
@@ -306,15 +369,34 @@ async function enableEditField(fieldId, fieldType, allowMultiple) {
         inputElement.placeholder = 'Введіть номери телефонів через кому';
         inputElement.dataset.originalValue = originalValue;
         if (!isEmpty && currentValue) {
-            const phoneLinks = currentValue.match(/<a[^>]*>([^<]+)<\/a>/g);
-            if (phoneLinks) {
-                const phones = phoneLinks.map(link => {
-                    const match = link.match(/>([^<]+)</);
-                    return match ? match[1] : '';
-                }).filter(p => p);
-                inputElement.value = phones.join(', ');
+            // Извлекаем номера из HTML - проверяем innerHTML поля, а не innerText
+            const fieldSpanElement = document.getElementById(`modal-field-${fieldId}`);
+            if (fieldSpanElement && fieldSpanElement.innerHTML) {
+                // Извлекаем все ссылки с номерами телефонов
+                const phoneLinks = fieldSpanElement.innerHTML.match(/<a[^>]*href="tel:([^"]+)"[^>]*>([^<]+)<\/a>/g);
+                if (phoneLinks && phoneLinks.length > 0) {
+                    // Извлекаем номера из href или из текста ссылки
+                    const phones = phoneLinks.map(link => {
+                        // Сначала пытаемся извлечь из href
+                        const hrefMatch = link.match(/href="tel:([^"]+)"/);
+                        if (hrefMatch) {
+                            return hrefMatch[1];
+                        }
+                        // Если не получилось, извлекаем из текста ссылки
+                        const textMatch = link.match(/>([^<]+)</);
+                        return textMatch ? textMatch[1] : '';
+                    }).filter(p => p);
+                    inputElement.value = phones.join(', ');
+                } else {
+                    // Если нет ссылок, пытаемся извлечь из текста (на случай, если формат другой)
+                    const textContent = fieldSpanElement.textContent || fieldSpanElement.innerText || '';
+                    // Разбиваем по переносам строк или пробелам и фильтруем пустые
+                    const phones = textContent.split(/\s+/).filter(p => p.trim() && p.trim() !== '—');
+                    inputElement.value = phones.join(', ');
+                }
             } else {
-                inputElement.value = currentValue.replace(/<[^>]+>/g, '');
+                // Fallback: используем currentValue как есть
+                inputElement.value = currentValue.replace(/<[^>]+>/g, '').trim();
             }
         }
         fieldSpan.replaceWith(inputElement);

@@ -20,7 +20,7 @@ import java.util.stream.Collectors;
 
 public class ClientSpecification implements Specification<Client> {
     private static final Set<String> VALID_FILTER_KEYS = Set.of(
-            "createdAtFrom", "createdAtTo", "updatedAtFrom", "updatedAtTo", "source");
+            "createdAtFrom", "createdAtTo", "updatedAtFrom", "updatedAtTo", "source", "showInactive");
 
     private final String query;
     private final Map<String, List<String>> filterParams;
@@ -44,11 +44,37 @@ public class ClientSpecification implements Specification<Client> {
             predicate = criteriaBuilder.and(predicate, createKeywordPredicate(root, query, criteriaBuilder));
         }
 
-        predicate = criteriaBuilder.and(predicate, criteriaBuilder.isTrue(root.get("isActive")));
+        // Фильтр по isActive: если showInactive установлен, показываем только неактивных, иначе только активных
+        boolean showInactive = filterParams != null && filterParams.containsKey("showInactive") 
+                && filterParams.get("showInactive") != null 
+                && !filterParams.get("showInactive").isEmpty()
+                && "true".equals(filterParams.get("showInactive").get(0));
+        
+        if (showInactive) {
+            // Показываем только неактивных клиентов
+            predicate = criteriaBuilder.and(predicate, criteriaBuilder.isFalse(root.get("isActive")));
+        } else {
+            // По умолчанию показываем только активных клиентов
+            predicate = criteriaBuilder.and(predicate, criteriaBuilder.isTrue(root.get("isActive")));
+        }
 
         if (clientTypeId != null) {
+            // Проверяем, есть ли уже JOIN для clientType
+            Join<?, ?> clientTypeJoin = null;
+            for (Join<?, ?> join : root.getJoins()) {
+                if ("clientType".equals(join.getAttribute().getName())) {
+                    clientTypeJoin = join;
+                    break;
+                }
+            }
+            
+            if (clientTypeJoin == null) {
+                // Создаем JOIN для фильтрации по clientTypeId
+                clientTypeJoin = root.join("clientType", JoinType.INNER);
+            }
+            
             predicate = criteriaBuilder.and(predicate, 
-                criteriaBuilder.equal(root.get("clientType").get("id"), clientTypeId));
+                criteriaBuilder.equal(clientTypeJoin.get("id"), clientTypeId));
         }
 
         predicate = applyFilters(predicate, root, query, criteriaBuilder);
@@ -155,9 +181,14 @@ public class ClientSpecification implements Specification<Client> {
                     case "updatedAtTo" -> predicate =
                             addDateFilter(predicate, root, criteriaBuilder, values, "updatedAt", false);
                     case "source" -> predicate = addIdFilter(predicate, root, criteriaBuilder, values, "source");
+                    case "showInactive" -> {
+                        // Логика showInactive обрабатывается в toPredicate, здесь просто пропускаем
+                        // чтобы не обрабатывать этот ключ как динамическое поле
+                    }
                 }
-            } else if (!key.endsWith("From") && !key.endsWith("To")) {
+            } else if (!key.endsWith("From") && !key.endsWith("To") && !key.equals("showInactive") && !key.equals("clientTypeId")) {
                 // Обрабатываем динамические поля (не стандартные и не диапазоны)
+                // clientTypeId обрабатывается отдельно в toPredicate, поэтому пропускаем его здесь
                 predicate = addDynamicFieldFilter(predicate, root, query, criteriaBuilder, key, values, clientTypeId);
             }
         }
