@@ -139,10 +139,47 @@ function initExcelExport(config) {
             }
 
             const blob = await response.blob();
+            
+            // Получаем имя файла из заголовка Content-Disposition
+            let filename = 'client_data.xlsx';
+            const contentDisposition = response.headers.get('Content-Disposition');
+            if (contentDisposition) {
+                // Сначала пытаемся получить filename* (RFC 5987) с кириллицей
+                const filenameStarMatch = contentDisposition.match(/filename\*=UTF-8''([^;]+)/);
+                if (filenameStarMatch && filenameStarMatch[1]) {
+                    try {
+                        // Декодируем percent-encoded UTF-8
+                        filename = decodeURIComponent(filenameStarMatch[1].replace(/['"]/g, ''));
+                    } catch (e) {
+                        // Если декодирование не удалось, пробуем обычный filename
+                        const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+                        if (filenameMatch && filenameMatch[1]) {
+                            filename = filenameMatch[1].replace(/['"]/g, '');
+                            try {
+                                filename = decodeURIComponent(filename);
+                            } catch (e2) {
+                                // Если декодирование не удалось, используем как есть
+                            }
+                        }
+                    }
+                } else {
+                    // Если filename* нет, используем обычный filename
+                    const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+                    if (filenameMatch && filenameMatch[1]) {
+                        filename = filenameMatch[1].replace(/['"]/g, '');
+                        try {
+                            filename = decodeURIComponent(filename);
+                        } catch (e) {
+                            // Если декодирование не удалось, используем как есть
+                        }
+                    }
+                }
+            }
+            
             const url = window.URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = url;
-            link.download = 'client_data.xlsx';
+            link.download = filename;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);

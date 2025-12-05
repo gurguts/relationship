@@ -112,12 +112,59 @@ async function loadClientTypesDropdown() {
     if (!dropdown || !navClients) return;
 
     try {
+        // Загружаем все активные типы клиентов
         const response = await fetch('/api/v1/client-type/active');
         if (!response.ok) return;
-        const clientTypes = await response.json();
+        const allClientTypes = await response.json();
+        
+        // Получаем права доступа текущего пользователя к типам клиентов
+        const userId = localStorage.getItem('userId');
+        let accessibleClientTypeIds = new Set();
+        
+        if (userId) {
+            try {
+                const permissionsResponse = await fetch(`/api/v1/client-type/permission/user/${userId}`);
+                if (permissionsResponse.ok) {
+                    const permissions = await permissionsResponse.json();
+                    // Добавляем типы клиентов, к которым у пользователя есть доступ на просмотр
+                    permissions.forEach(perm => {
+                        if (perm.canView) {
+                            accessibleClientTypeIds.add(perm.clientTypeId);
+                        }
+                    });
+                }
+            } catch (error) {
+                console.warn('Failed to load user client type permissions:', error);
+                // Если не удалось загрузить права доступа, показываем все типы (для обратной совместимости)
+                allClientTypes.forEach(type => accessibleClientTypeIds.add(type.id));
+            }
+        }
+        
+        // Проверяем, есть ли у пользователя права администратора
+        const authorities = localStorage.getItem('authorities');
+        let userAuthorities = [];
+        try {
+            if (authorities) {
+                userAuthorities = authorities.startsWith('[')
+                    ? JSON.parse(authorities)
+                    : authorities.split(',').map(auth => auth.trim());
+            }
+        } catch (error) {
+            console.error('Failed to parse authorities:', error);
+        }
+        
+        const isAdmin = userAuthorities.includes('system:admin') || userAuthorities.includes('administration:view');
+        
+        // Если пользователь администратор или нет прав доступа, показываем все типы
+        if (isAdmin || accessibleClientTypeIds.size === 0) {
+            allClientTypes.forEach(type => accessibleClientTypeIds.add(type.id));
+        }
+        
+        // Фильтруем типы клиентов по правам доступа
+        const accessibleClientTypes = allClientTypes.filter(type => accessibleClientTypeIds.has(type.id));
         
         dropdown.innerHTML = '';
-        clientTypes.forEach(type => {
+        accessibleClientTypes.forEach(type => {
             const li = document.createElement('li');
             const a = document.createElement('a');
             a.href = `/clients?type=${type.id}`;

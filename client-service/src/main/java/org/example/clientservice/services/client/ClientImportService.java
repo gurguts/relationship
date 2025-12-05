@@ -14,11 +14,14 @@ import org.example.clientservice.models.clienttype.FieldType;
 import org.example.clientservice.repositories.ClientRepository;
 import org.example.clientservice.services.impl.IClientCrudService;
 import org.example.clientservice.services.impl.IClientImportService;
+import org.example.clientservice.services.impl.ISourceService;
 import org.example.clientservice.services.clienttype.ClientTypeFieldService;
 import org.example.clientservice.services.clienttype.ClientTypeService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -29,15 +32,20 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class ClientImportService implements IClientImportService {
+    @PersistenceContext
+    private EntityManager entityManager;
+    
     private final ClientTypeService clientTypeService;
     private final ClientTypeFieldService clientTypeFieldService;
     private final ClientRepository clientRepository;
     private final IClientCrudService clientCrudService;
+    private final ISourceService sourceService;
     
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
@@ -57,7 +65,7 @@ public class ClientImportService implements IClientImportService {
         // Статические поля
         headerRow.createCell(colIndex++).setCellValue("ID (опціонально)");
         headerRow.createCell(colIndex++).setCellValue(clientType.getNameFieldLabel() != null ? clientType.getNameFieldLabel() : "Компанія");
-        headerRow.createCell(colIndex++).setCellValue("Залучення (ID)");
+        headerRow.createCell(colIndex++).setCellValue("Залучення (назва)");
         headerRow.createCell(colIndex++).setCellValue("Дата створення (yyyy-MM-dd або yyyy-MM-dd HH:mm:ss)");
         headerRow.createCell(colIndex++).setCellValue("Дата оновлення (yyyy-MM-dd або yyyy-MM-dd HH:mm:ss)");
         headerRow.createCell(colIndex++).setCellValue("Активний (Так/Ні)");
@@ -131,7 +139,7 @@ public class ClientImportService implements IClientImportService {
             
             // Парсим заголовки
             Row headerRow = sheet.getRow(0);
-            Map<String, Integer> columnIndexMap = parseHeaders(headerRow, fields);
+            Map<String, Integer> columnIndexMap = parseHeaders(headerRow, fields, clientType);
             
             // Валидируем и создаем клиентов
             List<Client> clientsToCreate = new ArrayList<>();
@@ -141,6 +149,23 @@ public class ClientImportService implements IClientImportService {
                 Row row = sheet.getRow(rowIndex);
                 if (row == null) {
                     continue;
+                }
+                
+                // Проверяем, что строка не пустая (содержит хотя бы одну непустую ячейку)
+                boolean isEmptyRow = true;
+                for (int cellIndex = 0; cellIndex < row.getLastCellNum(); cellIndex++) {
+                    Cell cell = row.getCell(cellIndex);
+                    if (cell != null) {
+                        String cellValue = getCellValueAsString(cell);
+                        if (cellValue != null && !cellValue.trim().isEmpty()) {
+                            isEmptyRow = false;
+                            break;
+                        }
+                    }
+                }
+                
+                if (isEmptyRow) {
+                    continue; // Пропускаем пустые строки
                 }
                 
                 try {
@@ -156,8 +181,84 @@ public class ClientImportService implements IClientImportService {
             }
             
             // Сохраняем всех клиентов
+            Long maxSpecifiedId = null;
             for (Client client : clientsToCreate) {
-                clientCrudService.createClient(client);
+                if (client.getId() != null) {
+                    // Если ID указан, используем нативный INSERT для вставки с указанным ID
+                    Long specifiedId = client.getId();
+                    
+                    // Отслеживаем максимальный указанный ID для обновления AUTO_INCREMENT
+                    if (maxSpecifiedId == null || specifiedId > maxSpecifiedId) {
+                        maxSpecifiedId = specifiedId;
+                    }
+                    
+                    // Формируем нативный INSERT запрос
+                    StringBuilder insertQuery = new StringBuilder(
+                            "INSERT INTO clients (id, client_type_id, company, source_id, is_active");
+                    
+                    // Добавляем поля created_at и updated_at, если они указаны
+                    boolean hasCreatedAt = client.getCreatedAt() != null;
+                    boolean hasUpdatedAt = client.getUpdatedAt() != null;
+                    
+                    if (hasCreatedAt) {
+                        insertQuery.append(", created_at");
+                    }
+                    if (hasUpdatedAt) {
+                        insertQuery.append(", updated_at");
+                    }
+                    
+                    insertQuery.append(") VALUES (:id, :clientTypeId, :company, :sourceId, :isActive");
+                    
+                    if (hasCreatedAt) {
+                        insertQuery.append(", :createdAt");
+                    }
+                    if (hasUpdatedAt) {
+                        insertQuery.append(", :updatedAt");
+                    }
+                    
+                    insertQuery.append(")");
+                    
+                    jakarta.persistence.Query query = entityManager.createNativeQuery(insertQuery.toString())
+                            .setParameter("id", specifiedId)
+                            .setParameter("clientTypeId", client.getClientType().getId())
+                            .setParameter("company", client.getCompany())
+                            .setParameter("sourceId", client.getSource())
+                            .setParameter("isActive", client.getIsActive() != null ? client.getIsActive() : true);
+                    
+                    if (hasCreatedAt) {
+                        query.setParameter("createdAt", client.getCreatedAt());
+                    }
+                    if (hasUpdatedAt) {
+                        query.setParameter("updatedAt", client.getUpdatedAt());
+                    }
+                    
+                    query.executeUpdate();
+                    
+                    // Сохраняем связанные fieldValues
+                    if (client.getFieldValues() != null && !client.getFieldValues().isEmpty()) {
+                        // Загружаем сохраненного клиента для установки связей
+                        Client savedClient = entityManager.find(Client.class, specifiedId);
+                        for (ClientFieldValue fieldValue : client.getFieldValues()) {
+                            fieldValue.setClient(savedClient);
+                            entityManager.persist(fieldValue);
+                        }
+                    }
+                } else {
+                    // Если ID не указан, используем стандартный метод создания
+                    clientCrudService.createClient(client);
+                }
+            }
+            
+            // Обновляем AUTO_INCREMENT один раз после всех вставок, если были клиенты с указанными ID
+            if (maxSpecifiedId != null) {
+                Long currentMaxId = (Long) entityManager.createNativeQuery("SELECT MAX(id) FROM clients").getSingleResult();
+                if (currentMaxId != null && maxSpecifiedId >= currentMaxId) {
+                    entityManager.createNativeQuery(
+                            "ALTER TABLE clients AUTO_INCREMENT = :nextId"
+                    )
+                    .setParameter("nextId", maxSpecifiedId + 1)
+                    .executeUpdate();
+                }
             }
             
             return "Успішно імпортовано " + clientsToCreate.size() + " клієнтів";
@@ -167,33 +268,65 @@ public class ClientImportService implements IClientImportService {
         }
     }
     
-    private Map<String, Integer> parseHeaders(Row headerRow, List<ClientTypeField> fields) {
+    private Map<String, Integer> parseHeaders(Row headerRow, List<ClientTypeField> fields, ClientType clientType) {
         Map<String, Integer> columnIndexMap = new HashMap<>();
+        
+        // Получаем название поля компании из типа клиента
+        String companyFieldLabel = clientType.getNameFieldLabel() != null ? 
+                clientType.getNameFieldLabel() : "Компанія";
+        
+        // Сначала создаем мапу всех fieldLabel для быстрого поиска
+        Map<String, ClientTypeField> fieldLabelMap = new HashMap<>();
+        for (ClientTypeField field : fields) {
+            fieldLabelMap.put(field.getFieldLabel(), field);
+        }
         
         for (int i = 0; i < headerRow.getLastCellNum(); i++) {
             Cell cell = headerRow.getCell(i);
             if (cell != null) {
-                String headerValue = getCellValueAsString(cell).trim();
+                String headerValue = getCellValueAsString(cell);
+                if (headerValue == null) {
+                    continue;
+                }
+                headerValue = headerValue.trim();
                 
-                if (headerValue.contains("ID")) {
-                    columnIndexMap.put("id", i);
-                } else if (headerValue.contains("Компанія") || headerValue.contains("Назва")) {
-                    columnIndexMap.put("company", i);
-                } else if (headerValue.contains("Залучення")) {
-                    columnIndexMap.put("source", i);
-                } else if (headerValue.contains("створення") || headerValue.contains("Created")) {
-                    columnIndexMap.put("createdAt", i);
-                } else if (headerValue.contains("оновлення") || headerValue.contains("Updated")) {
-                    columnIndexMap.put("updatedAt", i);
-                } else if (headerValue.contains("Активний") || headerValue.contains("Active")) {
-                    columnIndexMap.put("isActive", i);
-                } else {
-                    // Ищем по fieldLabel
-                    for (ClientTypeField field : fields) {
-                        if (headerValue.startsWith(field.getFieldLabel())) {
-                            columnIndexMap.put("field_" + field.getId(), i);
-                            break;
-                        }
+                // Сначала проверяем, не является ли это динамическим полем
+                // Используем нормализацию (приведение к нижнему регистру и нормализация пробелов) для более гибкого сравнения
+                boolean isDynamicField = false;
+                String normalizedHeader = headerValue.replaceAll("\\s+", " ").trim().toLowerCase();
+                
+                for (ClientTypeField field : fields) {
+                    String fieldLabel = field.getFieldLabel();
+                    String normalizedFieldLabel = fieldLabel.replaceAll("\\s+", " ").trim().toLowerCase();
+                    
+                    // Проверяем точное совпадение или начало с названия поля (для случаев типа "Назва підприємства (через кому)")
+                    if (normalizedHeader.equals(normalizedFieldLabel) || 
+                        normalizedHeader.startsWith(normalizedFieldLabel + " ") ||
+                        normalizedHeader.startsWith(normalizedFieldLabel + "(") ||
+                        normalizedHeader.startsWith(normalizedFieldLabel + " (")) {
+                        columnIndexMap.put("field_" + field.getId(), i);
+                        isDynamicField = true;
+                        break;
+                    }
+                }
+                
+                // Если это не динамическое поле, проверяем статические поля
+                if (!isDynamicField) {
+                    if (headerValue.contains("ID") && !headerValue.contains("field_")) {
+                        columnIndexMap.put("id", i);
+                    } else if (headerValue.equals(companyFieldLabel) || 
+                               (headerValue.startsWith(companyFieldLabel + " ") && 
+                                !fieldLabelMap.containsKey(headerValue))) {
+                        // Используем точное название поля компании из типа клиента
+                        columnIndexMap.put("company", i);
+                    } else if (headerValue.contains("Залучення")) {
+                        columnIndexMap.put("source", i);
+                    } else if (headerValue.contains("створення") || headerValue.contains("Created")) {
+                        columnIndexMap.put("createdAt", i);
+                    } else if (headerValue.contains("оновлення") || headerValue.contains("Updated")) {
+                        columnIndexMap.put("updatedAt", i);
+                    } else if (headerValue.contains("Активний") || headerValue.contains("Active")) {
+                        columnIndexMap.put("isActive", i);
                     }
                 }
             }
@@ -212,15 +345,13 @@ public class ClientImportService implements IClientImportService {
         Integer idCol = columnIndexMap.get("id");
         if (idCol != null) {
             Cell idCell = row.getCell(idCol);
-            if (idCell != null && !getCellValueAsString(idCell).trim().isEmpty()) {
-                try {
-                    Long id = Long.parseLong(getCellValueAsString(idCell).trim());
+            if (idCell != null) {
+                Long id = parseIdFromCell(idCell);
+                if (id != null) {
                     if (clientRepository.existsById(id)) {
                         throw new ClientException("ID " + id + " вже зайнятий");
                     }
                     client.setId(id);
-                } catch (NumberFormatException e) {
-                    throw new ClientException("Невірний формат ID");
                 }
             }
         }
@@ -237,18 +368,25 @@ public class ClientImportService implements IClientImportService {
         }
         client.setCompany(company.trim());
         
-        // Source
+        // Source - ищем только по названию (как для списков)
         Integer sourceCol = columnIndexMap.get("source");
         if (sourceCol != null) {
             Cell sourceCell = row.getCell(sourceCol);
             String sourceValue = getCellValueAsString(sourceCell);
             if (sourceValue != null && !sourceValue.trim().isEmpty()) {
-                try {
-                    Long sourceId = Long.parseLong(sourceValue.trim());
-                    client.setSource(sourceId);
-                } catch (NumberFormatException e) {
-                    throw new ClientException("Невірний формат ID залучення");
+                String trimmedSource = sourceValue.trim();
+                
+                // Ищем источник по названию (без учета регистра)
+                List<org.example.clientservice.models.field.Source> sources = sourceService.getAllSources();
+                org.example.clientservice.models.field.Source foundSource = sources.stream()
+                        .filter(s -> s.getName() != null && s.getName().trim().equalsIgnoreCase(trimmedSource))
+                        .findFirst()
+                        .orElse(null);
+                
+                if (foundSource == null) {
+                    throw new ClientException("Залучення з назвою '" + trimmedSource + "' не знайдено");
                 }
+                client.setSource(foundSource.getId());
             }
         }
         
@@ -295,14 +433,25 @@ public class ClientImportService implements IClientImportService {
                 Cell fieldCell = row.getCell(fieldCol);
                 String fieldValue = getCellValueAsString(fieldCell);
                 
+                // Проверяем, что значение не пустое (учитываем пробелы)
                 if (fieldValue != null && !fieldValue.trim().isEmpty()) {
                     List<ClientFieldValue> fieldValues = parseFieldValue(client, field, fieldValue.trim(), rowNumber);
                     client.getFieldValues().addAll(fieldValues);
-                } else if (field.getIsRequired() != null && field.getIsRequired()) {
-                    throw new ClientException("Поле '" + field.getFieldLabel() + "' є обов'язковим");
+                } else {
+                    if (field.getIsRequired() != null && field.getIsRequired()) {
+                        throw new ClientException("Поле '" + field.getFieldLabel() + "' є обов'язковим");
+                    }
                 }
-            } else if (field.getIsRequired() != null && field.getIsRequired()) {
-                throw new ClientException("Поле '" + field.getFieldLabel() + "' є обов'язковим");
+            } else {
+                log.warn("Field '{}' (id={}) column not found in header map. Available columns: {}", 
+                        field.getFieldLabel(), field.getId(), 
+                        columnIndexMap.entrySet().stream()
+                                .filter(e -> e.getKey().startsWith("field_"))
+                                .map(e -> e.getKey() + ":" + e.getValue())
+                                .collect(Collectors.joining(", ")));
+                if (field.getIsRequired() != null && field.getIsRequired()) {
+                    throw new ClientException("Поле '" + field.getFieldLabel() + "' є обов'язковим (колонка не знайдена)");
+                }
             }
         }
         
@@ -409,32 +558,159 @@ public class ClientImportService implements IClientImportService {
         }
     }
     
+    private Long parseIdFromCell(Cell cell) {
+        if (cell == null) {
+            return null;
+        }
+        
+        try {
+            switch (cell.getCellType()) {
+                case NUMERIC:
+                    // Для числовых ячеек проверяем, является ли число целым
+                    double numericValue = cell.getNumericCellValue();
+                    if (numericValue == (long) numericValue) {
+                        return (long) numericValue;
+                    } else {
+                        // Если число не целое, возвращаем null (ID должен быть целым числом)
+                        return null;
+                    }
+                case STRING:
+                    String stringValue = cell.getStringCellValue().trim();
+                    if (stringValue.isEmpty()) {
+                        return null;
+                    }
+                    // Пробуем распарсить как Long
+                    try {
+                        return Long.parseLong(stringValue);
+                    } catch (NumberFormatException e) {
+                        // Если не получилось, пробуем как double и проверяем, целое ли это
+                        try {
+                            double doubleValue = Double.parseDouble(stringValue);
+                            if (doubleValue == (long) doubleValue) {
+                                return (long) doubleValue;
+                            } else {
+                                // Если число не целое, возвращаем null
+                                return null;
+                            }
+                        } catch (NumberFormatException ex) {
+                            // Если не число вообще, возвращаем null (возможно, это значение из другой колонки)
+                            return null;
+                        }
+                    }
+                case FORMULA:
+                    // Для формул пытаемся получить вычисленное значение
+                    try {
+                        switch (cell.getCachedFormulaResultType()) {
+                            case NUMERIC:
+                                double formulaNumericValue = cell.getNumericCellValue();
+                                if (formulaNumericValue == (long) formulaNumericValue) {
+                                    return (long) formulaNumericValue;
+                                } else {
+                                    return null;
+                                }
+                            case STRING:
+                                String formulaStringValue = cell.getStringCellValue().trim();
+                                if (formulaStringValue.isEmpty()) {
+                                    return null;
+                                }
+                                try {
+                                    return Long.parseLong(formulaStringValue);
+                                } catch (NumberFormatException e) {
+                                    try {
+                                        double doubleValue = Double.parseDouble(formulaStringValue);
+                                        if (doubleValue == (long) doubleValue) {
+                                            return (long) doubleValue;
+                                        } else {
+                                            return null;
+                                        }
+                                    } catch (NumberFormatException ex) {
+                                        // Если не число, возвращаем null
+                                        return null;
+                                    }
+                                }
+                            default:
+                                return null;
+                        }
+                    } catch (Exception e) {
+                        // В случае любой ошибки возвращаем null
+                        return null;
+                    }
+                default:
+                    return null;
+            }
+        } catch (Exception e) {
+            // В случае любой ошибки возвращаем null вместо выбрасывания исключения
+            return null;
+        }
+    }
+    
     private String getCellValueAsString(Cell cell) {
         if (cell == null) {
             return null;
         }
         
-        switch (cell.getCellType()) {
-            case STRING:
-                return cell.getStringCellValue();
-            case NUMERIC:
-                if (DateUtil.isCellDateFormatted(cell)) {
-                    return cell.getLocalDateTimeCellValue().format(DATE_TIME_FORMATTER);
-                } else {
-                    // Убираем лишние нули после запятой для чисел
-                    double numericValue = cell.getNumericCellValue();
-                    if (numericValue == (long) numericValue) {
-                        return String.valueOf((long) numericValue);
+        try {
+            switch (cell.getCellType()) {
+                case STRING:
+                    return cell.getStringCellValue();
+                case NUMERIC:
+                    if (DateUtil.isCellDateFormatted(cell)) {
+                        return cell.getLocalDateTimeCellValue().format(DATE_TIME_FORMATTER);
                     } else {
-                        return String.valueOf(numericValue);
+                        // Убираем лишние нули после запятой для чисел
+                        double numericValue = cell.getNumericCellValue();
+                        if (numericValue == (long) numericValue) {
+                            return String.valueOf((long) numericValue);
+                        } else {
+                            return String.valueOf(numericValue);
+                        }
                     }
-                }
-            case BOOLEAN:
-                return String.valueOf(cell.getBooleanCellValue());
-            case FORMULA:
-                return cell.getCellFormula();
-            default:
+                case BOOLEAN:
+                    return String.valueOf(cell.getBooleanCellValue());
+                case FORMULA:
+                    // Для формул пытаемся получить вычисленное значение
+                    try {
+                        switch (cell.getCachedFormulaResultType()) {
+                            case STRING:
+                                return cell.getStringCellValue();
+                            case NUMERIC:
+                                if (DateUtil.isCellDateFormatted(cell)) {
+                                    return cell.getLocalDateTimeCellValue().format(DATE_TIME_FORMATTER);
+                                } else {
+                                    double numericValue = cell.getNumericCellValue();
+                                    if (numericValue == (long) numericValue) {
+                                        return String.valueOf((long) numericValue);
+                                    } else {
+                                        return String.valueOf(numericValue);
+                                    }
+                                }
+                            case BOOLEAN:
+                                return String.valueOf(cell.getBooleanCellValue());
+                            default:
+                                return cell.getCellFormula();
+                        }
+                    } catch (Exception e) {
+                        return cell.getCellFormula();
+                    }
+                case BLANK:
+                    return null;
+                default:
+                    // Пробуем получить значение как строку
+                    try {
+                        DataFormatter formatter = new DataFormatter();
+                        return formatter.formatCellValue(cell);
+                    } catch (Exception e) {
+                        return null;
+                    }
+            }
+        } catch (Exception e) {
+            // В случае ошибки пробуем использовать DataFormatter как последний вариант
+            try {
+                DataFormatter formatter = new DataFormatter();
+                return formatter.formatCellValue(cell);
+            } catch (Exception ex) {
                 return null;
+            }
         }
     }
     

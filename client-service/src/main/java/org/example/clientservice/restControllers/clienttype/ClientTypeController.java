@@ -6,9 +6,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.clientservice.mappers.clienttype.ClientTypeMapper;
 import org.example.clientservice.models.client.PageResponse;
 import org.example.clientservice.models.clienttype.ClientType;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.example.clientservice.models.dto.clienttype.ClientTypeCreateDTO;
 import org.example.clientservice.models.dto.clienttype.ClientTypeDTO;
 import org.example.clientservice.models.dto.clienttype.ClientTypeUpdateDTO;
+import org.example.clientservice.models.dto.clienttype.StaticFieldsConfig;
+import org.example.clientservice.repositories.clienttype.ClientTypeRepository;
+import org.example.clientservice.services.clienttype.StaticFieldsHelper;
 import org.example.clientservice.services.impl.IClientTypeService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -31,6 +36,8 @@ import java.util.stream.Collectors;
 public class ClientTypeController {
     private final IClientTypeService clientTypeService;
     private final ClientTypeMapper clientTypeMapper;
+    private final ObjectMapper objectMapper;
+    private final ClientTypeRepository clientTypeRepository;
 
     @PreAuthorize("hasAuthority('administration:edit')")
     @PostMapping
@@ -92,6 +99,34 @@ public class ClientTypeController {
     public ResponseEntity<Void> deleteClientType(@PathVariable Long id) {
         clientTypeService.deleteClientType(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PreAuthorize("hasAuthority('administration:edit')")
+    @GetMapping("/{id}/static-fields-config")
+    public ResponseEntity<StaticFieldsConfig> getStaticFieldsConfig(@PathVariable Long id) {
+        ClientType clientType = clientTypeService.getClientTypeById(id);
+        StaticFieldsConfig config = StaticFieldsHelper.parseStaticFieldsConfig(clientType);
+        // Если конфигурация не сохранена, возвращаем дефолтные значения для отображения в форме
+        if (config == null) {
+            config = new StaticFieldsConfig();
+        }
+        return ResponseEntity.ok(config);
+    }
+
+    @PreAuthorize("hasAuthority('administration:edit')")
+    @PutMapping("/{id}/static-fields-config")
+    public ResponseEntity<StaticFieldsConfig> updateStaticFieldsConfig(
+            @PathVariable Long id,
+            @RequestBody StaticFieldsConfig config) {
+        ClientType clientType = clientTypeService.getClientTypeById(id);
+        try {
+            String configJson = objectMapper.writeValueAsString(config);
+            clientType.setStaticFieldsConfig(configJson);
+            clientTypeRepository.save(clientType);
+            return ResponseEntity.ok(config);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Failed to serialize static fields config", e);
+        }
     }
 }
 

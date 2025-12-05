@@ -453,6 +453,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 permissionsBtn.className = 'edit-permissions';
                 permissionsBtn.addEventListener('click', () => showUserPermissionsModal(user));
 
+                const clientTypePermissionsBtn = document.createElement('button');
+                clientTypePermissionsBtn.textContent = 'Доступ до типів клієнтів';
+                clientTypePermissionsBtn.className = 'btn-secondary';
+                clientTypePermissionsBtn.style.marginLeft = '5px';
+                clientTypePermissionsBtn.addEventListener('click', () => showUserClientTypePermissionsModal(user));
+
                 const statusBtn = document.createElement('button');
                 const nextStatus = user.status === 'BANNED' ? 'ACTIVE' : 'BANNED';
                 statusBtn.textContent = user.status === 'BANNED' ? 'Активувати' : 'Деактивувати';
@@ -467,6 +473,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 listItem.appendChild(statusBtn);
                 listItem.appendChild(deleteBtn);
                 listItem.appendChild(permissionsBtn);
+                listItem.appendChild(clientTypePermissionsBtn);
                 userList.appendChild(listItem);
             });
         } catch (error) {
@@ -865,7 +872,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const createProduct = document.getElementById('create-product');
     const editProductModal = document.getElementById('edit-product-modal');
     const editProductForm = document.getElementById('edit-product-form');
-    const cancelEditBtn = document.getElementById('cancel-edit');
 
     const apiBaseUrl = '/api/v1/product';
 
@@ -973,9 +979,6 @@ document.addEventListener('DOMContentLoaded', function () {
             .catch(error => console.error('Ошибка:', error));
     });
 
-    cancelEditBtn.addEventListener('click', () => {
-        editProductModal.style.display = 'none';
-    });
 
     /*--client-product--*/
 
@@ -985,7 +988,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const clientCreateProduct = document.getElementById('client-create-product');
     const clientEditProductModal = document.getElementById('client-edit-product-modal');
     const clientEditProductForm = document.getElementById('client-edit-product-form');
-    const clientCancelEditBtn = document.getElementById('client-cancel-edit');
 
     const apiBaseClientProductUrl = '/api/v1/clientProduct';
 
@@ -1087,10 +1089,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 fetchClientProducts();
             })
             .catch(error => console.error('Ошибка:', error));
-    });
-
-    clientCancelEditBtn.addEventListener('click', () => {
-        clientEditProductModal.style.display = 'none';
     });
 
 
@@ -1447,14 +1445,44 @@ document.getElementById('client-import-form')?.addEventListener('submit', async 
         const response = await fetch(`/api/v1/client/import/${clientTypeId}`, {
             method: 'POST',
             body: formData,
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
-            }
+            credentials: 'include'
         });
         
         if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(errorText || 'Помилка імпорту');
+            let errorMessage = 'Помилка імпорту';
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                try {
+                    const errorData = await response.json();
+                    if (errorData.message) {
+                        errorMessage = errorData.message;
+                    }
+                    if (errorData.details && errorData.details.error) {
+                        errorMessage += '\n\n' + errorData.details.error;
+                    } else if (errorData.details) {
+                        // Если details - это объект с несколькими полями
+                        const detailsText = Object.entries(errorData.details)
+                            .map(([key, value]) => `${key}: ${value}`)
+                            .join('\n');
+                        if (detailsText) {
+                            errorMessage += '\n\n' + detailsText;
+                        }
+                    }
+                } catch (e) {
+                    console.error('Failed to parse error JSON:', e);
+                }
+            } else {
+                // Если не JSON, пробуем получить текст
+                try {
+                    const errorText = await response.text();
+                    if (errorText) {
+                        errorMessage = errorText;
+                    }
+                } catch (e) {
+                    console.error('Failed to read error text:', e);
+                }
+            }
+            throw new Error(errorMessage);
         }
         
         const result = await response.text();
@@ -1466,7 +1494,7 @@ document.getElementById('client-import-form')?.addEventListener('submit', async 
         
     } catch (error) {
         console.error('Import error:', error);
-        alert('Помилка імпорту: ' + error.message);
+        alert('Помилка імпорту:\n\n' + error.message);
     } finally {
         loaderBackdrop.style.display = 'none';
     }
@@ -1575,6 +1603,25 @@ async function manageClientTypeFields(clientTypeId) {
     currentClientTypeId = clientTypeId;
     document.getElementById('manage-fields-modal').style.display = 'flex';
     await loadClientTypeFields(clientTypeId);
+    
+    // Убеждаемся, что обработчик для кнопки настроен после открытия модального окна
+    const configureBtn = document.getElementById('configureStaticFieldsBtn');
+    if (configureBtn) {
+        // Удаляем старые обработчики, если они есть
+        const newBtn = configureBtn.cloneNode(true);
+        configureBtn.parentNode.replaceChild(newBtn, configureBtn);
+        
+        // Добавляем прямой обработчик
+        newBtn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (!currentClientTypeId) {
+                showMessage('Спочатку виберіть тип клієнта', 'error');
+                return;
+            }
+            await openStaticFieldsConfigModal(currentClientTypeId);
+        });
+    }
 }
 
 async function loadClientTypeFields(clientTypeId) {
@@ -1784,10 +1831,181 @@ async function deleteField(fieldId) {
     }
 }
 
+// Обработчик закрытия модальных окон по клику на крестик
 document.querySelectorAll('.close-modal').forEach(btn => {
-    btn.addEventListener('click', function() {
-        this.closest('.modal').style.display = 'none';
+    btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const modal = this.closest('.modal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
     });
+});
+
+// Static Fields Configuration - используем делегирование событий с более высоким приоритетом
+document.addEventListener('click', async (e) => {
+    // Проверяем, что клик был именно на кнопке или внутри неё
+    const btn = e.target.closest('#configureStaticFieldsBtn');
+    if (btn) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        if (!currentClientTypeId) {
+            showMessage('Спочатку виберіть тип клієнта', 'error');
+            return;
+        }
+        await openStaticFieldsConfigModal(currentClientTypeId);
+        return false;
+    }
+}, true); // Используем capture phase для более раннего перехвата
+
+// Обработчик закрытия модальных окон по клику вне области
+document.querySelectorAll('.modal').forEach(modal => {
+    modal.addEventListener('click', function(e) {
+        // Закрываем модальное окно, если клик был по фону (не по содержимому)
+        if (e.target === this) {
+            this.style.display = 'none';
+        }
+    });
+    
+    // Предотвращаем закрытие при клике на содержимое модального окна
+    const modalContent = modal.querySelector('.modal-content');
+    if (modalContent) {
+        modalContent.addEventListener('click', function(e) {
+            // Не останавливаем распространение для кнопок внутри модального окна
+            // Это позволяет кликам на кнопки обрабатываться до того, как событие будет остановлено
+            if (!e.target.closest('button')) {
+                e.stopPropagation();
+            }
+        });
+    }
+});
+
+async function openStaticFieldsConfigModal(clientTypeId) {
+    document.getElementById('static-fields-client-type-id').value = clientTypeId;
+    const modal = document.getElementById('static-fields-config-modal');
+    modal.style.display = 'flex';
+    
+    try {
+        const response = await fetch(`/api/v1/client-type/${clientTypeId}/static-fields-config`);
+        if (!response.ok) throw new Error('Failed to load static fields config');
+        const config = await response.json();
+        
+        // Заполняем форму текущими настройками
+        if (config.company) {
+            document.getElementById('static-company-visible').checked = config.company.isVisible || false;
+            document.getElementById('static-company-label').value = config.company.fieldLabel || 'Компанія';
+            document.getElementById('static-company-order').value = config.company.displayOrder || 0;
+            document.getElementById('static-company-width').value = config.company.columnWidth || 200;
+        }
+        
+        if (config.source) {
+            document.getElementById('static-source-visible').checked = config.source.isVisible || false;
+            document.getElementById('static-source-label').value = config.source.fieldLabel || 'Залучення';
+            document.getElementById('static-source-order').value = config.source.displayOrder || 999;
+            document.getElementById('static-source-width').value = config.source.columnWidth || 200;
+        }
+        
+        if (config.createdAt) {
+            document.getElementById('static-createdAt-visible').checked = config.createdAt.isVisible || false;
+            document.getElementById('static-createdAt-label').value = config.createdAt.fieldLabel || 'Створено';
+            document.getElementById('static-createdAt-order').value = config.createdAt.displayOrder || 1000;
+            document.getElementById('static-createdAt-width').value = config.createdAt.columnWidth || 150;
+        }
+        
+        if (config.updatedAt) {
+            document.getElementById('static-updatedAt-visible').checked = config.updatedAt.isVisible || false;
+            document.getElementById('static-updatedAt-label').value = config.updatedAt.fieldLabel || 'Оновлено';
+            document.getElementById('static-updatedAt-order').value = config.updatedAt.displayOrder || 1001;
+            document.getElementById('static-updatedAt-width').value = config.updatedAt.columnWidth || 150;
+        }
+    } catch (error) {
+        console.error('Error loading static fields config:', error);
+        showMessage('Помилка завантаження налаштувань', 'error');
+    }
+}
+
+document.getElementById('static-fields-config-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const clientTypeId = document.getElementById('static-fields-client-type-id').value;
+    
+    // Вспомогательная функция для безопасного парсинга чисел
+    const safeParseInt = (value, defaultValue) => {
+        const parsed = parseInt(value);
+        return isNaN(parsed) ? defaultValue : parsed;
+    };
+    
+    const config = {
+        company: {
+            isVisible: document.getElementById('static-company-visible').checked,
+            fieldLabel: document.getElementById('static-company-label').value.trim() || 'Компанія',
+            displayOrder: safeParseInt(document.getElementById('static-company-order').value, 0),
+            columnWidth: safeParseInt(document.getElementById('static-company-width').value, 200)
+        },
+        source: {
+            isVisible: document.getElementById('static-source-visible').checked,
+            fieldLabel: document.getElementById('static-source-label').value.trim() || 'Залучення',
+            displayOrder: safeParseInt(document.getElementById('static-source-order').value, 999),
+            columnWidth: safeParseInt(document.getElementById('static-source-width').value, 200)
+        },
+        createdAt: {
+            isVisible: document.getElementById('static-createdAt-visible').checked,
+            fieldLabel: document.getElementById('static-createdAt-label').value.trim() || 'Створено',
+            displayOrder: safeParseInt(document.getElementById('static-createdAt-order').value, 1000),
+            columnWidth: safeParseInt(document.getElementById('static-createdAt-width').value, 150)
+        },
+        updatedAt: {
+            isVisible: document.getElementById('static-updatedAt-visible').checked,
+            fieldLabel: document.getElementById('static-updatedAt-label').value.trim() || 'Оновлено',
+            displayOrder: safeParseInt(document.getElementById('static-updatedAt-order').value, 1001),
+            columnWidth: safeParseInt(document.getElementById('static-updatedAt-width').value, 150)
+        }
+    };
+    
+    try {
+        const response = await fetch(`/api/v1/client-type/${clientTypeId}/static-fields-config`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(config)
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to save static fields config');
+        }
+        
+        showMessage('Налаштування статичних полей збережено', 'success');
+        document.getElementById('static-fields-config-modal').style.display = 'none';
+        
+        // Перезагружаем видимые поля, если мы на странице клиентов
+        if (typeof loadClientTypeFields === 'function' && currentClientTypeId) {
+            // Небольшая задержка, чтобы убедиться, что изменения сохранены
+            setTimeout(async () => {
+                try {
+                    const [fieldsRes, visibleRes] = await Promise.all([
+                        fetch(`/api/v1/client-type/${currentClientTypeId}/field`),
+                        fetch(`/api/v1/client-type/${currentClientTypeId}/field/visible`)
+                    ]);
+                    if (visibleRes.ok) {
+                        visibleFields = await visibleRes.json();
+                        window.visibleFields = visibleFields;
+                        // Перестраиваем таблицу, если она существует
+                        if (typeof buildDynamicTable === 'function') {
+                            buildDynamicTable();
+                        }
+                    }
+                } catch (error) {
+                    console.warn('Failed to reload visible fields after config update:', error);
+                }
+            }, 500);
+        }
+    } catch (error) {
+        console.error('Error saving static fields config:', error);
+        showMessage(error.message || 'Помилка збереження налаштувань', 'error');
+    }
 });
 
 window.openEditClientTypeModal = openEditClientTypeModal;
@@ -1797,3 +2015,241 @@ window.deleteField = deleteField;
 window.deleteClientType = deleteClientType;
 window.downloadClientImportTemplate = downloadClientImportTemplate;
 window.openClientImportModal = openClientImportModal;
+
+// Client Type Permissions Management
+let currentUserForClientTypePermissions = null;
+let allClientTypes = [];
+
+async function showUserClientTypePermissionsModal(user) {
+    currentUserForClientTypePermissions = user;
+    const modal = document.getElementById('userClientTypePermissionsModal');
+    const userNameElement = document.getElementById('clientTypePermissionsUserName');
+    
+    userNameElement.textContent = `Користувач: ${user.fullName} (${user.login})`;
+    modal.style.display = 'flex';
+    
+    await loadClientTypePermissions(user.id);
+}
+
+async function loadClientTypePermissions(userId) {
+    try {
+        // Загружаем все типы клиентов (используем /active для получения списка, а не PageResponse)
+        const clientTypesResponse = await fetch('/api/v1/client-type/active');
+        if (!clientTypesResponse.ok) throw new Error('Failed to load client types');
+        const clientTypesData = await clientTypesResponse.json();
+        
+        // Проверяем, является ли ответ массивом или объектом с content
+        if (Array.isArray(clientTypesData)) {
+            allClientTypes = clientTypesData;
+        } else if (clientTypesData && Array.isArray(clientTypesData.content)) {
+            // Если это PageResponse, извлекаем content
+            allClientTypes = clientTypesData.content;
+        } else {
+            throw new Error('Invalid response format from client types API');
+        }
+        
+        // Загружаем права доступа пользователя
+        const permissionsResponse = await fetch(`/api/v1/client-type/permission/user/${userId}`);
+        if (!permissionsResponse.ok) throw new Error('Failed to load permissions');
+        const userPermissions = await permissionsResponse.json();
+        
+        // Создаем мапу прав доступа по clientTypeId
+        const permissionsMap = new Map();
+        userPermissions.forEach(perm => {
+            permissionsMap.set(perm.clientTypeId, perm);
+        });
+        
+        const permissionsList = document.getElementById('clientTypePermissionsList');
+        permissionsList.innerHTML = '';
+        
+        // Создаем таблицу для отображения прав доступа
+        const table = document.createElement('table');
+        table.className = 'data-table';
+        table.style.width = '100%';
+        table.style.marginTop = '1em';
+        
+        const thead = document.createElement('thead');
+        const headerRow = document.createElement('tr');
+        headerRow.innerHTML = `
+            <th>Тип клієнта</th>
+            <th style="text-align: center;">Перегляд</th>
+            <th style="text-align: center;">Створення</th>
+            <th style="text-align: center;">Редагування</th>
+            <th style="text-align: center;">Видалення</th>
+            <th style="text-align: center;">Дії</th>
+        `;
+        thead.appendChild(headerRow);
+        table.appendChild(thead);
+        
+        const tbody = document.createElement('tbody');
+        
+        allClientTypes.forEach(clientType => {
+            const permission = permissionsMap.get(clientType.id);
+            const row = document.createElement('tr');
+            
+            row.innerHTML = `
+                <td>${clientType.name}</td>
+                <td style="text-align: center;">
+                    <input type="checkbox" class="permission-checkbox" 
+                           data-client-type-id="${clientType.id}" 
+                           data-permission-type="canView" 
+                           ${permission && permission.canView ? 'checked' : ''}
+                           ${!permission ? 'disabled' : ''}>
+                </td>
+                <td style="text-align: center;">
+                    <input type="checkbox" class="permission-checkbox" 
+                           data-client-type-id="${clientType.id}" 
+                           data-permission-type="canCreate" 
+                           ${permission && permission.canCreate ? 'checked' : ''}
+                           ${!permission ? 'disabled' : ''}>
+                </td>
+                <td style="text-align: center;">
+                    <input type="checkbox" class="permission-checkbox" 
+                           data-client-type-id="${clientType.id}" 
+                           data-permission-type="canEdit" 
+                           ${permission && permission.canEdit ? 'checked' : ''}
+                           ${!permission ? 'disabled' : ''}>
+                </td>
+                <td style="text-align: center;">
+                    <input type="checkbox" class="permission-checkbox" 
+                           data-client-type-id="${clientType.id}" 
+                           data-permission-type="canDelete" 
+                           ${permission && permission.canDelete ? 'checked' : ''}
+                           ${!permission ? 'disabled' : ''}>
+                </td>
+                <td style="text-align: center;">
+                    ${permission ? 
+                        `<button class="btn-delete action-btn" onclick="deleteClientTypePermission(${clientType.id}, ${currentUserForClientTypePermissions.id})">Видалити доступ</button>` :
+                        `<button class="btn-primary action-btn" onclick="createClientTypePermission(${clientType.id}, ${currentUserForClientTypePermissions.id})">Додати доступ</button>`
+                    }
+                </td>
+            `;
+            
+            tbody.appendChild(row);
+        });
+        
+        table.appendChild(tbody);
+        permissionsList.appendChild(table);
+        
+    } catch (error) {
+        console.error('Error loading client type permissions:', error);
+        showMessage('Помилка завантаження прав доступу до типів клієнтів', 'error');
+    }
+}
+
+async function createClientTypePermission(clientTypeId, userId) {
+    try {
+        const response = await fetch(`/api/v1/client-type/${clientTypeId}/permission`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                userId: userId,
+                canView: true,
+                canCreate: false,
+                canEdit: false,
+                canDelete: false
+            })
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to create permission');
+        }
+        
+        showMessage('Доступ до типу клієнта додано', 'success');
+        await loadClientTypePermissions(userId);
+    } catch (error) {
+        console.error('Error creating client type permission:', error);
+        showMessage('Помилка створення доступу: ' + error.message, 'error');
+    }
+}
+
+async function deleteClientTypePermission(clientTypeId, userId) {
+    if (!confirm('Ви впевнені, що хочете видалити доступ до цього типу клієнта?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/v1/client-type/${clientTypeId}/permission/${userId}`, {
+            method: 'DELETE'
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to delete permission');
+        }
+        
+        showMessage('Доступ до типу клієнта видалено', 'success');
+        await loadClientTypePermissions(userId);
+    } catch (error) {
+        console.error('Error deleting client type permission:', error);
+        showMessage('Помилка видалення доступу: ' + error.message, 'error');
+    }
+}
+
+// Обработчик сохранения прав доступа
+document.getElementById('saveClientTypePermissionsButton')?.addEventListener('click', async () => {
+    if (!currentUserForClientTypePermissions) {
+        showMessage('Користувач не вибрано', 'error');
+        return;
+    }
+    
+    const checkboxes = document.querySelectorAll('#clientTypePermissionsList .permission-checkbox:not(:disabled)');
+    const permissionsByClientType = new Map();
+    
+    checkboxes.forEach(checkbox => {
+        const clientTypeId = parseInt(checkbox.dataset.clientTypeId);
+        const permissionType = checkbox.dataset.permissionType;
+        
+        if (!permissionsByClientType.has(clientTypeId)) {
+            permissionsByClientType.set(clientTypeId, {
+                canView: false,
+                canCreate: false,
+                canEdit: false,
+                canDelete: false
+            });
+        }
+        
+        const permission = permissionsByClientType.get(clientTypeId);
+        permission[permissionType] = checkbox.checked;
+    });
+    
+    try {
+        const updatePromises = [];
+        
+        for (const [clientTypeId, permission] of permissionsByClientType.entries()) {
+            const updatePromise = fetch(`/api/v1/client-type/${clientTypeId}/permission/${currentUserForClientTypePermissions.id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(permission)
+            });
+            updatePromises.push(updatePromise);
+        }
+        
+        const responses = await Promise.all(updatePromises);
+        const errors = [];
+        
+        responses.forEach((response, index) => {
+            if (!response.ok) {
+                errors.push(`Помилка оновлення прав для типу клієнта ${Array.from(permissionsByClientType.keys())[index]}`);
+            }
+        });
+        
+        if (errors.length > 0) {
+            throw new Error(errors.join('\n'));
+        }
+        
+        showMessage('Права доступу до типів клієнтів збережено', 'success');
+        await loadClientTypePermissions(currentUserForClientTypePermissions.id);
+    } catch (error) {
+        console.error('Error saving client type permissions:', error);
+        showMessage('Помилка збереження прав доступу: ' + error.message, 'error');
+    }
+});
+
+window.createClientTypePermission = createClientTypePermission;
+window.deleteClientTypePermission = deleteClientTypePermission;

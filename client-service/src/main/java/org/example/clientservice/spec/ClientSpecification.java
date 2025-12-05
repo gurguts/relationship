@@ -26,14 +26,23 @@ public class ClientSpecification implements Specification<Client> {
     private final Map<String, List<String>> filterParams;
     private final List<Long> sourceIds;
     private final Long clientTypeId;
+    private final List<Long> allowedClientTypeIds;
 
     public ClientSpecification(String query, Map<String, List<String>> filterParams,
                                List<Long> sourceIds,
                                Long clientTypeId) {
+        this(query, filterParams, sourceIds, clientTypeId, null);
+    }
+
+    public ClientSpecification(String query, Map<String, List<String>> filterParams,
+                               List<Long> sourceIds,
+                               Long clientTypeId,
+                               List<Long> allowedClientTypeIds) {
         this.query = query;
         this.filterParams = filterParams;
         this.sourceIds = sourceIds;
         this.clientTypeId = clientTypeId;
+        this.allowedClientTypeIds = allowedClientTypeIds;
     }
 
     @Override
@@ -58,21 +67,26 @@ public class ClientSpecification implements Specification<Client> {
             predicate = criteriaBuilder.and(predicate, criteriaBuilder.isTrue(root.get("isActive")));
         }
 
+        // Получаем или создаем JOIN для clientType
+        Join<?, ?> clientTypeJoin = null;
+        for (Join<?, ?> join : root.getJoins()) {
+            if ("clientType".equals(join.getAttribute().getName())) {
+                clientTypeJoin = join;
+                break;
+            }
+        }
+        if (clientTypeJoin == null) {
+            clientTypeJoin = root.join("clientType", JoinType.INNER);
+        }
+
+        // Фильтр по доступным типам клиентов (для прав доступа)
+        if (allowedClientTypeIds != null && !allowedClientTypeIds.isEmpty()) {
+            predicate = criteriaBuilder.and(predicate, 
+                clientTypeJoin.get("id").in(allowedClientTypeIds));
+        }
+
+        // Фильтр по конкретному типу клиента
         if (clientTypeId != null) {
-            // Проверяем, есть ли уже JOIN для clientType
-            Join<?, ?> clientTypeJoin = null;
-            for (Join<?, ?> join : root.getJoins()) {
-                if ("clientType".equals(join.getAttribute().getName())) {
-                    clientTypeJoin = join;
-                    break;
-                }
-            }
-            
-            if (clientTypeJoin == null) {
-                // Создаем JOIN для фильтрации по clientTypeId
-                clientTypeJoin = root.join("clientType", JoinType.INNER);
-            }
-            
             predicate = criteriaBuilder.and(predicate, 
                 criteriaBuilder.equal(clientTypeJoin.get("id"), clientTypeId));
         }

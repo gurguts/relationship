@@ -20,5 +20,7 @@ public class ClientTypeFieldDTO {
     private String validationPattern;
     private Boolean allowMultiple;
     private List<ClientTypeFieldListValueDTO> listValues;
+    private Boolean isStatic;
+    private String staticFieldName; // Для статических полей: "company", "source", "createdAt", "updatedAt"
 }
 

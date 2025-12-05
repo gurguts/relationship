@@ -228,12 +228,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         buildDynamicFilters();
         
         const validFieldNames = new Set(filterableFields.map(f => f.fieldName));
-        const staticFilterKeys = ['createdAtFrom', 'createdAtTo', 'updatedAtFrom', 'updatedAtTo', 'source', 'showInactive'];
         
         const cleanedFilters = {};
         Object.keys(window.selectedFilters).forEach(key => {
             const normalizedKey = key.toLowerCase();
-            if (staticFilterKeys.includes(normalizedKey) || normalizedKey.endsWith('from') || normalizedKey.endsWith('to')) {
+            const normalizedStaticKeys = staticFilterKeys.map(k => k.toLowerCase());
+            if (normalizedStaticKeys.includes(normalizedKey) || normalizedKey.endsWith('from') || normalizedKey.endsWith('to')) {
                 const value = window.selectedFilters[key];
                 if (value !== null && value !== undefined && value !== '' && 
                     !(Array.isArray(value) && value.length === 0)) {
@@ -437,31 +437,65 @@ async function loadDefaultClientData() {
 }
 
 function buildDynamicTable() {
-    if (!currentClientType || !visibleFields.length) return;
+    if (!currentClientType) return;
     
     const thead = document.querySelector('#client-list table thead tr');
     if (!thead) return;
     
     thead.innerHTML = '';
     
-    const nameTh = document.createElement('th');
-    nameTh.textContent = currentClientType.nameFieldLabel || 'Компанія';
-    nameTh.setAttribute('data-sort', 'company');
-    // Устанавливаем начальную ширину для нединамичного поля
-    nameTh.style.width = '200px';
-    nameTh.style.minWidth = '200px';
-    nameTh.style.maxWidth = '200px';
-    // Фиксируем ширину столбца названия
-    nameTh.style.flexShrink = '0';
-    nameTh.style.flexGrow = '0';
-    thead.appendChild(nameTh);
+    // Разделяем поля на статические и динамические
+    const staticFields = (visibleFields || []).filter(f => f.isStatic);
+    const dynamicFields = (visibleFields || []).filter(f => !f.isStatic);
     
-    visibleFields.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
-    visibleFields.forEach(field => {
+    // Проверяем, какие статические поля настроены
+    const hasCompanyStatic = staticFields.some(f => f.staticFieldName === 'company');
+    const hasSourceStatic = staticFields.some(f => f.staticFieldName === 'source');
+    
+    // Создаем массив всех полей для сортировки
+    const allFields = [...staticFields, ...dynamicFields];
+    
+    // Если статические поля не настроены, добавляем дефолтные поля в массив для сортировки
+    if (!hasCompanyStatic) {
+        allFields.push({
+            id: -1,
+            fieldName: 'company',
+            fieldLabel: currentClientType.nameFieldLabel || 'Компанія',
+            isStatic: false,
+            displayOrder: 0,
+            columnWidth: 200,
+            isSearchable: true
+        });
+    }
+    
+    if (!hasSourceStatic) {
+        allFields.push({
+            id: -2,
+            fieldName: 'source',
+            fieldLabel: 'Залучення',
+            isStatic: false,
+            displayOrder: 999,
+            columnWidth: 200,
+            isSearchable: false
+        });
+    }
+    
+    // Сортируем все поля по displayOrder
+    allFields.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+    
+    // Добавляем все поля в порядке displayOrder
+    allFields.forEach(field => {
         const th = document.createElement('th');
         th.textContent = field.fieldLabel;
         th.setAttribute('data-field-id', field.id);
-        if (field.isSearchable) {
+        if (field.isStatic) {
+            th.setAttribute('data-static-field', field.staticFieldName);
+            if (field.staticFieldName === 'company') {
+                th.setAttribute('data-sort', 'company');
+            }
+        } else if (field.fieldName === 'company') {
+            th.setAttribute('data-sort', 'company');
+        } else if (field.isSearchable) {
             th.setAttribute('data-sort', field.fieldName);
         }
         // Применяем ширину из настроек поля, если есть
@@ -475,18 +509,6 @@ function buildDynamicTable() {
         th.style.flexGrow = '0';
         thead.appendChild(th);
     });
-    
-    // Добавляем заголовок для колонки source
-    const sourceTh = document.createElement('th');
-    sourceTh.textContent = 'Залучення';
-    // Устанавливаем начальную ширину для нединамичного поля
-    sourceTh.style.width = '200px';
-    sourceTh.style.minWidth = '200px';
-    sourceTh.style.maxWidth = '200px';
-    // Фиксируем ширину столбца source
-    sourceTh.style.flexShrink = '0';
-    sourceTh.style.flexGrow = '0';
-    thead.appendChild(sourceTh);
     
     // Инициализируем изменение ширины столбцов после построения таблицы
     if (typeof initColumnResizer === 'function' && currentClientTypeId) {
@@ -785,7 +807,7 @@ const findNameByIdFromMap = (map, id) => {
 async function renderClients(clients) {
     tableBody.innerHTML = '';
     
-    if (currentClientTypeId && visibleFields.length > 0) {
+    if (currentClientTypeId && visibleFields && visibleFields.length > 0) {
         await renderClientsWithDynamicFields(clients);
     } else {
         renderClientsWithDefaultFields(clients);
@@ -803,12 +825,28 @@ async function renderClientsWithDynamicFields(clients) {
     const fieldValuesPromises = clients.map(client => loadClientFieldValues(client.id));
     const allFieldValues = await Promise.all(fieldValuesPromises);
     
+    // Разделяем поля на статические и динамические
+    const staticFields = visibleFields.filter(f => f.isStatic);
+    const dynamicFields = visibleFields.filter(f => !f.isStatic);
+    
+    // Проверяем, какие статические поля настроены
+    const hasCompanyStatic = staticFields.some(f => f.staticFieldName === 'company');
+    const hasSourceStatic = staticFields.some(f => f.staticFieldName === 'source');
+    
+    // Сортируем все поля по displayOrder
+    const allFields = [...staticFields, ...dynamicFields].sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+    
     clients.forEach((client, index) => {
         const row = document.createElement('tr');
         row.classList.add('client-row');
         
-        const nameFieldLabel = currentClientType ? currentClientType.nameFieldLabel : 'Компанія';
-        let html = `<td data-label="${nameFieldLabel}" class="company-cell" style="cursor: pointer;">${client.company || ''}</td>`;
+        let html = '';
+        
+        // Если company не настроен как статическое поле, добавляем его первым (по умолчанию)
+        if (!hasCompanyStatic) {
+            const nameFieldLabel = currentClientType ? currentClientType.nameFieldLabel : 'Компанія';
+            html += `<td data-label="${nameFieldLabel}" class="company-cell" style="cursor: pointer;">${client.company || ''}</td>`;
+        }
         
         const fieldValues = allFieldValues[index];
         const fieldValuesMap = new Map();
@@ -821,24 +859,52 @@ async function renderClientsWithDynamicFields(clients) {
         
         client._fieldValues = fieldValues;
         
-        visibleFields.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
-        visibleFields.forEach(field => {
-            const values = fieldValuesMap.get(field.id) || [];
+        // Обрабатываем все поля (статические и динамические) в порядке displayOrder
+        allFields.forEach(field => {
             let cellValue = '';
             
-            if (values.length > 0) {
-                if (field.allowMultiple) {
-                    cellValue = values.map(v => formatFieldValue(v, field)).join('<br>');
-                } else {
-                    cellValue = formatFieldValue(values[0], field);
+            if (field.isStatic) {
+                // Обрабатываем статические поля
+                switch (field.staticFieldName) {
+                    case 'company':
+                        cellValue = client.company || '';
+                        html += `<td data-label="${field.fieldLabel}" class="company-cell" style="cursor: pointer;">${cellValue}</td>`;
+                        break;
+                    case 'source':
+                        const sourceId = client.sourceId ? (typeof client.sourceId === 'string' ? parseInt(client.sourceId) : client.sourceId) : null;
+                        cellValue = sourceId ? findNameByIdFromMap(sourceMap, sourceId) : '';
+                        html += `<td data-label="${field.fieldLabel}">${cellValue}</td>`;
+                        break;
+                    case 'createdAt':
+                        cellValue = client.createdAt || '';
+                        html += `<td data-label="${field.fieldLabel}">${cellValue}</td>`;
+                        break;
+                    case 'updatedAt':
+                        cellValue = client.updatedAt || '';
+                        html += `<td data-label="${field.fieldLabel}">${cellValue}</td>`;
+                        break;
                 }
+            } else {
+                // Обрабатываем динамические поля
+                const values = fieldValuesMap.get(field.id) || [];
+                
+                if (values.length > 0) {
+                    if (field.allowMultiple) {
+                        cellValue = values.map(v => formatFieldValue(v, field)).join('<br>');
+                    } else {
+                        cellValue = formatFieldValue(values[0], field);
+                    }
+                }
+                
+                html += `<td data-label="${field.fieldLabel}">${cellValue}</td>`;
             }
-            
-            html += `<td data-label="${field.fieldLabel}">${cellValue}</td>`;
         });
         
-        // Добавляем колонку source после динамических полей
-        html += `<td data-label="Залучення">${findNameByIdFromMap(sourceMap, client.sourceId)}</td>`;
+        // Если source не настроен как статическое поле, добавляем его в конце (по умолчанию)
+        if (!hasSourceStatic) {
+            const sourceId = client.sourceId ? (typeof client.sourceId === 'string' ? parseInt(client.sourceId) : client.sourceId) : null;
+            html += `<td data-label="Залучення">${sourceId ? findNameByIdFromMap(sourceMap, sourceId) : ''}</td>`;
+        }
         
         row.innerHTML = html;
         tableBody.appendChild(row);

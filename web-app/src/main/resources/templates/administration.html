@@ -125,10 +125,24 @@
 
             <div id="userPermissionsModal" class="modal userPermissionsModal" style="display: none;">
                 <div class="modal-content modal-content-user-permission">
-                    <span class="close-permissions close">×</span>
+                    <span class="close-permissions close-modal">&times;</span>
                     <h2>Редагувати дозволи користувача</h2>
                     <div id="permissionsList"></div>
-                    <button id="savePermissionsButton" class="btn-primary">Зберегти</button>
+                    <div class="modal-actions">
+                        <button id="savePermissionsButton" class="btn-primary">Зберегти</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="userClientTypePermissionsModal" class="modal" style="display: none;">
+                <div class="modal-content">
+                    <span class="close-modal">&times;</span>
+                    <h2>Доступ до типів клієнтів</h2>
+                    <p id="clientTypePermissionsUserName" style="margin-bottom: 1.5em; font-weight: 600; color: var(--dark-blue);"></p>
+                    <div id="clientTypePermissionsList" style="max-height: calc(90vh - 250px); overflow-y: auto;"></div>
+                    <div class="modal-actions">
+                        <button id="saveClientTypePermissionsButton" class="btn-primary">Зберегти</button>
+                    </div>
                 </div>
             </div>
         </section>
@@ -236,6 +250,7 @@
 
             <div id="edit-product-modal" class="modal" style="display: none;">
                 <div class="modal-content">
+                    <span class="close-modal">&times;</span>
                     <h2>Редагувати продукт</h2>
                     <form id="edit-product-form">
                         <input type="hidden" id="edit-id" name="id">
@@ -253,7 +268,6 @@
                         </div>
                         <div class="modal-actions">
                             <button type="submit" class="btn-primary">Зберегти</button>
-                            <button type="button" id="cancel-edit" class="btn-secondary">Скасувати</button>
                         </div>
                     </form>
                 </div>
@@ -291,6 +305,7 @@
 
             <div id="client-edit-product-modal" class="modal" style="display: none;">
                 <div class="modal-content">
+                    <span class="close-modal">&times;</span>
                     <h2>Редагувати продукт клієнта</h2>
                     <form id="client-edit-product-form">
                         <input type="hidden" id="client-edit-id" name="id">
@@ -300,7 +315,6 @@
                         </div>
                         <div class="modal-actions">
                             <button type="submit" class="btn-primary">Зберегти</button>
-                            <button type="button" id="client-cancel-edit" class="btn-secondary">Скасувати</button>
                         </div>
                     </form>
                 </div>
@@ -417,7 +431,6 @@
             </div>
             <div class="modal-actions">
                 <button type="submit" class="btn-primary">Створити</button>
-                <button type="button" class="btn-secondary close-modal">Скасувати</button>
             </div>
         </form>
     </div>
@@ -443,7 +456,6 @@
             </div>
             <div class="modal-actions">
                 <button type="submit" class="btn-primary">Зберегти</button>
-                <button type="button" class="btn-secondary close-modal">Скасувати</button>
             </div>
         </form>
     </div>
@@ -451,9 +463,12 @@
 
 <div id="manage-fields-modal" class="modal" style="display: none;">
     <div class="modal-content manage-fields-modal-content">
-        <span class="close-modal">&times;</span>
+        <span class="close-modal" aria-label="Закрити">&times;</span>
         <h2>Управління полями</h2>
-        <button id="addFieldBtn" class="btn-primary add-field-btn">Додати поле</button>
+        <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
+            <button id="addFieldBtn" class="btn-primary add-field-btn">Додати поле</button>
+            <button id="configureStaticFieldsBtn" class="btn-secondary">Налаштувати статичні поля</button>
+        </div>
         <div class="table-container fields-table-container">
             <table class="data-table fields-table">
                 <thead>
@@ -538,7 +553,6 @@
             </div>
             <div class="modal-actions">
                 <button type="submit" class="btn-primary">Створити</button>
-                <button type="button" class="btn-secondary close-modal">Скасувати</button>
             </div>
         </form>
     </div>
@@ -596,7 +610,6 @@
             </div>
             <div class="modal-actions">
                 <button type="submit" class="btn-primary">Зберегти</button>
-                <button type="button" class="btn-secondary close-modal">Скасувати</button>
             </div>
         </form>
     </div>
@@ -615,7 +628,101 @@
             </div>
             <div class="modal-actions">
                 <button type="submit" class="btn-primary">Імпортувати</button>
-                <button type="button" class="btn-secondary close-modal">Скасувати</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Static Fields Configuration Modal -->
+<div id="static-fields-config-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <span class="close-modal" aria-label="Закрити">&times;</span>
+        <h2>Налаштування статичних полей</h2>
+        <form id="static-fields-config-form">
+            <input type="hidden" id="static-fields-client-type-id">
+            
+            <h3>Компанія</h3>
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="static-company-visible" name="companyVisible">
+                    Видиме в таблиці
+                </label>
+            </div>
+            <div class="form-group">
+                <label for="static-company-label">Мітка поля:</label>
+                <input type="text" id="static-company-label" name="companyLabel" value="Компанія">
+            </div>
+            <div class="form-group">
+                <label for="static-company-order">Порядок відображення:</label>
+                <input type="number" id="static-company-order" name="companyOrder" min="0" value="0">
+            </div>
+            <div class="form-group">
+                <label for="static-company-width">Ширина стовпця (px):</label>
+                <input type="number" id="static-company-width" name="companyWidth" min="50" value="200">
+            </div>
+            
+            <h3>Залучення</h3>
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="static-source-visible" name="sourceVisible" checked>
+                    Видиме в таблиці
+                </label>
+            </div>
+            <div class="form-group">
+                <label for="static-source-label">Мітка поля:</label>
+                <input type="text" id="static-source-label" name="sourceLabel" value="Залучення">
+            </div>
+            <div class="form-group">
+                <label for="static-source-order">Порядок відображення:</label>
+                <input type="number" id="static-source-order" name="sourceOrder" min="0" value="999">
+            </div>
+            <div class="form-group">
+                <label for="static-source-width">Ширина стовпця (px):</label>
+                <input type="number" id="static-source-width" name="sourceWidth" min="50" value="200">
+            </div>
+            
+            <h3>Дата створення</h3>
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="static-createdAt-visible" name="createdAtVisible">
+                    Видиме в таблиці
+                </label>
+            </div>
+            <div class="form-group">
+                <label for="static-createdAt-label">Мітка поля:</label>
+                <input type="text" id="static-createdAt-label" name="createdAtLabel" value="Створено">
+            </div>
+            <div class="form-group">
+                <label for="static-createdAt-order">Порядок відображення:</label>
+                <input type="number" id="static-createdAt-order" name="createdAtOrder" min="0" value="1000">
+            </div>
+            <div class="form-group">
+                <label for="static-createdAt-width">Ширина стовпця (px):</label>
+                <input type="number" id="static-createdAt-width" name="createdAtWidth" min="50" value="150">
+            </div>
+            
+            <h3>Дата оновлення</h3>
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="static-updatedAt-visible" name="updatedAtVisible">
+                    Видиме в таблиці
+                </label>
+            </div>
+            <div class="form-group">
+                <label for="static-updatedAt-label">Мітка поля:</label>
+                <input type="text" id="static-updatedAt-label" name="updatedAtLabel" value="Оновлено">
+            </div>
+            <div class="form-group">
+                <label for="static-updatedAt-order">Порядок відображення:</label>
+                <input type="number" id="static-updatedAt-order" name="updatedAtOrder" min="0" value="1001">
+            </div>
+            <div class="form-group">
+                <label for="static-updatedAt-width">Ширина стовпця (px):</label>
+                <input type="number" id="static-updatedAt-width" name="updatedAtWidth" min="50" value="150">
+            </div>
+            
+            <div class="modal-actions">
+                <button type="submit" class="btn-primary">Зберегти</button>
             </div>
         </form>
     </div>

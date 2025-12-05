@@ -70,6 +70,16 @@ public class ClientTypePermissionController {
         return ResponseEntity.noContent().build();
     }
 
+    @PreAuthorize("hasAuthority('administration:view')")
+    @GetMapping("/permission/user/{userId}")
+    public ResponseEntity<List<ClientTypePermissionDTO>> getPermissionsByUserId(@PathVariable Long userId) {
+        List<ClientTypePermission> permissions = permissionService.getPermissionsByUserId(userId);
+        List<ClientTypePermissionDTO> response = permissions.stream()
+                .map(this::permissionToDTO)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(response);
+    }
+
     private ClientTypePermissionDTO permissionToDTO(ClientTypePermission permission) {
         ClientTypePermissionDTO dto = new ClientTypePermissionDTO();
         dto.setId(permission.getId());

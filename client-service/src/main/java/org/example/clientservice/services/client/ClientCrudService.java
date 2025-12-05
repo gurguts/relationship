@@ -10,7 +10,9 @@ import org.example.clientservice.models.field.Source;
 import org.example.clientservice.repositories.ClientRepository;
 import org.example.clientservice.services.impl.IClientCrudService;
 import org.example.clientservice.services.impl.ISourceService;
+import org.example.clientservice.services.impl.IClientTypePermissionService;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,11 +27,24 @@ public class ClientCrudService implements IClientCrudService {
     private final ClientRepository clientRepository;
     private final ISourceService sourceService;
     private final UserClient userCLient;
+    private final IClientTypePermissionService clientTypePermissionService;
 
     @Override
     @Transactional
     public Client createClient(Client client) {
         log.info("Creating client: {}", client.getCompany());
+        
+        // Проверяем права доступа к типу клиента
+        if (client.getClientType() != null && client.getClientType().getId() != null) {
+            Long userId = getCurrentUserId();
+            if (userId != null && !isAdmin()) {
+                if (!clientTypePermissionService.canUserCreate(userId, client.getClientType().getId())) {
+                    throw new ClientException("ACCESS_DENIED", 
+                        "У вас немає прав на створення клієнтів цього типу");
+                }
+            }
+        }
+        
         return clientRepository.save(client);
     }
 
@@ -37,6 +52,17 @@ public class ClientCrudService implements IClientCrudService {
     @Transactional
     public Client updateClient(Client client, Long id) {
         Client existingClient = getClient(id);
+
+        // Проверяем права доступа к типу клиента
+        if (existingClient.getClientType() != null && existingClient.getClientType().getId() != null) {
+            Long userId = getCurrentUserId();
+            if (userId != null && !isAdmin()) {
+                if (!clientTypePermissionService.canUserEdit(userId, existingClient.getClientType().getId())) {
+                    throw new ClientException("ACCESS_DENIED", 
+                        "У вас немає прав на редагування клієнтів цього типу");
+                }
+            }
+        }
 
         String fullName = getFullName();
 
@@ -61,21 +87,58 @@ public class ClientCrudService implements IClientCrudService {
 
     @Override
     public Client getClient(Long clientId) {
-        return clientRepository.findById(clientId)
+        Client client = clientRepository.findById(clientId)
                 .orElseThrow(() -> new ClientNotFoundException("Client not found"));
+        
+        // Проверяем права доступа к типу клиента
+        if (client.getClientType() != null && client.getClientType().getId() != null) {
+            Long userId = getCurrentUserId();
+            if (userId != null && !isAdmin()) {
+                if (!clientTypePermissionService.canUserView(userId, client.getClientType().getId())) {
+                    throw new ClientException("ACCESS_DENIED", 
+                        "У вас немає прав на перегляд клієнтів цього типу");
+                }
+            }
+        }
+        
+        return client;
     }
 
     @Override
     @Transactional
     public void fullDeleteClient(Long clientId) {
-        getClient(clientId);
+        Client client = getClient(clientId);
+        
+        // Проверяем права доступа к типу клиента для полного удаления
+        if (client.getClientType() != null && client.getClientType().getId() != null) {
+            Long userId = getCurrentUserId();
+            if (userId != null && !isAdmin()) {
+                if (!clientTypePermissionService.canUserDelete(userId, client.getClientType().getId())) {
+                    throw new ClientException("ACCESS_DENIED", 
+                        "У вас немає прав на видалення клієнтів цього типу");
+                }
+            }
+        }
+        
         clientRepository.deleteById(clientId);
     }
 
     @Override
     @Transactional
     public void deleteClient(Long clientId) {
-        getClient(clientId);
+        Client client = getClient(clientId);
+        
+        // Проверяем права доступа к типу клиента для удаления
+        if (client.getClientType() != null && client.getClientType().getId() != null) {
+            Long userId = getCurrentUserId();
+            if (userId != null && !isAdmin()) {
+                if (!clientTypePermissionService.canUserDelete(userId, client.getClientType().getId())) {
+                    throw new ClientException("ACCESS_DENIED", 
+                        "У вас немає прав на видалення клієнтів цього типу");
+                }
+            }
+        }
+        
         clientRepository.deactivateClientById(clientId);
     }
 
@@ -164,6 +227,25 @@ public class ClientCrudService implements IClientCrudService {
         // Явно обновляем updatedAt, чтобы @UpdateTimestamp сработал
         // Это гарантирует, что поле обновится даже если изменены только fieldValues
         existingClient.setUpdatedAt(LocalDateTime.now());
+    }
+    
+    private Long getCurrentUserId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || authentication.getDetails() == null) {
+            return null;
+        }
+        return authentication.getDetails() instanceof Long ? 
+                (Long) authentication.getDetails() : null;
+    }
+    
+    private boolean isAdmin() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null) {
+            return false;
+        }
+        return authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(auth -> "system:admin".equals(auth) || "administration:view".equals(auth));
     }
 }
 

@@ -4,11 +4,15 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.clientservice.mappers.clienttype.ClientTypeFieldMapper;
+import org.example.clientservice.models.clienttype.ClientType;
 import org.example.clientservice.models.clienttype.ClientTypeField;
 import org.example.clientservice.models.dto.clienttype.ClientTypeFieldCreateDTO;
 import org.example.clientservice.models.dto.clienttype.ClientTypeFieldDTO;
 import org.example.clientservice.models.dto.clienttype.ClientTypeFieldUpdateDTO;
 import org.example.clientservice.models.dto.clienttype.FieldReorderDTO;
+import org.example.clientservice.models.dto.clienttype.StaticFieldsConfig;
+import org.example.clientservice.services.clienttype.ClientTypeService;
+import org.example.clientservice.services.clienttype.StaticFieldsHelper;
 import org.example.clientservice.services.impl.IClientTypeFieldService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -27,6 +31,7 @@ import java.util.stream.Collectors;
 @Validated
 public class ClientTypeFieldController {
     private final IClientTypeFieldService fieldService;
+    private final ClientTypeService clientTypeService;
 
     @PreAuthorize("hasAuthority('administration:edit')")
     @PostMapping("/{clientTypeId}/field")
@@ -58,6 +63,26 @@ public class ClientTypeFieldController {
         List<ClientTypeFieldDTO> response = fields.stream()
                 .map(ClientTypeFieldMapper::toDTO)
                 .collect(Collectors.toList());
+        
+        // Добавляем статические поля, если они настроены как видимые
+        try {
+            ClientType clientType = clientTypeService.getClientTypeById(clientTypeId);
+            StaticFieldsConfig staticConfig = StaticFieldsHelper.parseStaticFieldsConfig(clientType);
+            // Добавляем статические поля только если конфигурация была сохранена
+            if (staticConfig != null) {
+                List<ClientTypeFieldDTO> staticFields = StaticFieldsHelper.createStaticFieldDTOs(staticConfig);
+                response.addAll(staticFields);
+                
+                // Сортируем все поля по displayOrder
+                response.sort((a, b) -> Integer.compare(
+                        a.getDisplayOrder() != null ? a.getDisplayOrder() : 999,
+                        b.getDisplayOrder() != null ? b.getDisplayOrder() : 999
+                ));
+            }
+        } catch (Exception e) {
+            log.warn("Failed to add static fields for client type {}: {}", clientTypeId, e.getMessage());
+        }
+        
         return ResponseEntity.ok(response);
     }
 

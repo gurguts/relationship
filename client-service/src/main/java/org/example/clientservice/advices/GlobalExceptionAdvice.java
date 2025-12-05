@@ -81,9 +81,30 @@ public class GlobalExceptionAdvice {
     @ExceptionHandler(ClientException.class)
     public ErrorResponse handleClientException(ClientException ex, Locale locale) {
         log.warn("Client error: code={}, message={}", ex.getErrorCode(), ex.getMessage());
-        String message = messageSource.getMessage(
-                String.format("client.error.%s", ex.getErrorCode().toUpperCase()), null, ex.getMessage(), locale);
-        return new ErrorResponse(ex.getErrorCode(), message, null);
+        String localizedMessage = messageSource.getMessage(
+                String.format("client.error.%s", ex.getErrorCode().toUpperCase()), null, null, locale);
+        
+        // Если локализованное сообщение не найдено или это ошибка импорта с деталями, используем оригинальное сообщение
+        String message = (localizedMessage != null && !localizedMessage.equals(String.format("client.error.%s", ex.getErrorCode().toUpperCase()))) 
+                ? localizedMessage 
+                : ex.getMessage();
+        
+        // Если сообщение содержит переносы строк или многострочное, передаем его в details
+        Map<String, String> details = null;
+        if (ex.getMessage() != null && (ex.getMessage().contains("\n") || ex.getMessage().length() > 100)) {
+            details = new HashMap<>();
+            details.put("error", ex.getMessage());
+            // Если локализованное сообщение найдено, используем его как основное сообщение
+            if (localizedMessage != null && !localizedMessage.equals(String.format("client.error.%s", ex.getErrorCode().toUpperCase()))) {
+                message = localizedMessage;
+            } else {
+                // Иначе используем первую строку как основное сообщение
+                String[] lines = ex.getMessage().split("\n");
+                message = lines.length > 0 ? lines[0] : ex.getMessage();
+            }
+        }
+        
+        return new ErrorResponse(ex.getErrorCode(), message, details);
     }
 
     @ResponseStatus(HttpStatus.NOT_FOUND)

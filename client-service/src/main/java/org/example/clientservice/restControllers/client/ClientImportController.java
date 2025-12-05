@@ -39,8 +39,19 @@ public class ClientImportController {
             return ResponseEntity.badRequest().body("Файл не може бути порожнім");
         }
         
-        if (!file.getOriginalFilename().endsWith(".xlsx") && !file.getOriginalFilename().endsWith(".xls")) {
+        // Проверяем расширение файла
+        String filename = file.getOriginalFilename();
+        if (filename == null || (!filename.toLowerCase().endsWith(".xlsx") && !filename.toLowerCase().endsWith(".xls"))) {
             return ResponseEntity.badRequest().body("Підтримуються тільки файли Excel (.xlsx, .xls)");
+        }
+        
+        // Проверяем тип содержимого файла
+        String contentType = file.getContentType();
+        if (contentType != null && !contentType.contains("spreadsheet") && 
+            !contentType.contains("excel") && 
+            !contentType.equals("application/vnd.ms-excel") &&
+            !contentType.equals("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")) {
+            return ResponseEntity.badRequest().body("Файл не є валідним Excel файлом");
         }
         
         String result = clientImportService.importClients(clientTypeId, file);

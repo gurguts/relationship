@@ -28,6 +28,9 @@ public class ClientType {
     @Column(name = "is_active")
     private Boolean isActive = true;
 
+    @Column(name = "static_fields_config", columnDefinition = "TEXT")
+    private String staticFieldsConfig;
+
     @OneToMany(mappedBy = "clientType", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ClientTypeField> fields = new ArrayList<>();
 
