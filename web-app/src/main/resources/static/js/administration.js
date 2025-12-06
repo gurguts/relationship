@@ -9,11 +9,9 @@ const allPermissions = [
     'client:view',
     'client:create',
     'client:edit',
-    'client:edit_strangers',
     'client_stranger:edit',
     'client:delete',
     'client:full_delete',
-    'client:edit_source',
     'client:excel',
 
     'sale:view',
@@ -119,10 +117,8 @@ function formatPermissionName(permission) {
         'client:create': 'Создание клиентов',
         'client:edit': 'Редактирование клиентов',
         'client:delete': 'Удаление клиентов',
-        'client:edit_strangers': 'Редактирование чужих клиентов',
         'client_stranger:edit': 'Редактирование чужих клиентов та зміна привлечення',
         'client:full_delete': 'Полное удаление клиента',
-        'client:edit_source': 'Редактирование привлечения клиента',
         'client:excel': 'Выгрузка клиентов в excel',
 
         'sale:view': 'Отображение продаж',
@@ -2245,6 +2241,13 @@ document.getElementById('saveClientTypePermissionsButton')?.addEventListener('cl
         
         showMessage('Права доступу до типів клієнтів збережено', 'success');
         await loadClientTypePermissions(currentUserForClientTypePermissions.id);
+        
+        // Закрываем модальное окно после успешного сохранения
+        const modal = document.getElementById('userClientTypePermissionsModal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+        currentUserForClientTypePermissions = null;
     } catch (error) {
         console.error('Error saving client type permissions:', error);
         showMessage('Помилка збереження прав доступу: ' + error.message, 'error');

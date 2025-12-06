@@ -10,14 +10,11 @@ const customSelects = {};
 
 let availableSources = [];
 let sourceMap;
-let userMap;
-let productMap;
 
 const userId = localStorage.getItem('userId');
 const selectedFilters = {};
 
-// Функция для проверки прав доступа на редактирование клиента
-function canEditClient(client) {
+function getUserAuthorities() {
     const authorities = localStorage.getItem('authorities');
     let userAuthorities = [];
     try {
@@ -28,133 +25,68 @@ function canEditClient(client) {
         }
     } catch (error) {
         console.error('Failed to parse authorities:', error);
-        return false;
+        return [];
     }
-    
-    // Проверяем, есть ли право редактировать чужих клиентов
-    const canEditStrangers = userAuthorities.includes('client_stranger:edit') || 
-                             userAuthorities.includes('system:admin');
-    
-    if (canEditStrangers) {
-        return true;
-    }
-    
-    // Логика проверки прав доступа:
-    // 1. Если у клиента нет source - можно редактировать
-    // 2. Если у клиента есть source:
-    //    - Если source закреплен за текущим пользователем - можно редактировать
-    //    - Если source не закреплен или закреплен за другим - можно редактировать ТОЛЬКО с правом client_stranger:edit
-    
-    if (!client.sourceId) {
-        // Если у клиента нет source, разрешаем редактирование
-        return true;
-    }
-    
-    // Находим source в availableSources
-    if (!availableSources || availableSources.length === 0) {
-        // Если sources еще не загружены, разрешаем редактирование (чтобы не блокировать пользователя)
-        return true;
-    }
-    
-    const sourceId = Number(client.sourceId);
-    const source = availableSources.find(s => Number(s.id) === sourceId);
-    if (!source) {
-        // Если source не найден, запрещаем редактирование (на всякий случай)
-        return false;
-    }
-    
-    // Если source закреплен за текущим пользователем, разрешаем редактирование
-    const currentUserId = userId ? Number(userId) : null;
-    const sourceUserId = (source.userId !== null && source.userId !== undefined) ? Number(source.userId) : null;
-    
-    if (currentUserId != null && sourceUserId != null && Number(sourceUserId) === Number(currentUserId)) {
-        return true;
-    }
-    
-    // Если source не закреплен или закреплен за другим - запрещаем редактирование
-    // (можно редактировать только с правом client_stranger:edit, которое уже проверено выше)
-    return false;
+    return userAuthorities;
 }
 
-// Функция для проверки прав на редактирование названия клиента (company)
-function canEditCompany(client) {
-    const authorities = localStorage.getItem('authorities');
-    let userAuthorities = [];
-    try {
-        if (authorities) {
-            userAuthorities = authorities.startsWith('[')
-                ? JSON.parse(authorities)
-                : authorities.split(',').map(auth => auth.trim());
-        }
-    } catch (error) {
-        console.error('Failed to parse authorities:', error);
-        return false;
-    }
-    
-    // Проверяем, есть ли право редактировать чужих клиентов
-    const canEditStrangers = userAuthorities.includes('client_stranger:edit') || 
-                             userAuthorities.includes('system:admin');
-    
-    if (canEditStrangers) {
-        return true;
-    }
-    
-    // Название клиента можно редактировать только для "своих" клиентов
-    // (клиент без source или source закреплен за текущим пользователем)
-    
-    if (!client.sourceId) {
-        // Если у клиента нет source, разрешаем редактирование названия
-        return true;
-    }
-    
-    // Находим source в availableSources
-    if (!availableSources || availableSources.length === 0) {
-        // Если sources еще не загружены, разрешаем редактирование названия (чтобы не блокировать пользователя)
-        return true;
-    }
-    
-    const sourceId = Number(client.sourceId);
-    const source = availableSources.find(s => Number(s.id) === sourceId);
-    if (!source) {
-        // Если source не найден, запрещаем редактирование
-        return false;
-    }
-    
-    // Если source закреплен за текущим пользователем, разрешаем редактирование названия
-    const currentUserId = userId ? Number(userId) : null;
-    const sourceUserId = (source.userId !== null && source.userId !== undefined) ? Number(source.userId) : null;
-    if (currentUserId != null && sourceUserId != null && Number(sourceUserId) === Number(currentUserId)) {
-        return true;
-    }
-    
-    // Если source не закреплен или закреплен за другим - запрещаем редактирование названия
-    return false;
-}
-
-// Функция для проверки прав на изменение source
-function canEditSource() {
-    const authorities = localStorage.getItem('authorities');
-    let userAuthorities = [];
-    try {
-        if (authorities) {
-            userAuthorities = authorities.startsWith('[')
-                ? JSON.parse(authorities)
-                : authorities.split(',').map(auth => auth.trim());
-        }
-    } catch (error) {
-        console.error('Failed to parse authorities:', error);
-        return false;
-    }
-    
+function canEditStrangers() {
+    const userAuthorities = getUserAuthorities();
     return userAuthorities.includes('client_stranger:edit') || 
            userAuthorities.includes('system:admin');
+}
+
+function isOwnClient(client) {
+    if (!client.sourceId) {
+        return true;
+    }
+    
+    if (!availableSources || availableSources.length === 0) {
+        return true;
+    }
+    
+    const sourceId = Number(client.sourceId);
+    const source = availableSources.find(s => Number(s.id) === sourceId);
+    if (!source) {
+        return false;
+    }
+    
+    const currentUserId = userId ? Number(userId) : null;
+    const sourceUserId = (source.userId !== null && source.userId !== undefined) ? Number(source.userId) : null;
+    
+    return currentUserId != null && sourceUserId != null && Number(sourceUserId) === Number(currentUserId);
+}
+
+function canEditClient(client) {
+    if (canEditStrangers()) {
+        return true;
+    }
+    
+    return isOwnClient(client);
+}
+
+function canEditCompany(client) {
+    if (canEditStrangers()) {
+        return true;
+    }
+    return isOwnClient(client);
+}
+
+function canEditSource() {
+    return canEditStrangers();
+}
+
+function canDeleteClient(client) {
+    if (canEditStrangers()) {
+        return true;
+    }
+    return isOwnClient(client);
 }
 
 const API_URL = '/api/v1/client';
 
 let currentPage = 0;
 let pageSize = 50;
-
 const tableBody = document.getElementById('client-table-body');
 
 let currentClientTypeId = null;
@@ -162,7 +94,6 @@ let currentClientType = null;
 let clientTypeFields = [];
 let visibleFields = [];
 window.visibleFields = visibleFields;
-let searchableFields = [];
 let filterableFields = [];
 let visibleInCreateFields = [];
 
@@ -203,6 +134,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     const urlParams = new URLSearchParams(window.location.search);
     const typeId = urlParams.get('type');
     
+    if (!typeId) {
+        await showClientTypeSelectionModal();
+        return;
+    }
+    
+    await updateNavigationWithCurrentType(typeId);
+    
     const savedClientTypeId = localStorage.getItem('currentClientTypeId');
     const staticFilterKeys = ['createdAtFrom', 'createdAtTo', 'updatedAtFrom', 'updatedAtTo', 'source', 'showInactive'];
     
@@ -222,6 +160,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         localStorage.setItem('currentClientTypeId', newClientTypeId.toString());
         currentClientTypeId = newClientTypeId;
+        
+        await updateNavigationWithCurrentType(newClientTypeId);
+        
         await loadClientType(currentClientTypeId);
         await loadClientTypeFields(currentClientTypeId);
         buildDynamicTable();
@@ -258,7 +199,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             filterableFields.forEach(field => {
                 const filterId = `filter-${field.fieldName}`;
                 if (field.fieldType === 'DATE') {
-                    // Поля типа DATE - диапазон от-до
                     const fromInput = document.getElementById(`${filterId}-from`);
                     const toInput = document.getElementById(`${filterId}-to`);
                     if (fromInput && window.selectedFilters[`${field.fieldName}From`]) {
@@ -268,7 +208,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                         toInput.value = window.selectedFilters[`${field.fieldName}To`][0] || '';
                     }
                 } else if (field.fieldType === 'NUMBER') {
-                    // Поля типа NUMBER - диапазон от-до
                     const fromInput = document.getElementById(`${filterId}-from`);
                     const toInput = document.getElementById(`${filterId}-to`);
                     if (fromInput && window.selectedFilters[`${field.fieldName}From`]) {
@@ -278,8 +217,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                         toInput.value = window.selectedFilters[`${field.fieldName}To`][0] || '';
                     }
                 } else if (field.fieldType === 'LIST') {
-                    // Поля типа LIST - множественный выбор
-                    // Custom select уже создан в buildDynamicFilters, только восстанавливаем значения
                     if (customSelects[filterId] && window.selectedFilters[field.fieldName]) {
                         const savedValues = window.selectedFilters[field.fieldName];
                         if (Array.isArray(savedValues) && savedValues.length > 0) {
@@ -290,7 +227,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                         }
                     }
                 } else if (field.fieldType === 'BOOLEAN') {
-                    // Поля типа BOOLEAN - выбор из списка (Так/Ні)
                     const select = document.getElementById(filterId);
                     if (select && window.selectedFilters[field.fieldName] && window.selectedFilters[field.fieldName].length > 0) {
                         const savedValue = window.selectedFilters[field.fieldName][0];
@@ -299,7 +235,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                         }
                     }
                 } else if (field.fieldType === 'TEXT' || field.fieldType === 'PHONE') {
-                    // Поля типа TEXT и PHONE - простой поиск
                     const input = document.getElementById(filterId);
                     if (input && window.selectedFilters[field.fieldName]) {
                         input.value = Array.isArray(window.selectedFilters[field.fieldName]) 
@@ -327,16 +262,7 @@ async function loadEntitiesAndApplyFilters() {
         const data = await response.json();
         availableSources = data.sources || [];
         sourceMap = new Map(availableSources.map(item => [item.id, item.name]));
-        
-        // Загружаем другие данные, если они нужны для других модулей
-        if (data.users) {
-            userMap = new Map(data.users.map(item => [item.id, item.name]));
-        }
-        if (data.products) {
-            productMap = new Map(data.products.map(item => [item.id, item.name]));
-        }
 
-        const filterForm = document.getElementById('filterForm');
         if (filterForm) {
             if (window.selectedFilters['createdAtFrom']) {
                 const fromInput = filterForm.querySelector('#createdAtFrom');
@@ -354,8 +280,7 @@ async function loadEntitiesAndApplyFilters() {
                 const toInput = filterForm.querySelector('#updatedAtTo');
                 if (toInput) toInput.value = window.selectedFilters['updatedAtTo'][0];
             }
-            
-            // Создаем custom select для source, если он еще не создан
+
             const sourceSelect = filterForm.querySelector('#filter-source');
             if (sourceSelect && !customSelects['filter-source'] && availableSources && availableSources.length > 0) {
                 const sourceData = availableSources.map(s => ({
@@ -370,8 +295,7 @@ async function loadEntitiesAndApplyFilters() {
                     }
                 }
             }
-            
-            // Восстанавливаем значение для source
+
             if (window.selectedFilters['source'] && customSelects['filter-source']) {
                 const savedSources = window.selectedFilters['source'];
                 if (Array.isArray(savedSources) && savedSources.length > 0) {
@@ -381,8 +305,7 @@ async function loadEntitiesAndApplyFilters() {
                     }
                 }
             }
-            
-            // Восстанавливаем значение для чекбокса неактивных клиентов
+
             const showInactiveCheckbox = filterForm.querySelector('#filter-show-inactive');
             if (showInactiveCheckbox && window.selectedFilters['showInactive'] && window.selectedFilters['showInactive'][0] === 'true') {
                 showInactiveCheckbox.checked = true;
@@ -415,10 +338,9 @@ async function loadClientTypeFields(typeId) {
         ]);
         
         clientTypeFields = await fieldsRes.json();
-        window.clientTypeFields = clientTypeFields; // Делаем доступным глобально для экспорта
+        window.clientTypeFields = clientTypeFields;
         visibleFields = await visibleRes.json();
         window.visibleFields = visibleFields;
-        searchableFields = await searchableRes.json();
         filterableFields = await filterableRes.json();
         visibleInCreateFields = await visibleInCreateRes.json();
     } catch (error) {
@@ -443,19 +365,15 @@ function buildDynamicTable() {
     if (!thead) return;
     
     thead.innerHTML = '';
-    
-    // Разделяем поля на статические и динамические
+
     const staticFields = (visibleFields || []).filter(f => f.isStatic);
     const dynamicFields = (visibleFields || []).filter(f => !f.isStatic);
-    
-    // Проверяем, какие статические поля настроены
+
     const hasCompanyStatic = staticFields.some(f => f.staticFieldName === 'company');
     const hasSourceStatic = staticFields.some(f => f.staticFieldName === 'source');
-    
-    // Создаем массив всех полей для сортировки
+
     const allFields = [...staticFields, ...dynamicFields];
-    
-    // Если статические поля не настроены, добавляем дефолтные поля в массив для сортировки
+
     if (!hasCompanyStatic) {
         allFields.push({
             id: -1,
@@ -479,11 +397,9 @@ function buildDynamicTable() {
             isSearchable: false
         });
     }
-    
-    // Сортируем все поля по displayOrder
+
     allFields.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
-    
-    // Добавляем все поля в порядке displayOrder
+
     allFields.forEach(field => {
         const th = document.createElement('th');
         th.textContent = field.fieldLabel;
@@ -498,23 +414,19 @@ function buildDynamicTable() {
         } else if (field.isSearchable) {
             th.setAttribute('data-sort', field.fieldName);
         }
-        // Применяем ширину из настроек поля, если есть
         if (field.columnWidth) {
             th.style.width = field.columnWidth + 'px';
             th.style.minWidth = field.columnWidth + 'px';
             th.style.maxWidth = field.columnWidth + 'px';
         }
-        // Фиксируем ширину столбца
         th.style.flexShrink = '0';
         th.style.flexGrow = '0';
         thead.appendChild(th);
     });
-    
-    // Инициализируем изменение ширины столбцов после построения таблицы
+
     if (typeof initColumnResizer === 'function' && currentClientTypeId) {
         setTimeout(() => {
             initColumnResizer(currentClientTypeId);
-            // Применяем ширины столбцов после инициализации
             if (typeof applyColumnWidths === 'function') {
                 applyColumnWidths(currentClientTypeId);
             }
@@ -524,19 +436,15 @@ function buildDynamicTable() {
 
 function buildDynamicFilters() {
     if (!filterForm) return;
-    
-    // Защита от повторного вызова - проверяем, не идет ли уже построение
+
     if (buildDynamicFilters._isBuilding) {
         return;
     }
     buildDynamicFilters._isBuilding = true;
     
     try {
-        // Удаляем старые custom selects для фильтров перед пересозданием
-        // НЕ удаляем filter-source, так как это стандартное поле
         Object.keys(customSelects).forEach(selectId => {
             if (selectId.startsWith('filter-') && selectId !== 'filter-source') {
-                // Очищаем custom select перед удалением
                 const customSelect = customSelects[selectId];
                 if (customSelect && typeof customSelect.reset === 'function') {
                     try {
@@ -548,19 +456,16 @@ function buildDynamicFilters() {
                 delete customSelects[selectId];
             }
         });
-        
-        // Удаляем все существующие элементы фильтров (стандартные поля будут пересозданы)
+
         const existingFilters = filterForm.querySelectorAll('h2, .filter-block, .select-section-item');
         existingFilters.forEach(el => {
-            // Удаляем также все дочерние элементы, чтобы избежать утечек памяти
             const selects = el.querySelectorAll('select');
             selects.forEach(sel => {
                 sel.innerHTML = '';
             });
             el.remove();
         });
-        
-        // Удаляем custom select для source, чтобы он был пересоздан
+
         if (customSelects['filter-source']) {
             try {
                 if (customSelects['filter-source'] && typeof customSelects['filter-source'].reset === 'function') {
@@ -571,8 +476,7 @@ function buildDynamicFilters() {
             }
             delete customSelects['filter-source'];
         }
-        
-        // Добавляем стандартные поля: createdAt и updatedAt (всегда диапазон от-до)
+
         const createdAtH2 = document.createElement('h2');
         createdAtH2.textContent = 'Дата створення:';
         filterForm.appendChild(createdAtH2);
@@ -600,8 +504,7 @@ function buildDynamicFilters() {
             <input type="date" id="filter-updatedAt-to" name="updatedAtTo"><br><br>
         `;
         filterForm.appendChild(updatedAtBlock);
-        
-        // Добавляем стандартное поле: source (залучення)
+
         const sourceSelectItem = document.createElement('div');
         sourceSelectItem.className = 'select-section-item';
         sourceSelectItem.innerHTML = `
@@ -611,15 +514,12 @@ function buildDynamicFilters() {
             </select>
         `;
         filterForm.appendChild(sourceSelectItem);
-        
-        // Создаем custom select для source после загрузки данных (будет создан в loadEntitiesAndApplyFilters)
-        
-        // Добавляем фильтруемые поля из настроек
+
+
         if (filterableFields && filterableFields.length > 0) {
             filterableFields.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
             filterableFields.forEach(field => {
                 if (field.fieldType === 'DATE') {
-                    // Поля типа DATE - всегда диапазон от-до
                     const h2 = document.createElement('h2');
                     h2.textContent = field.fieldLabel + ':';
                     filterForm.appendChild(h2);
@@ -634,7 +534,6 @@ function buildDynamicFilters() {
                     `;
                     filterForm.appendChild(filterBlock);
                 } else if (field.fieldType === 'NUMBER') {
-                    // Поля типа NUMBER - диапазон от-до
                     const h2 = document.createElement('h2');
                     h2.textContent = field.fieldLabel + ':';
                     filterForm.appendChild(h2);
@@ -649,10 +548,8 @@ function buildDynamicFilters() {
                     `;
                     filterForm.appendChild(filterBlock);
                 } else if (field.fieldType === 'LIST') {
-                    // Поля типа LIST - множественный выбор (точно как в форме создания)
                     const selectId = `filter-${field.fieldName}`;
-                    
-                    // Убеждаемся, что старый custom select удален
+
                     if (customSelects[selectId]) {
                         try {
                             const oldSelect = customSelects[selectId];
@@ -664,8 +561,7 @@ function buildDynamicFilters() {
                         }
                         delete customSelects[selectId];
                     }
-                    
-                    // Удаляем старый selectContainer, если он существует
+
                     const existingContainer = document.querySelector(`.custom-select-container[data-for="${selectId}"]`);
                     if (existingContainer) {
                         existingContainer.remove();
@@ -684,10 +580,9 @@ function buildDynamicFilters() {
                     const select = selectItem.querySelector('select');
                     if (!select) {
                         console.error('Select not found for field:', field.fieldName);
-                        return; // Пропускаем это поле
+                        return;
                     }
-                    
-                    // Добавляем опции в select
+
                     if (field.listValues && field.listValues.length > 0) {
                         field.listValues.forEach(listValue => {
                             const option = document.createElement('option');
@@ -696,11 +591,9 @@ function buildDynamicFilters() {
                             select.appendChild(option);
                         });
                     }
-                    
-                    // Создаем custom select и заполняем данными, точно как в форме создания
+
                     setTimeout(() => {
                         if (typeof createCustomSelect === 'function') {
-                            // Проверяем, что selectContainer еще не создан
                             const existingContainer = document.querySelector(`.custom-select-container[data-for="${selectId}"]`);
                             if (existingContainer) {
                                 console.warn('Custom select container already exists for:', selectId);
@@ -722,7 +615,6 @@ function buildDynamicFilters() {
                         }
                     }, 0);
                 } else if (field.fieldType === 'TEXT' || field.fieldType === 'PHONE') {
-                    // Поля типа TEXT и PHONE - простой поиск
                     const selectItem = document.createElement('div');
                     selectItem.className = 'select-section-item';
                     selectItem.innerHTML = `
@@ -735,7 +627,6 @@ function buildDynamicFilters() {
                     `;
                     filterForm.appendChild(selectItem);
                 } else if (field.fieldType === 'BOOLEAN') {
-                    // Поля типа BOOLEAN - выбор из списка (Так/Ні)
                     const selectItem = document.createElement('div');
                     selectItem.className = 'select-section-item';
                     selectItem.innerHTML = `
@@ -748,12 +639,10 @@ function buildDynamicFilters() {
                         </select>
                     `;
                     filterForm.appendChild(selectItem);
-                    // Не используем customSelect для BOOLEAN - используем обычный select
                 }
             });
         }
-        
-        // Добавляем чекбокс для фильтрации неактивных клиентов в самом конце всех фильтров
+
         const isActiveBlock = document.createElement('div');
         isActiveBlock.className = 'filter-block';
         isActiveBlock.innerHTML = `
@@ -764,7 +653,6 @@ function buildDynamicFilters() {
         `;
         filterForm.appendChild(isActiveBlock);
     } finally {
-        // Снимаем флаг после завершения
         buildDynamicFilters._isBuilding = false;
     }
 }
@@ -812,8 +700,7 @@ async function renderClients(clients) {
     } else {
         renderClientsWithDefaultFields(clients);
     }
-    
-    // Применяем сохраненные ширины столбцов после рендеринга
+
     if (typeof applyColumnWidths === 'function' && currentClientTypeId) {
         setTimeout(() => {
             applyColumnWidths(currentClientTypeId);
@@ -824,16 +711,13 @@ async function renderClients(clients) {
 async function renderClientsWithDynamicFields(clients) {
     const fieldValuesPromises = clients.map(client => loadClientFieldValues(client.id));
     const allFieldValues = await Promise.all(fieldValuesPromises);
-    
-    // Разделяем поля на статические и динамические
+
     const staticFields = visibleFields.filter(f => f.isStatic);
     const dynamicFields = visibleFields.filter(f => !f.isStatic);
-    
-    // Проверяем, какие статические поля настроены
+
     const hasCompanyStatic = staticFields.some(f => f.staticFieldName === 'company');
     const hasSourceStatic = staticFields.some(f => f.staticFieldName === 'source');
-    
-    // Сортируем все поля по displayOrder
+
     const allFields = [...staticFields, ...dynamicFields].sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
     
     clients.forEach((client, index) => {
@@ -841,8 +725,7 @@ async function renderClientsWithDynamicFields(clients) {
         row.classList.add('client-row');
         
         let html = '';
-        
-        // Если company не настроен как статическое поле, добавляем его первым (по умолчанию)
+
         if (!hasCompanyStatic) {
             const nameFieldLabel = currentClientType ? currentClientType.nameFieldLabel : 'Компанія';
             html += `<td data-label="${nameFieldLabel}" class="company-cell" style="cursor: pointer;">${client.company || ''}</td>`;
@@ -858,13 +741,11 @@ async function renderClientsWithDynamicFields(clients) {
         });
         
         client._fieldValues = fieldValues;
-        
-        // Обрабатываем все поля (статические и динамические) в порядке displayOrder
+
         allFields.forEach(field => {
             let cellValue = '';
             
             if (field.isStatic) {
-                // Обрабатываем статические поля
                 switch (field.staticFieldName) {
                     case 'company':
                         cellValue = client.company || '';
@@ -885,7 +766,6 @@ async function renderClientsWithDynamicFields(clients) {
                         break;
                 }
             } else {
-                // Обрабатываем динамические поля
                 const values = fieldValuesMap.get(field.id) || [];
                 
                 if (values.length > 0) {
@@ -899,8 +779,7 @@ async function renderClientsWithDynamicFields(clients) {
                 html += `<td data-label="${field.fieldLabel}">${cellValue}</td>`;
             }
         });
-        
-        // Если source не настроен как статическое поле, добавляем его в конце (по умолчанию)
+
         if (!hasSourceStatic) {
             const sourceId = client.sourceId ? (typeof client.sourceId === 'string' ? parseInt(client.sourceId) : client.sourceId) : null;
             html += `<td data-label="Залучення">${sourceId ? findNameByIdFromMap(sourceMap, sourceId) : ''}</td>`;
@@ -931,8 +810,8 @@ function renderClientsWithDefaultFields(clients) {
         const companyCell = row.querySelector('.company-cell');
         if (companyCell) {
             companyCell.addEventListener('click', () => {
-                loadClientDetails(client);
-            });
+            loadClientDetails(client);
+        });
         }
     });
 }
@@ -1110,7 +989,7 @@ async function showClientModal(client) {
             if (values.length > 0) {
                 if (field.allowMultiple) {
                     fieldValue = values.map(v => formatFieldValueForModal(v, field)).join('<br>');
-                } else {
+    } else {
                     fieldValue = formatFieldValueForModal(values[0], field);
                 }
             }
@@ -1130,26 +1009,22 @@ async function showClientModal(client) {
                 ${editButtonHtml}
             `;
             fieldP.setAttribute('data-field-type', field.fieldType);
-            
-            // Вставляем каждое поле после предыдущего, чтобы сохранить правильный порядок
+
             lastInsertedElement.insertAdjacentElement('afterend', fieldP);
             lastInsertedElement = fieldP;
         });
-        
-        // Показываем source после динамических полей
+
         const sourceElement = document.getElementById('modal-client-source')?.parentElement;
         if (sourceElement) {
             sourceElement.style.display = '';
-            document.getElementById('modal-client-source').innerText =
-                findNameByIdFromMap(sourceMap, client.sourceId);
+    document.getElementById('modal-client-source').innerText =
+        findNameByIdFromMap(sourceMap, client.sourceId);
         }
-        
-        // Скрываем кнопки редактирования в зависимости от прав доступа
-        const canEdit = canEditClient(client);
+
+        canEditClient(client);
         const canEditSourceField = canEditSource();
         const canEditCompanyField = canEditCompany(client);
-        
-        // Скрываем кнопку редактирования для company, если нет прав на редактирование названия
+
         const companyEditButton = document.querySelector(`button.edit-icon[onclick*="enableEdit('company')"]`);
         if (companyEditButton) {
             if (!canEditCompanyField) {
@@ -1158,8 +1033,7 @@ async function showClientModal(client) {
                 companyEditButton.style.display = '';
             }
         }
-        
-        // Скрываем кнопку редактирования source, если нет права client_stranger:edit
+
         const sourceEditButton = document.getElementById('edit-source');
         if (sourceEditButton) {
             if (!canEditSourceField) {
@@ -1169,21 +1043,17 @@ async function showClientModal(client) {
             }
         }
     } else {
-        // Старые поля больше не используются - все данные теперь в динамических полях
-        // Показываем только source
         const sourceElement = document.getElementById('modal-client-source')?.parentElement;
         if (sourceElement) {
             sourceElement.style.display = '';
             document.getElementById('modal-client-source').innerText =
                 findNameByIdFromMap(sourceMap, client.sourceId);
         }
-        
-        // Скрываем кнопки редактирования в зависимости от прав доступа
-        const canEdit = canEditClient(client);
+
+        canEditClient(client);
         const canEditSourceField = canEditSource();
         const canEditCompanyField = canEditCompany(client);
-        
-        // Скрываем кнопку редактирования для company, если нет прав на редактирование названия
+
         const companyEditButton = document.querySelector(`button.edit-icon[onclick*="enableEdit('company')"]`);
         if (companyEditButton) {
             if (!canEditCompanyField) {
@@ -1192,8 +1062,7 @@ async function showClientModal(client) {
                 companyEditButton.style.display = '';
             }
         }
-        
-        // Скрываем кнопку редактирования source, если нет права client_stranger:edit
+
         const sourceEditButton = document.getElementById('edit-source');
         if (sourceEditButton) {
             if (!canEditSourceField) {
@@ -1227,6 +1096,13 @@ async function showClientModal(client) {
     }
 
     const fullDeleteButton = document.getElementById('full-delete-client');
+    if (fullDeleteButton) {
+        const canDelete = canDeleteClient(client);
+
+        if (fullDeleteButton.style.display !== 'none' && !canDelete) {
+            fullDeleteButton.style.display = 'none';
+        }
+    }
     fullDeleteButton.onclick = async () => {
         if (!confirm('Ви впевнені, що хочете повністю видалити цього клієнта з бази даних? Ця дія незворотна!')) {
             return;
@@ -1255,15 +1131,16 @@ async function showClientModal(client) {
 
     const deleteButton = document.getElementById('delete-client');
     const restoreButton = document.getElementById('restore-client');
-    
-    // Показываем/скрываем кнопки в зависимости от статуса клиента
+
+    const canDelete = canDeleteClient(client);
+
     if (client.isActive === false) {
-        // Клиент неактивен - показываем кнопку "Відновити" вместо "Видалити"
         if (deleteButton) deleteButton.style.display = 'none';
         if (restoreButton) restoreButton.style.display = 'block';
     } else {
-        // Клиент активен - показываем кнопку "Видалити"
-        if (deleteButton) deleteButton.style.display = 'block';
+        if (deleteButton) {
+            deleteButton.style.display = canDelete ? 'block' : 'none';
+        }
         if (restoreButton) restoreButton.style.display = 'none';
     }
     
@@ -1291,33 +1168,33 @@ async function showClientModal(client) {
             loaderBackdrop.style.display = 'none';
         }
     };
-    
+
     if (restoreButton) {
         restoreButton.onclick = async () => {
             if (!confirm('Ви впевнені, що хочете відновити цього клієнта? Клієнт знову стане активним.')) {
                 return;
-            }
-            
-            loaderBackdrop.style.display = 'flex';
-            try {
+}
+
+    loaderBackdrop.style.display = 'flex';
+    try {
                 const response = await fetch(`${API_URL}/active/${client.id}`, {method: 'PATCH'});
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    handleError(new ErrorResponse(errorData.error, errorData.message, errorData.details));
-                    return;
-                }
+        if (!response.ok) {
+            const errorData = await response.json();
+            handleError(new ErrorResponse(errorData.error, errorData.message, errorData.details));
+            return;
+        }
                 showMessage('Клієнт відновлено (isActive = true)', 'info');
                 modal.style.display = 'none';
 
-                loadDataWithSort(currentPage, pageSize, currentSort, currentDirection);
-            } catch (error) {
+        loadDataWithSort(currentPage, pageSize, currentSort, currentDirection);
+    } catch (error) {
                 console.error('Помилка відновлення клієнта:', error);
-                handleError(error);
-            } finally {
-                loaderBackdrop.style.display = 'none';
-            }
-        };
+        handleError(error);
+    } finally {
+        loaderBackdrop.style.display = 'none';
     }
+        };
+}
 
 }
 
@@ -1395,7 +1272,6 @@ function buildDynamicCreateForm() {
     nameFieldDiv.appendChild(nameInput);
     form.appendChild(nameFieldDiv);
 
-    // Сортируем поля по displayOrder перед отображением
     if (visibleInCreateFields && visibleInCreateFields.length > 0) {
         visibleInCreateFields.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
         
@@ -1441,8 +1317,7 @@ function buildDynamicCreateForm() {
             input.title = field.allowMultiple 
                 ? 'Номери повинні починатися з + та містити від 1 до 15 цифр (формат E.164), розділяйте комою'
                 : 'Номер повинен починатися з + та містити від 1 до 15 цифр (формат E.164)';
-            
-            // Единая кастомная валидация для всех PHONE полей
+
             const validatePhoneField = function() {
                 const value = this.value.trim();
                 if (!value) {
@@ -1455,7 +1330,6 @@ function buildDynamicCreateForm() {
                 }
                 
                 if (field.allowMultiple) {
-                    // Для множественных номеров проверяем каждый
                     const phones = value.split(',').map(p => p.trim()).filter(p => p);
                     if (phones.length === 0) {
                         this.setCustomValidity('Введіть хоча б один номер телефону');
@@ -1469,7 +1343,6 @@ function buildDynamicCreateForm() {
                         this.setCustomValidity('');
                     }
                 } else {
-                    // Для одиночного номера
                     const normalized = normalizePhoneNumber(value);
                     if (!validatePhoneNumber(normalized)) {
                         this.setCustomValidity('Номер має некоректний формат. Використовуйте формат E.164: +1234567890');
@@ -1481,7 +1354,6 @@ function buildDynamicCreateForm() {
             
             input.addEventListener('blur', validatePhoneField);
             input.addEventListener('input', function() {
-                // При вводе очищаем ошибку, чтобы не мешать пользователю
                 if (this.value.trim() === '') {
                     this.setCustomValidity('');
                 }
@@ -1560,7 +1432,6 @@ function buildDynamicCreateForm() {
         });
     }
 
-    // Добавляем поле source после динамических полей
     const sourceFieldDiv = document.createElement('div');
     sourceFieldDiv.className = 'form-group';
     
@@ -1572,12 +1443,9 @@ function buildDynamicCreateForm() {
     const sourceSelect = document.createElement('select');
     sourceSelect.id = 'source';
     sourceSelect.name = 'sourceId';
-    sourceSelect.required = true;
-    
     const defaultSourceOption = document.createElement('option');
     defaultSourceOption.value = '';
     defaultSourceOption.textContent = 'Виберіть...';
-    defaultSourceOption.disabled = true;
     defaultSourceOption.selected = true;
     sourceSelect.appendChild(defaultSourceOption);
     
@@ -1588,7 +1456,6 @@ function buildDynamicCreateForm() {
         sourceSelect.appendChild(option);
     });
     
-    // Устанавливаем значение по умолчанию из userSourceMapping, если есть
     const defaultSourceId = defaultValues.source ? defaultValues.source() : '';
     if (defaultSourceId && sourceSelect.querySelector(`option[value="${defaultSourceId}"]`)) {
         sourceSelect.value = defaultSourceId;
@@ -1596,8 +1463,7 @@ function buildDynamicCreateForm() {
     
     sourceFieldDiv.appendChild(sourceSelect);
     form.appendChild(sourceFieldDiv);
-    
-    // Инициализируем custom select для source
+
     setTimeout(() => {
         if (typeof createCustomSelect === 'function') {
             const customSelect = createCustomSelect(sourceSelect);
@@ -1639,7 +1505,7 @@ function updatePhoneOutput(fieldId, value) {
         .map(num => num.trim())
         .filter(num => num.length > 0)
         .map(normalizePhoneNumber)
-        .filter(phone => validatePhoneNumber(phone)); // Показываем только валидные номера
+        .filter(phone => validatePhoneNumber(phone));
 
     if (formattedNumbers.length > 0) {
         const formattedNumbersList = document.createElement('ul');
@@ -1659,14 +1525,13 @@ function resetForm() {
     if (currentClientTypeId) {
         buildDynamicCreateForm();
     } else {
-        form.reset();
-        // Сбрасываем custom select для source
+    form.reset();
         const sourceSelect = document.getElementById('source');
         if (sourceSelect) {
             sourceSelect.selectedIndex = 0;
             const customSelectId = 'source-custom';
-            if (customSelects[customSelectId]) {
-                customSelects[customSelectId].reset();
+        if (customSelects[customSelectId]) {
+            customSelects[customSelectId].reset();
                 const defaultSourceId = defaultValues.source ? defaultValues.source() : '';
                 if (defaultSourceId && sourceSelect.querySelector(`option[value="${defaultSourceId}"]`)) {
                     customSelects[customSelectId].setValue(defaultSourceId);
@@ -1678,82 +1543,63 @@ function resetForm() {
 
 const defaultValues = {
     source: () => {
-        const userId = localStorage.getItem('userId');
-        return userSourceMapping[userId] ? String(userSourceMapping[userId]) : '';
+        const currentUserId = localStorage.getItem('userId');
+        if (!currentUserId || !availableSources || availableSources.length === 0) {
+            return '';
+        }
+        const userSource = availableSources.find(source => {
+            const sourceUserId = source.userId !== null && source.userId !== undefined 
+                ? String(source.userId) 
+                : null;
+            return sourceUserId === currentUserId;
+        });
+        return userSource ? String(userSource.id) : '';
     }
 };
 
-const userSourceMapping = {
-    '1': 8, // admin
-    '2': 15, // Музика Катя
-    '3': 28, // Водій Дмитро
-    '4': 7, // Водій Сергій
-    '5': 8, // Шмигельська Олена
-    '6': 10, // Денис Казаков
-    '7': 26, // Водій Андрій
-    '9': 14, // Богдан Осипишин
-    '10': 8, // test driver
-    '11': 8, // КЗП
-    '12': 32, // Водій Саша
-    '13': 8, // Сергій Дзвунко
-    '14': 30, // Юрій Ємець
-    '15': 31 // Артем Фаєр
-};
 
-
-// Стандартная валидация для международных номеров телефонов (формат E.164)
-// Номер должен начинаться с + и содержать от 1 до 15 цифр после + (первая цифра не может быть 0)
 function validatePhoneNumber(phone) {
     if (!phone || typeof phone !== 'string') {
         return false;
     }
-    // Удаляем все символы кроме цифр и +
     const cleaned = phone.replace(/[^\d+]/g, '');
-    // Проверяем формат E.164: начинается с +, затем от 1 до 15 цифр, первая цифра не 0
+
     const e164Pattern = /^\+[1-9]\d{1,14}$/;
     return e164Pattern.test(cleaned);
 }
 
-// Нормализация номера телефона (удаление лишних символов, добавление +, удаление ведущих нулей)
 function normalizePhoneNumber(phone) {
     if (!phone || typeof phone !== 'string') {
         return phone;
     }
-    // Удаляем все символы кроме цифр и +
     let cleaned = phone.replace(/[^\d+]/g, '');
     
     if (cleaned.length === 0) {
-        return phone; // Возвращаем исходное значение, если ничего не осталось
+        return phone;
     }
-    
-    // Если номер начинается с +, убираем его временно для обработки
+
     let hasPlus = cleaned.startsWith('+');
     if (hasPlus) {
         cleaned = cleaned.substring(1);
     }
-    
-    // Удаляем ведущие нули
+
     cleaned = cleaned.replace(/^0+/, '');
-    
-    // Если после удаления нулей ничего не осталось, возвращаем исходное значение
+
     if (cleaned.length === 0) {
         return phone;
     }
-    
-    // Проверяем, что первая цифра не 0 (требование E.164)
+
     if (cleaned.startsWith('0')) {
         cleaned = cleaned.replace(/^0+/, '');
         if (cleaned.length === 0) {
             return phone;
         }
     }
-    
-    // Ограничиваем длину до 15 цифр (максимум для E.164)
+
     if (cleaned.length > 15) {
         cleaned = cleaned.substring(0, 15);
     }
-    
-    // Добавляем + в начало
+
     return '+' + cleaned;
 }
 
@@ -1766,13 +1612,12 @@ document.getElementById('client-form').addEventListener('submit',
             return;
         }
 
-        // Валидация всех PHONE полей перед отправкой
         let hasValidationErrors = false;
         visibleInCreateFields.forEach(field => {
             if (field.fieldType === 'PHONE') {
                 const phoneInput = document.getElementById(`field-${field.id}`);
                 if (phoneInput) {
-                    // Триггерим валидацию
+
                     phoneInput.dispatchEvent(new Event('blur'));
                     if (!phoneInput.validity.valid) {
                         hasValidationErrors = true;
@@ -1795,8 +1640,7 @@ document.getElementById('client-form').addEventListener('submit',
             company: formData.get('company'),
             fieldValues: []
         };
-        
-        // Добавляем sourceId, если он выбран
+
         const sourceId = formData.get('sourceId');
         if (sourceId) {
             clientData.sourceId = parseInt(sourceId);
@@ -1810,10 +1654,10 @@ document.getElementById('client-form').addEventListener('submit',
                 const phoneValue = formData.get(`field-${field.id}`);
                 if (phoneValue) {
                     const phones = phoneValue.split(',')
-                        .map(num => num.trim())
-                        .filter(num => num.length > 0)
+            .map(num => num.trim())
+            .filter(num => num.length > 0)
                         .map(normalizePhoneNumber)
-                        .filter(phone => validatePhoneNumber(phone)); // Фильтруем только валидные номера
+                        .filter(phone => validatePhoneNumber(phone));
                     
                     phones.forEach((phone, index) => {
                         clientData.fieldValues.push({
@@ -1842,14 +1686,12 @@ document.getElementById('client-form').addEventListener('submit',
                 };
                 
                 if (field.fieldType === 'TEXT' || field.fieldType === 'PHONE') {
-                    // Для PHONE нормализуем номер и проверяем валидность
                     if (field.fieldType === 'PHONE') {
                         const normalizedValue = normalizePhoneNumber(fieldValue);
                         if (validatePhoneNumber(normalizedValue)) {
                             fieldValueData.valueText = normalizedValue;
                         } else {
-                            // Если номер невалидный, пропускаем его (валидация уже была на фронте)
-                            return; // Пропускаем это поле
+                            return;
                         }
                     } else {
                         fieldValueData.valueText = fieldValue;
@@ -1969,10 +1811,9 @@ function updateSelectedFilters() {
 
     Object.keys(selectedFilters).forEach(key => delete selectedFilters[key]);
 
-    const filterForm = document.getElementById('filterForm');
+    if (!filterForm) return;
     const formData = new FormData(filterForm);
 
-    // Обрабатываем стандартные поля дат
     const createdAtFrom = formData.get('createdAtFrom');
     const createdAtTo = formData.get('createdAtTo');
     const updatedAtFrom = formData.get('updatedAtFrom');
@@ -1983,7 +1824,6 @@ function updateSelectedFilters() {
     if (updatedAtFrom) selectedFilters['updatedAtFrom'] = [updatedAtFrom];
     if (updatedAtTo) selectedFilters['updatedAtTo'] = [updatedAtTo];
 
-    // Обрабатываем стандартное поле source (залучення)
     const sourceSelectId = 'filter-source';
     if (customSelects[sourceSelectId]) {
         const selectedSources = customSelects[sourceSelectId].getValue();
@@ -1993,23 +1833,19 @@ function updateSelectedFilters() {
         }
     }
 
-    // Обрабатываем чекбокс для неактивных клиентов
     const showInactive = formData.get('showInactive');
     if (showInactive === 'true') {
         selectedFilters['showInactive'] = ['true'];
     }
 
-    // Обрабатываем фильтруемые поля из настроек
     if (filterableFields && filterableFields.length > 0) {
         filterableFields.forEach(field => {
             if (field.fieldType === 'DATE') {
-                // Поля типа DATE - диапазон от-до
                 const fromValue = formData.get(`${field.fieldName}From`);
                 const toValue = formData.get(`${field.fieldName}To`);
                 if (fromValue) selectedFilters[`${field.fieldName}From`] = [fromValue];
                 if (toValue) selectedFilters[`${field.fieldName}To`] = [toValue];
             } else if (field.fieldType === 'NUMBER') {
-                // Поля типа NUMBER - диапазон от-до
                 const fromValue = formData.get(`${field.fieldName}From`);
                 const toValue = formData.get(`${field.fieldName}To`);
                 if (fromValue && fromValue.trim() !== '') {
@@ -2019,7 +1855,6 @@ function updateSelectedFilters() {
                     selectedFilters[`${field.fieldName}To`] = [toValue.trim()];
                 }
             } else if (field.fieldType === 'LIST') {
-                // Поля типа LIST - множественный выбор через custom select
                 const selectId = `filter-${field.fieldName}`;
                 if (customSelects[selectId]) {
                     const selectedValues = customSelects[selectId].getValue();
@@ -2029,13 +1864,11 @@ function updateSelectedFilters() {
                     }
                 }
             } else if (field.fieldType === 'TEXT' || field.fieldType === 'PHONE') {
-                // Поля типа TEXT и PHONE - простой поиск
                 const value = formData.get(field.fieldName);
                 if (value && value.trim() !== '') {
                     selectedFilters[field.fieldName] = [value.trim()];
                 }
             } else if (field.fieldType === 'BOOLEAN') {
-                // Поля типа BOOLEAN - выбор из списка (Так/Ні)
                 const value = formData.get(field.fieldName);
                 if (value && value !== '' && value !== 'null') {
                     selectedFilters[field.fieldName] = [value];
@@ -2056,15 +1889,12 @@ function updateFilterCounter() {
 
     let totalFilters = 0;
 
-    // Подсчитываем фильтры: для массивов считаем количество элементов, для остальных - 1
     Object.keys(selectedFilters).forEach(key => {
         const value = selectedFilters[key];
         if (Array.isArray(value)) {
-            // Для массивов считаем количество непустых значений
             const validValues = value.filter(v => v !== null && v !== undefined && v !== '' && v !== 'null');
             totalFilters += validValues.length;
         } else if (value !== null && value !== undefined && value !== '') {
-            // Для не-массивов считаем как 1 фильтр
             totalFilters += 1;
         }
     });
@@ -2086,13 +1916,12 @@ document.getElementById('filter-counter').addEventListener('click', () => {
 function clearFilters() {
     Object.keys(selectedFilters).forEach(key => delete selectedFilters[key]);
 
-    const filterForm = document.getElementById('filterForm');
     if (filterForm) {
         filterForm.reset();
         Object.keys(customSelects).forEach(selectId => {
             if (selectId.startsWith('filter-')) {
                 if (customSelects[selectId] && typeof customSelects[selectId].reset === 'function') {
-                    customSelects[selectId].reset();
+                customSelects[selectId].reset();
                 } else if (customSelects[selectId] && typeof customSelects[selectId].setValue === 'function') {
                     customSelects[selectId].setValue([]);
                 }
@@ -2102,7 +1931,7 @@ function clearFilters() {
 
     const searchInput = document.getElementById('inputSearch');
     if (searchInput) {
-        searchInput.value = '';
+    searchInput.value = '';
     }
 
     localStorage.removeItem('selectedFilters');
@@ -2152,6 +1981,128 @@ function populateSelect(selectId, data) {
         if (defaultValue && data.some(item => String(item.id) === defaultValue)) {
             customSelects[customSelectId].setValue(defaultValue);
         }
+    }
+}
+
+async function showClientTypeSelectionModal() {
+    const modal = document.getElementById('clientTypeSelectionModal');
+    const listContainer = document.getElementById('client-types-selection-list');
+    
+    if (!modal || !listContainer) return;
+    
+    try {
+        const response = await fetch('/api/v1/client-type/active');
+        if (!response.ok) {
+            console.error('Failed to load client types');
+            return;
+        }
+        const allClientTypes = await response.json();
+
+        const userId = localStorage.getItem('userId');
+        let accessibleClientTypeIds = new Set();
+        
+        if (userId) {
+            try {
+                const permissionsResponse = await fetch(`/api/v1/client-type/permission/me`);
+                if (permissionsResponse.ok) {
+                    const permissions = await permissionsResponse.json();
+                    permissions.forEach(perm => {
+                        if (perm.canView) {
+                            accessibleClientTypeIds.add(perm.clientTypeId);
+                        }
+                    });
+                }
+            } catch (error) {
+                console.warn('Failed to load user client type permissions:', error);
+                allClientTypes.forEach(type => accessibleClientTypeIds.add(type.id));
+            }
+        }
+
+        const authorities = localStorage.getItem('authorities');
+        let userAuthorities = [];
+        try {
+            if (authorities) {
+                userAuthorities = authorities.startsWith('[')
+                    ? JSON.parse(authorities)
+                    : authorities.split(',').map(auth => auth.trim());
+            }
+        } catch (error) {
+            console.error('Failed to parse authorities:', error);
+        }
+        
+        const isAdmin = userAuthorities.includes('system:admin') || userAuthorities.includes('administration:view');
+
+        if (isAdmin || accessibleClientTypeIds.size === 0) {
+            allClientTypes.forEach(type => accessibleClientTypeIds.add(type.id));
+        }
+
+        const accessibleClientTypes = allClientTypes.filter(type => accessibleClientTypeIds.has(type.id));
+        
+        if (accessibleClientTypes.length === 0) {
+            listContainer.innerHTML = '<p style="text-align: center; color: var(--main-grey); padding: 2em;">Немає доступних типів клієнтів</p>';
+        } else {
+            listContainer.innerHTML = '';
+            accessibleClientTypes.forEach(type => {
+                const card = document.createElement('div');
+                card.className = 'client-type-card';
+                card.innerHTML = `
+                    <div class="client-type-card-icon">👥</div>
+                    <div class="client-type-card-name">${type.name}</div>
+                `;
+                card.addEventListener('click', () => {
+                    window.location.href = `/clients?type=${type.id}`;
+                });
+                listContainer.appendChild(card);
+            });
+        }
+        
+        modal.style.display = 'flex';
+
+        const closeBtn = document.querySelector('.close-client-type-modal');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => {
+                modal.style.display = 'none';
+            });
+        }
+        
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.style.display = 'none';
+            }
+        });
+    } catch (error) {
+        console.error('Error loading client types:', error);
+    }
+}
+
+async function updateNavigationWithCurrentType(typeId) {
+    try {
+        const response = await fetch(`/api/v1/client-type/${typeId}`);
+        if (!response.ok) return;
+        
+        const clientType = await response.json();
+        const navLink = document.querySelector('#nav-clients a');
+        
+        if (navLink && clientType.name) {
+            navLink.innerHTML = `
+                <span class="nav-client-type-label">Клієнти:</span>
+                <span class="nav-client-type-name">${clientType.name}</span>
+                <span class="dropdown-arrow">▼</span>
+            `;
+        }
+
+        const dropdown = document.getElementById('client-types-dropdown');
+        if (dropdown) {
+            const links = dropdown.querySelectorAll('a');
+            links.forEach(link => {
+                link.classList.remove('active');
+                if (link.href.includes(`type=${typeId}`)) {
+                    link.classList.add('active');
+                }
+            });
+        }
+    } catch (error) {
+        console.error('Error updating navigation:', error);
     }
 }
 

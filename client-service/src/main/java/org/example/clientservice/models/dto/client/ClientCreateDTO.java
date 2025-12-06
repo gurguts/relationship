@@ -18,7 +18,6 @@ public class ClientCreateDTO {
     @Size(max = 255, message = "{validation.company.size}")
     private String company;
 
-    @NotNull(message = "{validation.sourceId.notnull}")
     private Long sourceId;
 
     private List<ClientFieldValueCreateDTO> fieldValues;

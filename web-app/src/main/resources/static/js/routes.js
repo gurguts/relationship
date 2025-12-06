@@ -8,39 +8,663 @@ let currentDirection = 'DESC';
 const filterForm = document.getElementById('filterForm');
 const customSelects = {};
 
+let availableSources = [];
+let sourceMap;
+
 const userId = localStorage.getItem('userId');
 const selectedFilters = {};
+
+function getUserAuthorities() {
+    const authorities = localStorage.getItem('authorities');
+    let userAuthorities = [];
+    try {
+        if (authorities) {
+            userAuthorities = authorities.startsWith('[')
+                ? JSON.parse(authorities)
+                : authorities.split(',').map(auth => auth.trim());
+        }
+    } catch (error) {
+        console.error('Failed to parse authorities:', error);
+        return [];
+    }
+    return userAuthorities;
+}
+
+function canEditStrangers() {
+    const userAuthorities = getUserAuthorities();
+    return userAuthorities.includes('client_stranger:edit') || 
+           userAuthorities.includes('system:admin');
+}
+
+function isOwnClient(client) {
+    if (!client.sourceId) {
+        return true;
+    }
+    
+    if (!availableSources || availableSources.length === 0) {
+        return true;
+    }
+    
+    const sourceId = Number(client.sourceId);
+    const source = availableSources.find(s => Number(s.id) === sourceId);
+    if (!source) {
+        return false;
+    }
+    
+    const currentUserId = userId ? Number(userId) : null;
+    const sourceUserId = (source.userId !== null && source.userId !== undefined) ? Number(source.userId) : null;
+    
+    return currentUserId != null && sourceUserId != null && Number(sourceUserId) === Number(currentUserId);
+}
+
+function canEditClient(client) {
+    if (canEditStrangers()) {
+        return true;
+    }
+    
+    return isOwnClient(client);
+}
+
+function canEditCompany(client) {
+    if (canEditStrangers()) {
+        return true;
+    }
+    return isOwnClient(client);
+}
+
+function canEditSource() {
+    return canEditStrangers();
+}
+
+function canDeleteClient(client) {
+    if (canEditStrangers()) {
+        return true;
+    }
+    return isOwnClient(client);
+}
 
 const API_URL = '/api/v1/client';
 
 let currentPage = 0;
 let pageSize = 50;
-
 const tableBody = document.getElementById('client-table-body');
 
-let availableStatuses = [];
-let availableRegions = [];
-let availableSources = [];
-let availableRoutes = [];
-let availableBusiness = [];
-let availableClientProducts = [];
+let currentClientTypeId = null;
+let currentClientType = null;
+let clientTypeFields = [];
+let visibleFields = [];
+window.visibleFields = visibleFields;
+let filterableFields = [];
+let visibleInCreateFields = [];
 
-let statusMap;
-let regionMap;
-let routeMap;
-let businessMap;
-let clientProductMap;
-let sourceMap;
-let userMap;
+document.addEventListener('DOMContentLoaded', async () => {
+    const savedFilters = localStorage.getItem('selectedFilters');
+    let parsedFilters;
+    if (savedFilters) {
+        try {
+            parsedFilters = JSON.parse(savedFilters);
+            const normalizedFilters = {};
+            Object.keys(parsedFilters).forEach(key => {
+                const normalizedKey = key.toLowerCase();
+                if (normalizedKey === 'source' ||
+                    normalizedKey.endsWith('from') || normalizedKey.endsWith('to') ||
+                    normalizedKey === 'createdatfrom' || normalizedKey === 'createdatto' ||
+                    normalizedKey === 'updatedatfrom' || normalizedKey === 'updatedatto') {
+                    normalizedFilters[normalizedKey] = parsedFilters[key];
+                }
+            });
+            parsedFilters = normalizedFilters;
+        } catch (e) {
+            console.error('Invalid selectedFilters in localStorage:', e);
+            parsedFilters = {};
+        }
+    } else {
+        parsedFilters = {};
+    }
+    window.selectedFilters = parsedFilters;
 
-const findNameByIdFromMap = (map, id) => {
-    const numericId = Number(id);
+    const savedSearchTerm = localStorage.getItem('searchTerm');
+    if (savedSearchTerm) {
+        const searchInput = document.getElementById('inputSearch');
+        if (searchInput) {
+            searchInput.value = savedSearchTerm;
+        }
+    }
 
-    const name = map.get(numericId);
+    const urlParams = new URLSearchParams(window.location.search);
+    const typeId = urlParams.get('type');
+    
+    if (!typeId) {
+        await showClientTypeSelectionModal();
+        return;
+    }
+    
+    await updateNavigationWithCurrentType(typeId);
+    
+    const savedClientTypeId = localStorage.getItem('currentClientTypeId');
+    const staticFilterKeys = ['createdAtFrom', 'createdAtTo', 'updatedAtFrom', 'updatedAtTo', 'source', 'showInactive'];
+    
+    if (typeId) {
+        const newClientTypeId = parseInt(typeId);
+        
+        if (savedClientTypeId && parseInt(savedClientTypeId) !== newClientTypeId) {
+            const cleanedFilters = {};
+            Object.keys(window.selectedFilters).forEach(key => {
+                if (staticFilterKeys.includes(key) || key.endsWith('From') || key.endsWith('To')) {
+                    cleanedFilters[key] = window.selectedFilters[key];
+                }
+            });
+            window.selectedFilters = cleanedFilters;
+            localStorage.setItem('selectedFilters', JSON.stringify(cleanedFilters));
+        }
+        
+        localStorage.setItem('currentClientTypeId', newClientTypeId.toString());
+        currentClientTypeId = newClientTypeId;
+        
+        await updateNavigationWithCurrentType(newClientTypeId);
+        
+        await loadClientType(currentClientTypeId);
+        await loadClientTypeFields(currentClientTypeId);
+        buildDynamicTable();
+        buildDynamicFilters();
+        
+        const validFieldNames = new Set(filterableFields.map(f => f.fieldName));
+        
+        const cleanedFilters = {};
+        Object.keys(window.selectedFilters).forEach(key => {
+            const normalizedKey = key.toLowerCase();
+            const normalizedStaticKeys = staticFilterKeys.map(k => k.toLowerCase());
+            if (normalizedStaticKeys.includes(normalizedKey) || normalizedKey.endsWith('from') || normalizedKey.endsWith('to')) {
+                const value = window.selectedFilters[key];
+                if (value !== null && value !== undefined && value !== '' && 
+                    !(Array.isArray(value) && value.length === 0)) {
+                    cleanedFilters[normalizedKey] = value;
+                }
+            } else if (validFieldNames.has(key)) {
+                const value = window.selectedFilters[key];
+                if (value !== null && value !== undefined && value !== '' && 
+                    !(Array.isArray(value) && (value.length === 0 || (value.length === 1 && (value[0] === '' || value[0] === 'null'))))) {
+                    cleanedFilters[key] = value;
+                }
+            }
+        });
+        window.selectedFilters = cleanedFilters;
+        if (Object.keys(cleanedFilters).length === 0) {
+            localStorage.removeItem('selectedFilters');
+        } else {
+            localStorage.setItem('selectedFilters', JSON.stringify(cleanedFilters));
+        }
+        
+        if (filterableFields && filterableFields.length > 0) {
+            filterableFields.forEach(field => {
+                const filterId = `filter-${field.fieldName}`;
+                if (field.fieldType === 'DATE') {
+                    const fromInput = document.getElementById(`${filterId}-from`);
+                    const toInput = document.getElementById(`${filterId}-to`);
+                    if (fromInput && window.selectedFilters[`${field.fieldName}From`]) {
+                        fromInput.value = window.selectedFilters[`${field.fieldName}From`][0] || '';
+                    }
+                    if (toInput && window.selectedFilters[`${field.fieldName}To`]) {
+                        toInput.value = window.selectedFilters[`${field.fieldName}To`][0] || '';
+                    }
+                } else if (field.fieldType === 'NUMBER') {
+                    const fromInput = document.getElementById(`${filterId}-from`);
+                    const toInput = document.getElementById(`${filterId}-to`);
+                    if (fromInput && window.selectedFilters[`${field.fieldName}From`]) {
+                        fromInput.value = window.selectedFilters[`${field.fieldName}From`][0] || '';
+                    }
+                    if (toInput && window.selectedFilters[`${field.fieldName}To`]) {
+                        toInput.value = window.selectedFilters[`${field.fieldName}To`][0] || '';
+                    }
+                } else if (field.fieldType === 'LIST') {
+                    if (customSelects[filterId] && window.selectedFilters[field.fieldName]) {
+                        const savedValues = window.selectedFilters[field.fieldName];
+                        if (Array.isArray(savedValues) && savedValues.length > 0) {
+                            const validValues = savedValues.filter(v => v !== null && v !== undefined && v !== '' && v !== 'null');
+                            if (validValues.length > 0) {
+                                customSelects[filterId].setValue(validValues);
+                            }
+                        }
+                    }
+                } else if (field.fieldType === 'BOOLEAN') {
+                    const select = document.getElementById(filterId);
+                    if (select && window.selectedFilters[field.fieldName] && window.selectedFilters[field.fieldName].length > 0) {
+                        const savedValue = window.selectedFilters[field.fieldName][0];
+                        if (savedValue && savedValue !== '' && savedValue !== 'null') {
+                            select.value = savedValue;
+                        }
+                    }
+                } else if (field.fieldType === 'TEXT' || field.fieldType === 'PHONE') {
+                    const input = document.getElementById(filterId);
+                    if (input && window.selectedFilters[field.fieldName]) {
+                        input.value = Array.isArray(window.selectedFilters[field.fieldName]) 
+                            ? window.selectedFilters[field.fieldName][0] 
+                            : window.selectedFilters[field.fieldName];
+                    }
+                }
+            });
+        }
+        updateFilterCounter();
+    } else {
+        await loadDefaultClientData();
+    }
+    
+    await loadEntitiesAndApplyFilters();
+    
+    loadDataWithSort(currentPage, pageSize, currentSort, currentDirection);
+});
 
-    return name || '';
-};
+async function loadEntitiesAndApplyFilters() {
+    try {
+        const response = await fetch('/api/v1/entities');
+        if (!response.ok) return;
+        
+        const data = await response.json();
+        availableSources = data.sources || [];
+        sourceMap = new Map(availableSources.map(item => [item.id, item.name]));
 
+        if (filterForm) {
+            if (window.selectedFilters['createdAtFrom']) {
+                const fromInput = filterForm.querySelector('#createdAtFrom');
+                if (fromInput) fromInput.value = window.selectedFilters['createdAtFrom'][0];
+            }
+            if (window.selectedFilters['createdAtTo']) {
+                const toInput = filterForm.querySelector('#createdAtTo');
+                if (toInput) toInput.value = window.selectedFilters['createdAtTo'][0];
+            }
+            if (window.selectedFilters['updatedAtFrom']) {
+                const fromInput = filterForm.querySelector('#updatedAtFrom');
+                if (fromInput) fromInput.value = window.selectedFilters['updatedAtFrom'][0];
+            }
+            if (window.selectedFilters['updatedAtTo']) {
+                const toInput = filterForm.querySelector('#updatedAtTo');
+                if (toInput) toInput.value = window.selectedFilters['updatedAtTo'][0];
+            }
+
+            const sourceSelect = filterForm.querySelector('#filter-source');
+            if (sourceSelect && !customSelects['filter-source'] && availableSources && availableSources.length > 0) {
+                const sourceData = availableSources.map(s => ({
+                    id: s.id,
+                    name: s.name
+                }));
+                if (typeof createCustomSelect === 'function') {
+                    const customSelect = createCustomSelect(sourceSelect, true);
+                    if (customSelect) {
+                        customSelects['filter-source'] = customSelect;
+                        customSelect.populate(sourceData);
+                    }
+                }
+            }
+
+            if (window.selectedFilters['source'] && customSelects['filter-source']) {
+                const savedSources = window.selectedFilters['source'];
+                if (Array.isArray(savedSources) && savedSources.length > 0) {
+                    const validSources = savedSources.filter(v => v !== null && v !== undefined && v !== '' && v !== 'null');
+                    if (validSources.length > 0) {
+                        customSelects['filter-source'].setValue(validSources);
+                    }
+                }
+            }
+
+            const showInactiveCheckbox = filterForm.querySelector('#filter-show-inactive');
+            if (showInactiveCheckbox && window.selectedFilters['showInactive'] && window.selectedFilters['showInactive'][0] === 'true') {
+                showInactiveCheckbox.checked = true;
+            }
+        }
+    } catch (error) {
+        console.error('Error loading entities:', error);
+    }
+}
+
+async function loadClientType(typeId) {
+    try {
+        const response = await fetch(`/api/v1/client-type/${typeId}`);
+        if (!response.ok) throw new Error('Failed to load client type');
+        currentClientType = await response.json();
+        document.title = currentClientType.name;
+    } catch (error) {
+        console.error('Error loading client type:', error);
+    }
+}
+
+async function loadClientTypeFields(typeId) {
+    try {
+        const [fieldsRes, visibleRes, searchableRes, filterableRes, visibleInCreateRes] = await Promise.all([
+            fetch(`/api/v1/client-type/${typeId}/field`),
+            fetch(`/api/v1/client-type/${typeId}/field/visible`),
+            fetch(`/api/v1/client-type/${typeId}/field/searchable`),
+            fetch(`/api/v1/client-type/${typeId}/field/filterable`),
+            fetch(`/api/v1/client-type/${typeId}/field/visible-in-create`)
+        ]);
+        
+        clientTypeFields = await fieldsRes.json();
+        window.clientTypeFields = clientTypeFields;
+        visibleFields = await visibleRes.json();
+        window.visibleFields = visibleFields;
+        filterableFields = await filterableRes.json();
+        visibleInCreateFields = await visibleInCreateRes.json();
+    } catch (error) {
+        console.error('Error loading fields:', error);
+    }
+}
+
+async function loadDefaultClientData() {
+    try {
+        const sourcesRes = await fetch('/api/v1/source');
+        availableSources = await sourcesRes.json();
+        sourceMap = new Map(availableSources.map(s => [s.id, s.name]));
+    } catch (error) {
+        console.error('Error loading default data:', error);
+    }
+}
+
+function buildDynamicTable() {
+    if (!currentClientType) return;
+    
+    const thead = document.querySelector('#client-list table thead tr');
+    if (!thead) return;
+    
+    thead.innerHTML = '';
+
+    const actionsTh = document.createElement('th');
+    actionsTh.textContent = 'Дії';
+    actionsTh.style.width = '150px';
+    actionsTh.style.minWidth = '150px';
+    actionsTh.style.maxWidth = '150px';
+    actionsTh.style.flexShrink = '0';
+    actionsTh.style.flexGrow = '0';
+    thead.appendChild(actionsTh);
+
+    const staticFields = (visibleFields || []).filter(f => f.isStatic);
+    const dynamicFields = (visibleFields || []).filter(f => !f.isStatic);
+
+    const hasCompanyStatic = staticFields.some(f => f.staticFieldName === 'company');
+    const hasSourceStatic = staticFields.some(f => f.staticFieldName === 'source');
+
+    const allFields = [...staticFields, ...dynamicFields];
+
+    if (!hasCompanyStatic) {
+        allFields.push({
+            id: -1,
+            fieldName: 'company',
+            fieldLabel: currentClientType.nameFieldLabel || 'Компанія',
+            isStatic: false,
+            displayOrder: 0,
+            columnWidth: 200,
+            isSearchable: true
+        });
+    }
+    
+    if (!hasSourceStatic) {
+        allFields.push({
+            id: -2,
+            fieldName: 'source',
+            fieldLabel: 'Залучення',
+            isStatic: false,
+            displayOrder: 999,
+            columnWidth: 200,
+            isSearchable: false
+        });
+    }
+
+    allFields.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+
+    allFields.forEach(field => {
+        const th = document.createElement('th');
+        th.textContent = field.fieldLabel;
+        th.setAttribute('data-field-id', field.id);
+        if (field.isStatic) {
+            th.setAttribute('data-static-field', field.staticFieldName);
+            if (field.staticFieldName === 'company') {
+                th.setAttribute('data-sort', 'company');
+            }
+        } else if (field.fieldName === 'company') {
+            th.setAttribute('data-sort', 'company');
+        } else if (field.isSearchable) {
+            th.setAttribute('data-sort', field.fieldName);
+        }
+        if (field.columnWidth) {
+            th.style.width = field.columnWidth + 'px';
+            th.style.minWidth = field.columnWidth + 'px';
+            th.style.maxWidth = field.columnWidth + 'px';
+        }
+        th.style.flexShrink = '0';
+        th.style.flexGrow = '0';
+        thead.appendChild(th);
+    });
+
+    if (typeof initColumnResizer === 'function' && currentClientTypeId) {
+        setTimeout(() => {
+            initColumnResizer(currentClientTypeId);
+            if (typeof applyColumnWidths === 'function') {
+                applyColumnWidths(currentClientTypeId);
+            }
+        }, 0);
+    }
+}
+
+function buildDynamicFilters() {
+    if (!filterForm) return;
+
+    if (buildDynamicFilters._isBuilding) {
+        return;
+    }
+    buildDynamicFilters._isBuilding = true;
+    
+    try {
+        Object.keys(customSelects).forEach(selectId => {
+            if (selectId.startsWith('filter-') && selectId !== 'filter-source') {
+                const customSelect = customSelects[selectId];
+                if (customSelect && typeof customSelect.reset === 'function') {
+                    try {
+                        customSelect.reset();
+                    } catch (e) {
+                        console.warn('Error resetting custom select:', e);
+                    }
+                }
+                delete customSelects[selectId];
+            }
+        });
+
+        const existingFilters = filterForm.querySelectorAll('h2, .filter-block, .select-section-item');
+        existingFilters.forEach(el => {
+            const selects = el.querySelectorAll('select');
+            selects.forEach(sel => {
+                sel.innerHTML = '';
+            });
+            el.remove();
+        });
+
+        if (customSelects['filter-source']) {
+            try {
+                if (customSelects['filter-source'] && typeof customSelects['filter-source'].reset === 'function') {
+                    customSelects['filter-source'].reset();
+                }
+            } catch (e) {
+                console.warn('Error resetting source custom select:', e);
+            }
+            delete customSelects['filter-source'];
+        }
+
+        const createdAtH2 = document.createElement('h2');
+        createdAtH2.textContent = 'Дата створення:';
+        filterForm.appendChild(createdAtH2);
+        
+        const createdAtBlock = document.createElement('div');
+        createdAtBlock.className = 'filter-block';
+        createdAtBlock.innerHTML = `
+            <label class="from-to-style" for="filter-createdAt-from">Від:</label>
+            <input type="date" id="filter-createdAt-from" name="createdAtFrom"><br><br>
+            <label class="from-to-style" for="filter-createdAt-to">До:</label>
+            <input type="date" id="filter-createdAt-to" name="createdAtTo"><br><br>
+        `;
+        filterForm.appendChild(createdAtBlock);
+        
+        const updatedAtH2 = document.createElement('h2');
+        updatedAtH2.textContent = 'Дата оновлення:';
+        filterForm.appendChild(updatedAtH2);
+        
+        const updatedAtBlock = document.createElement('div');
+        updatedAtBlock.className = 'filter-block';
+        updatedAtBlock.innerHTML = `
+            <label class="from-to-style" for="filter-updatedAt-from">Від:</label>
+            <input type="date" id="filter-updatedAt-from" name="updatedAtFrom"><br><br>
+            <label class="from-to-style" for="filter-updatedAt-to">До:</label>
+            <input type="date" id="filter-updatedAt-to" name="updatedAtTo"><br><br>
+        `;
+        filterForm.appendChild(updatedAtBlock);
+
+        const sourceSelectItem = document.createElement('div');
+        sourceSelectItem.className = 'select-section-item';
+        sourceSelectItem.innerHTML = `
+            <br>
+            <label class="select-label-style" for="filter-source">Залучення:</label>
+            <select id="filter-source" name="source" multiple>
+            </select>
+        `;
+        filterForm.appendChild(sourceSelectItem);
+
+
+        if (filterableFields && filterableFields.length > 0) {
+            filterableFields.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+            filterableFields.forEach(field => {
+                if (field.fieldType === 'DATE') {
+                    const h2 = document.createElement('h2');
+                    h2.textContent = field.fieldLabel + ':';
+                    filterForm.appendChild(h2);
+                    
+                    const filterBlock = document.createElement('div');
+                    filterBlock.className = 'filter-block';
+                    filterBlock.innerHTML = `
+                        <label class="from-to-style" for="filter-${field.fieldName}-from">Від:</label>
+                        <input type="date" id="filter-${field.fieldName}-from" name="${field.fieldName}From"><br><br>
+                        <label class="from-to-style" for="filter-${field.fieldName}-to">До:</label>
+                        <input type="date" id="filter-${field.fieldName}-to" name="${field.fieldName}To"><br><br>
+                    `;
+                    filterForm.appendChild(filterBlock);
+                } else if (field.fieldType === 'NUMBER') {
+                    const h2 = document.createElement('h2');
+                    h2.textContent = field.fieldLabel + ':';
+                    filterForm.appendChild(h2);
+                    
+                    const filterBlock = document.createElement('div');
+                    filterBlock.className = 'filter-block';
+                    filterBlock.innerHTML = `
+                        <label class="from-to-style" for="filter-${field.fieldName}-from">Від:</label>
+                        <input type="number" id="filter-${field.fieldName}-from" name="${field.fieldName}From" step="any" placeholder="Мінімум"><br><br>
+                        <label class="from-to-style" for="filter-${field.fieldName}-to">До:</label>
+                        <input type="number" id="filter-${field.fieldName}-to" name="${field.fieldName}To" step="any" placeholder="Максимум"><br><br>
+                    `;
+                    filterForm.appendChild(filterBlock);
+                } else if (field.fieldType === 'LIST') {
+                    const selectId = `filter-${field.fieldName}`;
+
+                    if (customSelects[selectId]) {
+                        try {
+                            const oldSelect = customSelects[selectId];
+                            if (oldSelect && typeof oldSelect.reset === 'function') {
+                                oldSelect.reset();
+                            }
+                        } catch (e) {
+                            console.warn('Error cleaning up old custom select:', e);
+                        }
+                        delete customSelects[selectId];
+                    }
+
+                    const existingContainer = document.querySelector(`.custom-select-container[data-for="${selectId}"]`);
+                    if (existingContainer) {
+                        existingContainer.remove();
+                    }
+                    
+                    const selectItem = document.createElement('div');
+                    selectItem.className = 'select-section-item';
+                    selectItem.innerHTML = `
+                        <br>
+                        <label class="select-label-style" for="filter-${field.fieldName}">${field.fieldLabel}:</label>
+                        <select id="filter-${field.fieldName}" name="${field.fieldName}" multiple>
+                        </select>
+                    `;
+                    filterForm.appendChild(selectItem);
+                    
+                    const select = selectItem.querySelector('select');
+                    if (!select) {
+                        console.error('Select not found for field:', field.fieldName);
+                        return;
+                    }
+
+                    if (field.listValues && field.listValues.length > 0) {
+                        field.listValues.forEach(listValue => {
+                            const option = document.createElement('option');
+                            option.value = listValue.id;
+                            option.textContent = listValue.value;
+                            select.appendChild(option);
+                        });
+                    }
+
+                    setTimeout(() => {
+                        if (typeof createCustomSelect === 'function') {
+                            const existingContainer = document.querySelector(`.custom-select-container[data-for="${selectId}"]`);
+                            if (existingContainer) {
+                                console.warn('Custom select container already exists for:', selectId);
+                                return;
+                            }
+                            
+                            const customSelect = createCustomSelect(select, true);
+                            if (customSelect) {
+                                customSelects[selectId] = customSelect;
+                                
+                                if (field.listValues && field.listValues.length > 0) {
+                                    const listData = field.listValues.map(lv => ({
+                                        id: lv.id,
+                                        name: lv.value
+                                    }));
+                                    customSelect.populate(listData);
+                                }
+                            }
+                        }
+                    }, 0);
+                } else if (field.fieldType === 'TEXT' || field.fieldType === 'PHONE') {
+                    const selectItem = document.createElement('div');
+                    selectItem.className = 'select-section-item';
+                    selectItem.innerHTML = `
+                        <br>
+                        <label class="select-label-style" for="filter-${field.fieldName}">${field.fieldLabel}:</label>
+                        <input type="text" 
+                               id="filter-${field.fieldName}" 
+                               name="${field.fieldName}" 
+                               placeholder="Пошук...">
+                    `;
+                    filterForm.appendChild(selectItem);
+                } else if (field.fieldType === 'BOOLEAN') {
+                    const selectItem = document.createElement('div');
+                    selectItem.className = 'select-section-item';
+                    selectItem.innerHTML = `
+                        <br>
+                        <label class="select-label-style" for="filter-${field.fieldName}">${field.fieldLabel}:</label>
+                        <select id="filter-${field.fieldName}" name="${field.fieldName}">
+                            <option value="">Всі</option>
+                            <option value="true">Так</option>
+                            <option value="false">Ні</option>
+                        </select>
+                    `;
+                    filterForm.appendChild(selectItem);
+                }
+            });
+        }
+
+        const isActiveBlock = document.createElement('div');
+        isActiveBlock.className = 'filter-block';
+        isActiveBlock.innerHTML = `
+            <label style="display: flex; align-items: center; gap: 0.5em; margin: 0.5em 0;">
+                <input type="checkbox" id="filter-show-inactive" name="showInactive" value="true">
+                <span>Показати неактивних клієнтів</span>
+            </label>
+        `;
+        filterForm.appendChild(isActiveBlock);
+    } finally {
+        buildDynamicFilters._isBuilding = false;
+    }
+}
 
 prevPageButton.addEventListener('click', () => {
     if (currentPage > 0) {
@@ -69,489 +693,230 @@ function updatePagination(totalClients, clientsOnPage, totalPages, currentPageIn
     nextPageButton.disabled = currentPageIndex >= totalPages - 1;
 }
 
+const findNameByIdFromMap = (map, id) => {
+    const numericId = Number(id);
 
-function renderClients(clients) {
+    const name = map.get(numericId);
+
+    return name || '';
+};
+
+async function renderClients(clients) {
     tableBody.innerHTML = '';
+    
+    if (currentClientTypeId && visibleFields && visibleFields.length > 0) {
+        await renderClientsWithDynamicFields(clients);
+    } else {
+        renderClientsWithDefaultFields(clients);
+    }
+
+    if (typeof applyColumnWidths === 'function' && currentClientTypeId) {
+        setTimeout(() => {
+            applyColumnWidths(currentClientTypeId);
+        }, 0);
+    }
+}
+
+async function renderClientsWithDynamicFields(clients) {
+    const fieldValuesPromises = clients.map(client => loadClientFieldValues(client.id));
+    const allFieldValues = await Promise.all(fieldValuesPromises);
+
+    const staticFields = visibleFields.filter(f => f.isStatic);
+    const dynamicFields = visibleFields.filter(f => !f.isStatic);
+
+    const hasCompanyStatic = staticFields.some(f => f.staticFieldName === 'company');
+    const hasSourceStatic = staticFields.some(f => f.staticFieldName === 'source');
+
+    const allFields = [...staticFields, ...dynamicFields].sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+    
+    clients.forEach((client, index) => {
+        const row = document.createElement('tr');
+        row.classList.add('client-row');
+        
+        let html = '<td class="button-td" data-label="">';
+        html += `<button class="purchase-button" data-client-id="${client.id}">Закупка</button>`;
+        html += `<button class="container-button" data-client-id="${client.id}">Тара</button>`;
+        html += '</td>';
+
+        if (!hasCompanyStatic) {
+            const nameFieldLabel = currentClientType ? currentClientType.nameFieldLabel : 'Компанія';
+            html += `<td data-label="${nameFieldLabel}" class="company-cell" style="cursor: pointer;">${client.company || ''}</td>`;
+        }
+        
+        const fieldValues = allFieldValues[index];
+        const fieldValuesMap = new Map();
+        fieldValues.forEach(fv => {
+            if (!fieldValuesMap.has(fv.fieldId)) {
+                fieldValuesMap.set(fv.fieldId, []);
+            }
+            fieldValuesMap.get(fv.fieldId).push(fv);
+        });
+        
+        client._fieldValues = fieldValues;
+
+        allFields.forEach(field => {
+            let cellValue = '';
+            
+            if (field.isStatic) {
+                switch (field.staticFieldName) {
+                    case 'company':
+                        cellValue = client.company || '';
+                        html += `<td data-label="${field.fieldLabel}" class="company-cell" style="cursor: pointer;">${cellValue}</td>`;
+                        break;
+                    case 'source':
+                        const sourceId = client.sourceId ? (typeof client.sourceId === 'string' ? parseInt(client.sourceId) : client.sourceId) : null;
+                        cellValue = sourceId ? findNameByIdFromMap(sourceMap, sourceId) : '';
+                        html += `<td data-label="${field.fieldLabel}">${cellValue}</td>`;
+                        break;
+                    case 'createdAt':
+                        cellValue = client.createdAt || '';
+                        html += `<td data-label="${field.fieldLabel}">${cellValue}</td>`;
+                        break;
+                    case 'updatedAt':
+                        cellValue = client.updatedAt || '';
+                        html += `<td data-label="${field.fieldLabel}">${cellValue}</td>`;
+                        break;
+                }
+            } else {
+                const values = fieldValuesMap.get(field.id) || [];
+                
+                if (values.length > 0) {
+                    if (field.allowMultiple) {
+                        cellValue = values.map(v => formatFieldValue(v, field)).join('<br>');
+                    } else {
+                        cellValue = formatFieldValue(values[0], field);
+                    }
+                }
+                
+                html += `<td data-label="${field.fieldLabel}">${cellValue}</td>`;
+            }
+        });
+
+        if (!hasSourceStatic) {
+            const sourceId = client.sourceId ? (typeof client.sourceId === 'string' ? parseInt(client.sourceId) : client.sourceId) : null;
+            html += `<td data-label="Залучення">${sourceId ? findNameByIdFromMap(sourceMap, sourceId) : ''}</td>`;
+        }
+        
+        row.innerHTML = html;
+        tableBody.appendChild(row);
+        
+        const purchaseButton = row.querySelector('.purchase-button');
+        if (purchaseButton) {
+            purchaseButton.addEventListener('click', () => {
+                console.log('Purchase button clicked for client:', client.id);
+            });
+        }
+        
+        const containerButton = row.querySelector('.container-button');
+        if (containerButton) {
+            containerButton.addEventListener('click', () => {
+                console.log('Container button clicked for client:', client.id);
+            });
+        }
+        
+        const companyCell = row.querySelector('.company-cell');
+        if (companyCell) {
+            companyCell.addEventListener('click', () => {
+                loadClientDetails(client);
+            });
+        }
+    });
+}
+
+function renderClientsWithDefaultFields(clients) {
     clients.forEach(client => {
         const row = document.createElement('tr');
         row.classList.add('client-row');
+
         row.innerHTML = `
-            <td><input type="checkbox" class="client-checkbox" data-client-id="${client.id}">
-            <td class="button-td" data-label="">  
-            <button class="sale-button" data-client-id="${client.id}">Продаж</button>
-            <button class="purchase-button" data-client-id="${client.id}">Закупка</button>
-            <button class="container-button" data-client-id="${client.id}">Тара</button>
+            <td class="button-td" data-label="">
+                <button class="purchase-button" data-client-id="${client.id}">Закупка</button>
+                <button class="container-button" data-client-id="${client.id}">Тара</button>
             </td>
-            <td data-label="Компанія" data-sort="company" class="company-cell">${client.company}</td>
-            <td data-label="Область">${findNameByIdFromMap(regionMap, client.regionId)}</td>
-            <td data-label="Адрес" data-sort="location">${client.location ? client.location : ''}</td>
-            <td data-label="Телефони">${client.phoneNumbers ? client.phoneNumbers.map(number =>
-            `<a href="tel:${number}">${number}</a>`).join('<br>') : ''}</td>
-            <td data-label="Маршруты">${findNameByIdFromMap(routeMap, client.routeId)}</td>
-            <td data-label="Ціна">${client.price ? client.price : ''}</td>
-            <td data-label="Статус">${findNameByIdFromMap(statusMap, client.statusId)}</td>
-            ${client.urgently ? '<td data-label="" class="urgent-cell urgent-text">Терміновий Збір</td>' : ''}
-         `;
+            <td data-label="Компанія" data-sort="company" class="company-cell" style="cursor: pointer;">${client.company || ''}</td>
+            <td data-label="Залучення">${findNameByIdFromMap(sourceMap, client.sourceId)}</td>
+        `;
         tableBody.appendChild(row);
-        row.querySelector('.company-cell').addEventListener('click', () => {
+        
+        const purchaseButton = row.querySelector('.purchase-button');
+        if (purchaseButton) {
+            purchaseButton.addEventListener('click', () => {
+                console.log('Purchase button clicked for client:', client.id);
+            });
+        }
+        
+        const containerButton = row.querySelector('.container-button');
+        if (containerButton) {
+            containerButton.addEventListener('click', () => {
+                console.log('Container button clicked for client:', client.id);
+            });
+        }
+        
+        const companyCell = row.querySelector('.company-cell');
+        if (companyCell) {
+            companyCell.addEventListener('click', () => {
             loadClientDetails(client);
         });
-
-        row.querySelector('.purchase-button').addEventListener('click', () => {
-            openPurchaseModal(client.id, client.sourceId);
-        });
-
-        row.querySelector('.sale-button').addEventListener('click', () => {
-            openSaleModal(client.id, client.sourceId);
-        });
-
-        row.querySelector('.container-button').addEventListener('click', () => {
-            openBarrelModal(client.id);
-        });
+        }
     });
-    addCheckboxListeners();
 }
 
-
-/*--saleModal--*/
-
-const saleModal = document.getElementById('saleModal');
-const closeButtonSale = saleModal.querySelector('.close-sale-modal');
-const saleForm = document.getElementById('saleForm');
-const productSelectSale = document.getElementById('productSale');
-const currencySelectSale = document.getElementById('currencySale');
-const exchangeRateInputSale = document.getElementById('exchangeRateSale');
-const exchangeRateLabelSale = document.getElementById('exchangeRateSaleLabel');
-let availableProductsSale = [];
-
-document.addEventListener('DOMContentLoaded', () => {
-    fetch('/api/v1/product?usage=SALE_ONLY')
-        .then(response => response.json())
-        .then(data => {
-            availableProductsSale = data;
-            data.forEach(type => {
-                const option = document.createElement("option");
-                option.value = type.id;
-                option.textContent = type.name;
-                productSelectSale.appendChild(option);
-            });
-        });
-    toggleExchangeRateFieldSale();
-    currencySelectSale.addEventListener('change', toggleExchangeRateFieldSale);
-});
-
-function toggleExchangeRateFieldSale() {
-    if (currencySelectSale.value === 'UAH') {
-        exchangeRateInputSale.style.display = 'none';
-        exchangeRateLabelSale.style.display = 'none';
-        exchangeRateInputSale.value = '';
-        exchangeRateInputSale.removeAttribute('required');
-    } else {
-        exchangeRateInputSale.style.display = 'block';
-        exchangeRateLabelSale.style.display = 'block';
-        exchangeRateInputSale.setAttribute('required', 'required');
+function formatFieldValue(fieldValue, field) {
+    if (!fieldValue) return '';
+    
+    switch (field.fieldType) {
+        case 'TEXT':
+        case 'PHONE':
+            return fieldValue.valueText || '';
+        case 'NUMBER':
+            return fieldValue.valueNumber || '';
+        case 'DATE':
+            return fieldValue.valueDate || '';
+        case 'BOOLEAN':
+            if (fieldValue.valueBoolean === true) return 'Так';
+            if (fieldValue.valueBoolean === false) return 'Ні';
+            return '';
+        case 'LIST':
+            return fieldValue.valueListValue || '';
+        default:
+            return '';
     }
 }
 
-function openSaleModal(clientId, sourceId) {
-    saleModal.classList.remove('hide');
-    saleModal.style.display = "block";
-    setTimeout(() => {
-        saleModal.classList.add('show');
-    }, 10);
-    document.getElementById('clientIdSale').value = clientId;
-    document.getElementById('sourceIdSale').value = sourceId;
-}
-
-function closeModalSale() {
-    saleModal.classList.remove('show');
-    saleModal.classList.add('hide');
-    setTimeout(() => {
-        saleModal.style.display = "none";
-        saleForm.reset();
-    }, 300);
-}
-
-
-closeButtonSale.addEventListener('click', closeModalSale);
-window.addEventListener('click', (event) => {
-    if (event.target === saleModal) {
-        closeModalSale();
+function formatFieldValueForModal(fieldValue, field) {
+    if (!fieldValue) return '';
+    
+    switch (field.fieldType) {
+        case 'TEXT':
+            return fieldValue.valueText || '';
+        case 'PHONE':
+            const phone = fieldValue.valueText || '';
+            return phone ? `<a href="tel:${phone}">${phone}</a>` : '';
+        case 'NUMBER':
+            return fieldValue.valueNumber || '';
+        case 'DATE':
+            return fieldValue.valueDate || '';
+        case 'BOOLEAN':
+            if (fieldValue.valueBoolean === true) return 'Так';
+            if (fieldValue.valueBoolean === false) return 'Ні';
+            return '';
+        case 'LIST':
+            return fieldValue.valueListValue || '';
+        default:
+            return '';
     }
-});
+}
 
-saleForm.addEventListener('submit', async (event) => {
-    loaderBackdrop.style.display = 'flex';
-    event.preventDefault();
-
-    const clientId = document.getElementById('clientIdSale').value;
-    const sourceId = document.getElementById('sourceIdSale').value;
-    const productId = document.getElementById('productSale').value;
-    const quantity = document.getElementById('quantityProductSale').value;
-    const totalPrice = document.getElementById('totalPriceSale').value;
-    const paymentMethod = document.getElementById('paymentMethodSale').value;
-    const currency = document.getElementById('currencySale').value;
-    const exchangeRate = currency !== 'UAH' && exchangeRateInputSale.value ? exchangeRateInputSale.value : null;
-
+async function loadClientFieldValues(clientId) {
     try {
-        const response = await fetch(`/api/v1/sale`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({clientId, sourceId, productId, quantity, totalPrice, paymentMethod, currency, exchangeRate})
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            handleError(new ErrorResponse(errorData.error, errorData.message, errorData.details));
-            return;
-        }
-
-        closeModalSale();
-        loadDataWithSort(currentPage, pageSize, currentSort, currentDirection);
-        showMessage('Дані успішно надіслані', 'info');
+        const response = await fetch(`/api/v1/client/${clientId}/field-values`);
+        if (!response.ok) return [];
+        return await response.json();
     } catch (error) {
-        console.error('Помилка:', error);
-        handleError(error);
-    } finally {
-        loaderBackdrop.style.display = 'none';
-    }
-});
-
-
-/*--purchaseModal--*/
-
-const purchaseModal = document.getElementById('purchaseModal');
-const closeButton = purchaseModal.querySelector('.close-purchase-modal');
-const purchaseForm = document.getElementById('purchaseForm');
-const productSelect = document.getElementById('product');
-const currencySelect = document.getElementById('currencyPurchase');
-const exchangeRateInput = document.getElementById('exchangeRatePurchase');
-const exchangeRateLabel = document.getElementById('exchangeRatePurchaseLabel');
-let availableProducts = [];
-
-document.addEventListener('DOMContentLoaded', () => {
-    fetch('/api/v1/product?usage=PURCHASE_ONLY')
-        .then(response => response.json())
-        .then(data => {
-            availableProducts = data;
-            data.forEach(type => {
-                const option = document.createElement("option");
-                option.value = type.id;
-                option.textContent = type.name;
-                productSelect.appendChild(option);
-            });
-        });
-    toggleExchangeRateField();
-    currencySelect.addEventListener('change', toggleExchangeRateField);
-});
-
-function toggleExchangeRateField() {
-    // Exchange rate field is now optional (not used for price calculation, only for display)
-    if (currencySelect.value === 'EUR' || currencySelect.value === 'UAH') {
-        exchangeRateInput.style.display = 'none';
-        exchangeRateLabel.style.display = 'none';
-        exchangeRateInput.value = '';
-        exchangeRateInput.removeAttribute('required');
-    } else {
-        exchangeRateInput.style.display = 'block';
-        exchangeRateLabel.style.display = 'block';
-        exchangeRateInput.removeAttribute('required'); // Not required anymore
+        console.error('Error loading field values:', error);
+        return [];
     }
 }
-
-function openPurchaseModal(clientId, sourceId) {
-    purchaseModal.classList.remove('hide');
-    purchaseModal.style.display = "block";
-    setTimeout(() => {
-        purchaseModal.classList.add('show');
-    }, 10);
-    document.getElementById('clientIdPurchase').value = clientId;
-    document.getElementById('sourceIdPurchase').value = sourceId;
-    toggleExchangeRateField();
-}
-
-function closeModalPurchase() {
-    purchaseModal.classList.remove('show');
-    purchaseModal.classList.add('hide');
-    setTimeout(() => {
-        purchaseModal.style.display = "none";
-        purchaseForm.reset();
-        toggleExchangeRateField();
-    }, 300);
-}
-
-
-closeButton.addEventListener('click', closeModalPurchase);
-window.addEventListener('click', (event) => {
-    if (event.target === purchaseModal) {
-        closeModalPurchase();
-    }
-});
-
-purchaseForm.addEventListener('submit', async (event) => {
-    loaderBackdrop.style.display = 'flex';
-    event.preventDefault();
-
-    const clientId = document.getElementById('clientIdPurchase').value;
-    const sourceId = document.getElementById('sourceIdPurchase').value;
-    const productId = document.getElementById('product').value;
-    const quantity = document.getElementById('quantityProduct').value;
-    const totalPrice = document.getElementById('totalPrice').value;
-    const paymentMethod = document.getElementById('paymentMethod').value;
-    const currency = document.getElementById('currencyPurchase').value;
-    const exchangeRate = currency !== 'UAH' && exchangeRateInput.value ? exchangeRateInput.value : null;
-    const comment = document.getElementById('commentPurchase').value;
-
-    try {
-        const response = await fetch(`/api/v1/purchase`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({clientId, sourceId, productId, quantity, totalPrice, paymentMethod, currency, exchangeRate, comment})
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            handleError(new ErrorResponse(errorData.error, errorData.message, errorData.details));
-            return;
-        }
-
-        closeModalPurchase();
-        loadDataWithSort(currentPage, pageSize, currentSort, currentDirection);
-        showMessage('Дані успішно надіслані', 'info');
-    } catch (error) {
-        console.error('Помилка:', error);
-        handleError(error);
-    } finally {
-        loaderBackdrop.style.display = 'none';
-    }
-});
-
-
-const modalElementBarrel = document.getElementById('barrelModal');
-const closeBarrelButton = modalElementBarrel.querySelector('.close-barrel');
-const barrelForm = document.getElementById('barrelForm');
-const barrelTypeSelect = document.getElementById('barrelType');
-let availableBarrelTypes = [];
-
-
-document.addEventListener('DOMContentLoaded', async () => {
-    try {
-        const response = await fetch('/api/v1/container', {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-        });
-        if (!response.ok) {
-            const errorData = await response.json();
-            handleError(new ErrorResponse(errorData.error, errorData.message, errorData.details));
-            return;
-        }
-
-        availableBarrelTypes = await response.json();
-
-        availableBarrelTypes.forEach(type => {
-            const option = document.createElement('option');
-            option.value = type.id;
-            option.textContent = type.name;
-            barrelTypeSelect.appendChild(option);
-        });
-    } catch (error) {
-        console.error('Error loading container types:', error);
-        handleError(error);
-    }
-});
-
-function openBarrelModal(clientId) {
-    modalElementBarrel.classList.remove('hide');
-    modalElementBarrel.style.display = 'block';
-    setTimeout(() => {
-        modalElementBarrel.classList.add('show');
-    }, 10);
-    document.getElementById('clientIdBarrel').value = clientId;
-}
-
-function closeModalBarrel() {
-    modalElementBarrel.classList.remove('show');
-    modalElementBarrel.classList.add('hide');
-    setTimeout(() => {
-        modalElementBarrel.style.display = 'none';
-        barrelForm.reset();
-    }, 300);
-}
-
-closeBarrelButton.addEventListener('click', closeModalBarrel);
-window.addEventListener('click', (event) => {
-    if (event.target === modalElementBarrel) {
-        closeModalBarrel();
-    }
-});
-
-barrelForm.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    loaderBackdrop.style.display = 'flex';
-
-    const clientId = document.getElementById('clientIdBarrel').value;
-    const action = document.getElementById('action').value;
-    const containerId = document.getElementById('barrelType').value;
-    const quantity = document.getElementById('quantity').value;
-
-    try {
-        let endpoint, requestBody;
-        if (action === 'TRANSFER_TO_CLIENT') {
-            endpoint = '/api/v1/containers/client/transfer';
-            requestBody = {
-                clientId: parseInt(clientId),
-                containerId: parseInt(containerId),
-                quantity: Number(quantity).toString(),
-            };
-        } else if (action === 'COLLECT_FROM_CLIENT') {
-            endpoint = '/api/v1/containers/client/collect';
-            requestBody = {
-                clientId: parseInt(clientId),
-                containerId: parseInt(containerId),
-                quantity: Number(quantity).toString(),
-            };
-        }
-
-        const response = await fetch(endpoint, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(requestBody),
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            handleError(new ErrorResponse(errorData.error, errorData.message, errorData.details));
-        }
-
-        closeModalBarrel();
-        loadDataWithSort(currentPage, pageSize, currentSort, currentDirection);
-        showMessage('Операція успішно виконана', 'info');
-
-    } catch (error) {
-        console.error('Помилка:', error);
-        handleError(error);
-    } finally {
-        loaderBackdrop.style.display = 'none';
-    }
-});
-
-
-/*--checkbox--*/
-
-function addCheckboxListeners() {
-    const checkboxes = document.querySelectorAll('.client-checkbox');
-    const selectAll = document.getElementById('select-all');
-    const mapButton = document.getElementById('map-button');
-
-    function updateMapButtonVisibility() {
-        const selectedCount = document.querySelectorAll('.client-checkbox:checked').length;
-        mapButton.style.display = selectedCount > 0 ? 'block' : 'none';
-    }
-
-    selectAll.addEventListener('change', () => {
-        const isChecked = selectAll.checked;
-        checkboxes.forEach(checkbox => {
-            checkbox.checked = isChecked;
-        });
-        updateMapButtonVisibility();
-    });
-
-    checkboxes.forEach(checkbox => {
-        checkbox.addEventListener('change', () => {
-            if (!checkbox.checked) {
-                selectAll.checked = false;
-            }
-            updateMapButtonVisibility();
-        });
-    });
-}
-
-/*--map--*/
-
-function setupMapModal() {
-    const modal = document.getElementById('map-modal');
-    const closeModal = modal.querySelector('.map-close');
-    const mapButton = document.getElementById('map-button');
-    const routeForm = document.getElementById('route-form');
-
-    mapButton.addEventListener('click', () => {
-        const selectedClients = Array.from(document.querySelectorAll('.client-checkbox:checked'))
-            .map(checkbox => {
-                const row = checkbox.closest('tr');
-                const locationCell = row.querySelector('[data-sort="location"]');
-                const companyCell = row.querySelector('[data-sort="company"]');
-                return {
-                    location: locationCell ? locationCell.textContent.trim() : null,
-                    company: companyCell ? companyCell.textContent.trim() : null
-                };
-            })
-            .filter(client => client.location);
-
-        if (selectedClients.length === 0) {
-            alert('Виберіть хоч одного клієнта з адресою');
-            return;
-        }
-
-        modal.style.display = 'flex';
-
-        routeForm.dataset.selectedClients = JSON.stringify(selectedClients);
-    });
-
-    routeForm.addEventListener('submit', async (event) => {
-        event.preventDefault();
-
-        const startLocation = document.getElementById('start-location').value;
-        const endLocation = document.getElementById('end-location').value;
-        const clientData = JSON.parse(routeForm.dataset.selectedClients);
-
-        const locations = [startLocation, ...clientData.map(client => client.location), endLocation];
-        const companies = clientData.map(client => client.company);
-
-        if (locations.length < 2) {
-            alert('Потрібно мінімум дві локації для побудови маршруту.');
-            return;
-        }
-
-        const response = await fetch('/api/v1/client/map', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({locations, companies})
-        });
-
-        if (response.ok) {
-            const data = await response.json();
-            window.location.href = `/map/${data.mapId}`;
-        } else {
-            alert('Помилка при побудові маршруту.');
-        }
-    });
-
-
-    closeModal.addEventListener('click', () => {
-        modal.style.display = 'none';
-    });
-
-    window.addEventListener('click', (event) => {
-        if (event.target === modal) {
-            modal.style.display = 'none';
-        }
-    });
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-    setupMapModal();
-});
-
 
 document.querySelectorAll('th[data-sort]').forEach(th => {
     th.addEventListener('click', () => {
@@ -574,12 +939,33 @@ async function loadDataWithSort(page, size, sort, direction) {
     const searchTerm = searchInput ? searchInput.value : '';
     let queryParams = `page=${page}&size=${size}&sort=${sort}&direction=${direction}`;
 
+    if (currentClientTypeId) {
+        queryParams += `&clientTypeId=${currentClientTypeId}`;
+    }
+
     if (searchTerm) {
         queryParams += `&q=${encodeURIComponent(searchTerm)}`;
     }
 
-    if (Object.keys(selectedFilters).length > 0) {
-        queryParams += `&filters=${encodeURIComponent(JSON.stringify(selectedFilters))}`;
+    const cleanedFilters = {};
+    Object.keys(selectedFilters).forEach(key => {
+        const value = selectedFilters[key];
+        if (value !== null && value !== undefined) {
+            if (Array.isArray(value)) {
+                const filteredArray = value.filter(v => v !== null && v !== undefined && v !== '' && v !== 'null');
+                if (filteredArray.length > 0) {
+                    cleanedFilters[key] = filteredArray;
+                }
+            } else if (typeof value === 'string' && value.trim() !== '') {
+                cleanedFilters[key] = [value.trim()];
+            } else if (typeof value !== 'string') {
+                cleanedFilters[key] = [value];
+            }
+        }
+    });
+    
+    if (Object.keys(cleanedFilters).length > 0) {
+        queryParams += `&filters=${encodeURIComponent(JSON.stringify(cleanedFilters))}`;
     }
 
     try {
@@ -593,9 +979,10 @@ async function loadDataWithSort(page, size, sort, direction) {
 
         const data = await response.json();
         renderClients(data.content);
+
         updatePagination(data.totalElements, data.content.length, data.totalPages, currentPage);
     } catch (error) {
-        console.error('Помилка:', error);
+        console.error('Error loading clients:', error);
         handleError(error);
     } finally {
         loaderBackdrop.style.display = 'none';
@@ -607,49 +994,132 @@ function loadClientDetails(client) {
     showClientModal(client);
 }
 
-function showClientModal(client) {
+async function showClientModal(client) {
     document.getElementById('client-modal').setAttribute('data-client-id', client.id);
 
     document.getElementById('modal-client-id').innerText = client.id;
+    
+    const modalContent = document.querySelector('.modal-content-client');
+    const existingFields = modalContent.querySelectorAll('p[data-field-id]');
+    existingFields.forEach(el => el.remove());
+    
+    const nameFieldLabel = currentClientType ? currentClientType.nameFieldLabel : 'Компанія';
+    document.getElementById('modal-client-company').parentElement.querySelector('strong').textContent = nameFieldLabel + ':';
     document.getElementById('modal-client-company').innerText = client.company;
-    document.getElementById('modal-client-person').innerText = client.person || '';
-    document.getElementById('modal-client-phone').innerText = client.phoneNumbers || '';
-    document.getElementById('modal-client-location').innerText = client.location || '';
-    document.getElementById('modal-client-price-purchase').innerText = client.pricePurchase || '';
-    document.getElementById('modal-client-price-sale').innerText = client.priceSale || '';
-    if (client.vat === true) {
-        document.getElementById('modal-client-vat').innerHTML =
-            `<input type="checkbox" id="edit-vat" checked disabled />`;
-    } else if (client.vat === false || client.vat === null || client.vat === undefined) {
-        document.getElementById('modal-client-vat').innerHTML =
-            `<input type="checkbox" id="edit-vat" disabled />`;
+    
+    if (currentClientTypeId && clientTypeFields.length > 0) {
+        let fieldValues = client._fieldValues;
+        if (!fieldValues) {
+            fieldValues = await loadClientFieldValues(client.id);
+        }
+        const fieldValuesMap = new Map();
+        fieldValues.forEach(fv => {
+            if (!fieldValuesMap.has(fv.fieldId)) {
+                fieldValuesMap.set(fv.fieldId, []);
+            }
+            fieldValuesMap.get(fv.fieldId).push(fv);
+        });
+        
+        const companyP = document.getElementById('modal-client-company').parentElement;
+        
+        clientTypeFields.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+        
+        let lastInsertedElement = companyP;
+        clientTypeFields.forEach(field => {
+            const values = fieldValuesMap.get(field.id) || [];
+            const fieldP = document.createElement('p');
+            fieldP.setAttribute('data-field-id', field.id);
+            
+            let fieldValue = '';
+            if (values.length > 0) {
+                if (field.allowMultiple) {
+                    fieldValue = values.map(v => formatFieldValueForModal(v, field)).join('<br>');
     } else {
-        document.getElementById('modal-client-vat').innerHTML = '';
-    }
-    document.getElementById('modal-client-volumeMonth').innerText = client.volumeMonth || '';
-    document.getElementById('modal-client-edrpou').innerText = client.edrpou || '';
-    document.getElementById('modal-client-enterpriseName').innerText = client.enterpriseName || '';
-    document.getElementById('modal-client-business').innerText =
-        findNameByIdFromMap(businessMap, client.businessId);
-    document.getElementById('modal-client-clientProduct').innerText =
-        findNameByIdFromMap(clientProductMap, client.clientProductId);
-    document.getElementById('modal-client-route').innerText =
-        findNameByIdFromMap(routeMap, client.routeId);
-    document.getElementById('modal-client-region').innerText =
-        findNameByIdFromMap(regionMap, client.regionId);
-    document.getElementById('modal-client-status').innerText =
-        findNameByIdFromMap(statusMap, client.statusId);
+                    fieldValue = formatFieldValueForModal(values[0], field);
+                }
+            }
+            
+            const canEdit = canEditClient(client);
+            const editButtonHtml = canEdit ? `
+                <button class="edit-icon" onclick="enableEditField(${field.id}, '${field.fieldType}', ${field.allowMultiple || false})" data-field-id="${field.id}" title="Редагувати">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                    </svg>
+                </button>
+            ` : '';
+            
+            fieldP.innerHTML = `
+                <strong>${field.fieldLabel}:</strong>
+                <span id="modal-field-${field.id}" class="${!fieldValue ? 'empty-value' : ''}">${fieldValue || '—'}</span>
+                ${editButtonHtml}
+            `;
+            fieldP.setAttribute('data-field-type', field.fieldType);
+
+            lastInsertedElement.insertAdjacentElement('afterend', fieldP);
+            lastInsertedElement = fieldP;
+        });
+
+        const sourceElement = document.getElementById('modal-client-source')?.parentElement;
+        if (sourceElement) {
+            sourceElement.style.display = '';
     document.getElementById('modal-client-source').innerText =
         findNameByIdFromMap(sourceMap, client.sourceId);
-    document.getElementById('modal-client-comment').innerText = client.comment || '';
+        }
+
+        canEditClient(client);
+        const canEditSourceField = canEditSource();
+        const canEditCompanyField = canEditCompany(client);
+
+        const companyEditButton = document.querySelector(`button.edit-icon[onclick*="enableEdit('company')"]`);
+        if (companyEditButton) {
+            if (!canEditCompanyField) {
+                companyEditButton.style.display = 'none';
+            } else {
+                companyEditButton.style.display = '';
+            }
+        }
+
+        const sourceEditButton = document.getElementById('edit-source');
+        if (sourceEditButton) {
+            if (!canEditSourceField) {
+                sourceEditButton.style.display = 'none';
+            } else {
+                sourceEditButton.style.display = '';
+            }
+        }
+    } else {
+        const sourceElement = document.getElementById('modal-client-source')?.parentElement;
+        if (sourceElement) {
+            sourceElement.style.display = '';
+            document.getElementById('modal-client-source').innerText =
+                findNameByIdFromMap(sourceMap, client.sourceId);
+        }
+
+        canEditClient(client);
+        const canEditSourceField = canEditSource();
+        const canEditCompanyField = canEditCompany(client);
+
+        const companyEditButton = document.querySelector(`button.edit-icon[onclick*="enableEdit('company')"]`);
+        if (companyEditButton) {
+            if (!canEditCompanyField) {
+                companyEditButton.style.display = 'none';
+            } else {
+                companyEditButton.style.display = '';
+            }
+        }
+
+        const sourceEditButton = document.getElementById('edit-source');
+        if (sourceEditButton) {
+            if (!canEditSourceField) {
+                sourceEditButton.style.display = 'none';
+            } else {
+                sourceEditButton.style.display = '';
+            }
+        }
+    }
+    
     document.getElementById('modal-client-created').innerText = client.createdAt || '';
     document.getElementById('modal-client-updated').innerText = client.updatedAt || '';
-
-    const urgentlyCheckbox = document.getElementById('modal-client-urgently');
-    urgentlyCheckbox.checked = client.urgently;
-    urgentlyCheckbox.addEventListener('change', function () {
-        toggleUrgently(client.id);
-    });
 
     const modal = document.getElementById('client-modal');
     modal.style.display = 'flex';
@@ -671,7 +1141,18 @@ function showClientModal(client) {
     }
 
     const fullDeleteButton = document.getElementById('full-delete-client');
+    if (fullDeleteButton) {
+        const canDelete = canDeleteClient(client);
+
+        if (fullDeleteButton.style.display !== 'none' && !canDelete) {
+            fullDeleteButton.style.display = 'none';
+        }
+    }
     fullDeleteButton.onclick = async () => {
+        if (!confirm('Ви впевнені, що хочете повністю видалити цього клієнта з бази даних? Ця дія незворотна!')) {
+            return;
+        }
+        
         loaderBackdrop.style.display = 'flex';
         try {
             const response = await fetch(`${API_URL}/${client.id}`, {method: 'DELETE'});
@@ -680,7 +1161,7 @@ function showClientModal(client) {
                 handleError(new ErrorResponse(errorData.error, errorData.message, errorData.details));
                 return;
             }
-            showMessage('Клієнт повністю видалений', 'info');
+            showMessage('Клієнт повністю видалений з бази даних', 'info');
             modal.style.display = 'none';
 
             loadDataWithSort(currentPage, pageSize, currentSort, currentDirection);
@@ -694,7 +1175,25 @@ function showClientModal(client) {
 
 
     const deleteButton = document.getElementById('delete-client');
+    const restoreButton = document.getElementById('restore-client');
+
+    const canDelete = canDeleteClient(client);
+
+    if (client.isActive === false) {
+        if (deleteButton) deleteButton.style.display = 'none';
+        if (restoreButton) restoreButton.style.display = 'block';
+    } else {
+        if (deleteButton) {
+            deleteButton.style.display = canDelete ? 'block' : 'none';
+        }
+        if (restoreButton) restoreButton.style.display = 'none';
+    }
+    
     deleteButton.onclick = async () => {
+        if (!confirm('Ви впевнені, що хочете деактивувати цього клієнта? Клієнт буде прихований, але залишиться в базі даних.')) {
+            return;
+        }
+        
         loaderBackdrop.style.display = 'flex';
         try {
             const response = await fetch(`${API_URL}/active/${client.id}`, {method: 'DELETE'});
@@ -703,42 +1202,47 @@ function showClientModal(client) {
                 handleError(new ErrorResponse(errorData.error, errorData.message, errorData.details));
                 return;
             }
-            showMessage('Клієнт видалений', 'info');
+            showMessage('Клієнт деактивовано (isActive = false)', 'info');
             modal.style.display = 'none';
 
             loadDataWithSort(currentPage, pageSize, currentSort, currentDirection);
         } catch (error) {
-            console.error('Помилка вимкнення клієнта:', error);
+            console.error('Помилка деактивації клієнта:', error);
             handleError(error);
         } finally {
             loaderBackdrop.style.display = 'none';
         }
     };
 
+    if (restoreButton) {
+        restoreButton.onclick = async () => {
+            if (!confirm('Ви впевнені, що хочете відновити цього клієнта? Клієнт знову стане активним.')) {
+                return;
 }
 
-async function toggleUrgently(clientId) {
     loaderBackdrop.style.display = 'flex';
-
     try {
-        const response = await fetch(`${API_URL}/urgently/${clientId}`, {method: 'PATCH'});
-
+                const response = await fetch(`${API_URL}/active/${client.id}`, {method: 'PATCH'});
         if (!response.ok) {
             const errorData = await response.json();
             handleError(new ErrorResponse(errorData.error, errorData.message, errorData.details));
             return;
         }
-
-        showMessage('Статус терміновості успішно оновлено', 'info');
+                showMessage('Клієнт відновлено (isActive = true)', 'info');
+                modal.style.display = 'none';
 
         loadDataWithSort(currentPage, pageSize, currentSort, currentDirection);
     } catch (error) {
-        console.error('Ошибка обновления статуса терміновості:', error);
+                console.error('Помилка відновлення клієнта:', error);
         handleError(error);
     } finally {
         loaderBackdrop.style.display = 'none';
     }
+        };
 }
+
+}
+
 
 /*-------create client-------*/
 
@@ -748,6 +1252,11 @@ var span = document.getElementsByClassName("create-client-close")[0];
 let editing = false;
 
 btn.onclick = function () {
+    if (!currentClientTypeId) {
+        showMessage('Будь ласка, виберіть тип клієнта з навігації', 'error');
+        return;
+    }
+    buildDynamicCreateForm();
     modal.classList.remove('hide');
     modal.style.display = "flex";
     setTimeout(() => {
@@ -783,85 +1292,265 @@ window.onclick = function (event) {
     }
 }
 
-function resetForm() {
-    const form = document.getElementById('client-form');
-    form.reset();
+function buildDynamicCreateForm() {
+    if (!currentClientTypeId) {
+        return;
+    }
 
-    ['region', 'status', 'source', 'route', 'business'].forEach(selectId => {
-        const select = document.getElementById(selectId);
-        select.selectedIndex = 0;
-        const customSelectId = `${selectId}-custom`;
-        if (customSelects[customSelectId]) {
-            customSelects[customSelectId].reset();
-            let defaultValue = defaultValues[selectId];
-            if (typeof defaultValue === 'function') {
-                defaultValue = defaultValue();
+    const form = document.getElementById('client-form');
+    form.innerHTML = '';
+
+    const nameFieldLabel = currentClientType ? currentClientType.nameFieldLabel : 'Компанія';
+    
+    const nameFieldDiv = document.createElement('div');
+    nameFieldDiv.className = 'form-group';
+    const nameLabel = document.createElement('label');
+    nameLabel.setAttribute('for', 'company');
+    nameLabel.textContent = nameFieldLabel;
+    const nameInput = document.createElement('input');
+    nameInput.type = 'text';
+    nameInput.id = 'company';
+    nameInput.name = 'company';
+    nameInput.required = true;
+    nameInput.placeholder = nameFieldLabel;
+    nameFieldDiv.appendChild(nameLabel);
+    nameFieldDiv.appendChild(nameInput);
+    form.appendChild(nameFieldDiv);
+
+    if (visibleInCreateFields && visibleInCreateFields.length > 0) {
+        visibleInCreateFields.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+        
+        visibleInCreateFields.forEach((field, index) => {
+        const fieldDiv = document.createElement('div');
+        fieldDiv.className = 'form-group';
+        fieldDiv.setAttribute('data-field-id', field.id);
+        fieldDiv.setAttribute('data-field-type', field.fieldType);
+
+        const label = document.createElement('label');
+        label.setAttribute('for', `field-${field.id}`);
+        label.textContent = field.fieldLabel + (field.isRequired ? ' *' : '');
+        fieldDiv.appendChild(label);
+
+        let input;
+        if (field.fieldType === 'TEXT') {
+            input = document.createElement('input');
+            input.type = 'text';
+            input.id = `field-${field.id}`;
+            input.name = `field-${field.id}`;
+            input.required = field.isRequired || false;
+            input.placeholder = field.fieldLabel;
+        } else if (field.fieldType === 'NUMBER') {
+            input = document.createElement('input');
+            input.type = 'number';
+            input.id = `field-${field.id}`;
+            input.name = `field-${field.id}`;
+            input.required = field.isRequired || false;
+            input.placeholder = field.fieldLabel;
+        } else if (field.fieldType === 'DATE') {
+            input = document.createElement('input');
+            input.type = 'date';
+            input.id = `field-${field.id}`;
+            input.name = `field-${field.id}`;
+            input.required = field.isRequired || false;
+        } else if (field.fieldType === 'PHONE') {
+            input = document.createElement('input');
+            input.type = 'tel';
+            input.id = `field-${field.id}`;
+            input.name = `field-${field.id}`;
+            input.required = field.isRequired || false;
+            input.placeholder = field.allowMultiple ? 'Телефони (розділяємо комою, формат: +1234567890)' : 'Телефон (формат: +1234567890)';
+            input.title = field.allowMultiple 
+                ? 'Номери повинні починатися з + та містити від 1 до 15 цифр (формат E.164), розділяйте комою'
+                : 'Номер повинен починатися з + та містити від 1 до 15 цифр (формат E.164)';
+
+            const validatePhoneField = function() {
+                const value = this.value.trim();
+                if (!value) {
+                    if (this.required) {
+                        this.setCustomValidity('Це поле обов\'язкове для заповнення');
+                    } else {
+                        this.setCustomValidity('');
+                    }
+                    return;
+                }
+                
+                if (field.allowMultiple) {
+                    const phones = value.split(',').map(p => p.trim()).filter(p => p);
+                    if (phones.length === 0) {
+                        this.setCustomValidity('Введіть хоча б один номер телефону');
+                        return;
+                    }
+                    const normalizedPhones = phones.map(p => normalizePhoneNumber(p));
+                    const invalidPhones = normalizedPhones.filter(p => !validatePhoneNumber(p));
+                    if (invalidPhones.length > 0) {
+                        this.setCustomValidity('Деякі номери мають некоректний формат. Використовуйте формат E.164: +1234567890');
+                    } else {
+                        this.setCustomValidity('');
+                    }
+                } else {
+                    const normalized = normalizePhoneNumber(value);
+                    if (!validatePhoneNumber(normalized)) {
+                        this.setCustomValidity('Номер має некоректний формат. Використовуйте формат E.164: +1234567890');
+                    } else {
+                        this.setCustomValidity('');
+                    }
+                }
+            };
+            
+            input.addEventListener('blur', validatePhoneField);
+            input.addEventListener('input', function() {
+                if (this.value.trim() === '') {
+                    this.setCustomValidity('');
+                }
+            });
+            
+            if (field.allowMultiple) {
+                const outputDiv = document.createElement('div');
+                outputDiv.id = `output-${field.id}`;
+                outputDiv.className = 'phone-output';
+                fieldDiv.appendChild(outputDiv);
+                input.addEventListener('input', () => updatePhoneOutput(field.id, input.value));
             }
-            if (defaultValue && select.querySelector(`option[value="${defaultValue}"]`)) {
-                customSelects[customSelectId].setValue(defaultValue);
+        } else if (field.fieldType === 'LIST') {
+            input = document.createElement('select');
+            input.id = `field-${field.id}`;
+            input.name = `field-${field.id}`;
+            input.required = field.isRequired || false;
+            if (field.allowMultiple) {
+                input.multiple = true;
+            }
+            if (field.listValues && field.listValues.length > 0) {
+                field.listValues.forEach(listValue => {
+                    const option = document.createElement('option');
+                    option.value = listValue.id;
+                    option.textContent = listValue.value;
+                    if (!field.allowMultiple) {
+                        option.selected = false;
+                    }
+                    input.appendChild(option);
+                });
+            }
+            if (!field.allowMultiple) {
+                input.selectedIndex = -1;
+            }
+            fieldDiv.appendChild(input);
+            form.appendChild(fieldDiv);
+            setTimeout(() => {
+                if (typeof createCustomSelect === 'function') {
+                    const customSelect = createCustomSelect(input);
+                    customSelects[`field-${field.id}`] = customSelect;
+                    if (field.listValues && field.listValues.length > 0) {
+                        const listData = field.listValues.map(lv => ({
+                            id: lv.id,
+                            name: lv.value
+                        }));
+                        customSelect.populate(listData);
+                    }
+                    if (!field.allowMultiple) {
+                        customSelect.reset();
+                    }
+                }
+            }, 0);
+            return;
+        } else if (field.fieldType === 'BOOLEAN') {
+            input = document.createElement('select');
+            input.id = `field-${field.id}`;
+            input.name = `field-${field.id}`;
+            input.required = field.isRequired || false;
+            const defaultOption = document.createElement('option');
+            defaultOption.value = '';
+            defaultOption.textContent = 'Виберіть...';
+            defaultOption.disabled = true;
+            defaultOption.selected = true;
+            input.appendChild(defaultOption);
+            const yesOption = document.createElement('option');
+            yesOption.value = 'true';
+            yesOption.textContent = 'Так';
+            input.appendChild(yesOption);
+            const noOption = document.createElement('option');
+            noOption.value = 'false';
+            noOption.textContent = 'Ні';
+            input.appendChild(noOption);
+        }
+        fieldDiv.appendChild(input);
+        form.appendChild(fieldDiv);
+        });
+    }
+
+    const sourceFieldDiv = document.createElement('div');
+    sourceFieldDiv.className = 'form-group';
+    
+    const sourceLabel = document.createElement('label');
+    sourceLabel.setAttribute('for', 'source');
+    sourceLabel.textContent = 'Залучення *';
+    sourceFieldDiv.appendChild(sourceLabel);
+    
+    const sourceSelect = document.createElement('select');
+    sourceSelect.id = 'source';
+    sourceSelect.name = 'sourceId';
+    const defaultSourceOption = document.createElement('option');
+    defaultSourceOption.value = '';
+    defaultSourceOption.textContent = 'Виберіть...';
+    defaultSourceOption.selected = true;
+    sourceSelect.appendChild(defaultSourceOption);
+    
+    availableSources.forEach(source => {
+        const option = document.createElement('option');
+        option.value = source.id;
+        option.textContent = source.name;
+        sourceSelect.appendChild(option);
+    });
+    
+    const defaultSourceId = defaultValues.source ? defaultValues.source() : '';
+    if (defaultSourceId && sourceSelect.querySelector(`option[value="${defaultSourceId}"]`)) {
+        sourceSelect.value = defaultSourceId;
+    }
+    
+    sourceFieldDiv.appendChild(sourceSelect);
+    form.appendChild(sourceFieldDiv);
+
+    setTimeout(() => {
+        if (typeof createCustomSelect === 'function') {
+            const customSelect = createCustomSelect(sourceSelect);
+            customSelects['source-custom'] = customSelect;
+            const sourceData = availableSources.map(s => ({
+                id: s.id,
+                name: s.name
+            }));
+            customSelect.populate(sourceData);
+            if (defaultSourceId) {
+                customSelect.setValue(defaultSourceId);
             }
         }
-    });
-}
+    }, 0);
 
-const defaultValues = {
-    region: '136',
-    status: '24',
-    route: '66',
-    business: '1',
-    clientProduct: '1',
-    source: () => {
-        const userId = localStorage.getItem('userId');
-        return userSourceMapping[userId] ? String(userSourceMapping[userId]) : '';
-    }
-};
+    const submitButton = document.createElement('button');
+    submitButton.type = 'submit';
+    submitButton.id = 'save-button';
+    submitButton.textContent = 'Зберегти';
+    form.appendChild(submitButton);
 
-const userSourceMapping = {
-    '1': 8, // admin
-    '2': 15, // Музика Катя
-    '3': 28, // Водій Дмитро
-    '4': 7, // Водій Сергій
-    '5': 8, // Шмигельська Олена
-    '6': 10, // Денис Казаков
-    '7': 26, // Водій Андрій
-    '9': 14, // Богдан Осипишин
-    '10': 8, // test driver
-    '11': 8, // КЗП
-    '12': 32, // Водій Саша
-    '13': 8, // Сергій Дзвунко
-    '14': 30, // Юрій Ємець
-    '15': 31 // Артем Фаєр
-};
-
-
-const phonePattern = /^\+380\d{9}$/;
-document.getElementById('phoneNumbers').addEventListener('input', updateOutput);
-
-function formatPhoneNumber(num) {
-    const cleanedNum = num.replace(/[^\d+]/g, '');
-    if (phonePattern.test(cleanedNum)) {
-        return cleanedNum;
-    } else if (cleanedNum.length === 10 && cleanedNum.startsWith('0')) {
-        return "+380" + cleanedNum.substring(1);
-    } else if (cleanedNum.length === 12 && cleanedNum.startsWith('380')) {
-        return "+380" + cleanedNum.substring(3);
-    } else if (cleanedNum.length >= 12 && cleanedNum.startsWith('+380')) {
-        return "+380" + cleanedNum.substring(4);
-    } else {
-        return null;
+    const companyInput = document.getElementById('company');
+    if (companyInput) {
+        const validateForm = () => {
+            const isCompanyFilled = companyInput.value.trim() !== '';
+            submitButton.disabled = !isCompanyFilled;
+        };
+        companyInput.addEventListener('input', validateForm);
+        validateForm();
     }
 }
 
-function updateOutput() {
-    const input = document.getElementById('phoneNumbers').value;
-    const outputDiv = document.getElementById('output');
+function updatePhoneOutput(fieldId, value) {
+    const outputDiv = document.getElementById(`output-${fieldId}`);
+    if (!outputDiv) return;
     outputDiv.innerHTML = '';
 
-    let formattedNumbers = input.split(',')
+    let formattedNumbers = value.split(',')
         .map(num => num.trim())
         .filter(num => num.length > 0)
-        .map(formatPhoneNumber)
-        .filter(num => num !== null);
+        .map(normalizePhoneNumber)
+        .filter(phone => validatePhoneNumber(phone));
 
     if (formattedNumbers.length > 0) {
         const formattedNumbersList = document.createElement('ul');
@@ -876,24 +1565,195 @@ function updateOutput() {
     }
 }
 
+function resetForm() {
+    const form = document.getElementById('client-form');
+    if (currentClientTypeId) {
+        buildDynamicCreateForm();
+    } else {
+    form.reset();
+        const sourceSelect = document.getElementById('source');
+        if (sourceSelect) {
+            sourceSelect.selectedIndex = 0;
+            const customSelectId = 'source-custom';
+        if (customSelects[customSelectId]) {
+            customSelects[customSelectId].reset();
+                const defaultSourceId = defaultValues.source ? defaultValues.source() : '';
+                if (defaultSourceId && sourceSelect.querySelector(`option[value="${defaultSourceId}"]`)) {
+                    customSelects[customSelectId].setValue(defaultSourceId);
+                }
+            }
+        }
+    }
+}
+
+const defaultValues = {
+    source: () => {
+        const currentUserId = localStorage.getItem('userId');
+        if (!currentUserId || !availableSources || availableSources.length === 0) {
+            return '';
+        }
+        const userSource = availableSources.find(source => {
+            const sourceUserId = source.userId !== null && source.userId !== undefined 
+                ? String(source.userId) 
+                : null;
+            return sourceUserId === currentUserId;
+        });
+        return userSource ? String(userSource.id) : '';
+    }
+};
+
+
+function validatePhoneNumber(phone) {
+    if (!phone || typeof phone !== 'string') {
+        return false;
+    }
+    const cleaned = phone.replace(/[^\d+]/g, '');
+
+    const e164Pattern = /^\+[1-9]\d{1,14}$/;
+    return e164Pattern.test(cleaned);
+}
+
+function normalizePhoneNumber(phone) {
+    if (!phone || typeof phone !== 'string') {
+        return phone;
+    }
+    let cleaned = phone.replace(/[^\d+]/g, '');
+    
+    if (cleaned.length === 0) {
+        return phone;
+    }
+
+    let hasPlus = cleaned.startsWith('+');
+    if (hasPlus) {
+        cleaned = cleaned.substring(1);
+    }
+
+    cleaned = cleaned.replace(/^0+/, '');
+
+    if (cleaned.length === 0) {
+        return phone;
+    }
+
+    if (cleaned.startsWith('0')) {
+        cleaned = cleaned.replace(/^0+/, '');
+        if (cleaned.length === 0) {
+            return phone;
+        }
+    }
+
+    if (cleaned.length > 15) {
+        cleaned = cleaned.substring(0, 15);
+    }
+
+    return '+' + cleaned;
+}
 
 document.getElementById('client-form').addEventListener('submit',
     async function (event) {
         event.preventDefault();
 
+        if (!currentClientTypeId) {
+            showMessage('Будь ласка, виберіть тип клієнта з навігації', 'error');
+            return;
+        }
+
+        let hasValidationErrors = false;
+        visibleInCreateFields.forEach(field => {
+            if (field.fieldType === 'PHONE') {
+                const phoneInput = document.getElementById(`field-${field.id}`);
+                if (phoneInput) {
+
+                    phoneInput.dispatchEvent(new Event('blur'));
+                    if (!phoneInput.validity.valid) {
+                        hasValidationErrors = true;
+                        phoneInput.reportValidity();
+                    }
+                }
+            }
+        });
+
+        if (hasValidationErrors) {
+            showMessage('Будь ласка, виправте помилки в полях телефонів', 'error');
+            return;
+        }
+
         loaderBackdrop.style.display = 'flex';
 
         const formData = new FormData(this);
-        const clientData = {};
+        const clientData = {
+            clientTypeId: currentClientTypeId,
+            company: formData.get('company'),
+            fieldValues: []
+        };
 
-        formData.forEach((value, key) => clientData[key] = value);
+        const sourceId = formData.get('sourceId');
+        if (sourceId) {
+            clientData.sourceId = parseInt(sourceId);
+        }
 
-        clientData.phoneNumbers = clientData.phoneNumbers
-            .split(',')
+        visibleInCreateFields.forEach(field => {
+            const fieldValue = formData.get(`field-${field.id}`);
+            const fieldValueMultiple = formData.getAll(`field-${field.id}`);
+            
+            if (field.fieldType === 'PHONE' && field.allowMultiple) {
+                const phoneValue = formData.get(`field-${field.id}`);
+                if (phoneValue) {
+                    const phones = phoneValue.split(',')
             .map(num => num.trim())
             .filter(num => num.length > 0)
-            .map(num => formatPhoneNumber(num))
-            .filter(num => num !== null);
+                        .map(normalizePhoneNumber)
+                        .filter(phone => validatePhoneNumber(phone));
+                    
+                    phones.forEach((phone, index) => {
+                        clientData.fieldValues.push({
+                            fieldId: field.id,
+                            valueText: phone,
+                            displayOrder: index
+                        });
+                    });
+                }
+            } else if (field.fieldType === 'LIST' && field.allowMultiple) {
+                if (fieldValueMultiple && fieldValueMultiple.length > 0) {
+                    fieldValueMultiple.forEach((value, index) => {
+                        if (value) {
+                            clientData.fieldValues.push({
+                                fieldId: field.id,
+                                valueListId: parseInt(value),
+                                displayOrder: index
+                            });
+                        }
+                    });
+                }
+            } else if (fieldValue) {
+                const fieldValueData = {
+                    fieldId: field.id,
+                    displayOrder: 0
+                };
+                
+                if (field.fieldType === 'TEXT' || field.fieldType === 'PHONE') {
+                    if (field.fieldType === 'PHONE') {
+                        const normalizedValue = normalizePhoneNumber(fieldValue);
+                        if (validatePhoneNumber(normalizedValue)) {
+                            fieldValueData.valueText = normalizedValue;
+                        } else {
+                            return;
+                        }
+                    } else {
+                        fieldValueData.valueText = fieldValue;
+                    }
+                } else if (field.fieldType === 'NUMBER') {
+                    fieldValueData.valueNumber = parseFloat(fieldValue);
+                } else if (field.fieldType === 'DATE') {
+                    fieldValueData.valueDate = fieldValue;
+                } else if (field.fieldType === 'BOOLEAN') {
+                    fieldValueData.valueBoolean = fieldValue === 'true';
+                } else if (field.fieldType === 'LIST') {
+                    fieldValueData.valueListId = parseInt(fieldValue);
+                }
+                
+                clientData.fieldValues.push(fieldValueData);
+            }
+        });
 
         try {
             const response = await fetch('/api/v1/client', {
@@ -918,7 +1778,7 @@ document.getElementById('client-form').addEventListener('submit',
 
             showMessage(`Клієнт з ID: ${data.id} успішно створений`, 'info');
         } catch (error) {
-            console.error('Ошибка создания клиента:', error);
+            console.error('Error creating client:', error);
             handleError(error);
         } finally {
             loaderBackdrop.style.display = 'none';
@@ -942,7 +1802,6 @@ searchButton.addEventListener('click', async () => {
     localStorage.setItem('searchTerm', searchTerm);
     loadDataWithSort(0, 100, currentSort, currentDirection);
 });
-
 
 /*--filter--*/
 
@@ -997,20 +1856,7 @@ function updateSelectedFilters() {
 
     Object.keys(selectedFilters).forEach(key => delete selectedFilters[key]);
 
-    Object.keys(customSelects).forEach(selectId => {
-        if (selectId.endsWith('-filter')) {
-            const select = document.getElementById(selectId);
-            if (select) {
-                const name = select.name;
-                const values = customSelects[selectId].getValue();
-                if (values.length > 0) {
-                    selectedFilters[name] = values;
-                }
-            }
-        }
-    });
-
-    const filterForm = document.getElementById('filterForm');
+    if (!filterForm) return;
     const formData = new FormData(filterForm);
 
     const createdAtFrom = formData.get('createdAtFrom');
@@ -1022,6 +1868,59 @@ function updateSelectedFilters() {
     if (createdAtTo) selectedFilters['createdAtTo'] = [createdAtTo];
     if (updatedAtFrom) selectedFilters['updatedAtFrom'] = [updatedAtFrom];
     if (updatedAtTo) selectedFilters['updatedAtTo'] = [updatedAtTo];
+
+    const sourceSelectId = 'filter-source';
+    if (customSelects[sourceSelectId]) {
+        const selectedSources = customSelects[sourceSelectId].getValue();
+        const filteredSources = selectedSources.filter(v => v !== null && v !== undefined && v !== '' && v !== 'null');
+        if (filteredSources.length > 0) {
+            selectedFilters['source'] = filteredSources;
+        }
+    }
+
+    const showInactive = formData.get('showInactive');
+    if (showInactive === 'true') {
+        selectedFilters['showInactive'] = ['true'];
+    }
+
+    if (filterableFields && filterableFields.length > 0) {
+        filterableFields.forEach(field => {
+            if (field.fieldType === 'DATE') {
+                const fromValue = formData.get(`${field.fieldName}From`);
+                const toValue = formData.get(`${field.fieldName}To`);
+                if (fromValue) selectedFilters[`${field.fieldName}From`] = [fromValue];
+                if (toValue) selectedFilters[`${field.fieldName}To`] = [toValue];
+            } else if (field.fieldType === 'NUMBER') {
+                const fromValue = formData.get(`${field.fieldName}From`);
+                const toValue = formData.get(`${field.fieldName}To`);
+                if (fromValue && fromValue.trim() !== '') {
+                    selectedFilters[`${field.fieldName}From`] = [fromValue.trim()];
+                }
+                if (toValue && toValue.trim() !== '') {
+                    selectedFilters[`${field.fieldName}To`] = [toValue.trim()];
+                }
+            } else if (field.fieldType === 'LIST') {
+                const selectId = `filter-${field.fieldName}`;
+                if (customSelects[selectId]) {
+                    const selectedValues = customSelects[selectId].getValue();
+                    const filteredValues = selectedValues.filter(v => v !== null && v !== undefined && v !== '' && v !== 'null');
+                    if (filteredValues.length > 0) {
+                        selectedFilters[field.fieldName] = filteredValues;
+                    }
+                }
+            } else if (field.fieldType === 'TEXT' || field.fieldType === 'PHONE') {
+                const value = formData.get(field.fieldName);
+                if (value && value.trim() !== '') {
+                    selectedFilters[field.fieldName] = [value.trim()];
+                }
+            } else if (field.fieldType === 'BOOLEAN') {
+                const value = formData.get(field.fieldName);
+                if (value && value !== '' && value !== 'null') {
+                    selectedFilters[field.fieldName] = [value];
+                }
+            }
+        });
+    }
 
     localStorage.setItem('selectedFilters', JSON.stringify(selectedFilters));
     updateFilterCounter();
@@ -1035,18 +1934,21 @@ function updateFilterCounter() {
 
     let totalFilters = 0;
 
-    totalFilters += Object.values(selectedFilters)
-        .filter(value => Array.isArray(value))
-        .reduce((count, values) => count + values.length, 0);
-
-    totalFilters += Object.keys(selectedFilters)
-        .filter(key => !Array.isArray(selectedFilters[key]) && selectedFilters[key] !== '')
-        .length;
+    Object.keys(selectedFilters).forEach(key => {
+        const value = selectedFilters[key];
+        if (Array.isArray(value)) {
+            const validValues = value.filter(v => v !== null && v !== undefined && v !== '' && v !== 'null');
+            totalFilters += validValues.length;
+        } else if (value !== null && value !== undefined && value !== '') {
+            totalFilters += 1;
+        }
+    });
 
     if (totalFilters > 0) {
         countElement.textContent = totalFilters;
         counterElement.style.display = 'inline-flex';
     } else {
+        countElement.textContent = '0';
         counterElement.style.display = 'none';
     }
 }
@@ -1059,143 +1961,196 @@ document.getElementById('filter-counter').addEventListener('click', () => {
 function clearFilters() {
     Object.keys(selectedFilters).forEach(key => delete selectedFilters[key]);
 
-    const filterForm = document.getElementById('filterForm');
     if (filterForm) {
         filterForm.reset();
         Object.keys(customSelects).forEach(selectId => {
-            if (selectId.endsWith('-filter')) {
+            if (selectId.startsWith('filter-')) {
+                if (customSelects[selectId] && typeof customSelects[selectId].reset === 'function') {
                 customSelects[selectId].reset();
+                } else if (customSelects[selectId] && typeof customSelects[selectId].setValue === 'function') {
+                    customSelects[selectId].setValue([]);
+                }
             }
         });
     }
 
     const searchInput = document.getElementById('inputSearch');
+    if (searchInput) {
     searchInput.value = '';
+    }
 
     localStorage.removeItem('selectedFilters');
     localStorage.removeItem('searchTerm');
+    window.selectedFilters = {};
 
     updateFilterCounter();
     loadDataWithSort(currentPage, pageSize, currentSort, currentDirection);
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    const savedFilters = localStorage.getItem('selectedFilters');
-    let parsedFilters;
-    if (savedFilters) {
-        try {
-            parsedFilters = JSON.parse(savedFilters);
-        } catch (e) {
-            console.error('Invalid selectedFilters in localStorage:', e);
-            parsedFilters = {};
+function populateSelect(selectId, data) {
+    const select = document.getElementById(selectId);
+    if (!select) {
+        console.error(`Select with id "${selectId}" not found in DOM`);
+        return;
+    }
+
+    select.innerHTML = '';
+
+    if (!selectId.endsWith('-filter')) {
+        const defaultOption = document.createElement('option');
+        defaultOption.value = '';
+        defaultOption.text = select.dataset.placeholder || 'Виберіть параметр';
+        defaultOption.disabled = true;
+        defaultOption.selected = true;
+        select.appendChild(defaultOption);
+    }
+
+    data.forEach(item => {
+        const option = document.createElement('option');
+        option.value = String(item.id);
+        option.text = item.name;
+        select.appendChild(option);
+    });
+
+    const customSelectId = selectId.endsWith('-filter') ? `${selectId}` : `${selectId}-custom`;
+    if (!customSelects[customSelectId]) {
+        customSelects[customSelectId] = createCustomSelect(select);
+    }
+    customSelects[customSelectId].populate(data);
+
+    if (!selectId.endsWith('-filter')) {
+        let defaultValue = defaultValues[selectId];
+        if (typeof defaultValue === 'function') {
+            defaultValue = defaultValue();
         }
-    } else {
-        parsedFilters = {};
+        if (defaultValue && data.some(item => String(item.id) === defaultValue)) {
+            customSelects[customSelectId].setValue(defaultValue);
+        }
     }
-    window.selectedFilters = parsedFilters;
+}
 
-    const savedSearchTerm = localStorage.getItem('searchTerm');
-    if (savedSearchTerm) {
-        const searchInput = document.getElementById('inputSearch');
-        searchInput.value = savedSearchTerm;
+async function showClientTypeSelectionModal() {
+    const modal = document.getElementById('clientTypeSelectionModal');
+    const listContainer = document.getElementById('client-types-selection-list');
+    
+    if (!modal || !listContainer) return;
+    
+    try {
+        const response = await fetch('/api/v1/client-type/active');
+        if (!response.ok) {
+            console.error('Failed to load client types');
+            return;
+        }
+        const allClientTypes = await response.json();
+
+        const userId = localStorage.getItem('userId');
+        let accessibleClientTypeIds = new Set();
+        
+        if (userId) {
+            try {
+                const permissionsResponse = await fetch(`/api/v1/client-type/permission/me`);
+                if (permissionsResponse.ok) {
+                    const permissions = await permissionsResponse.json();
+                    permissions.forEach(perm => {
+                        if (perm.canView) {
+                            accessibleClientTypeIds.add(perm.clientTypeId);
+                        }
+                    });
+                }
+            } catch (error) {
+                console.warn('Failed to load user client type permissions:', error);
+                allClientTypes.forEach(type => accessibleClientTypeIds.add(type.id));
+            }
+        }
+
+        const authorities = localStorage.getItem('authorities');
+        let userAuthorities = [];
+        try {
+            if (authorities) {
+                userAuthorities = authorities.startsWith('[')
+                    ? JSON.parse(authorities)
+                    : authorities.split(',').map(auth => auth.trim());
+            }
+        } catch (error) {
+            console.error('Failed to parse authorities:', error);
+        }
+        
+        const isAdmin = userAuthorities.includes('system:admin') || userAuthorities.includes('administration:view');
+
+        if (isAdmin || accessibleClientTypeIds.size === 0) {
+            allClientTypes.forEach(type => accessibleClientTypeIds.add(type.id));
+        }
+
+        const accessibleClientTypes = allClientTypes.filter(type => accessibleClientTypeIds.has(type.id));
+        
+        if (accessibleClientTypes.length === 0) {
+            listContainer.innerHTML = '<p style="text-align: center; color: var(--main-grey); padding: 2em;">Немає доступних типів клієнтів</p>';
+        } else {
+            listContainer.innerHTML = '';
+            accessibleClientTypes.forEach(type => {
+                const card = document.createElement('div');
+                card.className = 'client-type-card';
+                card.innerHTML = `
+                    <div class="client-type-card-icon">👥</div>
+                    <div class="client-type-card-name">${type.name}</div>
+                `;
+                card.addEventListener('click', () => {
+                    window.location.href = `/routes?type=${type.id}`;
+                });
+                listContainer.appendChild(card);
+            });
+        }
+        
+        modal.style.display = 'flex';
+
+        const closeBtn = document.querySelector('.close-client-type-modal');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => {
+                modal.style.display = 'none';
+            });
+        }
+        
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.style.display = 'none';
+            }
+        });
+    } catch (error) {
+        console.error('Error loading client types:', error);
     }
+}
 
-    const companyInput = document.getElementById('company');
-    const saveButton = document.getElementById('save-button');
+async function updateNavigationWithCurrentType(typeId) {
+    try {
+        const response = await fetch(`/api/v1/client-type/${typeId}`);
+        if (!response.ok) return;
+        
+        const clientType = await response.json();
+        const navLink = document.querySelector('#nav-routes a');
+        
+        if (navLink && clientType.name) {
+            navLink.innerHTML = `
+                <span class="nav-client-type-label">Маршрути:</span>
+                <span class="nav-client-type-name">${clientType.name}</span>
+                <span class="dropdown-arrow">▼</span>
+            `;
+        }
 
-    const validateForm = () => {
-        const isCompanyFilled = companyInput.value.trim() !== '';
-        saveButton.disabled = !isCompanyFilled;
-    };
-
-    companyInput.addEventListener('input', validateForm);
-    validateForm();
-
-    fetch('/api/v1/entities')
-        .then(response => response.json())
-        .then(data => {
-            availableStatuses = data.statuses || [];
-            availableRegions = data.regions || [];
-            availableSources = data.sources || [];
-            availableRoutes = data.routes || [];
-            availableBusiness = data.businesses || [];
-            availableUsers = data.users || [];
-            availableProducts = data.products || [];
-            availableClientProducts = data.clientProducts || [];
-
-            statusMap = new Map(availableStatuses.map(item => [item.id, item.name]));
-            regionMap = new Map(availableRegions.map(item => [item.id, item.name]));
-            sourceMap = new Map(availableSources.map(item => [item.id, item.name]));
-            routeMap = new Map(availableRoutes.map(item => [item.id, item.name]));
-            businessMap = new Map(availableBusiness.map(item => [item.id, item.name]));
-            clientProductMap = new Map(availableClientProducts.map(item => [item.id, item.name]));
-            userMap = new Map(availableUsers.map(item => [item.id, item.name]));
-            productMap = new Map(availableProducts.map(item => [item.id, item.name]));
-
-            populateSelect('status', availableStatuses || []);
-            populateSelect('status-filter', availableStatuses || []);
-            populateSelect('region', availableRegions || []);
-            populateSelect('region-filter', availableRegions || []);
-            populateSelect('source', availableSources || []);
-            populateSelect('source-filter', availableSources || []);
-            populateSelect('route', availableRoutes || []);
-            populateSelect('route-filter', availableRoutes || []);
-            populateSelect('business', availableBusiness || []);
-            populateSelect('business-filter', availableBusiness || []);
-            populateSelect('clientProduct', availableClientProducts);
-            populateSelect('client-product-filter', availableClientProducts);
-
-            ['region', 'status', 'source', 'route', 'business', 'clientProduct'].forEach(selectId => {
-                const select = document.getElementById(selectId);
-                if (select && !customSelects[`${selectId}-custom`]) {
-                    customSelects[`${selectId}-custom`] = createCustomSelect(select);
+        const dropdown = document.getElementById('route-types-dropdown');
+        if (dropdown) {
+            const links = dropdown.querySelectorAll('a');
+            links.forEach(link => {
+                link.classList.remove('active');
+                if (link.href.includes(`type=${typeId}`)) {
+                    link.classList.add('active');
                 }
             });
+        }
+    } catch (error) {
+        console.error('Error updating navigation:', error);
+    }
+}
 
-            ['region-filter', 'status-filter', 'source-filter', 'route-filter', 'business-filter', 'client-product-filter']
-                .forEach(selectId => {
-                    const select = document.getElementById(selectId);
-                    if (select && !customSelects[selectId]) {
-                        customSelects[selectId] = createCustomSelect(select);
-                    }
-                });
-
-            ['region-filter', 'status-filter', 'source-filter', 'route-filter', 'business-filter', 'client-product-filter']
-                .forEach(selectId => {
-                    const select = document.getElementById(selectId);
-                    if (select && customSelects[selectId]) {
-                        const name = select.name;
-                        if (window.selectedFilters[name] && Array.isArray(window.selectedFilters[name])) {
-                            customSelects[selectId].setValue(window.selectedFilters[name]);
-                        }
-                    }
-                });
-
-            const filterForm = document.getElementById('filterForm');
-            if (filterForm) {
-                if (window.selectedFilters['createdAtFrom']) {
-                    filterForm.querySelector('#createdAtFrom').value = window.selectedFilters['createdAtFrom'];
-                }
-                if (window.selectedFilters['createdAtTo']) {
-                    filterForm.querySelector('#createdAtTo').value = window.selectedFilters['createdAtTo'];
-                }
-                if (window.selectedFilters['updatedAtFrom']) {
-                    filterForm.querySelector('#updatedAtFrom').value = window.selectedFilters['updatedAtFrom'];
-                }
-                if (window.selectedFilters['updatedAtTo']) {
-                    filterForm.querySelector('#updatedAtTo').value = window.selectedFilters['updatedAtTo'];
-                }
-            }
-
-            updateSelectedFilters();
-
-            loadDataWithSort(currentPage, pageSize, currentSort, currentDirection);
-        })
-        .catch(error => {
-            console.error(error);
-            handleError(error);
-        });
-});
 
 
 

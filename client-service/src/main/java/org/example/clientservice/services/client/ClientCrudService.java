@@ -120,6 +120,9 @@ public class ClientCrudService implements IClientCrudService {
             }
         }
         
+        // Проверяем права доступа на основе source (аналогично редактированию)
+        checkSourceBasedPermission(client, "delete");
+        
         clientRepository.deleteById(clientId);
     }
 
@@ -138,6 +141,9 @@ public class ClientCrudService implements IClientCrudService {
                 }
             }
         }
+        
+        // Проверяем права доступа на основе source (аналогично редактированию)
+        checkSourceBasedPermission(client, "delete");
         
         clientRepository.deactivateClientById(clientId);
     }
@@ -246,6 +252,52 @@ public class ClientCrudService implements IClientCrudService {
         return authentication.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .anyMatch(auth -> "system:admin".equals(auth) || "administration:view".equals(auth));
+    }
+    
+    /**
+     * Проверяет права доступа на основе source клиента.
+     * Логика:
+     * 1. Если у клиента нет source - можно выполнять действие
+     * 2. Если у клиента есть source и он закреплен за текущим пользователем - можно выполнять действие
+     * 3. Если у клиента есть source, но он закреплен за другим - можно выполнять действие только с правом client_stranger:edit
+     * 
+     * @param client клиент для проверки
+     * @param action действие для сообщения об ошибке ("edit" или "delete")
+     */
+    private void checkSourceBasedPermission(Client client, String action) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null) {
+            throw new ClientException("Authentication required");
+        }
+        
+        Long currentUserId = authentication.getDetails() instanceof Long ? 
+                (Long) authentication.getDetails() : null;
+        
+        boolean canEditStrangers = authentication.getAuthorities().stream()
+                .anyMatch(auth -> "client_stranger:edit".equals(auth.getAuthority()));
+        
+        // Если у пользователя есть право редактировать чужих клиентов - разрешаем
+        if (canEditStrangers) {
+            return;
+        }
+        
+        // Если у клиента нет source - можно выполнять действие
+        if (client.getSource() == null) {
+            return;
+        }
+        
+        // У клиента есть source - проверяем, закреплен ли он за текущим пользователем
+        Source clientSource = sourceService.getSource(client.getSource());
+        if (clientSource.getUserId() != null && currentUserId != null && 
+            currentUserId.equals(clientSource.getUserId())) {
+            // Source закреплен за текущим пользователем - можно выполнять действие
+            return;
+        }
+        
+        // Source не закреплен или закреплен за другим - нет прав на выполнение действия
+        String actionText = "delete".equals(action) ? "видалення" : "редагування";
+        throw new ClientException("ACCESS_DENIED", 
+            String.format("У вас немає прав на %s цього клієнта. Клієнт має привлечення, закріплене за іншим користувачем.", actionText));
     }
 }
 

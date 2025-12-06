@@ -46,9 +46,6 @@
             <li id="nav-purchase"><a href="/purchase">
                 Закупівлі
             </a></li>
-            <!--<li id="nav-sale"><a href="/sale">
-                Продажі
-            </a></li>-->
             <li id="nav-containers"><a href="/containers">
                 Тари
             </a></li>
@@ -119,9 +116,19 @@
         <span class="close-filter">×</span>
         <h1>ФІЛЬТРИ</h1>
         <form id="filterForm">
-            <!-- Фильтры создаются динамически через JavaScript -->
+
         </form>
         <button id="modal-filter-button-submit" type="submit">Застосувати фільтри</button>
+    </div>
+</div>
+
+<div id="clientTypeSelectionModal" class="modal-client-type-selection" style="display: none;">
+    <div class="modal-client-type-selection-content">
+        <span class="close-client-type-modal">&times;</span>
+        <h2>Виберіть тип клієнта</h2>
+        <div id="client-types-selection-list" class="client-types-grid">
+
+        </div>
     </div>
 </div>
 
@@ -134,7 +141,7 @@
             <label><input type="checkbox" name="fields" value="createdAt" checked> Дата створення</label><br>
             <label><input type="checkbox" name="fields" value="updatedAt" checked> Дата оновлення</label><br>
             <label><input type="checkbox" name="fields" value="source" checked> Залучення</label><br>
-            <!-- Динамические поля будут добавлены через JavaScript -->
+
         </form>
         <button id="exportConfirm" class="btn btn-primary">Експортувати</button>
         <button id="exportCancel" class="btn btn-secondary">Скасування</button>
@@ -240,9 +247,6 @@
         </form>
     </div>
 </div>
-
-<label style="display: none" for="company"></label>
-<label style="display: none" for="source"></label>
 
 <div id="purchaseClientModal" class="modal-purchase-client" style="display: none;">
     <div class="modal-purchase-client-content">

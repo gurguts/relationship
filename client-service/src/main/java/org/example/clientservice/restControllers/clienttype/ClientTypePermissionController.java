@@ -10,6 +10,8 @@ import org.example.clientservice.models.dto.clienttype.ClientTypePermissionUpdat
 import org.example.clientservice.services.impl.IClientTypePermissionService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
@@ -78,6 +80,28 @@ public class ClientTypePermissionController {
                 .map(this::permissionToDTO)
                 .collect(Collectors.toList());
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/permission/me")
+    public ResponseEntity<List<ClientTypePermissionDTO>> getMyPermissions() {
+        Long userId = getCurrentUserId();
+        if (userId == null) {
+            return ResponseEntity.badRequest().build();
+        }
+        List<ClientTypePermission> permissions = permissionService.getPermissionsByUserId(userId);
+        List<ClientTypePermissionDTO> response = permissions.stream()
+                .map(this::permissionToDTO)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(response);
+    }
+    
+    private Long getCurrentUserId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || authentication.getDetails() == null) {
+            return null;
+        }
+        return authentication.getDetails() instanceof Long ? 
+                (Long) authentication.getDetails() : null;
     }
 
     private ClientTypePermissionDTO permissionToDTO(ClientTypePermission permission) {

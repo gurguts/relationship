@@ -522,6 +522,143 @@ input.custom-select-placeholder {
     overflow-y: auto;
 }
 
+/*--client-type-selection-modal--*/
+
+.modal-client-type-selection {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.modal-client-type-selection-content {
+    background-color: #fff;
+    border-radius: 12px;
+    padding: 2em;
+    max-width: 600px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    position: relative;
+    animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(50px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.close-client-type-modal {
+    position: absolute;
+    top: 1em;
+    right: 1em;
+    font-size: 2em;
+    color: var(--main-grey);
+    cursor: pointer;
+    line-height: 1;
+    transition: color 0.3s ease;
+}
+
+.close-client-type-modal:hover {
+    color: var(--dark-blue);
+}
+
+.modal-client-type-selection-content h2 {
+    font-size: 2em;
+    color: var(--dark-blue);
+    margin-bottom: 0.5em;
+    text-align: center;
+}
+
+.modal-subtitle {
+    text-align: center;
+    color: var(--main-grey);
+    margin-bottom: 2em;
+    font-size: 1.1em;
+}
+
+.client-types-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1.5em;
+    margin-top: 1em;
+}
+
+.client-type-card {
+    background: linear-gradient(135deg, var(--bright-green) 0%, var(--dark-green) 100%);
+    border-radius: 12px;
+    padding: 2em 1.5em;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    border: 2px solid transparent;
+}
+
+.client-type-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+    border-color: var(--bright-blue);
+}
+
+.client-type-card-icon {
+    font-size: 3em;
+    margin-bottom: 0.5em;
+}
+
+.client-type-card-name {
+    color: white;
+    font-size: 1.3em;
+    font-weight: 600;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Улучшенный dropdown в навигации */
+.dropdown-menu li a.active {
+    background-color: var(--bright-green);
+    font-weight: 600;
+    position: relative;
+}
+
+.dropdown-menu li a.active::before {
+    position: absolute;
+    left: 0.5em;
+    color: white;
+}
+
+.nav-client-type-label {
+    opacity: 0.8;
+    margin-right: 0.3em;
+}
+
+.nav-client-type-name {
+    font-weight: 600;
+    color: var(--main-yellow);
+}
+
 .modal-export-data-content label {
     display: flex;
     align-items: center;
@@ -584,7 +721,7 @@ input.custom-select-placeholder {
     table-layout: fixed;
     min-width: 100%;
     width: auto;
-    border-collapse: separate;
+    border-collapse: collapse;
     border-spacing: 0;
     text-align: left;
     font-size: var(--base-text-size);
@@ -679,9 +816,14 @@ input.custom-select-placeholder {
 #client-list td {
     padding: 0.4em 0.2em;
     border-bottom: 1px solid #ddd;
-    vertical-align: middle;
+    vertical-align: top;
     white-space: nowrap;
     min-width: 0;
+}
+
+#client-list td.button-td {
+    white-space: normal;
+    vertical-align: top;
 }
 
 .client-checkbox {
@@ -2064,5 +2206,50 @@ input.custom-select-placeholder {
 }
 
 @media (max-width: 768px) {
+}
+
+.button-td {
+    padding: 0.5em;
+    vertical-align: top;
+    text-align: center;
+    white-space: normal;
+}
+
+.button-td .purchase-button,
+.button-td .container-button {
+    display: inline-block;
+    margin: 0 0.25em;
+    vertical-align: top;
+}
+
+.purchase-button, .container-button {
+    padding: 0.2em 0.4em;
+    color: #fff;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    border-radius: 8px;
+    text-transform: uppercase;
+    transition: background-color 0.3s, transform 0.2s, box-shadow 0.3s;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.purchase-button:active,
+.container-button:active {
+    transform: scale(0.95);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.purchase-button:hover,
+.container-button:hover {
+    box-shadow: 0 6px 10px rgba(0, 0, 0, 0.15);
+}
+
+.purchase-button {
+    background-color: #ff6f61;
+}
+
+.container-button {
+    background-color: #673ab7;
 }
 
