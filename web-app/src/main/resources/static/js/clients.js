@@ -2040,6 +2040,10 @@ async function showClientTypeSelectionModal() {
         
         if (accessibleClientTypes.length === 0) {
             listContainer.innerHTML = '<p style="text-align: center; color: var(--main-grey); padding: 2em;">Немає доступних типів клієнтів</p>';
+            modal.style.display = 'flex';
+        } else if (accessibleClientTypes.length === 1) {
+            window.location.href = `/clients?type=${accessibleClientTypes[0].id}`;
+            return;
         } else {
             listContainer.innerHTML = '';
             accessibleClientTypes.forEach(type => {
@@ -2054,9 +2058,8 @@ async function showClientTypeSelectionModal() {
                 });
                 listContainer.appendChild(card);
             });
+            modal.style.display = 'flex';
         }
-        
-        modal.style.display = 'flex';
 
         const closeBtn = document.querySelector('.close-client-type-modal');
         if (closeBtn) {

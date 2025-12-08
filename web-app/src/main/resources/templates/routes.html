@@ -6,6 +6,7 @@
     <title>Routes</title>
 
     <link rel="stylesheet" href="/css/clients.css">
+    <link rel="stylesheet" href="/css/routes.css">
     <link rel="stylesheet" href="/css/common.css">
 
     <link rel="icon" type="image/png" href="/favicon/favicon-96x96.png" sizes="96x96"/>
@@ -298,6 +299,80 @@
     </div>
 </div>
 
+
+<div id="createPurchaseModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <span class="close" id="closeCreatePurchaseModal">&times;</span>
+        <h2>Створення закупівлі</h2>
+        <form id="createPurchaseForm">
+            <input type="hidden" id="purchaseClientId" name="clientId">
+            <input type="hidden" id="purchaseSourceId" name="sourceId">
+            <label>Водій:
+                <select id="purchaseUserId" name="userId" required></select>
+            </label>
+            <label>Товар:
+                <select id="purchaseProductId" name="productId" required></select>
+            </label>
+            <label>Кількість:
+                <input type="number" id="purchaseQuantity" name="quantity" step="0.01" min="0.01" required>
+            </label>
+            <label>Сплачено:
+                <input type="number" id="purchaseTotalPrice" name="totalPrice" step="0.01" min="0" required>
+            </label>
+            <label>Метод оплати:
+                <select id="purchasePaymentMethod" name="paymentMethod" required>
+                    <option value="">Виберіть метод оплати</option>
+                    <option value="CASH">Готівка</option>
+                    <option value="BANKTRANSFER">Безготівковий розрахунок</option>
+                </select>
+            </label>
+            <label>Валюта:
+                <select id="purchaseCurrency" name="currency" required>
+                    <option value="UAH" selected>UAH</option>
+                    <option value="USD">USD</option>
+                    <option value="EUR">EUR</option>
+                </select>
+            </label>
+            <label id="exchangeRateLabel" style="display: none;">Курс:
+                <input type="number" id="purchaseExchangeRate" name="exchangeRate" step="0.000001" min="0">
+            </label>
+            <label>Коментар:
+                <textarea id="purchaseComment" name="comment" rows="3" placeholder="Додатковий коментар до закупівлі"></textarea>
+            </label>
+            <div class="modal-buttons">
+                <button type="submit">Створити</button>
+                <button type="button" id="cancelCreatePurchase">Відмінити</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="createContainerModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <span class="close" id="closeCreateContainerModal">&times;</span>
+        <h2>Транзакція тари</h2>
+        <form id="createContainerForm">
+            <input type="hidden" id="containerClientId" name="clientId">
+            <label>Тип операції:
+                <select id="containerOperationType" name="operationType" required>
+                    <option value="">Виберіть тип операції</option>
+                    <option value="transfer">Залишити тару у клієнта</option>
+                    <option value="collect">Забрати тару у клієнта</option>
+                </select>
+            </label>
+            <label>Тип тари:
+                <select id="containerContainerId" name="containerId" required></select>
+            </label>
+            <label>Кількість:
+                <input type="number" id="containerQuantity" name="quantity" step="0.01" min="0.01" required>
+            </label>
+            <div class="modal-buttons">
+                <button type="submit">Виконати</button>
+                <button type="button" id="cancelCreateContainer">Відмінити</button>
+            </div>
+        </form>
+    </div>
+</div>
 
 <div id="loader-backdrop" class="loader-backdrop" style="display: none;">
     <div id="loader" class="loader"></div>

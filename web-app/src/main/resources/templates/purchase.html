@@ -5,10 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Purchase</title>
 
-    <link rel="stylesheet" href="/css/common.css">
+    <link rel="stylesheet" href="/css/clients.css">
     <link rel="stylesheet" href="/css/purchase.css">
-
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/common.css">
 
     <link rel="icon" type="image/png" href="/favicon/favicon-96x96.png" sizes="96x96"/>
     <link rel="icon" type="image/svg+xml" href="/favicon/favicon.svg"/>
@@ -34,18 +33,30 @@
     </div>
     <nav>
         <ul>
-            <li id="nav-clients"><a href="/clients">
-                Клієнти
-            </a></li>
-            <li id="nav-routes"><a href="/routes">
-                Маршрути
-            </a></li>
-            <li id="nav-purchase"><a class="selected-nav" href="/purchase">
-                Закупівлі
-            </a></li>
-            <!--<li id="nav-sale"><a href="/sale">
-                Продажі
-            </a></li>-->
+            <li id="nav-clients" class="dropdown">
+                <a href="#" onclick="return false;">
+                    Клієнти
+                    <span class="dropdown-arrow">▼</span>
+                </a>
+                <ul id="client-types-dropdown" class="dropdown-menu" style="display: none;">
+                </ul>
+            </li>
+            <li id="nav-routes" class="dropdown">
+                <a href="#" onclick="return false;">
+                    Маршрути
+                    <span class="dropdown-arrow">▼</span>
+                </a>
+                <ul id="route-types-dropdown" class="dropdown-menu" style="display: none;">
+                </ul>
+            </li>
+            <li id="nav-purchase" class="dropdown">
+                <a class="selected-nav" href="#" onclick="return false;">
+                    Закупівлі
+                    <span class="dropdown-arrow">▼</span>
+                </a>
+                <ul id="purchase-types-dropdown" class="dropdown-menu" style="display: none;">
+                </ul>
+            </li>
             <li id="nav-containers"><a href="/containers">
                 Тари
             </a></li>
@@ -71,15 +82,7 @@
 </header>
 
 <div class="search-section">
-    <span id="all-purchase-info"></span>
-
-    <div id="fetch-report-btn">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M5 9H9V10H5V9ZM5 6.5H11V7.5H5V6.5ZM5 11.5H7.5V12.5H5V11.5Z" fill="white"/>
-            <path d="M12.5 2.5H11V2C11 1.73478 10.8946 1.48043 10.7071 1.29289C10.5196 1.10536 10.2652 1 10 1H6C5.73478 1 5.48043 1.10536 5.29289 1.29289C5.10536 1.48043 5 1.73478 5 2V2.5H3.5C3.23478 2.5 2.98043 2.60536 2.79289 2.79289C2.60536 2.98043 2.5 3.23478 2.5 3.5V14C2.5 14.2652 2.60536 14.5196 2.79289 14.7071C2.98043 14.8946 3.23478 15 3.5 15H12.5C12.7652 15 13.0196 14.8946 13.2071 14.7071C13.3946 14.5196 13.5 14.2652 13.5 14V3.5C13.5 3.23478 13.3946 2.98043 13.2071 2.79289C13.0196 2.60536 12.7652 2.5 12.5 2.5ZM6 2H10V4H6V2ZM12.5 14H3.5V3.5H5V5H11V3.5H12.5V14Z"
-                  fill="white"/>
-        </svg>
-    </div>
+    <span id="all-client-info"></span>
     <div class="search-block">
         <label style="display: none" for="inputSearch"></label>
         <input type="text" id="inputSearch" placeholder="Пошук">
@@ -112,209 +115,51 @@
         </svg>
     </div>
 
-    <button id="exportToExcelData" class="btn btn-primary">Excel</button>
+    <div class="open-modal-create-block">
+        <button id="open-modal">+</button>
+    </div>
 </div>
-
 
 <div id="filterModal" class="modal-filter">
     <div class="modal-content-filter">
-        <span class="close-filter">&times;</span>
+        <span class="close-filter">×</span>
         <h1>ФІЛЬТРИ</h1>
         <form id="filterForm">
-            <h2>Дата закупок:</h2>
-            <div class="filter-block">
-                <label class="from-to-style" for="createdAtFrom">Від:</label>
-                <input type="date" id="createdAtFrom" name="createdAtFrom"><br><br>
-
-                <label class="from-to-style" for="createdAtTo">До:</label>
-                <input type="date" id="createdAtTo" name="createdAtTo"><br><br>
-            </div>
-
-            <h2>Закуплено за раз:</h2>
-            <div class="filter-block">
-                <label class="from-to-style" for="quantityFrom">Від:</label>
-                <input type="number" id="quantityFrom" name="quantityFrom"><br><br>
-
-                <label class="from-to-style" for="quantityTo">До:</label>
-                <input type="number" id="quantityTo" name="quantityTo"><br><br>
-            </div>
-
-            <h2>Сплачено за раз:</h2>
-            <div class="filter-block">
-                <label class="from-to-style" for="totalPriceFrom">Від:</label>
-                <input type="number" id="totalPriceFrom" name="totalPriceFrom"><br><br>
-
-                <label class="from-to-style" for="totalPriceTo">До:</label>
-                <input type="number" id="totalPriceTo" name="totalPriceTo"><br><br>
-            </div>
-
-            <h2>Ціна за од.:</h2>
-            <div class="filter-block">
-                <label class="from-to-style" for="unitPriceFrom">Від:</label>
-                <input type="number" id="unitPriceFrom" name="unitPriceFrom"><br><br>
-
-                <label class="from-to-style" for="unitPriceTo">До:</label>
-                <input type="number" id="unitPriceTo" name="unitPriceTo"><br><br>
-            </div>
-
-            <div class="select-section-items">
-
-                <div class="select-section-item">
-                    <br>
-                    <label class="select-label-style" for="business-filter">Тип бізнесу:</label>
-                    <select id="business-filter" name="business" multiple>
-                    </select>
-                </div>
-
-                <div class="select-section-item">
-                    <br>
-                    <label class="select-label-style" for="route-filter">Маршрут:</label>
-                    <select id="route-filter" name="route" multiple>
-                    </select>
-                </div>
-
-                <div class="select-section-item">
-                    <br>
-                    <label class="select-label-style" for="region-filter">Область:</label>
-                    <select id="region-filter" name="region" multiple>
-                    </select>
-                </div>
-
-                <div class="select-section-item">
-                    <br>
-                    <label class="select-label-style" for="status-filter">Статус:</label>
-                    <select id="status-filter" name="status" multiple>
-                    </select>
-                </div>
-
-                <div class="select-section-item">
-                    <br>
-                    <label class="select-label-style" for="source-filter">Залучення:</label>
-                    <select id="source-filter" name="source" multiple>
-                    </select>
-                </div>
-
-                <div class="select-section-item">
-                    <br>
-                    <label class="select-label-style" for="user-filter">Водій:</label>
-                    <select id="user-filter" name="user" multiple>
-                    </select>
-                </div>
-
-                <div class="select-section-item">
-                    <br>
-                    <label class="select-label-style" for="product-filter">Товар:</label>
-                    <select id="product-filter" name="product" multiple>
-                    </select>
-                </div>
-
-                <div class="select-section-item">
-                    <br>
-                    <label class="select-label-style" for="paymentMethod-filter">Форма оплати:</label>
-                    <select id="paymentMethod-filter" name="paymentMethod" multiple>
-                    </select>
-                </div>
-
-                <div class="select-section-item">
-                    <br>
-                    <label class="select-label-style" for="currencyType-filter">Валюта:</label>
-                    <select id="currencyType-filter" name="currencyType" multiple>
-                    </select>
-                </div>
-
-                <div class="select-section-item">
-                    <br>
-                    <label class="select-label-style" for="client-product-filter">Товар клієнта:</label>
-                    <select id="client-product-filter" name="clientProduct" multiple>
-                    </select>
-                </div>
-            </div>
 
         </form>
         <button id="modal-filter-button-submit" type="submit">Застосувати фільтри</button>
     </div>
 </div>
 
-<div id="report-container" style="display: none;">
-    <button class="print-btn" onclick="printReport()">🖨️</button>
-    <button class="close-btn" onclick="closeReport()">×</button>
-    <h3>Звіт:</h3>
-    <div id="report-content"></div>
-</div>
+<div id="clientTypeSelectionModal" class="modal-client-type-selection" style="display: none;">
+    <div class="modal-client-type-selection-content">
+        <span class="close-client-type-modal">&times;</span>
+        <h2>Виберіть тип клієнта</h2>
+        <div id="client-types-selection-list" class="client-types-grid">
 
-<div id="exportModalData" class="modal-export-data" style="display: none;">
-    <div class="modal-export-data-content">
-        <h3>Виберіть поля для експорту</h3>
-        <form id="exportFieldsForm">
-            <label><input type="checkbox" name="fields" value="id-client" checked> Id (клієнта)</label><br>
-            <label><input type="checkbox" name="fields" value="company-client" checked> Компанія (клієнта)</label><br>
-            <label><input type="checkbox" name="fields" value="person-client" checked> Контактна особа (клієнта)</label><br>
-            <label><input type="checkbox" name="fields" value="phoneNumbers-client" checked> Номери телефонів (клієнта)</label><br>
-            <label><input type="checkbox" name="fields" value="createdAt-client" checked> Дата створення
-                (клієнта)</label><br>
-            <label><input type="checkbox" name="fields" value="updatedAt-client" checked> Дата онолвлення
-                (клієнта)</label><br>
-            <label><input type="checkbox" name="fields" value="status-client" checked> Статус (клієнта)</label><br>
-            <label><input type="checkbox" name="fields" value="source-client" checked> Залучення (клієнта)</label><br>
-            <label><input type="checkbox" name="fields" value="location-client" checked> Адреса (клієнта)</label><br>
-            <label><input type="checkbox" name="fields" value="pricePurchase-client" checked> Ціна закупілві
-                (клієнта)</label><br>
-            <label><input type="checkbox" name="fields" value="priceSale-client" checked> Ціна продажу (клієнта)</label><br>
-            <label><input type="checkbox" name="fields" value="volumeMonth-client" checked> Орієнтований об'єм на
-                місяць (клієнта)</label><br>
-            <label><input type="checkbox" name="fields" value="route-client" checked> Маршрут (клієнта)</label><br>
-            <label><input type="checkbox" name="fields" value="region-client" checked> Область (клієнта)</label><br>
-            <label><input type="checkbox" name="fields" value="business-client" checked> Тип бізнесу
-                (клієнта)</label><br>
-            <label><input type="checkbox" name="fields" value="clientProduct-client" checked> Товар (клієнта)</label><br>
-            <label><input type="checkbox" name="fields" value="edrpou-client" checked> ЄДРПОУ (клієнта)</label><br>
-            <label><input type="checkbox" name="fields" value="enterpriseName-client" checked> Назва підприємства
-                (клієнта)</label><br>
-            <label><input type="checkbox" name="fields" value="vat-client" checked> ПДВ (клієнта)</label><br>
-            <label><input type="checkbox" name="fields" value="comment-client" checked> Коментар (клієнта)</label><br>
-
-            <label><input type="checkbox" name="fields" value="id" checked> Id</label><br>
-            <label><input type="checkbox" name="fields" value="user" checked> Водій</label><br>
-            <label><input type="checkbox" name="fields" value="source" checked> Залучення</label><br>
-            <label><input type="checkbox" name="fields" value="product" checked> Товар</label><br>
-            <label><input type="checkbox" name="fields" value="quantity" checked> Кількість</label><br>
-            <label><input type="checkbox" name="fields" value="unitPrice" checked> Ціна за од</label><br>
-            <label><input type="checkbox" name="fields" value="totalPrice" checked> Повна ціна</label><br>
-            <label><input type="checkbox" name="fields" value="paymentMethod" checked> Метод оплати</label><br>
-            <label><input type="checkbox" name="fields" value="currency" checked> Валюта</label><br>
-            <label><input type="checkbox" name="fields" value="exchangeRate" checked> Курс</label><br>
-            <label><input type="checkbox" name="fields" value="transaction" checked> Id транзакції</label><br>
-            <label><input type="checkbox" name="fields" value="createdAt" checked> Дата створення</label><br>
-            <label><input type="checkbox" name="fields" value="updatedAt" checked> Дата оновлення</label><br>
-            <label><input type="checkbox" name="fields" value="comment" checked> Коментар</label><br>
-        </form>
-        <button id="exportConfirm" class="btn btn-primary">Експортувати</button>
-        <button id="exportCancel" class="btn btn-secondary">Скасування</button>
+        </div>
     </div>
 </div>
 
-<div id="purchase-list">
+<div id="client-list">
     <table>
         <thead>
         <tr>
-            <th>Компанія</th>
-            <th data-sort="product">Товар</th>
-            <th data-sort="user">Водій</th>
-            <th data-sort="source">Залучення</th>
-            <th data-sort="quantity">Кількість</th>
-            <th data-sort="totalPrice">Сплачено</th>
-            <th data-sort="unitPrice">За од</th>
-            <th data-sort="paymentMethod">Форма</th>
-            <th data-sort="currency">Валюта</th>
-            <th data-sort="exchangeRate">Курс</th>
-            <th data-sort="createdAt">Дата</th>
-            <th>Коментар</th>
-            <th>Дії</th>
         </tr>
         </thead>
-        <tbody id="purchase-table-body">
+        <tbody id="client-table-body">
         </tbody>
     </table>
+</div>
+
+<div id="pagination">
+    <button id="prev-btn"><</button>
+    <span id="pagination-info"></span>
+    <button id="next-btn">></button>
+</div>
+
+<div id="loader-backdrop" class="loader-backdrop" style="display: none;">
+    <div id="loader" class="loader"></div>
 </div>
 
 <div id="edit-modal" class="edit-modal" style="display: none;">
@@ -327,7 +172,7 @@
             <label>Кількість:
                 <input type="number" name="quantity" step="0.01" min="0" required>
             </label>
-            <label>Сплачено:
+            <label>Всього сплачено:
                 <input type="number" name="totalPrice" step="0.01" min="0" required>
             </label>
             <label>Дата:
@@ -336,11 +181,11 @@
             <label>Курс:
                 <input type="number" name="exchangeRate" step="0.000001" min="0">
             </label>
-            <label>Коментар:
-                <textarea name="comment" rows="3" placeholder="Додатковий коментар до закупівлі"></textarea>
+            <label>Залучення:
+                <select name="sourceId"></select>
             </label>
-            <label class="edit-source" style="display: none;">Залучення:
-                <select name="sourceId" class="edit-source"></select>
+            <label>Коментар:
+                <textarea name="comment"></textarea>
             </label>
             <button type="submit">Зберегти</button>
             <button type="button" id="cancel-edit">Відмінити</button>
@@ -348,18 +193,16 @@
     </div>
 </div>
 
-
-<div id="pagination">
-    <button id="prev-btn"><</button>
-    <span id="pagination-info"></span>
-    <button id="next-btn">></button>
-</div>
-
-
+<script src="/js/purchase.js"></script>
+<script src="/js/columnResizer.js"></script>
+<script src="/js/createCustomSelect.js"></script>
+<script src="/js/editClient.js"></script>
+<script src="/js/loadClientDetails.js"></script>
+<script src="/js/common.js"></script>
 <div id="client-modal" style="display: none;" data-source-id="" data-client-id="">
     <div class="modal-content-client">
         <span id="close-modal-client" class="close">&times;</span>
-        <h1><span id="modal-client-id"></span></h1>
+        <h1>Клієнт #<span id="modal-client-id"></span></h1>
         <div class="section-client-buttons">
             <div class="section-client-buttons-block">
                 <button id="show-purchases-client" class="client-action-info-button">Закупівлі</button>
@@ -367,99 +210,28 @@
                 <button id="show-containers-client" class="client-action-info-button">Тара</button>
             </div>
         </div>
+        <div class="client-fields-container">
         <p>
             <strong>Компанія:</strong>
             <span id="modal-client-company"></span>
-            <i class="edit-icon" onclick="enableEdit('company')">✏️</i>
-        </p>
-        <p>
-            <strong>Контактна особа:</strong>
-            <span id="modal-client-person"></span>
-            <i class="edit-icon" onclick="enableEdit('person')">✏️</i>
-        </p>
-        <p>
-            <strong>Телефони:</strong>
-            <span id="modal-client-phone"></span>
-            <i class="edit-icon" onclick="enableEdit('phone')">✏️</i>
-        </p>
-        <p>
-            <strong>Адреса:</strong>
-            <span id="modal-client-location"></span>
-            <i class="edit-icon" onclick="enableEdit('location')">✏️</i>
-        </p>
-        <p>
-            <strong>Ціна закупівлі:</strong>
-            <span id="modal-client-price-purchase"></span>
-            <i class="edit-icon" onclick="enableEdit('price-purchase')">✏️</i>
-        </p>
-        <p>
-            <strong>Ціна продажу:</strong>
-            <span id="modal-client-price-sale"></span>
-            <i class="edit-icon" onclick="enableEdit('price-sale')">✏️</i>
-        </p>
-        <p>
-            <strong>ПДВ:</strong>
-            <span id="modal-client-vat"></span>
-            <label style="display: none" for="edit-vat"></label>
-            <input type="checkbox" id="edit-vat" style="display: none;">
-            <i class="edit-icon" onclick="enableEdit('vat')">✏️</i>
-        </p>
-
-        <p>
-            <strong>Об'єм на місяць:</strong>
-            <span id="modal-client-volumeMonth"></span>
-            <i class="edit-icon" onclick="enableEdit('volumeMonth')">✏️</i>
-        </p>
-        <p>
-            <strong>ЄДРПОУ:</strong>
-            <span id="modal-client-edrpou"></span>
-            <i class="edit-icon" onclick="enableEdit('edrpou')">✏️</i>
-        </p>
-        <p>
-            <strong>Назва підриємства:</strong>
-            <span id="modal-client-enterpriseName"></span>
-            <i class="edit-icon" onclick="enableEdit('enterpriseName')">✏️</i>
-        </p>
-        <p>
-            <strong>Тип бізнесу:</strong>
-            <span id="modal-client-business"></span>
-            <i class="edit-icon" onclick="enableSelect('business', availableBusiness)">✏️</i>
-        </p>
-        <p>
-            <strong>Маршрут:</strong>
-            <span id="modal-client-route"></span>
-            <i class="edit-icon" onclick="enableSelect('route', availableRoutes)">✏️</i>
-        </p>
-        <p>
-            <strong>Область:</strong>
-            <span id="modal-client-region"></span>
-            <i class="edit-icon" onclick="enableSelect('region', availableRegions)">✏️</i>
-        </p>
-        <p>
-            <strong>Статус:</strong>
-            <span id="modal-client-status"></span>
-            <i class="edit-icon" onclick="enableSelect('status', availableStatuses)">✏️</i>
+            <button class="edit-icon" onclick="enableEdit('company')" title="Редагувати">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                </svg>
+            </button>
         </p>
         <p class="modal-content-p-source">
             <strong>Залучення:</strong>
             <span id="modal-client-source"></span>
-            <i id="edit-source" class="edit-icon" onclick="enableSelect('source', availableSources)">✏️</i>
+            <button id="edit-source" class="edit-icon" onclick="enableSelect('source', availableSources)" title="Редагувати">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                </svg>
+            </button>
         </p>
-        <p class="modal-content-client-product">
-            <strong>Товар:</strong>
-            <span id="modal-client-clientProduct"></span>
-            <i id="edit-clientProduct" class="edit-icon" onclick="enableSelect('clientProduct', availableClientProducts)">✏️</i>
-        </p>
-        <p>
-            <strong>Коментар:</strong>
-            <span id="modal-client-comment"></span>
-            <i class="edit-icon" onclick="enableEdit('comment')">✏️</i>
-        </p>
-        <p><strong>Терміновий заїзд:</strong>
-            <label style="display: none" for="modal-client-urgently"></label>
-            <input type="checkbox" id="modal-client-urgently"></p>
         <p><strong>Створено:</strong> <span id="modal-client-created"></span></p>
         <p><strong>Оновлено:</strong> <span id="modal-client-updated"></span></p>
+        </div>
 
         <div class="section-client-buttons">
 
@@ -470,6 +242,7 @@
 
             <div class="section-client-buttons-block">
                 <button id="delete-client" class="delete-btn">Видалити</button>
+                <button id="restore-client" class="delete-btn" style="display: none;">Відновити</button>
                 <button id="full-delete-client" class="delete-btn">Full delete</button>
             </div>
         </div>
@@ -529,10 +302,9 @@
         <table id="containerTable">
             <thead>
             <tr>
-                <th>Кількість</th>
                 <th>Тип тари</th>
-                <th>Власник</th>
-                <th>Оновлено</th>
+                <th>Кількість</th>
+                <th>Дата</th>
             </tr>
             </thead>
             <tbody></tbody>
@@ -540,24 +312,7 @@
     </div>
 </div>
 
-
-<div id="loader-backdrop" class="loader-backdrop" style="display: none;">
-    <div id="loader" class="loader"></div>
-</div>
-
-<script src="/js/purchase.js"></script>
-<script src="/js/createCustomSelect.js"></script>
-<script src="/js/common.js"></script>
-<script src="/js/editClient.js"></script>
-<script src="/js/loadClientDetails.js"></script>
 <script src="/js/error.js"></script>
-<script src="/js/exportExcel.js"></script>
-<script>
-    initExcelExport({
-        apiPath: '/api/v1/purchase',
-        downloadFilename: 'purchases_data.xlsx'
-    });
-</script>
 
 </body>
 </html>

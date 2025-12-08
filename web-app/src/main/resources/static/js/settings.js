@@ -43,8 +43,6 @@ function initializeTabs() {
                 loadBranches();
             } else if (targetTab === 'accounts') {
                 loadAccounts();
-            } else if (targetTab === 'source') {
-                loadSources();
             }
         });
     });
@@ -80,10 +78,6 @@ function setupEventListeners() {
 
     // Category type filter
     document.getElementById('category-type-filter').addEventListener('change', loadCategories);
-
-    document.getElementById('create-source-btn').addEventListener('click', () => {
-        openCreateFieldModal('source', 'джерело');
-    });
 
     // Branch and Account buttons
     document.getElementById('create-branch-btn').addEventListener('click', () => {
@@ -268,21 +262,9 @@ async function deleteCategory(id) {
     }
 }
 
-// ========== FIELDS (Business, Region, Source, Route, Status) ==========
+// ========== FIELDS (Business, Region, Route, Status) ==========
 
-const fieldConfig = {
-    source: {
-        endpoint: 'source',
-        name: 'джерело',
-        namePlural: 'джерела',
-        cache: []
-    }
-};
-
-async function loadSources() {
-    await loadUsers();
-    await loadField('source');
-}
+const fieldConfig = {};
 
 async function loadField(fieldType) {
     try {
@@ -308,16 +290,8 @@ function renderField(fieldType, items) {
 
     items.forEach(item => {
         const row = document.createElement('tr');
-        let userCell = '';
-        if (fieldType === 'source') {
-            const userName = item.userId 
-                ? (usersCache.find(u => u.id === item.userId)?.fullName || usersCache.find(u => u.id === item.userId)?.name || `User ${item.userId}`)
-                : 'Не закріплено';
-            userCell = `<td>${userName}</td>`;
-        }
         row.innerHTML = `
             <td>${item.name}</td>
-            ${userCell}
             <td>
                 <div class="action-buttons-table">
                     <button class="action-btn btn-edit" onclick="editField('${fieldType}', ${item.id})">Редагувати</button>
@@ -336,23 +310,6 @@ async function openCreateFieldModal(fieldType, fieldName) {
     document.getElementById('field-modal-title').textContent = `Створити ${fieldName}`;
     document.getElementById('field-submit-btn').textContent = 'Створити';
     document.getElementById('field-name').value = '';
-
-    const userGroup = document.getElementById('field-user-group');
-    const userSelect = document.getElementById('field-user');
-    if (fieldType === 'source') {
-        await loadUsers();
-        userSelect.innerHTML = '<option value="">Не закріплено</option>';
-        usersCache.forEach(user => {
-            const option = document.createElement('option');
-            option.value = user.id;
-            option.textContent = user.fullName || user.name;
-            userSelect.appendChild(option);
-        });
-        userGroup.style.display = 'block';
-        userSelect.value = '';
-    } else {
-        userGroup.style.display = 'none';
-    }
     
     document.getElementById('create-field-modal').style.display = 'block';
 }
@@ -366,11 +323,6 @@ async function handleCreateField(e) {
     const formData = {
         name: document.getElementById('field-name').value
     };
-
-    if (fieldType === 'source') {
-        const userIdValue = document.getElementById('field-user').value;
-        formData.userId = userIdValue ? parseInt(userIdValue) : null;
-    }
 
     try {
         const url = fieldId 
@@ -414,24 +366,6 @@ async function editField(fieldType, id) {
         document.getElementById('field-name').value = item.name;
         document.getElementById('field-modal-title').textContent = `Редагувати ${config.name}`;
         document.getElementById('field-submit-btn').textContent = 'Зберегти';
-        
-        // Загружаем пользователей и устанавливаем значение для source
-        const userGroup = document.getElementById('field-user-group');
-        const userSelect = document.getElementById('field-user');
-        if (fieldType === 'source') {
-            await loadUsers();
-            userSelect.innerHTML = '<option value="">Не закріплено</option>';
-            usersCache.forEach(user => {
-                const option = document.createElement('option');
-                option.value = user.id;
-                option.textContent = user.fullName || user.name;
-                userSelect.appendChild(option);
-            });
-            userGroup.style.display = 'block';
-            userSelect.value = item.userId || '';
-        } else {
-            userGroup.style.display = 'none';
-        }
         
         document.getElementById('create-field-modal').style.display = 'block';
     } catch (error) {

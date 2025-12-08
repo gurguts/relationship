@@ -216,6 +216,7 @@ document.addEventListener('DOMContentLoaded', function () {
         'create-product',
         'client-product-list',
         'client-create-product',
+        'sources-list-container',
         'branchPermissionsContainer'
     ];
     let activeAdminButton = null;
@@ -1094,6 +1095,181 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('client-types-list-container').style.display = 'block';
         await loadClientTypes();
     });
+
+    setupAdminTab('showSourcesBtn', async () => {
+        const container = document.getElementById('sources-list-container');
+        if (container) container.style.display = 'block';
+        await loadSources();
+    });
+
+    const createSourceBtn = document.getElementById('create-source-btn');
+    const sourceForm = document.getElementById('source-form');
+    const sourceModal = document.getElementById('create-source-modal');
+    const sourceModalTitle = document.getElementById('source-modal-title');
+    const sourceSubmitBtn = document.getElementById('source-submit-btn');
+    const sourceNameInput = document.getElementById('source-name');
+    const sourceUserSelect = document.getElementById('source-user');
+    const sourceIdInput = document.getElementById('source-id');
+    const sourceBody = document.getElementById('source-body');
+
+    let sourcesUsersCache = [];
+
+    async function loadUsersForSources() {
+        try {
+            const response = await fetch('/api/v1/user');
+            if (!response.ok) throw new Error('Failed to load users');
+            sourcesUsersCache = await response.json();
+        } catch (error) {
+            console.error('Error loading users for sources:', error);
+        }
+    }
+
+    async function loadSources() {
+        try {
+            await loadUsersForSources();
+            const response = await fetch('/api/v1/source');
+            if (!response.ok) throw new Error('Failed to load sources');
+            const sources = await response.json();
+            renderSources(sources);
+        } catch (error) {
+            console.error('Error loading sources:', error);
+        }
+    }
+
+    function renderSources(sources) {
+        if (!sourceBody) return;
+        sourceBody.innerHTML = '';
+        sources.forEach(source => {
+            const row = document.createElement('tr');
+            const userName = source.userId 
+                ? (sourcesUsersCache.find(u => u.id === source.userId)?.fullName || sourcesUsersCache.find(u => u.id === source.userId)?.name || `User ${source.userId}`)
+                : 'Не закріплено';
+            row.innerHTML = `
+                <td>${source.name}</td>
+                <td>${userName}</td>
+                <td>
+                    <button onclick="editSource(${source.id})" class="btn-edit">Редагувати</button>
+                    <button onclick="deleteSource(${source.id})" class="btn-delete">Видалити</button>
+                </td>
+            `;
+            sourceBody.appendChild(row);
+        });
+    }
+
+    if (createSourceBtn) {
+        createSourceBtn.addEventListener('click', async () => {
+            sourceIdInput.value = '';
+            sourceModalTitle.textContent = 'Створити джерело';
+            sourceSubmitBtn.textContent = 'Створити';
+            sourceNameInput.value = '';
+            await loadUsersForSources();
+            sourceUserSelect.innerHTML = '<option value="">Не закріплено</option>';
+            sourcesUsersCache.forEach(user => {
+                const option = document.createElement('option');
+                option.value = user.id;
+                option.textContent = user.fullName || user.name;
+                sourceUserSelect.appendChild(option);
+            });
+            sourceUserSelect.value = '';
+            sourceModal.style.display = 'flex';
+        });
+    }
+
+    if (sourceForm) {
+        sourceForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const sourceId = sourceIdInput.value;
+            const formData = {
+                name: sourceNameInput.value,
+                userId: sourceUserSelect.value ? parseInt(sourceUserSelect.value) : null
+            };
+
+            try {
+                const url = sourceId 
+                    ? `/api/v1/source/${sourceId}`
+                    : '/api/v1/source';
+                const method = sourceId ? 'PUT' : 'POST';
+                
+                const response = await fetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.message || `Failed to ${sourceId ? 'update' : 'create'} source`);
+                }
+                sourceModal.style.display = 'none';
+                sourceForm.reset();
+                sourceIdInput.value = '';
+                await loadSources();
+            } catch (error) {
+                console.error(`Error ${sourceId ? 'updating' : 'creating'} source:`, error);
+                alert(error.message || `Помилка ${sourceId ? 'оновлення' : 'створення'} джерела`);
+            }
+        });
+    }
+
+    window.editSource = async function(id) {
+        try {
+            const response = await fetch(`/api/v1/source/${id}`);
+            if (!response.ok) throw new Error('Failed to load source');
+            const source = await response.json();
+            
+            sourceIdInput.value = source.id;
+            sourceNameInput.value = source.name;
+            sourceModalTitle.textContent = 'Редагувати джерело';
+            sourceSubmitBtn.textContent = 'Зберегти';
+            
+            await loadUsersForSources();
+            sourceUserSelect.innerHTML = '<option value="">Не закріплено</option>';
+            sourcesUsersCache.forEach(user => {
+                const option = document.createElement('option');
+                option.value = user.id;
+                option.textContent = user.fullName || user.name;
+                sourceUserSelect.appendChild(option);
+            });
+            sourceUserSelect.value = source.userId || '';
+            
+            sourceModal.style.display = 'flex';
+        } catch (error) {
+            console.error('Error loading source:', error);
+            alert('Помилка завантаження джерела');
+        }
+    };
+
+    window.deleteSource = async function(id) {
+        if (!confirm('Ви впевнені, що хочете видалити це джерело? Ця дія незворотна.')) return;
+        
+        try {
+            const response = await fetch(`/api/v1/source/${id}`, {
+                method: 'DELETE'
+            });
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.message || 'Failed to delete source');
+            }
+            await loadSources();
+        } catch (error) {
+            console.error('Error deleting source:', error);
+            alert(error.message || 'Помилка видалення джерела');
+        }
+    };
+
+    const closeSourceModal = sourceModal?.querySelector('.close-modal');
+    if (closeSourceModal) {
+        closeSourceModal.addEventListener('click', () => {
+            sourceModal.style.display = 'none';
+        });
+    }
+
+    if (sourceModal) {
+        sourceModal.addEventListener('click', (e) => {
+            if (e.target === sourceModal) {
+                sourceModal.style.display = 'none';
+            }
+        });
+    }
 
     setupAdminTab('showBranchPermissionsBtn', async () => {
         const container = document.getElementById('branchPermissionsContainer');

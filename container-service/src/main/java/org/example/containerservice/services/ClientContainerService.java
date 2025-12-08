@@ -2,7 +2,6 @@ package org.example.containerservice.services;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.example.containerservice.clients.ClientApiClient;
 import org.example.containerservice.exceptions.ContainerException;
 import org.example.containerservice.exceptions.ContainerNotFoundException;
 import org.example.containerservice.models.ClientContainer;
@@ -28,7 +27,6 @@ public class ClientContainerService {
     private final ContainerBalanceRepository containerBalanceRepository;
     private final ContainerTransactionService containerTransactionService;
     private final IContainerService containerService;
-    private final ClientApiClient clientApiClient;
 
     @Transactional
     public void transferContainerToClient(Long clientId, Long containerId, BigDecimal quantity) {
@@ -44,8 +42,6 @@ public class ClientContainerService {
 
         containerTransactionService.logTransaction(userId, null, clientId, containerId, quantity,
                 ContainerTransactionType.TRANSFER_TO_CLIENT);
-
-        clientApiClient.setUrgentlyFalseAndRoute(clientId);
 
         log.info("Transferred {} units of container {} from user {} to client {}", quantity, containerId, userId, clientId);
     }
@@ -107,8 +103,6 @@ public class ClientContainerService {
         }
 
         containerBalanceRepository.save(collectorBalance);
-
-        clientApiClient.setUrgentlyFalseAndRoute(clientId);
     }
 
     private ContainerBalance validateAndGetBalance(Long clientId, Long containerId, BigDecimal quantity) {

@@ -1,0 +1,264 @@
+#createPurchaseModal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    z-index: 12;
+    justify-content: center;
+    align-items: center;
+    overflow: auto;
+    font-size: var(--rem);
+}
+
+#createPurchaseModal .modal-content {
+    background: white;
+    padding: 2em;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 600px;
+    position: relative;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    overflow-y: auto;
+    max-height: 90vh;
+    margin: auto;
+}
+
+#createPurchaseModal .modal-content h2 {
+    font-size: 1.8rem;
+    text-align: center;
+    text-transform: uppercase;
+    color: var(--dark-green);
+    margin: 0 0 1.5em 0;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+#createPurchaseModal .close {
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    cursor: pointer;
+    font-size: 2em;
+    font-weight: bold;
+    color: #666;
+    transition: color 0.3s ease, transform 0.2s ease;
+    line-height: 1;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: none;
+    border: none;
+}
+
+#createPurchaseModal .close:hover {
+    color: #ff4444;
+    background-color: #ffebee;
+    transform: rotate(90deg);
+}
+
+#createPurchaseModal form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.2em;
+    width: 100%;
+}
+
+#createPurchaseModal form label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5em;
+    font-size: 0.95em;
+    font-weight: 600;
+    color: var(--dark-blue);
+}
+
+#createPurchaseModal form #exchangeRateLabel {
+    display: none;
+}
+
+#createPurchaseModal form input,
+#createPurchaseModal form select,
+#createPurchaseModal form textarea {
+    padding: 0.8em;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    font-size: 1em;
+    transition: border-color 0.3s ease;
+}
+
+#createPurchaseModal form input:focus,
+#createPurchaseModal form select:focus,
+#createPurchaseModal form textarea:focus {
+    outline: none;
+    border-color: var(--dark-green);
+}
+
+#createPurchaseModal .modal-buttons {
+    display: flex;
+    gap: 1em;
+    justify-content: flex-end;
+    margin-top: 1em;
+}
+
+#createPurchaseModal .modal-buttons button {
+    padding: 0.8em 2em;
+    border: none;
+    border-radius: 8px;
+    font-size: 1em;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+#createPurchaseModal .modal-buttons button[type="submit"] {
+    background-color: var(--dark-green);
+    color: white;
+}
+
+#createPurchaseModal .modal-buttons button[type="submit"]:hover {
+    background-color: var(--bright-blue);
+}
+
+#createPurchaseModal .modal-buttons button[type="button"] {
+    background-color: #6c757d;
+    color: white;
+}
+
+#createPurchaseModal .modal-buttons button[type="button"]:hover {
+    background-color: #5a6268;
+}
+
+#createContainerModal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    z-index: 12;
+    justify-content: center;
+    align-items: center;
+    overflow: auto;
+    font-size: var(--rem);
+}
+
+#createContainerModal .modal-content {
+    background: white;
+    padding: 2em;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 600px;
+    position: relative;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    overflow-y: auto;
+    max-height: 90vh;
+    margin: auto;
+}
+
+#createContainerModal .modal-content h2 {
+    font-size: 1.8rem;
+    text-align: center;
+    text-transform: uppercase;
+    color: var(--dark-green);
+    margin: 0 0 1.5em 0;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+#createContainerModal .close {
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    cursor: pointer;
+    font-size: 2em;
+    font-weight: bold;
+    color: #666;
+    transition: color 0.3s ease, transform 0.2s ease;
+    line-height: 1;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: none;
+    border: none;
+}
+
+#createContainerModal .close:hover {
+    color: #ff4444;
+    background-color: #ffebee;
+    transform: rotate(90deg);
+}
+
+#createContainerModal form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.2em;
+    width: 100%;
+}
+
+#createContainerModal form label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5em;
+    font-size: 0.95em;
+    font-weight: 600;
+    color: var(--dark-blue);
+}
+
+#createContainerModal form input,
+#createContainerModal form select {
+    padding: 0.8em;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    font-size: 1em;
+    transition: border-color 0.3s ease;
+}
+
+#createContainerModal form input:focus,
+#createContainerModal form select:focus {
+    outline: none;
+    border-color: var(--dark-green);
+}
+
+#createContainerModal .modal-buttons {
+    display: flex;
+    gap: 1em;
+    justify-content: flex-end;
+    margin-top: 1em;
+}
+
+#createContainerModal .modal-buttons button {
+    padding: 0.8em 2em;
+    border: none;
+    border-radius: 8px;
+    font-size: 1em;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+#createContainerModal .modal-buttons button[type="submit"] {
+    background-color: var(--dark-green);
+    color: white;
+}
+
+#createContainerModal .modal-buttons button[type="submit"]:hover {
+    background-color: var(--bright-blue);
+}
+
+#createContainerModal .modal-buttons button[type="button"] {
+    background-color: #6c757d;
+    color: white;
+}
+
+#createContainerModal .modal-buttons button[type="button"]:hover {
+    background-color: #5a6268;
+}
+

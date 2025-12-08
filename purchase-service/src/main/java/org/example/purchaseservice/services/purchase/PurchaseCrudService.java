@@ -4,7 +4,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.purchaseservice.clients.AccountClient;
 import org.example.purchaseservice.clients.AccountTransactionClient;
-import org.example.purchaseservice.clients.ClientApiClient;
 import org.example.purchaseservice.clients.SourceClient;
 import org.example.purchaseservice.clients.TransactionApiClient;
 import org.example.purchaseservice.clients.UserClient;
@@ -35,7 +34,6 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class PurchaseCrudService implements IPurchaseCrudService {
     private final PurchaseRepository purchaseRepository;
-    private final ClientApiClient clientApiClient;
     private final TransactionApiClient transactionApiClient;
     private final AccountTransactionClient accountTransactionClient;
     private final AccountClient accountClient;
@@ -49,32 +47,31 @@ public class PurchaseCrudService implements IPurchaseCrudService {
     @Transactional
     public Purchase createPurchase(Purchase purchase) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        Long userId = (Long) authentication.getDetails();
-        purchase.setUser(userId);
+        Long executedUserId = (Long) authentication.getDetails();
+        purchase.setExecutedUser(executedUserId);
 
         purchase.calculateAndSetUnitPrice();
         
         // Get exchange rate to EUR and convert prices/quantity
         String purchaseCurrency = purchase.getCurrency() != null ? purchase.getCurrency() : "EUR";
         BigDecimal exchangeRateToEur = exchangeRateService.getExchangeRateToEur(purchaseCurrency);
+        purchase.setExchangeRateToEur(exchangeRateToEur);
         purchase.calculateAndSetPricesInEur(exchangeRateToEur);
 
         Long transactionId = null;
         if (purchase.getPaymentMethod().equals(PaymentMethod.CASH)) {
 
-            transactionId = createAccountTransactionForPurchase(userId, purchase);
+            transactionId = createAccountTransactionForPurchase(purchase.getUser(), purchase);
         }
 
         purchase.setTransaction(transactionId);
-
-        clientApiClient.setUrgentlyFalseAndRoute(purchase.getClient());
 
         Purchase savedPurchase = purchaseRepository.save(purchase);
 
         // Update driver product balance (use EUR values)
         if (savedPurchase.getTotalPriceEur() != null && savedPurchase.getQuantityEur() != null) {
             driverProductBalanceService.addProduct(
-                    userId,
+                    savedPurchase.getUser(),
                     savedPurchase.getProduct(),
                     savedPurchase.getQuantityEur(),  // Use quantity in EUR
                     savedPurchase.getTotalPriceEur()  // Use total price in EUR
@@ -166,6 +163,7 @@ public class PurchaseCrudService implements IPurchaseCrudService {
         // Recalculate prices in EUR
         String purchaseCurrency = existingPurchase.getCurrency() != null ? existingPurchase.getCurrency() : "EUR";
         BigDecimal exchangeRateToEur = exchangeRateService.getExchangeRateToEur(purchaseCurrency);
+        existingPurchase.setExchangeRateToEur(exchangeRateToEur);
         existingPurchase.calculateAndSetPricesInEur(exchangeRateToEur);
 
         Purchase savedPurchase = purchaseRepository.save(existingPurchase);

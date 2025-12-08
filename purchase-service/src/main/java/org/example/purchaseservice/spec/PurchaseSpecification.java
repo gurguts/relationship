@@ -111,6 +111,7 @@ public class PurchaseSpecification implements Specification<Purchase> {
                 case "user":
                     predicate = addIdFilter(predicate, root, criteriaBuilder, values, "user");
                     break;
+                case "currency":
                 case "currencyType":
                     predicate = addStringFilter(predicate, root, criteriaBuilder, values, "currency");
                     break;
@@ -118,6 +119,18 @@ public class PurchaseSpecification implements Specification<Purchase> {
                     predicate = addPaymentMethodFilter(predicate, root, criteriaBuilder, values);
                     break;
                 default:
+                    if (key.endsWith("From") || key.endsWith("To")) {
+                        String fieldName = key.substring(0, key.length() - (key.endsWith("From") ? 4 : 2));
+                        if (fieldName.equals("createdAt")) {
+                            predicate = addDateFilter(predicate, root, criteriaBuilder, values, "createdAt", key.endsWith("From"));
+                        } else if (fieldName.equals("quantity")) {
+                            predicate = addNumericFilter(predicate, root, criteriaBuilder, values, "quantity", key.endsWith("From"));
+                        } else if (fieldName.equals("unitPrice")) {
+                            predicate = addNumericFilter(predicate, root, criteriaBuilder, values, "unitPrice", key.endsWith("From"));
+                        } else if (fieldName.equals("totalPrice")) {
+                            predicate = addNumericFilter(predicate, root, criteriaBuilder, values, "totalPrice", key.endsWith("From"));
+                        }
+                    }
                     break;
             }
         }

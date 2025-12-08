@@ -43,11 +43,11 @@ public class ClientSearchService implements IClientSearchService {
     }
 
     @Override
-    public List<Client> searchClientsForPurchase(String query, Map<String, List<String>> filterParams) {
-        log.info("Searching clients for purchase-service with query: {}, filters: {}", query, filterParams);
+    public List<Client> searchClientsForPurchase(String query, Map<String, List<String>> filterParams, Long clientTypeId) {
+        log.info("Searching clients for purchase-service with query: {}, filters: {}, clientTypeId: {}", query, filterParams, clientTypeId);
 
         FilterIds filterIds = query != null && !query.trim().isEmpty() ? fetchFilterIds(query) : null;
-        return fetchClients(query, filterParams, filterIds);
+        return fetchClients(query, filterParams, filterIds, clientTypeId);
     }
 
     @Override
@@ -117,16 +117,16 @@ public class ClientSearchService implements IClientSearchService {
         return clientPage;
     }
 
-    private List<Client> fetchClients(String query, Map<String, List<String>> filterParams, FilterIds filterIds) {
-        Long clientTypeId = filterParams != null && filterParams.containsKey("clientTypeId") 
-            ? Long.parseLong(filterParams.get("clientTypeId").get(0)) 
-            : null;
+    private List<Client> fetchClients(String query, Map<String, List<String>> filterParams, FilterIds filterIds, Long clientTypeId) {
+        Map<String, List<String>> cleanedFilterParams = filterParams != null ? new java.util.HashMap<>(filterParams) : new java.util.HashMap<>();
+        cleanedFilterParams.remove("clientTypeId");
 
         List<Client> clients = clientRepository.findAll(new ClientSpecification(
                 query,
-                filterParams,
+                cleanedFilterParams,
                 filterIds != null ? filterIds.sourceIds() : null,
-                clientTypeId
+                clientTypeId,
+                null
         ));
 
         return clients;

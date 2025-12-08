@@ -9,6 +9,9 @@ import java.math.BigDecimal;
 
 @Data
 public class PurchaseCreateDTO {
+    @NotNull(message = "{validation.purchase.user.null}")
+    private Long userId;
+
     @NotNull(message = "{validation.purchase.client.null}")
     private Long clientId;
 

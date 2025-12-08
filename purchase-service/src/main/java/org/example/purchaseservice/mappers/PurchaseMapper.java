@@ -70,6 +70,7 @@ public class PurchaseMapper {
             return null;
         }
         Purchase purchase = new Purchase();
+        purchase.setUser(dto.getUserId());
         purchase.setClient(dto.getClientId());
         purchase.setSource(dto.getSourceId());
         purchase.setProduct(dto.getProductId());

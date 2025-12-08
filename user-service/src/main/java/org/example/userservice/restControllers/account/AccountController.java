@@ -109,7 +109,7 @@ public class AccountController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAuthority('settings:edit')")
+    @PreAuthorize("hasAuthority('settings_finance:delete')")
     public ResponseEntity<Void> deleteAccount(@PathVariable Long id) {
         accountService.deleteAccount(id);
         return ResponseEntity.noContent().build();

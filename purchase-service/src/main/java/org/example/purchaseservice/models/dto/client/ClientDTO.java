@@ -18,7 +18,6 @@ public class ClientDTO {
     private String updatedAt;
     private String volumeMonth;
     private String comment;
-    private Boolean urgently;
     private String edrpou;
     private String enterpriseName;
     private Boolean vat;

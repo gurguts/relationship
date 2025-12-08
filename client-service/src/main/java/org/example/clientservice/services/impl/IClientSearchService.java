@@ -10,7 +10,7 @@ import java.util.Map;
 public interface IClientSearchService {
     Page<Client> searchClients(String query, Pageable pageable, Map<String, List<String>> filterParams, Long clientTypeId);
 
-    List<Client> searchClientsForPurchase(String query, Map<String, List<String>> filterParams);
+    List<Client> searchClientsForPurchase(String query, Map<String, List<String>> filterParams, Long clientTypeId);
 
     List<Map<Long, String>> searchIdsClient(List<Long> ids);
 }

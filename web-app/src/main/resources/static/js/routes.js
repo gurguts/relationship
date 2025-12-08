@@ -10,6 +10,12 @@ const customSelects = {};
 
 let availableSources = [];
 let sourceMap;
+let availableUsers = [];
+let userMap;
+let availableProducts = [];
+let productMap;
+let availableContainers = [];
+let containerMap;
 
 const userId = localStorage.getItem('userId');
 const selectedFilters = {};
@@ -802,15 +808,19 @@ async function renderClientsWithDynamicFields(clients) {
         
         const purchaseButton = row.querySelector('.purchase-button');
         if (purchaseButton) {
-            purchaseButton.addEventListener('click', () => {
-                console.log('Purchase button clicked for client:', client.id);
+            purchaseButton.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                openCreatePurchaseModal(client.id);
             });
         }
         
         const containerButton = row.querySelector('.container-button');
         if (containerButton) {
-            containerButton.addEventListener('click', () => {
-                console.log('Container button clicked for client:', client.id);
+            containerButton.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                openCreateContainerModal(client.id);
             });
         }
         
@@ -840,15 +850,19 @@ function renderClientsWithDefaultFields(clients) {
         
         const purchaseButton = row.querySelector('.purchase-button');
         if (purchaseButton) {
-            purchaseButton.addEventListener('click', () => {
-                console.log('Purchase button clicked for client:', client.id);
+            purchaseButton.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                openCreatePurchaseModal(client.id);
             });
         }
         
         const containerButton = row.querySelector('.container-button');
         if (containerButton) {
-            containerButton.addEventListener('click', () => {
-                console.log('Container button clicked for client:', client.id);
+            containerButton.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                openCreateContainerModal(client.id);
             });
         }
         
@@ -2085,6 +2099,10 @@ async function showClientTypeSelectionModal() {
         
         if (accessibleClientTypes.length === 0) {
             listContainer.innerHTML = '<p style="text-align: center; color: var(--main-grey); padding: 2em;">Немає доступних типів клієнтів</p>';
+            modal.style.display = 'flex';
+        } else if (accessibleClientTypes.length === 1) {
+            window.location.href = `/routes?type=${accessibleClientTypes[0].id}`;
+            return;
         } else {
             listContainer.innerHTML = '';
             accessibleClientTypes.forEach(type => {
@@ -2099,9 +2117,8 @@ async function showClientTypeSelectionModal() {
                 });
                 listContainer.appendChild(card);
             });
+            modal.style.display = 'flex';
         }
-        
-        modal.style.display = 'flex';
 
         const closeBtn = document.querySelector('.close-client-type-modal');
         if (closeBtn) {
@@ -2149,6 +2166,297 @@ async function updateNavigationWithCurrentType(typeId) {
     } catch (error) {
         console.error('Error updating navigation:', error);
     }
+}
+
+async function loadUsers() {
+    try {
+        const response = await fetch('/api/v1/user');
+        if (!response.ok) throw new Error('Failed to load users');
+        availableUsers = await response.json();
+        userMap = new Map(availableUsers.map(u => [u.id, u.name]));
+    } catch (error) {
+        console.error('Error loading users:', error);
+        availableUsers = [];
+        userMap = new Map();
+    }
+}
+
+async function loadProducts() {
+    try {
+        const response = await fetch('/api/v1/product?usage=PURCHASE_ONLY');
+        if (!response.ok) throw new Error('Failed to load products');
+        availableProducts = await response.json();
+        productMap = new Map(availableProducts.map(p => [p.id, p.name]));
+    } catch (error) {
+        console.error('Error loading products:', error);
+        availableProducts = [];
+        productMap = new Map();
+    }
+}
+
+async function openCreatePurchaseModal(clientId) {
+    const modal = document.getElementById('createPurchaseModal');
+    if (!modal) {
+        return;
+    }
+    const form = document.getElementById('createPurchaseForm');
+    const clientIdInput = document.getElementById('purchaseClientId');
+    const sourceIdInput = document.getElementById('purchaseSourceId');
+    const userIdSelect = document.getElementById('purchaseUserId');
+    const productIdSelect = document.getElementById('purchaseProductId');
+    const currencySelect = document.getElementById('purchaseCurrency');
+    const exchangeRateLabel = document.getElementById('exchangeRateLabel');
+    const exchangeRateInput = document.getElementById('purchaseExchangeRate');
+    
+    if (!form || !clientIdInput || !sourceIdInput || !userIdSelect || !productIdSelect || !currencySelect) {
+        return;
+    }
+    
+    form.reset();
+    clientIdInput.value = clientId;
+    
+    try {
+        const clientResponse = await fetch(`/api/v1/client/${clientId}`);
+        if (!clientResponse.ok) throw new Error('Failed to load client');
+        const clientData = await clientResponse.json();
+        sourceIdInput.value = clientData.sourceId || '';
+    } catch (error) {
+        console.error('Error loading client:', error);
+        sourceIdInput.value = '';
+    }
+    
+    await Promise.all([loadUsers(), loadProducts()]);
+    
+    userIdSelect.innerHTML = '';
+    const currentUserId = userId ? Number(userId) : null;
+    availableUsers.forEach(user => {
+        const option = document.createElement('option');
+        option.value = user.id;
+        option.textContent = user.name;
+        if (currentUserId && Number(user.id) === currentUserId) {
+            option.selected = true;
+        }
+        userIdSelect.appendChild(option);
+    });
+    
+    productIdSelect.innerHTML = '<option value="">Виберіть товар</option>';
+    availableProducts.forEach(product => {
+        const option = document.createElement('option');
+        option.value = product.id;
+        option.textContent = product.name;
+        productIdSelect.appendChild(option);
+    });
+    
+    currencySelect.value = 'UAH';
+    exchangeRateLabel.style.display = 'none';
+    exchangeRateInput.value = '';
+    
+    modal.style.display = 'flex';
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const createPurchaseModal = document.getElementById('createPurchaseModal');
+    const closeCreatePurchaseModal = document.getElementById('closeCreatePurchaseModal');
+    const cancelCreatePurchase = document.getElementById('cancelCreatePurchase');
+    const createPurchaseForm = document.getElementById('createPurchaseForm');
+    const currencySelect = document.getElementById('purchaseCurrency');
+    const exchangeRateLabel = document.getElementById('exchangeRateLabel');
+    const exchangeRateInput = document.getElementById('purchaseExchangeRate');
+    
+    if (currencySelect && exchangeRateLabel && exchangeRateInput) {
+        currencySelect.addEventListener('change', function() {
+            if (this.value === 'USD' || this.value === 'EUR') {
+                exchangeRateLabel.style.display = 'flex';
+            } else {
+                exchangeRateLabel.style.display = 'none';
+                exchangeRateInput.value = '';
+            }
+        });
+    }
+    
+    if (closeCreatePurchaseModal) {
+        closeCreatePurchaseModal.addEventListener('click', () => {
+            createPurchaseModal.style.display = 'none';
+        });
+    }
+    
+    if (cancelCreatePurchase) {
+        cancelCreatePurchase.addEventListener('click', () => {
+            createPurchaseModal.style.display = 'none';
+        });
+    }
+    
+    if (createPurchaseForm) {
+        createPurchaseForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const sourceIdValue = document.getElementById('purchaseSourceId').value;
+            const formData = {
+                userId: Number(document.getElementById('purchaseUserId').value),
+                clientId: Number(document.getElementById('purchaseClientId').value),
+                sourceId: sourceIdValue && sourceIdValue !== '' ? Number(sourceIdValue) : null,
+                productId: Number(document.getElementById('purchaseProductId').value),
+                quantity: parseFloat(document.getElementById('purchaseQuantity').value),
+                totalPrice: parseFloat(document.getElementById('purchaseTotalPrice').value),
+                paymentMethod: document.getElementById('purchasePaymentMethod').value,
+                currency: document.getElementById('purchaseCurrency').value,
+                exchangeRate: document.getElementById('purchaseExchangeRate').value ? parseFloat(document.getElementById('purchaseExchangeRate').value) : null,
+                comment: document.getElementById('purchaseComment').value || null
+            };
+            
+            try {
+                loaderBackdrop.style.display = 'flex';
+                const response = await fetch('/api/v1/purchase', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.message || 'Помилка створення закупівлі');
+                }
+                
+                createPurchaseModal.style.display = 'none';
+                createPurchaseForm.reset();
+                showMessage('Закупівлю успішно створено', 'info');
+            } catch (error) {
+                console.error('Error creating purchase:', error);
+                showMessage('Помилка створення закупівлі: ' + error.message, 'error');
+            } finally {
+                loaderBackdrop.style.display = 'none';
+            }
+        });
+    }
+    
+    const createContainerModal = document.getElementById('createContainerModal');
+    const closeCreateContainerModal = document.getElementById('closeCreateContainerModal');
+    const cancelCreateContainer = document.getElementById('cancelCreateContainer');
+    const createContainerForm = document.getElementById('createContainerForm');
+    
+    if (closeCreateContainerModal) {
+        closeCreateContainerModal.addEventListener('click', () => {
+            createContainerModal.style.display = 'none';
+        });
+    }
+    
+    if (cancelCreateContainer) {
+        cancelCreateContainer.addEventListener('click', () => {
+            createContainerModal.style.display = 'none';
+        });
+    }
+    
+    if (createContainerForm) {
+        createContainerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const operationType = document.getElementById('containerOperationType').value;
+            const clientId = Number(document.getElementById('containerClientId').value);
+            const containerId = Number(document.getElementById('containerContainerId').value);
+            const quantity = parseFloat(document.getElementById('containerQuantity').value);
+            
+            if (!operationType || !clientId || !containerId || !quantity) {
+                showMessage('Будь ласка, заповніть всі поля', 'error');
+                return;
+            }
+            
+            const formData = {
+                clientId: clientId,
+                containerId: containerId,
+                quantity: quantity
+            };
+            
+            const endpoint = operationType === 'transfer' 
+                ? '/api/v1/containers/client/transfer'
+                : '/api/v1/containers/client/collect';
+            
+            try {
+                loaderBackdrop.style.display = 'flex';
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.message || 'Помилка виконання транзакції тари');
+                }
+                
+                createContainerModal.style.display = 'none';
+                createContainerForm.reset();
+                const operationText = operationType === 'transfer' 
+                    ? 'Тара успішно залишена у клієнта'
+                    : 'Тара успішно забрана у клієнта';
+                showMessage(operationText, 'info');
+            } catch (error) {
+                console.error('Error executing container transaction:', error);
+                showMessage('Помилка виконання транзакції тари: ' + error.message, 'error');
+            } finally {
+                loaderBackdrop.style.display = 'none';
+            }
+        });
+    }
+    
+    window.addEventListener('click', (e) => {
+        const purchaseModal = document.getElementById('createPurchaseModal');
+        const containerModal = document.getElementById('createContainerModal');
+        if (e.target === purchaseModal) {
+            purchaseModal.style.display = 'none';
+        }
+        if (e.target === containerModal) {
+            containerModal.style.display = 'none';
+        }
+    });
+});
+
+async function loadContainers() {
+    try {
+        const response = await fetch('/api/v1/container');
+        if (!response.ok) throw new Error('Failed to load containers');
+        availableContainers = await response.json();
+        containerMap = new Map(availableContainers.map(c => [c.id, c.name]));
+    } catch (error) {
+        console.error('Error loading containers:', error);
+        availableContainers = [];
+        containerMap = new Map();
+    }
+}
+
+async function openCreateContainerModal(clientId) {
+    const modal = document.getElementById('createContainerModal');
+    if (!modal) {
+        return;
+    }
+    const form = document.getElementById('createContainerForm');
+    const clientIdInput = document.getElementById('containerClientId');
+    const operationTypeSelect = document.getElementById('containerOperationType');
+    const containerIdSelect = document.getElementById('containerContainerId');
+    
+    if (!form || !clientIdInput || !operationTypeSelect || !containerIdSelect) {
+        return;
+    }
+    
+    form.reset();
+    clientIdInput.value = clientId;
+    
+    await loadContainers();
+    
+    operationTypeSelect.value = '';
+    
+    containerIdSelect.innerHTML = '<option value="">Виберіть тип тари</option>';
+    availableContainers.forEach(container => {
+        const option = document.createElement('option');
+        option.value = container.id;
+        option.textContent = container.name;
+        containerIdSelect.appendChild(option);
+    });
+    
+    modal.style.display = 'flex';
 }
 
 

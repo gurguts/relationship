@@ -16,7 +16,4 @@ public interface ClientApiClient {
 
     @PostMapping("/search")
     List<ClientDTO> searchClients(@RequestBody ClientSearchRequest request);
-
-    @PatchMapping("/urgently/false/{clientId}")
-    void setUrgentlyFalseAndRoute(@PathVariable Long clientId);
 }

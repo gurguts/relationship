@@ -81,7 +81,7 @@ public class ClientSearchController {
 
     @PostMapping("/search")
     public List<ClientListDTO> searchClientsForPurchase(@RequestBody ClientSearchRequest request) {
-        List<Client> clients = clientService.searchClientsForPurchase(request.query(), request.filterParams());
+        List<Client> clients = clientService.searchClientsForPurchase(request.query(), request.filterParams(), request.clientTypeId());
 
         ExternalClientDataCache cache = new ExternalClientDataCache(
                 sourceService.getAllSources()
