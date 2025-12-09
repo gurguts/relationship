@@ -257,16 +257,58 @@
 }
 
 
-#filterForm input[type="number"],
-#filterForm select {
+#filterForm input[type="number"] {
     font-size: 1em;
     width: 30%;
-    padding: 0.2em;
+    padding: 0.5em;
     margin: 0;
     box-sizing: border-box;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    background-color: #fff;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
-#filterForm input[type="date"],
+#filterForm input[type="number"]:focus {
+    border-color: var(--dark-green);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(73, 115, 10, 0.1);
+}
+
+#filterForm select {
+    font-size: 1em;
+    padding: 0.5em;
+    width: 30%;
+    box-sizing: border-box;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    background-color: #fff;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+#filterForm select:focus {
+    border-color: var(--dark-green);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(73, 115, 10, 0.1);
+}
+
+#filterForm input[type="date"] {
+    font-size: 1em;
+    padding: 0.5em;
+    width: 30%;
+    box-sizing: border-box;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background-color: #fff;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+#filterForm input[type="date"]:focus {
+    border-color: var(--dark-green);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(73, 115, 10, 0.1);
+}
+
 #filterForm select {
     font-size: 1em;
     padding: 0.5em;
@@ -956,13 +998,16 @@ input.custom-select-placeholder {
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
+    background-color: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
     justify-content: center;
     align-items: center;
     z-index: 11;
     overflow: hidden;
     opacity: 0;
     transition: opacity 0.3s ease-in-out;
+    padding: 1em;
+    box-sizing: border-box;
 }
 
 #client-modal.open {
@@ -976,14 +1021,17 @@ input.custom-select-placeholder {
 
 .modal-content-client {
     background-color: white;
-    padding: 1em;
-    border-radius: 8px 0 0 8px;
-    width: 70%;
-    height: 90%;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    padding: 1.2em;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 900px;
+    max-height: 95vh;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
     overflow-y: auto;
     font-family: sans-serif;
     position: relative;
+    display: flex;
+    flex-direction: column;
 }
 
 #client-modal.open .modal-content-client {
@@ -1016,15 +1064,35 @@ input.custom-select-placeholder {
 .modal-content-client h1 {
     margin: 0;
     text-align: center;
-    color: var(--dark-blue);
     font-size: 1.4em;
+    font-weight: 600;
+    border-bottom: 2px solid var(--dark-green);
+}
+
+.modal-content-client .client-fields-container {
+    flex: 1;
+    overflow-y: auto;
+    padding-right: 0.3em;
 }
 
 .modal-content-client p {
-    margin: 0 0;
-    padding: 0.1em 0;
-    border-bottom: 1px solid #bebebe;
-    font-size: 1em;
+    margin: 0.1em 0;
+    padding: 0.5em 0.8em;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    font-size: 0.95em;
+    background-color: #fafafa;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.4em;
+    flex-wrap: wrap;
+}
+
+.modal-content-client p.editing {
+    background-color: #fff;
+    border-color: var(--dark-green);
+    box-shadow: 0 2px 8px rgba(73, 115, 10, 0.15);
 }
 
 .modal-content-p-source {
@@ -1032,56 +1100,121 @@ input.custom-select-placeholder {
 }
 
 .modal-content-client strong {
-    font-size: 1em;
+    font-size: 0.9em;
     display: inline-block;
-    min-width: 15em;
+    min-width: 11em;
     color: var(--dark-blue);
-    text-transform: uppercase;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+    .modal-content-client strong {
+        min-width: 100%;
+        margin-bottom: 0.2em;
+    }
 }
 
 #close-modal-client {
     position: absolute;
-    top: 10px;
-    right: 10px;
+    top: 0.5em;
+    right: 0.8em;
     cursor: pointer;
-    font-size: 2em;
+    font-size: 1.8em;
     font-weight: bold;
-    color: #333;
-    transition: color 0.3s ease;
+    color: #666;
+    transition: all 0.3s ease;
     border: none;
     background: none;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    z-index: 1;
+    touch-action: manipulation;
 }
 
-#close-modal-client:hover {
+#close-modal-client:hover,
+#close-modal-client:active {
     color: #c00;
+    background-color: rgba(204, 0, 0, 0.1);
+    transform: scale(1.1);
+}
+
+@media (max-width: 768px) {
+    #close-modal-client {
+        width: 44px;
+        height: 44px;
+        font-size: 2.2em;
+    }
 }
 
 .edit-icon {
-    margin-left: 0.3em;
+    margin-left: auto;
     cursor: pointer;
-    font-size: 1.2em;
-    color: #555;
-    visibility: hidden;
-    transition: visibility 0.2s ease, opacity 0.2s ease;
-    opacity: 0;
+    color: var(--dark-green);
+    visibility: visible;
+    opacity: 0.7;
+    transition: all 0.2s ease;
+    padding: 0.2em;
+    border-radius: 4px;
+    flex-shrink: 0;
+    min-width: 20px;
+    min-height: 20px;
+    width: 20px;
+    height: 20px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    touch-action: manipulation;
+    background: none;
+    border: none;
 }
 
-.modal-content-client p:hover .edit-icon {
-    visibility: visible;
+.edit-icon svg {
+    width: 100%;
+    height: 100%;
+    fill: currentColor;
+}
+
+.edit-icon:hover,
+.edit-icon:active {
     opacity: 1;
+    background-color: rgba(73, 115, 10, 0.1);
+    transform: scale(1.1);
 }
 
 .modal-content-client p:hover {
-    background-color: #f9f9f9;
+    background-color: #f5f5f5;
+}
+
+@media (max-width: 768px) {
+    .edit-icon {
+        visibility: visible;
+        opacity: 1;
+        font-size: 1.5em;
+        min-width: 40px;
+        min-height: 40px;
+    }
 }
 
 .modal-content-client span {
-    color: black;
-    font-size: 1em;
+    color: #333;
+    font-size: 0.95em;
     display: inline-block;
     white-space: normal;
     word-wrap: break-word;
     word-break: break-word;
+    flex: 1;
+    min-width: 0;
+    line-height: 1.4;
+}
+
+.modal-content-client span.empty-value {
+    color: #999;
+    font-style: italic;
 }
 
 .modal-content-client i.edit-icon:hover {
@@ -1091,21 +1224,33 @@ input.custom-select-placeholder {
 
 .modal-content-client input,
 .modal-content-client textarea {
-    font-size: 1em;
-    color: black;
+    font-size: 0.95em;
+    color: #333;
     background-color: #fff;
-    padding: 0.5em;
-    border: 1px solid #ddd;
-    border-radius: 4px;
+    padding: 0.5em 0.6em;
+    border: 2px solid #ddd;
+    border-radius: 6px;
     font-family: 'Arial', sans-serif;
-    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    transition: all 0.3s ease;
+    flex: 1;
+    min-width: 200px;
+    box-sizing: border-box;
 }
 
 .modal-content-client input:focus,
 .modal-content-client textarea:focus {
-    border-color: #2980b9;
+    border-color: var(--dark-green);
     outline: none;
-    box-shadow: 0 0 8px rgba(41, 128, 185, 0.5);
+    box-shadow: 0 0 0 3px rgba(73, 115, 10, 0.1);
+}
+
+@media (max-width: 768px) {
+    .modal-content-client input,
+    .modal-content-client textarea {
+        width: 100%;
+        min-width: 100%;
+        font-size: 16px;
+    }
 }
 
 .edit-number {
@@ -1122,7 +1267,7 @@ input.custom-select-placeholder {
 
 
 .edit-textarea {
-    width: 50em;
+    width: 45em;
     max-height: 20em;
     resize: both;
     box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -1151,19 +1296,45 @@ input.custom-select-placeholder {
     outline: none;
 }
 
+.section-client-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6em;
+    justify-content: space-between;
+}
+
+.section-client-buttons-block {
+    display: flex;
+    gap: 0.5em;
+    flex-wrap: wrap;
+}
+
 #save-client, #cancel-client, #delete-client, #full-delete-client {
-    display: inline-block;
-    padding: 0.5em 1em;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5em 1.2em;
     border: none;
-    border-radius: 5px;
+    border-radius: 6px;
     cursor: pointer;
-    font-size: 1em;
+    font-size: 0.9em;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    min-height: 36px;
+    touch-action: manipulation;
 }
 
 #save-client {
     display: none;
-    background-color: var(--bright-green);
+    background-color: var(--dark-green);
     color: white;
+}
+
+#save-client:hover,
+#save-client:active {
+    background-color: var(--bright-green);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(73, 115, 10, 0.3);
 }
 
 .delete-btn {
@@ -1171,10 +1342,41 @@ input.custom-select-placeholder {
     color: white;
 }
 
+.delete-btn:hover,
+.delete-btn:active {
+    background-color: #d32f2f;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(244, 67, 54, 0.3);
+}
+
 #cancel-client {
     display: none;
-    background-color: #ffcc00;
+    background-color: #ff9800;
     color: white;
+}
+
+#cancel-client:hover,
+#cancel-client:active {
+    background-color: #f57c00;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 152, 0, 0.3);
+}
+
+@media (max-width: 768px) {
+    .section-client-buttons {
+        flex-direction: column;
+    }
+    
+    .section-client-buttons-block {
+        width: 100%;
+        flex-direction: column;
+    }
+    
+    #save-client, #cancel-client, #delete-client, #full-delete-client {
+        width: 100%;
+        padding: 1em;
+        font-size: 1.1em;
+    }
 }
 
 #modal-client-vat input {

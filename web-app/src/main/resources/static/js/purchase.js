@@ -162,7 +162,7 @@ function getRowHtml(purchase) {
     const totalPrice = purchase.totalPrice ? purchase.totalPrice.toString() : '';
     const currency = purchase.currency || '';
     const exchangeRate = purchase.exchangeRate ? purchase.exchangeRate.toString() : '';
-    const paymentMethod = purchase.paymentMethod === 'CASH' ? 'Готівка' : purchase.paymentMethod === 'BANKTRANSFER' ? 'Безготівковий розрахунок' : '';
+    const paymentMethod = purchase.paymentMethod === 'CASH' ? '2' : purchase.paymentMethod === 'BANKTRANSFER' ? '1' : '';
     const createdAt = purchase.createdAt ? new Date(purchase.createdAt).toLocaleDateString('ua-UA') : '';
     const isReceived = purchase.isReceived === true;
     const editDisabled = isReceived ? 'disabled' : '';
@@ -533,8 +533,8 @@ function buildDynamicFilters() {
             <label class="select-label-style" for="filter-paymentMethod">Метод оплати:</label>
             <select id="filter-paymentMethod" name="paymentMethod">
                 <option value="">Всі</option>
-                <option value="CASH">Готівка</option>
-                <option value="BANKTRANSFER">Безготівковий розрахунок</option>
+                <option value="CASH">2</option>
+                <option value="BANKTRANSFER">1</option>
             </select>
         `;
         filterForm.appendChild(paymentMethodSelectItem);
@@ -1562,26 +1562,28 @@ async function showClientModal(client) {
         restoreButton.onclick = async () => {
             if (!confirm('Ви впевнені, що хочете відновити цього клієнта? Клієнт знову стане активним.')) {
                 return;
-}
-    loaderBackdrop.style.display = 'flex';
-    try {
+            }
+            
+            loaderBackdrop.style.display = 'flex';
+            try {
                 const response = await fetch(`${API_URL_PURCHASE}/../client/active/${client.id}`, {method: 'PATCH'});
-        if (!response.ok) {
-            const errorData = await response.json();
-            handleError(new ErrorResponse(errorData.error, errorData.message, errorData.details));
-            return;
-        }
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    handleError(new ErrorResponse(errorData.error, errorData.message, errorData.details));
+                    return;
+                }
                 showMessage('Клієнт відновлено (isActive = true)', 'info');
                 modal.style.display = 'none';
 
-        loadDataWithSort(currentPage, pageSize, currentSort, currentDirection);
-    } catch (error) {
+                loadDataWithSort(currentPage, pageSize, currentSort, currentDirection);
+            } catch (error) {
                 console.error('Помилка відновлення клієнта:', error);
-        handleError(error);
-    } finally {
-        loaderBackdrop.style.display = 'none';
-    }
+                handleError(error);
+            } finally {
+                loaderBackdrop.style.display = 'none';
+            }
         };
+    }
 }
 
 document.getElementById('show-purchases-client')?.addEventListener('click', async function() {
@@ -1706,19 +1708,6 @@ document.getElementById('show-containers-client')?.addEventListener('click', asy
 document.getElementById('closeContainerModal')?.addEventListener('click', function() {
     document.getElementById('containerClientModal').style.display = 'none';
 });
-            showMessage('Клієнт видалений', 'info');
-            modal.style.display = 'none';
-
-            loadDataWithSort(currentPage, pageSize, currentSort, currentDirection);
-        } catch (error) {
-            console.error('Помилка вимкнення клієнта:', error);
-            handleError(error);
-        } finally {
-            loaderBackdrop.style.display = 'none';
-        }
-    };
-
-}
 
 async function toggleUrgently(clientId) {
     loaderBackdrop.style.display = 'flex';
