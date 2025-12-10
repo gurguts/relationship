@@ -69,11 +69,11 @@ public class PurchaseCrudService implements IPurchaseCrudService {
         Purchase savedPurchase = purchaseRepository.save(purchase);
 
         // Update driver product balance (use EUR values)
-        if (savedPurchase.getTotalPriceEur() != null && savedPurchase.getQuantityEur() != null) {
+        if (savedPurchase.getTotalPriceEur() != null && savedPurchase.getQuantity() != null) {
             driverProductBalanceService.addProduct(
                     savedPurchase.getUser(),
                     savedPurchase.getProduct(),
-                    savedPurchase.getQuantityEur(),  // Use quantity in EUR
+                    savedPurchase.getQuantity(),
                     savedPurchase.getTotalPriceEur()  // Use total price in EUR
             );
         }
@@ -103,7 +103,7 @@ public class PurchaseCrudService implements IPurchaseCrudService {
         }
 
         // Save old values for balance update
-        java.math.BigDecimal oldQuantity = existingPurchase.getQuantityEur();
+        java.math.BigDecimal oldQuantity = existingPurchase.getQuantity();
         java.math.BigDecimal oldTotalPriceEur = existingPurchase.getTotalPriceEur();
         Long productId = existingPurchase.getProduct();
 
@@ -175,7 +175,7 @@ public class PurchaseCrudService implements IPurchaseCrudService {
                     productId,
                     oldQuantity,
                     oldTotalPriceEur,  // Use total price in EUR!
-                    savedPurchase.getQuantityEur(),  // Use quantity in EUR
+                    savedPurchase.getQuantity(),
                     savedPurchase.getTotalPriceEur()  // Use total price in EUR!
             );
         }
@@ -277,13 +277,13 @@ public class PurchaseCrudService implements IPurchaseCrudService {
                 new PurchaseNotFoundException(String.format("Purchase with ID %d not found", id)));
         
         // Remove from driver balance before deleting purchase (use EUR values)
-        if (purchase.getQuantityEur() != null && purchase.getQuantityEur().compareTo(java.math.BigDecimal.ZERO) > 0 
+        if (purchase.getQuantity() != null && purchase.getQuantity().compareTo(java.math.BigDecimal.ZERO) > 0 
                 && purchase.getTotalPriceEur() != null) {
             try {
                 driverProductBalanceService.removeProduct(
                         purchase.getUser(),
                         purchase.getProduct(),
-                        purchase.getQuantityEur(),  // Use quantity in EUR
+                        purchase.getQuantity(),
                         purchase.getTotalPriceEur()  // Pass the specific total price in EUR of this purchase!
                 );
             } catch (Exception e) {

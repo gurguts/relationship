@@ -76,9 +76,6 @@ public class Purchase {
 
     @Column(name = "unit_price_eur", precision = 20, scale = 6)
     private BigDecimal unitPriceEur;
-    
-    @Column(name = "quantity_eur", precision = 20, scale = 2)
-    private BigDecimal quantityEur;
 
     public void calculateAndSetUnitPrice() {
         if (quantity != null && totalPrice != null && quantity.compareTo(BigDecimal.ZERO) != 0) {
@@ -92,8 +89,6 @@ public class Purchase {
         if (totalPrice == null || quantity == null) {
             return;
         }
-
-        this.quantityEur = quantity;
 
         if ("EUR".equalsIgnoreCase(currency) || currency == null) {
             this.totalPriceEur = totalPrice;

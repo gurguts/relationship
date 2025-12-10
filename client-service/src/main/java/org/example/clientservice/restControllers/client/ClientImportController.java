@@ -38,14 +38,12 @@ public class ClientImportController {
         if (file.isEmpty()) {
             return ResponseEntity.badRequest().body("Файл не може бути порожнім");
         }
-        
-        // Проверяем расширение файла
+
         String filename = file.getOriginalFilename();
         if (filename == null || (!filename.toLowerCase().endsWith(".xlsx") && !filename.toLowerCase().endsWith(".xls"))) {
             return ResponseEntity.badRequest().body("Підтримуються тільки файли Excel (.xlsx, .xls)");
         }
-        
-        // Проверяем тип содержимого файла
+
         String contentType = file.getContentType();
         if (contentType != null && !contentType.contains("spreadsheet") && 
             !contentType.contains("excel") && 

@@ -4,10 +4,45 @@
     padding: 0 1em;
 }
 
+.profile-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1em;
+    margin-bottom: 1.5em;
+}
+
 .profile-container h1 {
     color: var(--dark-blue);
-    margin-bottom: 1.5em;
+    margin: 0;
     text-align: center;
+}
+
+#user-selector-container {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+}
+
+.user-selector {
+    padding: 0.75em 1em;
+    border: 2px solid var(--dark-blue);
+    border-radius: 6px;
+    font-size: 1em;
+    background: white;
+    color: var(--dark-blue);
+    cursor: pointer;
+    min-width: 250px;
+    transition: border-color 0.3s ease;
+}
+
+.user-selector:focus {
+    outline: none;
+    border-color: var(--bright-green);
+}
+
+.user-selector:hover {
+    border-color: var(--bright-green);
 }
 
 .profile-sections {
@@ -144,6 +179,126 @@
     padding: 2em;
     color: #999;
     font-style: italic;
+}
+
+.edit-balance-btn {
+    padding: 0.5em 1em;
+    background: var(--bright-green);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: background 0.3s ease;
+}
+
+.edit-balance-btn:hover {
+    background: var(--dark-green);
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(5px);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background: white;
+    padding: 2em;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    max-width: 500px;
+    width: 90%;
+    position: relative;
+}
+
+.modal-content h2 {
+    color: var(--dark-blue);
+    margin-bottom: 1em;
+    padding-bottom: 0.5em;
+    border-bottom: 2px solid var(--bright-green);
+}
+
+.modal-content p {
+    margin-bottom: 1em;
+    color: #666;
+}
+
+.modal-content label {
+    display: block;
+    margin-bottom: 0.5em;
+    color: var(--dark-blue);
+    font-weight: 600;
+}
+
+.modal-content input {
+    width: 100%;
+    padding: 0.75em;
+    border: 2px solid #ddd;
+    border-radius: 6px;
+    font-size: 1em;
+    box-sizing: border-box;
+    margin-bottom: 1.5em;
+}
+
+.modal-content input:focus {
+    outline: none;
+    border-color: var(--bright-green);
+}
+
+.modal-buttons {
+    display: flex;
+    gap: 1em;
+    justify-content: flex-end;
+}
+
+.modal-buttons button {
+    padding: 0.75em 1.5em;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1em;
+    transition: all 0.3s ease;
+}
+
+.modal-buttons button[type="submit"] {
+    background: var(--bright-green);
+    color: white;
+}
+
+.modal-buttons button[type="submit"]:hover {
+    background: var(--dark-green);
+}
+
+.modal-buttons .cancel-btn {
+    background: #ddd;
+    color: #333;
+}
+
+.modal-buttons .cancel-btn:hover {
+    background: #bbb;
+}
+
+.modal .close {
+    position: absolute;
+    top: 1em;
+    right: 1em;
+    font-size: 1.5em;
+    cursor: pointer;
+    color: #999;
+    transition: color 0.3s ease;
+}
+
+.modal .close:hover {
+    color: #333;
 }
 
 @media (max-width: 768px) {

@@ -57,16 +57,13 @@ public class ClientSpecialOperationsController {
         byte[] excelData = clientService.generateExcelFile(
                 sortDirection, sortProperty, query, filters, selectedFields);
 
-        // Формируем имя файла с датой/временем и названием типа клиента
         String filename = generateFilename(filters);
-        
-        // Кодируем имя файла для RFC 5987 (percent-encoding UTF-8)
+
         String encodedFilename = encodeFilenameForRfc5987(filename);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
-        // Используем RFC 5987 формат для поддержки кириллицы: filename*=UTF-8''<encoded>
-        // Используем только ASCII символы в filename для совместимости
+
         String asciiFilename = sanitizeToAscii(filename);
         headers.set(HttpHeaders.CONTENT_DISPOSITION, 
                 String.format("attachment; filename=\"%s\"; filename*=UTF-8''%s", asciiFilename, encodedFilename));
@@ -88,17 +85,14 @@ public class ClientSpecialOperationsController {
     }
     
     private String generateFilename(Map<String, List<String>> filters) {
-        // Получаем текущую дату и время
         String dateTime = LocalDateTime.now().format(FILENAME_DATE_FORMATTER);
-        
-        // Пытаемся получить название типа клиента из фильтров
+
         String clientTypeName = "клієнти";
         if (filters != null && filters.containsKey("clientTypeId") && !filters.get("clientTypeId").isEmpty()) {
             try {
                 Long clientTypeId = Long.parseLong(filters.get("clientTypeId").get(0));
                 var clientType = clientTypeService.getClientTypeById(clientTypeId);
                 if (clientType != null && clientType.getName() != null) {
-                    // Сохраняем оригинальное название типа клиента (оно будет транслитерировано в sanitizeToAscii)
                     clientTypeName = sanitizeFilename(clientType.getName());
                     log.debug("Client type name for filename: {}", clientTypeName);
                 }
@@ -108,54 +102,46 @@ public class ClientSpecialOperationsController {
         } else {
             log.debug("No clientTypeId in filters, using default name");
         }
-        
-        // Формируем имя файла: клиенты_<тип>_<дата_время>.xlsx
+
         String filename = String.format("клієнти_%s_%s.xlsx", clientTypeName, dateTime);
         log.debug("Generated filename: {}", filename);
         return filename;
     }
     
     private String sanitizeFilename(String filename) {
-        // Заменяем недопустимые символы для имени файла на подчеркивания
         return filename.replaceAll("[\\\\/:*?\"<>|\\s]+", "_")
-                .replaceAll("_{2,}", "_") // Заменяем множественные подчеркивания на одно
-                .replaceAll("^_|_$", ""); // Убираем подчеркивания в начале и конце
+                .replaceAll("_{2,}", "_")
+                .replaceAll("^_|_$", "");
     }
     
     private String sanitizeToAscii(String filename) {
-        // Транслитерация кириллицы в ASCII для совместимости
         StringBuilder result = new StringBuilder();
         for (char c : filename.toCharArray()) {
             if (c < 128) {
-                // ASCII символ - оставляем как есть (кроме недопустимых символов)
                 if ((c >= '0' && c <= '9') || 
                     (c >= 'A' && c <= 'Z') || 
                     (c >= 'a' && c <= 'z') ||
                     c == '-' || c == '_' || c == '.') {
                     result.append(c);
                 } else {
-                    // Недопустимые ASCII символы заменяем на подчеркивание
                     result.append('_');
                 }
             } else {
-                // Кириллица - транслитерируем
                 String transliterated = transliterateCyrillic(c);
                 if (transliterated.isEmpty() || transliterated.equals("_")) {
-                    // Если транслитерация не удалась, заменяем на подчеркивание
                     result.append('_');
                 } else {
                     result.append(transliterated);
                 }
             }
         }
-        // Убираем множественные подчеркивания
+
         String resultStr = result.toString().replaceAll("_{2,}", "_");
         log.debug("Transliterated filename: {} -> {}", filename, resultStr);
         return resultStr;
     }
     
     private String transliterateCyrillic(char c) {
-        // Базовая транслитерация украинской кириллицы
         return switch (c) {
             case 'а', 'А' -> "a";
             case 'б', 'Б' -> "b";
@@ -195,7 +181,6 @@ public class ClientSpecialOperationsController {
     }
     
     private String encodeFilenameForRfc5987(String filename) {
-        // Percent-encoding для RFC 5987 (UTF-8)
         StringBuilder encoded = new StringBuilder();
         byte[] bytes = filename.getBytes(StandardCharsets.UTF_8);
         for (byte b : bytes) {

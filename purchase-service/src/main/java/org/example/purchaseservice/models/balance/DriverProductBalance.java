@@ -126,5 +126,19 @@ public class DriverProductBalance {
             this.totalCostEur = BigDecimal.ZERO;
         }
     }
+    
+    public void updateTotalCostEur(BigDecimal newTotalCostEur) {
+        if (newTotalCostEur == null || newTotalCostEur.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Total cost must be non-negative");
+        }
+        
+        this.totalCostEur = newTotalCostEur;
+        
+        if (this.quantity.compareTo(BigDecimal.ZERO) > 0) {
+            this.averagePriceEur = newTotalCostEur.divide(this.quantity, 6, RoundingMode.CEILING);
+        } else {
+            this.averagePriceEur = BigDecimal.ZERO;
+        }
+    }
 }
 

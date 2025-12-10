@@ -69,11 +69,6 @@ public class WarehouseProductBalance {
         }
     }
     
-    /**
-     * Removes product from warehouse (during withdrawal)
-     * @param removedQuantity quantity of removed product
-     * @return average price of the product for withdrawal cost calculation
-     */
     public BigDecimal removeProduct(BigDecimal removedQuantity) {
         if (removedQuantity == null || removedQuantity.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Removed quantity must be positive");
@@ -84,18 +79,15 @@ public class WarehouseProductBalance {
         }
         
         BigDecimal currentAveragePrice = this.averagePriceEur;
-        BigDecimal removedCost = removedQuantity.multiply(currentAveragePrice);
         BigDecimal newQuantity = this.quantity.subtract(removedQuantity);
-        BigDecimal newTotalCost = this.totalCostEur.subtract(removedCost);
         
         this.quantity = newQuantity;
-        this.totalCostEur = newTotalCost;
         
-        // Average price stays the same during removal
-        // But if quantity becomes 0, reset all
         if (newQuantity.compareTo(BigDecimal.ZERO) == 0) {
             this.averagePriceEur = BigDecimal.ZERO;
             this.totalCostEur = BigDecimal.ZERO;
+        } else {
+            this.averagePriceEur = this.totalCostEur.divide(newQuantity, 6, RoundingMode.CEILING);
         }
         
         return currentAveragePrice;

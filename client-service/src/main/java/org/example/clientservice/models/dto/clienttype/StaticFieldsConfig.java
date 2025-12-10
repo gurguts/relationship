@@ -10,7 +10,6 @@ public class StaticFieldsConfig {
     private StaticFieldConfig updatedAt;
     
     public StaticFieldsConfig() {
-        // Значения по умолчанию
         company = new StaticFieldConfig(true, 0, 200, "Компанія");
         source = new StaticFieldConfig(true, 999, 200, "Залучення");
         createdAt = new StaticFieldConfig(false, 1000, 150, "Створено");

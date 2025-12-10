@@ -146,36 +146,33 @@ public class WarehouseWithdrawService implements IWarehouseWithdrawService {
             }
 
             BigDecimal additionalQuantity = delta.setScale(2, RoundingMode.HALF_UP);
-            BigDecimal additionalCost = unitPrice.multiply(additionalQuantity).setScale(6, RoundingMode.HALF_UP);
-
-            warehouseProductBalanceService.removeProductWithCost(
+            warehouseProductBalanceService.removeProduct(
                     withdrawal.getWarehouseId(),
                     withdrawal.getProductId(),
-                    additionalQuantity,
-                    additionalCost
+                    additionalQuantity
             );
 
             if (withdrawal.getShipmentId() != null) {
+                BigDecimal additionalCost = unitPrice.multiply(additionalQuantity).setScale(6, RoundingMode.HALF_UP);
                 shipmentService.addWithdrawalCost(withdrawal.getShipmentId(), additionalCost);
             }
 
-            log.info("Withdrawal {} increased by {} (cost {})", id, additionalQuantity, additionalCost);
+            log.info("Withdrawal {} increased by {}", id, additionalQuantity);
         } else if (delta.compareTo(BigDecimal.ZERO) < 0) {
             BigDecimal quantityToReturn = delta.abs().setScale(2, RoundingMode.HALF_UP);
-            BigDecimal costToReturn = unitPrice.multiply(quantityToReturn).setScale(6, RoundingMode.HALF_UP);
 
-            warehouseProductBalanceService.addProduct(
+            warehouseProductBalanceService.addProductQuantityOnly(
                     withdrawal.getWarehouseId(),
                     withdrawal.getProductId(),
-                    quantityToReturn,
-                    costToReturn
+                    quantityToReturn
             );
 
             if (withdrawal.getShipmentId() != null) {
+                BigDecimal costToReturn = unitPrice.multiply(quantityToReturn).setScale(6, RoundingMode.HALF_UP);
                 shipmentService.subtractWithdrawalCost(withdrawal.getShipmentId(), costToReturn);
             }
 
-            log.info("Withdrawal {} decreased by {} (return cost {})", id, quantityToReturn, costToReturn);
+            log.info("Withdrawal {} decreased by {}", id, quantityToReturn);
         } else {
             log.debug("Withdrawal {} quantity unchanged", id);
         }
@@ -287,21 +284,20 @@ public class WarehouseWithdrawService implements IWarehouseWithdrawService {
         }
 
         quantity = quantity.setScale(2, RoundingMode.HALF_UP);
-        BigDecimal unitPrice = resolveUnitPrice(withdrawal);
-        BigDecimal totalCost = calculateTotalCost(unitPrice, quantity);
 
-        warehouseProductBalanceService.addProduct(
+        warehouseProductBalanceService.addProductQuantityOnly(
                 withdrawal.getWarehouseId(),
                 withdrawal.getProductId(),
-                quantity,
-                totalCost
+                quantity
         );
 
         if (withdrawal.getShipmentId() != null) {
+            BigDecimal unitPrice = resolveUnitPrice(withdrawal);
+            BigDecimal totalCost = calculateTotalCost(unitPrice, quantity);
             shipmentService.subtractWithdrawalCost(withdrawal.getShipmentId(), totalCost);
         }
 
-        log.info("Returned withdrawal {} to warehouse {}: quantity={}, totalCost={}",
-                withdrawal.getId(), withdrawal.getWarehouseId(), quantity, totalCost);
+        log.info("Returned withdrawal {} to warehouse {}: quantity={}",
+                withdrawal.getId(), withdrawal.getWarehouseId(), quantity);
     }
 }

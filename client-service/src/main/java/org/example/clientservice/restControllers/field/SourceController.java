@@ -45,7 +45,6 @@ public class SourceController {
     @PreAuthorize("hasAuthority('settings_client:create')")
     @PostMapping
     public ResponseEntity<SourceDTO> createSource(@RequestBody SourceCreateDTO sourceCreateDTO) {
-        // Если userId не передан, устанавливаем его из текущего пользователя
         if (sourceCreateDTO.getUserId() == null) {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             Long currentUserId = authentication != null && authentication.getDetails() instanceof Long ? 

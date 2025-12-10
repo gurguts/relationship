@@ -106,7 +106,6 @@ public class ClientTypeController {
     public ResponseEntity<StaticFieldsConfig> getStaticFieldsConfig(@PathVariable Long id) {
         ClientType clientType = clientTypeService.getClientTypeById(id);
         StaticFieldsConfig config = StaticFieldsHelper.parseStaticFieldsConfig(clientType);
-        // Если конфигурация не сохранена, возвращаем дефолтные значения для отображения в форме
         if (config == null) {
             config = new StaticFieldsConfig();
         }

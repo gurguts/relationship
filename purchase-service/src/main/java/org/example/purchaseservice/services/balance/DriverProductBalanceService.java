@@ -147,5 +147,24 @@ public class DriverProductBalanceService {
     public List<DriverProductBalance> getAllActiveBalances() {
         return driverProductBalanceRepository.findAllWithPositiveQuantity();
     }
+    
+    @Transactional
+    public DriverProductBalance updateTotalCostEur(Long driverId, Long productId, BigDecimal newTotalCostEur) {
+        log.info("Updating total cost EUR: driverId={}, productId={}, newTotalCostEur={}", 
+                driverId, productId, newTotalCostEur);
+        
+        DriverProductBalance balance = driverProductBalanceRepository
+                .findByDriverIdAndProductId(driverId, productId)
+                .orElseThrow(() -> new PurchaseException("BALANCE_NOT_FOUND", 
+                        String.format("Driver balance not found: driverId=%d, productId=%d", driverId, productId)));
+        
+        balance.updateTotalCostEur(newTotalCostEur);
+        DriverProductBalance saved = driverProductBalanceRepository.save(balance);
+        
+        log.info("Driver balance total cost updated: id={}, newTotalCost={}, newAveragePrice={}", 
+                saved.getId(), saved.getTotalCostEur(), saved.getAveragePriceEur());
+        
+        return saved;
+    }
 }
 

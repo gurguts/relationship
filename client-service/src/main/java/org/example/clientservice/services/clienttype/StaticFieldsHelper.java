@@ -17,14 +17,14 @@ public class StaticFieldsHelper {
 
     public static StaticFieldsConfig parseStaticFieldsConfig(ClientType clientType) {
         if (clientType == null || clientType.getStaticFieldsConfig() == null || clientType.getStaticFieldsConfig().trim().isEmpty()) {
-            return null; // Если конфигурация не сохранена, возвращаем null - статические поля не будут добавлены
+            return null;
         }
 
         try {
             return objectMapper.readValue(clientType.getStaticFieldsConfig(), StaticFieldsConfig.class);
         } catch (JsonProcessingException e) {
             log.warn("Failed to parse static fields config for client type {}: {}", clientType.getId(), e.getMessage());
-            return null; // При ошибке парсинга возвращаем null
+            return null;
         }
     }
 
@@ -56,7 +56,6 @@ public class StaticFieldsHelper {
         }
         
         ClientTypeFieldDTO dto = new ClientTypeFieldDTO();
-        // Используем отрицательные ID для статических полей, чтобы не конфликтовать с реальными полями
         dto.setId((long) -getStaticFieldId(staticFieldName));
         dto.setFieldName(staticFieldName);
         dto.setFieldLabel(config.getFieldLabel() != null && !config.getFieldLabel().trim().isEmpty() 

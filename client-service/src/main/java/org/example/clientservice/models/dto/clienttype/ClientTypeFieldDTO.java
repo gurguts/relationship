@@ -21,6 +21,6 @@ public class ClientTypeFieldDTO {
     private Boolean allowMultiple;
     private List<ClientTypeFieldListValueDTO> listValues;
     private Boolean isStatic;
-    private String staticFieldName; // Для статических полей: "company", "source", "createdAt", "updatedAt"
+    private String staticFieldName;
 }
 

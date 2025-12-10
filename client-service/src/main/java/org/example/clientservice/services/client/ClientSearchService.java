@@ -85,23 +85,18 @@ public class ClientSearchService implements IClientSearchService {
 
     private Page<Client> fetchClients(String query, Map<String, List<String>> filterParams, FilterIds filterIds,
                                       Pageable pageable, Long clientTypeId) {
-        // Получаем доступные типы клиентов для текущего пользователя
         Long userId = getCurrentUserId();
         List<Long> allowedClientTypeIds = null;
         
         if (userId != null && !isAdmin()) {
-            // Если пользователь не администратор, фильтруем по доступным типам
             allowedClientTypeIds = getAccessibleClientTypeIds(userId);
             if (allowedClientTypeIds.isEmpty()) {
-                // Если у пользователя нет доступа ни к одному типу, возвращаем пустую страницу
                 return Page.empty(pageable);
             }
         }
-        
-        // Если указан конкретный clientTypeId, проверяем доступ
+
         if (clientTypeId != null && userId != null && !isAdmin()) {
             if (!clientTypePermissionService.canUserView(userId, clientTypeId)) {
-                // Если у пользователя нет доступа к указанному типу, возвращаем пустую страницу
                 return Page.empty(pageable);
             }
         }

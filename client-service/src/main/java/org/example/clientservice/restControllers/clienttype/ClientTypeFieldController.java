@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -63,21 +64,15 @@ public class ClientTypeFieldController {
         List<ClientTypeFieldDTO> response = fields.stream()
                 .map(ClientTypeFieldMapper::toDTO)
                 .collect(Collectors.toList());
-        
-        // Добавляем статические поля, если они настроены как видимые
+
         try {
             ClientType clientType = clientTypeService.getClientTypeById(clientTypeId);
             StaticFieldsConfig staticConfig = StaticFieldsHelper.parseStaticFieldsConfig(clientType);
-            // Добавляем статические поля только если конфигурация была сохранена
             if (staticConfig != null) {
                 List<ClientTypeFieldDTO> staticFields = StaticFieldsHelper.createStaticFieldDTOs(staticConfig);
                 response.addAll(staticFields);
-                
-                // Сортируем все поля по displayOrder
-                response.sort((a, b) -> Integer.compare(
-                        a.getDisplayOrder() != null ? a.getDisplayOrder() : 999,
-                        b.getDisplayOrder() != null ? b.getDisplayOrder() : 999
-                ));
+
+                response.sort(Comparator.comparingInt(a -> a.getDisplayOrder() != null ? a.getDisplayOrder() : 999));
             }
         } catch (Exception e) {
             log.warn("Failed to add static fields for client type {}: {}", clientTypeId, e.getMessage());

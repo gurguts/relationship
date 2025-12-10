@@ -10,6 +10,9 @@ public enum Permission {
     USER_EDIT("user:edit"),
     USER_DELETE("user:delete"),
 
+    PROFILE_EDIT("profile:edit"),
+    PROFILE_MULTIPLE_VIEW("profile:multiple_view"),
+
     CLIENT_VIEW("client:view"),
     CLIENT_CREATE("client:create"),
     CLIENT_EDIT("client:edit"),

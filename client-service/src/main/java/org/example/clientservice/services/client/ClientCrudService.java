@@ -33,8 +33,7 @@ public class ClientCrudService implements IClientCrudService {
     @Transactional
     public Client createClient(Client client) {
         log.info("Creating client: {}", client.getCompany());
-        
-        // Проверяем права доступа к типу клиента
+
         if (client.getClientType() != null && client.getClientType().getId() != null) {
             Long userId = getCurrentUserId();
             if (userId != null && !isAdmin()) {
@@ -53,7 +52,6 @@ public class ClientCrudService implements IClientCrudService {
     public Client updateClient(Client client, Long id) {
         Client existingClient = getClient(id);
 
-        // Проверяем права доступа к типу клиента
         if (existingClient.getClientType() != null && existingClient.getClientType().getId() != null) {
             Long userId = getCurrentUserId();
             if (userId != null && !isAdmin()) {
@@ -89,8 +87,7 @@ public class ClientCrudService implements IClientCrudService {
     public Client getClient(Long clientId) {
         Client client = clientRepository.findById(clientId)
                 .orElseThrow(() -> new ClientNotFoundException("Client not found"));
-        
-        // Проверяем права доступа к типу клиента
+
         if (client.getClientType() != null && client.getClientType().getId() != null) {
             Long userId = getCurrentUserId();
             if (userId != null && !isAdmin()) {
@@ -108,8 +105,7 @@ public class ClientCrudService implements IClientCrudService {
     @Transactional
     public void fullDeleteClient(Long clientId) {
         Client client = getClient(clientId);
-        
-        // Проверяем права доступа к типу клиента для полного удаления
+
         if (client.getClientType() != null && client.getClientType().getId() != null) {
             Long userId = getCurrentUserId();
             if (userId != null && !isAdmin()) {
@@ -119,8 +115,7 @@ public class ClientCrudService implements IClientCrudService {
                 }
             }
         }
-        
-        // Проверяем права доступа на основе source (аналогично редактированию)
+
         checkSourceBasedPermission(client, "delete");
         
         clientRepository.deleteById(clientId);
@@ -141,8 +136,7 @@ public class ClientCrudService implements IClientCrudService {
                 }
             }
         }
-        
-        // Проверяем права доступа на основе source (аналогично редактированию)
+
         checkSourceBasedPermission(client, "delete");
         
         clientRepository.deactivateClientById(clientId);

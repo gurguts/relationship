@@ -51,10 +51,6 @@ public class WarehouseProductBalanceService {
         return saved;
     }
     
-    /**
-     * Remove product from warehouse (during withdrawal)
-     * @return average price of the product for withdrawal cost calculation
-     */
     @Transactional
     public BigDecimal removeProduct(Long warehouseId, Long productId, BigDecimal quantity) {
         log.info("Removing product from warehouse balance: warehouseId={}, productId={}, quantity={}", 
@@ -69,16 +65,45 @@ public class WarehouseProductBalanceService {
         BigDecimal averagePrice = balance.removeProduct(quantity);
         WarehouseProductBalance saved = warehouseProductBalanceRepository.save(balance);
         
-        // Delete record if quantity becomes 0
         if (saved.getQuantity().compareTo(BigDecimal.ZERO) == 0) {
             warehouseProductBalanceRepository.delete(saved);
             log.info("Warehouse balance deleted (quantity=0): id={}", saved.getId());
         } else {
-            log.info("Warehouse balance updated: id={}, newQuantity={}, averagePrice={}", 
-                    saved.getId(), saved.getQuantity(), saved.getAveragePriceEur());
+            log.info("Warehouse balance updated: id={}, newQuantity={}, totalCost={}, averagePrice={}", 
+                    saved.getId(), saved.getQuantity(), saved.getTotalCostEur(), saved.getAveragePriceEur());
         }
         
         return averagePrice;
+    }
+    
+    @Transactional
+    public void addProductQuantityOnly(Long warehouseId, Long productId, BigDecimal quantity) {
+        log.info("Adding product quantity only to warehouse balance: warehouseId={}, productId={}, quantity={}", 
+                warehouseId, productId, quantity);
+        
+        WarehouseProductBalance balance = warehouseProductBalanceRepository
+                .findByWarehouseIdAndProductId(warehouseId, productId)
+                .orElseGet(() -> {
+                    WarehouseProductBalance newBalance = new WarehouseProductBalance();
+                    newBalance.setWarehouseId(warehouseId);
+                    newBalance.setProductId(productId);
+                    newBalance.setQuantity(BigDecimal.ZERO);
+                    newBalance.setTotalCostEur(BigDecimal.ZERO);
+                    newBalance.setAveragePriceEur(BigDecimal.ZERO);
+                    return newBalance;
+                });
+        
+        BigDecimal newQuantity = balance.getQuantity().add(quantity);
+        balance.setQuantity(newQuantity);
+        
+        if (newQuantity.compareTo(BigDecimal.ZERO) > 0) {
+            balance.setAveragePriceEur(balance.getTotalCostEur().divide(newQuantity, 6, RoundingMode.CEILING));
+        }
+        
+        WarehouseProductBalance saved = warehouseProductBalanceRepository.save(balance);
+        
+        log.info("Warehouse balance updated (quantity only): id={}, newQuantity={}, totalCost={}, averagePrice={}", 
+                saved.getId(), saved.getQuantity(), saved.getTotalCostEur(), saved.getAveragePriceEur());
     }
     
     /**

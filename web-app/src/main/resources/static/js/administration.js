@@ -6,6 +6,9 @@ const allPermissions = [
     'user:edit',
     'user:delete',
 
+    'profile:edit',
+    'profile:multiple_view',
+
     'client:view',
     'client:create',
     'client:edit',
@@ -112,6 +115,9 @@ function formatPermissionName(permission) {
         'user:create': 'Создание пользователей',
         'user:edit': 'Изменение пользователей',
         'user:delete': 'Удаление пользователей',
+
+        'profile:edit': 'Изменение в профиле',
+        'profile:multiple_view': 'Просмотр нескольких профилей',
 
         'client:view': 'Отображение клиентов',
         'client:create': 'Создание клиентов',

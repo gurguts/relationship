@@ -9,7 +9,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -85,6 +87,24 @@ public class DriverBalanceController {
                 .collect(Collectors.toList());
         
         return ResponseEntity.ok(dtos);
+    }
+    
+    @PreAuthorize("hasAuthority('profile:edit')")
+    @PatchMapping("/{driverId}/product/{productId}/total-cost")
+    public ResponseEntity<DriverProductBalanceDTO> updateTotalCostEur(
+            @PathVariable Long driverId,
+            @PathVariable Long productId,
+            @RequestBody Map<String, BigDecimal> request) {
+        
+        BigDecimal newTotalCostEur = request.get("totalCostEur");
+        if (newTotalCostEur == null) {
+            return ResponseEntity.badRequest().build();
+        }
+        
+        DriverProductBalance balance = driverProductBalanceService.updateTotalCostEur(
+                driverId, productId, newTotalCostEur);
+        
+        return ResponseEntity.ok(mapToDTO(balance));
     }
     
     private DriverProductBalanceDTO mapToDTO(DriverProductBalance balance) {

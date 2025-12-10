@@ -26,5 +26,4 @@ public interface ClientRepository extends JpaRepository<Client, Long>, JpaSpecif
     @NonNull
     List<Client> findAll(@NonNull Specification<Client> spec);
 
-    // Методы toggleUrgently и setFalseUrgentlyAndUpdateRoute удалены, так как поля urgently и route больше не существуют
 }

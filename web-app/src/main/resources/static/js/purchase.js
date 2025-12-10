@@ -160,6 +160,7 @@ function getRowHtml(purchase) {
     const quantity = purchase.quantity ? purchase.quantity.toString() : '';
     const unitPrice = purchase.unitPrice ? purchase.unitPrice.toString() : '';
     const totalPrice = purchase.totalPrice ? purchase.totalPrice.toString() : '';
+    const totalPriceEur = purchase.totalPriceEur ? purchase.totalPriceEur.toString() : '';
     const currency = purchase.currency || '';
     const exchangeRate = purchase.exchangeRate ? purchase.exchangeRate.toString() : '';
     const paymentMethod = purchase.paymentMethod === 'CASH' ? '2' : purchase.paymentMethod === 'BANKTRANSFER' ? '1' : '';
@@ -177,6 +178,7 @@ function getRowHtml(purchase) {
         <td>${unitPrice}</td>
         <td>${totalPrice}</td>
         <td>${currency}</td>
+        <td>${totalPriceEur}</td>
         <td>${exchangeRate}</td>
         <td>${paymentMethod}</td>
         <td>${createdAt}</td>
@@ -391,6 +393,7 @@ function buildPurchaseTable() {
         { text: 'Ціна за одиницю', sort: 'unitPrice' },
         { text: 'Всього сплачено', sort: 'totalPrice' },
         { text: 'Валюта', sort: 'currency' },
+        { text: 'Всього сплачено (EUR)', sort: 'totalPriceEur' },
         { text: 'Курс', sort: 'exchangeRate' },
         { text: 'Метод оплати', sort: 'paymentMethod' },
         { text: 'Дата створення', sort: 'createdAt' },

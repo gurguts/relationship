@@ -25,6 +25,8 @@ public class PurchasePageDTO {
 
     private BigDecimal totalPrice;
 
+    private BigDecimal totalPriceEur;
+
     private PaymentMethod paymentMethod;
 
     private String currency;
