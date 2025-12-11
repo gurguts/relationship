@@ -42,8 +42,8 @@ public class WarehouseWithdrawal {
     @Column(name = "total_cost_eur", precision = 20, scale = 6)
     private BigDecimal totalCostEur;
 
-    @Column(name = "shipment_id")
-    private Long shipmentId;
+    @Column(name = "vehicle_id")
+    private Long vehicleId;
 
     @Column(name = "description")
     private String description;

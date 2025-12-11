@@ -138,7 +138,8 @@ public class TransactionExportService {
             Row headerRow = sheet.createRow(0);
             String[] headers = {
                     "Дата", "Тип", "Категорія", "З рахунку", "На рахунок",
-                    "Сума", "Валюта", "Курс конвертації", "У валюту", "Конвертована сума",
+                    "Сума списання", "Валюта", "Комісія", "Сума переказу/зачислення",
+                    "Курс конвертації", "У валюту", "Конвертована сума",
                     "Клієнт", "Опис"
             };
 
@@ -201,7 +202,7 @@ public class TransactionExportService {
                 toAccountCell.setCellValue(toAccountName);
                 toAccountCell.setCellStyle(dataStyle);
 
-                // Amount
+                // Amount (сумма списания)
                 Cell amountCell = row.createCell(5);
                 if (transaction.getAmount() != null) {
                     amountCell.setCellValue(transaction.getAmount().doubleValue());
@@ -215,8 +216,43 @@ public class TransactionExportService {
                 currencyCell.setCellValue(transaction.getCurrency() != null ? transaction.getCurrency() : "");
                 currencyCell.setCellStyle(dataStyle);
 
+                // Commission (комісія)
+                Cell commissionCell = row.createCell(7);
+                if (transaction.getCommission() != null && transaction.getCommission().compareTo(java.math.BigDecimal.ZERO) > 0) {
+                    commissionCell.setCellValue(transaction.getCommission().doubleValue());
+                } else {
+                    commissionCell.setCellValue("");
+                }
+                commissionCell.setCellStyle(dataStyle);
+
+                // Transfer/Received Amount (сумма переказу/зачислення)
+                Cell transferAmountCell = row.createCell(8);
+                if (transaction.getType() == org.example.userservice.models.transaction.TransactionType.INTERNAL_TRANSFER) {
+                    // Для перевода: сумма минус комиссия
+                    if (transaction.getAmount() != null) {
+                        java.math.BigDecimal transferAmount = transaction.getAmount();
+                        if (transaction.getCommission() != null) {
+                            transferAmount = transferAmount.subtract(transaction.getCommission());
+                        }
+                        transferAmountCell.setCellValue(transferAmount.doubleValue());
+                    } else {
+                        transferAmountCell.setCellValue("");
+                    }
+                } else if (transaction.getType() == org.example.userservice.models.transaction.TransactionType.CURRENCY_CONVERSION) {
+                    // Для конвертации: конвертированная сумма
+                    if (transaction.getConvertedAmount() != null) {
+                        transferAmountCell.setCellValue(transaction.getConvertedAmount().doubleValue());
+                    } else {
+                        transferAmountCell.setCellValue("");
+                    }
+                } else {
+                    // Для остальных типов: пусто
+                    transferAmountCell.setCellValue("");
+                }
+                transferAmountCell.setCellStyle(dataStyle);
+
                 // Exchange Rate
-                Cell exchangeRateCell = row.createCell(7);
+                Cell exchangeRateCell = row.createCell(9);
                 if (transaction.getExchangeRate() != null) {
                     exchangeRateCell.setCellValue(transaction.getExchangeRate().doubleValue());
                 } else {
@@ -225,13 +261,13 @@ public class TransactionExportService {
                 exchangeRateCell.setCellStyle(dataStyle);
 
                 // Converted Currency
-                Cell convertedCurrencyCell = row.createCell(8);
+                Cell convertedCurrencyCell = row.createCell(10);
                 convertedCurrencyCell.setCellValue(
                         transaction.getConvertedCurrency() != null ? transaction.getConvertedCurrency() : "");
                 convertedCurrencyCell.setCellStyle(dataStyle);
 
                 // Converted Amount
-                Cell convertedAmountCell = row.createCell(9);
+                Cell convertedAmountCell = row.createCell(11);
                 if (transaction.getConvertedAmount() != null) {
                     convertedAmountCell.setCellValue(transaction.getConvertedAmount().doubleValue());
                 } else {
@@ -240,7 +276,7 @@ public class TransactionExportService {
                 convertedAmountCell.setCellStyle(dataStyle);
 
                 // Client
-                Cell clientCell = row.createCell(10);
+                Cell clientCell = row.createCell(12);
                 String clientCompany = transaction.getClientId() != null
                         ? clientCompanyMap.getOrDefault(transaction.getClientId(), "")
                         : "";
@@ -248,7 +284,7 @@ public class TransactionExportService {
                 clientCell.setCellStyle(dataStyle);
 
                 // Description
-                Cell descriptionCell = row.createCell(11);
+                Cell descriptionCell = row.createCell(13);
                 descriptionCell.setCellValue(transaction.getDescription() != null ? transaction.getDescription() : "");
                 descriptionCell.setCellStyle(dataStyle);
             }

@@ -230,15 +230,25 @@ public class AccountTransactionService {
         validateCurrency(transaction.getFromAccountId(), fromCurrency);
         validateCurrency(transaction.getFromAccountId(), toCurrency);
 
-        if (transaction.getExchangeRate() == null || transaction.getExchangeRate().compareTo(BigDecimal.ZERO) <= 0) {
-            throw new TransactionException("Exchange rate must be greater than zero");
+        BigDecimal convertedAmount = transaction.getConvertedAmount();
+        BigDecimal exchangeRate = transaction.getExchangeRate();
+        
+        // If convertedAmount is provided, calculate exchangeRate from it
+        // Otherwise, if exchangeRate is provided, calculate convertedAmount from it
+        if (convertedAmount != null && convertedAmount.compareTo(BigDecimal.ZERO) > 0) {
+            if (transaction.getAmount() == null || transaction.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
+                throw new TransactionException("Amount must be greater than zero");
+            }
+            exchangeRate = convertedAmount.divide(transaction.getAmount(), 6, RoundingMode.HALF_UP);
+            transaction.setExchangeRate(exchangeRate);
+        } else if (exchangeRate != null && exchangeRate.compareTo(BigDecimal.ZERO) > 0) {
+            convertedAmount = transaction.getAmount()
+                    .multiply(exchangeRate)
+                    .setScale(2, RoundingMode.HALF_UP);
+            transaction.setConvertedAmount(convertedAmount);
+        } else {
+            throw new TransactionException("Either exchange rate or converted amount must be provided");
         }
-
-        // Calculate converted amount
-        BigDecimal convertedAmount = transaction.getAmount()
-                .multiply(transaction.getExchangeRate())
-                .setScale(2, RoundingMode.HALF_UP);
-        transaction.setConvertedAmount(convertedAmount);
 
         // Subtract from source currency
         accountBalanceService.subtractAmount(

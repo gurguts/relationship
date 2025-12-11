@@ -2194,6 +2194,46 @@ async function loadProducts() {
     }
 }
 
+async function checkExchangeRatesFreshness() {
+    try {
+        const response = await fetch('/api/v1/exchange-rates');
+        if (!response.ok) {
+            return false;
+        }
+        const rates = await response.json();
+        
+        if (!rates || rates.length === 0) {
+            return false;
+        }
+        
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        for (const rate of rates) {
+            let rateDate = null;
+            
+            if (rate.updatedAt) {
+                rateDate = new Date(rate.updatedAt);
+            } else if (rate.createdAt) {
+                rateDate = new Date(rate.createdAt);
+            } else {
+                return false;
+            }
+            
+            rateDate.setHours(0, 0, 0, 0);
+            
+            if (rateDate.getTime() < today.getTime()) {
+                return false;
+            }
+        }
+        
+        return true;
+    } catch (error) {
+        console.error('Error checking exchange rates freshness:', error);
+        return false;
+    }
+}
+
 async function openCreatePurchaseModal(clientId) {
     const modal = document.getElementById('createPurchaseModal');
     if (!modal) {
@@ -2207,6 +2247,7 @@ async function openCreatePurchaseModal(clientId) {
     const currencySelect = document.getElementById('purchaseCurrency');
     const exchangeRateLabel = document.getElementById('exchangeRateLabel');
     const exchangeRateInput = document.getElementById('purchaseExchangeRate');
+    const exchangeRateWarning = document.getElementById('exchange-rate-warning');
     
     if (!form || !clientIdInput || !sourceIdInput || !userIdSelect || !productIdSelect || !currencySelect) {
         return;
@@ -2214,6 +2255,11 @@ async function openCreatePurchaseModal(clientId) {
     
     form.reset();
     clientIdInput.value = clientId;
+    
+    const ratesAreFresh = await checkExchangeRatesFreshness();
+    if (exchangeRateWarning) {
+        exchangeRateWarning.style.display = ratesAreFresh ? 'none' : 'block';
+    }
     
     try {
         const clientResponse = await fetch(`/api/v1/client/${clientId}`);

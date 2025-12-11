@@ -7,7 +7,7 @@ import lombok.Data;
 import java.math.BigDecimal;
 
 @Data
-public class ShipmentProductUpdateDTO {
+public class VehicleProductUpdateDTO {
     @DecimalMin(value = "0.00", inclusive = true, message = "Quantity cannot be negative")
     @Digits(integer = 14, fraction = 2)
     private BigDecimal quantity;
@@ -16,3 +16,4 @@ public class ShipmentProductUpdateDTO {
     @Digits(integer = 14, fraction = 6)
     private BigDecimal totalCostEur;
 }
+

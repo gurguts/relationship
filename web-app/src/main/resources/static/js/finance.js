@@ -83,6 +83,14 @@ function setupEventListeners() {
 
     // Transaction type change
     document.getElementById('transaction-type').addEventListener('change', handleTransactionTypeChange);
+    
+    // Update commission display for internal transfers
+    document.getElementById('transaction-amount')?.addEventListener('input', () => {
+        updateCommissionDisplay();
+        updateConversionExchangeRateDisplay();
+    });
+    document.getElementById('transaction-received-amount')?.addEventListener('input', updateCommissionDisplay);
+    document.getElementById('conversion-received-amount')?.addEventListener('input', updateConversionExchangeRateDisplay);
 
     // Transaction filters
     document.getElementById('apply-transaction-filters')?.addEventListener('click', () => {
@@ -985,30 +993,40 @@ function handleTransactionTypeChange() {
     const toAccountGroup = document.getElementById('to-account-group');
     const conversionAccountGroup = document.getElementById('conversion-account-group');
     const conversionCurrencyGroup = document.getElementById('conversion-currency-group');
-    const exchangeRateGroup = document.getElementById('exchange-rate-group');
+    const conversionReceivedAmountGroup = document.getElementById('conversion-received-amount-group');
+    const conversionExchangeRateDisplayGroup = document.getElementById('conversion-exchange-rate-display-group');
     const clientGroup = document.getElementById('client-group');
     const currencyGroup = document.getElementById('currency-group');
     const amountGroup = document.getElementById('amount-group');
+    const receivedAmountGroup = document.getElementById('received-amount-group');
+    const commissionDisplayGroup = document.getElementById('commission-display-group');
+    const amountLabel = document.getElementById('transaction-amount-label');
 
     // Reset visibility
     fromAccountGroup.style.display = 'none';
     toAccountGroup.style.display = 'none';
     conversionAccountGroup.style.display = 'none';
     conversionCurrencyGroup.style.display = 'none';
-    exchangeRateGroup.style.display = 'none';
+    conversionReceivedAmountGroup.style.display = 'none';
+    conversionExchangeRateDisplayGroup.style.display = 'none';
     clientGroup.style.display = 'none';
+    receivedAmountGroup.style.display = 'none';
+    commissionDisplayGroup.style.display = 'none';
     
     // Reset labels
     if (currencyGroup) {
         const label = currencyGroup.querySelector('label');
         if (label) label.textContent = 'Валюта:';
     }
+    if (amountLabel) {
+        amountLabel.textContent = 'Сума:';
+    }
 
     // Load categories for this type
     loadCategoriesForType(type).then(categories => {
         const select = document.getElementById('transaction-category');
         if (select) {
-            select.innerHTML = '<option value="">Виберіть категорію</option>';
+            select.innerHTML = '<option value="">Без категорії</option>';
             if (Array.isArray(categories)) {
                 categories.forEach(cat => {
                     const option = document.createElement('option');
@@ -1025,8 +1043,16 @@ function handleTransactionTypeChange() {
         toAccountGroup.style.display = 'block';
         currencyGroup.style.display = 'block';
         amountGroup.style.display = 'block';
-        const commissionGroup = document.getElementById('commission-group');
-        if (commissionGroup) commissionGroup.style.display = 'block';
+        receivedAmountGroup.style.display = 'block';
+        commissionDisplayGroup.style.display = 'block';
+        if (amountLabel) {
+            amountLabel.textContent = 'Сума списання:';
+        }
+        const receivedAmountInput = document.getElementById('transaction-received-amount');
+        if (receivedAmountInput) {
+            receivedAmountInput.required = true;
+        }
+        updateCommissionDisplay();
     } else if (type === 'EXTERNAL_INCOME') {
         toAccountGroup.style.display = 'block';
         currencyGroup.style.display = 'block';
@@ -1043,7 +1069,8 @@ function handleTransactionTypeChange() {
     } else if (type === 'CURRENCY_CONVERSION') {
         conversionAccountGroup.style.display = 'block';
         conversionCurrencyGroup.style.display = 'block';
-        exchangeRateGroup.style.display = 'block';
+        conversionReceivedAmountGroup.style.display = 'block';
+        conversionExchangeRateDisplayGroup.style.display = 'block';
         currencyGroup.style.display = 'block';
         amountGroup.style.display = 'block';
         // Change label for currency conversion
@@ -1051,37 +1078,132 @@ function handleTransactionTypeChange() {
             const label = currencyGroup.querySelector('label');
             if (label) label.textContent = 'З валюту:';
         }
+        if (amountLabel) {
+            amountLabel.textContent = 'Сума списання:';
+        }
+        const conversionReceivedAmountInput = document.getElementById('conversion-received-amount');
+        if (conversionReceivedAmountInput) {
+            conversionReceivedAmountInput.required = true;
+        }
+        updateConversionExchangeRateDisplay();
     }
     
-    // Hide commission group for all types except INTERNAL_TRANSFER
-    const commissionGroup = document.getElementById('commission-group');
-    if (commissionGroup && type !== 'INTERNAL_TRANSFER') {
-        commissionGroup.style.display = 'none';
-        document.getElementById('transaction-commission').value = '';
+    // Remove required attribute from received amount for non-transfer types
+    const receivedAmountInput = document.getElementById('transaction-received-amount');
+    if (receivedAmountInput && type !== 'INTERNAL_TRANSFER') {
+        receivedAmountInput.required = false;
+    }
+    
+    // Remove required attribute from conversion received amount for non-conversion types
+    const conversionReceivedAmountInput = document.getElementById('conversion-received-amount');
+    if (conversionReceivedAmountInput && type !== 'CURRENCY_CONVERSION') {
+        conversionReceivedAmountInput.required = false;
+    }
+    
+}
+
+function updateCommissionDisplay() {
+    const type = document.getElementById('transaction-type').value;
+    if (type !== 'INTERNAL_TRANSFER') {
+        return;
+    }
+    
+    const amountInput = document.getElementById('transaction-amount');
+    const receivedAmountInput = document.getElementById('transaction-received-amount');
+    const commissionDisplay = document.getElementById('transaction-commission-display');
+    
+    if (!amountInput || !receivedAmountInput || !commissionDisplay) {
+        return;
+    }
+    
+    const amount = parseFloat(amountInput.value) || 0;
+    const receivedAmount = parseFloat(receivedAmountInput.value) || 0;
+    
+    if (amount > 0 && receivedAmount > 0) {
+        const commission = amount - receivedAmount;
+        commissionDisplay.textContent = commission.toFixed(2);
+        if (commission < 0) {
+            commissionDisplay.style.color = '#d32f2f';
+        } else if (commission > 0) {
+            commissionDisplay.style.color = '#1976d2';
+        } else {
+            commissionDisplay.style.color = '#666';
+        }
+    } else {
+        commissionDisplay.textContent = '0.00';
+        commissionDisplay.style.color = '#666';
+    }
+}
+
+function updateConversionExchangeRateDisplay() {
+    const type = document.getElementById('transaction-type').value;
+    if (type !== 'CURRENCY_CONVERSION') {
+        return;
+    }
+    
+    const amountInput = document.getElementById('transaction-amount');
+    const receivedAmountInput = document.getElementById('conversion-received-amount');
+    const exchangeRateDisplay = document.getElementById('conversion-exchange-rate-display');
+    
+    if (!amountInput || !receivedAmountInput || !exchangeRateDisplay) {
+        return;
+    }
+    
+    const amount = parseFloat(amountInput.value) || 0;
+    const receivedAmount = parseFloat(receivedAmountInput.value) || 0;
+    
+    if (amount > 0 && receivedAmount > 0) {
+        const exchangeRate = receivedAmount / amount;
+        exchangeRateDisplay.textContent = exchangeRate.toFixed(6);
+        exchangeRateDisplay.style.color = '#1976d2';
+    } else {
+        exchangeRateDisplay.textContent = '0.000000';
+        exchangeRateDisplay.style.color = '#666';
     }
 }
 
 
 async function handleCreateTransaction(e) {
     e.preventDefault();
+    const categoryValue = document.getElementById('transaction-category').value;
     const formData = {
         type: document.getElementById('transaction-type').value,
-        categoryId: parseInt(document.getElementById('transaction-category').value),
         amount: parseFloat(document.getElementById('transaction-amount').value),
         currency: document.getElementById('transaction-currency').value,
         description: document.getElementById('transaction-description').value
     };
+    
+    if (categoryValue && categoryValue.trim() !== '') {
+        formData.categoryId = parseInt(categoryValue);
+    }
 
     const type = formData.type;
     if (type === 'INTERNAL_TRANSFER') {
         formData.fromAccountId = parseInt(document.getElementById('from-account').value);
         formData.toAccountId = parseInt(document.getElementById('to-account').value);
-        const commissionValue = document.getElementById('transaction-commission').value;
-        if (commissionValue && commissionValue.trim() !== '') {
-            const commission = parseFloat(commissionValue);
-            if (commission > 0) {
-                formData.commission = commission;
-            }
+        
+        const receivedAmountValue = document.getElementById('transaction-received-amount').value;
+        if (!receivedAmountValue || receivedAmountValue.trim() === '') {
+            showFinanceMessage('Вкажіть суму зачислення', 'error');
+            return;
+        }
+        
+        const receivedAmount = parseFloat(receivedAmountValue);
+        const amount = formData.amount;
+        
+        if (receivedAmount > amount) {
+            showFinanceMessage('Сума зачислення не може бути більшою за суму списання', 'error');
+            return;
+        }
+        
+        if (receivedAmount <= 0) {
+            showFinanceMessage('Сума зачислення повинна бути більше нуля', 'error');
+            return;
+        }
+        
+        const commission = amount - receivedAmount;
+        if (commission > 0) {
+            formData.commission = commission;
         }
     } else if (type === 'EXTERNAL_INCOME') {
         formData.toAccountId = parseInt(document.getElementById('to-account').value);
@@ -1100,7 +1222,29 @@ async function handleCreateTransaction(e) {
         formData.fromAccountId = accountId;
         formData.toAccountId = accountId;
         formData.convertedCurrency = document.getElementById('conversion-currency').value;
-        formData.exchangeRate = parseFloat(document.getElementById('exchange-rate').value);
+        
+        const receivedAmountValue = document.getElementById('conversion-received-amount').value;
+        if (!receivedAmountValue || receivedAmountValue.trim() === '') {
+            showFinanceMessage('Вкажіть суму зачислення', 'error');
+            return;
+        }
+        
+        const receivedAmount = parseFloat(receivedAmountValue);
+        const amount = formData.amount;
+        
+        if (receivedAmount <= 0) {
+            showFinanceMessage('Сума зачислення повинна бути більше нуля', 'error');
+            return;
+        }
+        
+        if (amount <= 0) {
+            showFinanceMessage('Сума списання повинна бути більше нуля', 'error');
+            return;
+        }
+        
+        const exchangeRate = receivedAmount / amount;
+        formData.exchangeRate = exchangeRate;
+        formData.convertedAmount = receivedAmount;
     }
 
     // Check permissions before creating transaction
@@ -1140,6 +1284,18 @@ async function handleCreateTransaction(e) {
         const clientHidden = document.getElementById('transaction-client-id');
         if (clientInput) clientInput.value = '';
         if (clientHidden) clientHidden.value = '';
+        // Reset commission display
+        const commissionDisplay = document.getElementById('transaction-commission-display');
+        if (commissionDisplay) {
+            commissionDisplay.textContent = '0.00';
+            commissionDisplay.style.color = '#666';
+        }
+        // Reset conversion exchange rate display
+        const conversionExchangeRateDisplay = document.getElementById('conversion-exchange-rate-display');
+        if (conversionExchangeRateDisplay) {
+            conversionExchangeRateDisplay.textContent = '0.000000';
+            conversionExchangeRateDisplay.style.color = '#666';
+        }
         
         // Reload data based on active tab
         const activeTab = document.querySelector('.tab-btn.active');

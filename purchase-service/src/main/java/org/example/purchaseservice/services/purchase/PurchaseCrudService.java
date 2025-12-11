@@ -93,13 +93,15 @@ public class PurchaseCrudService implements IPurchaseCrudService {
 
         String fullName = getFullName();
 
-        String sourceName = sourceClient.getSourceName(existingPurchase.getSource()).getName();
-
         boolean canEditData = SecurityContextHolder.getContext().getAuthentication().getAuthorities().stream()
                 .anyMatch(auth -> "purchase:edit_strangers".equals(auth.getAuthority()));
 
-        if (!(fullName.equals(sourceName) || canEditData)) {
-            throw new PurchaseException("ONLY_OWNER", "You cannot change someone else's purchase.");
+        // Check source ownership only if source is set
+        if (existingPurchase.getSource() != null) {
+            String sourceName = sourceClient.getSourceName(existingPurchase.getSource()).getName();
+            if (!(fullName.equals(sourceName) || canEditData)) {
+                throw new PurchaseException("ONLY_OWNER", "You cannot change someone else's purchase.");
+            }
         }
 
         // Save old values for balance update

@@ -34,7 +34,7 @@ public class WarehouseWithdrawService implements IWarehouseWithdrawService {
     private final WarehouseWithdrawalRepository warehouseWithdrawalRepository;
     private final WithdrawalReasonRepository withdrawalReasonRepository;
     private final org.example.purchaseservice.services.balance.WarehouseProductBalanceService warehouseProductBalanceService;
-    private final org.example.purchaseservice.services.balance.ShipmentService shipmentService;
+    private final org.example.purchaseservice.services.balance.VehicleService vehicleService;
 
 
     @Override
@@ -47,32 +47,43 @@ public class WarehouseWithdrawService implements IWarehouseWithdrawService {
         BigDecimal quantity = warehouseWithdrawal.getQuantity().setScale(2, RoundingMode.HALF_UP);
         warehouseWithdrawal.setQuantity(quantity);
 
-        // Check product availability on warehouse and get average price
-        if (!warehouseProductBalanceService.hasEnoughProduct(
-                warehouseWithdrawal.getWarehouseId(),
-                warehouseWithdrawal.getProductId(),
-                quantity)) {
-            
-            WarehouseProductBalance balance =
-                    warehouseProductBalanceService.getBalance(
-                            warehouseWithdrawal.getWarehouseId(),
-                            warehouseWithdrawal.getProductId());
-            
+        WarehouseProductBalance balance =
+                warehouseProductBalanceService.getBalance(
+                        warehouseWithdrawal.getWarehouseId(),
+                        warehouseWithdrawal.getProductId());
+
+        if (balance == null) {
             throw new PurchaseException("INSUFFICIENT_PRODUCT", String.format(
-                    "Insufficient product on warehouse. Available: %s, requested: %s",
-                    balance != null ? balance.getQuantity() : BigDecimal.ZERO,
+                    "Insufficient product on warehouse. Available: 0, requested: %s",
                     quantity));
         }
 
-        // Remove product from warehouse and get average price
-        BigDecimal averagePrice = warehouseProductBalanceService.removeProduct(
-                warehouseWithdrawal.getWarehouseId(),
-                warehouseWithdrawal.getProductId(),
-                quantity
-        ).setScale(6, RoundingMode.HALF_UP);
+        BigDecimal availableQuantity = balance.getQuantity();
 
-        // Calculate withdrawal cost
+        if (availableQuantity.compareTo(quantity) < 0) {
+            throw new PurchaseException("INSUFFICIENT_PRODUCT", String.format(
+                    "Insufficient product on warehouse. Available: %s, requested: %s",
+                    availableQuantity, quantity));
+        }
+
+        BigDecimal averagePrice = balance.getAveragePriceEur();
         BigDecimal totalCost = quantity.multiply(averagePrice).setScale(6, RoundingMode.HALF_UP);
+
+        if (warehouseWithdrawal.getVehicleId() != null) {
+            warehouseProductBalanceService.removeProductWithCost(
+                    warehouseWithdrawal.getWarehouseId(),
+                    warehouseWithdrawal.getProductId(),
+                    quantity,
+                    totalCost
+            );
+        } else {
+            averagePrice = warehouseProductBalanceService.removeProduct(
+                    warehouseWithdrawal.getWarehouseId(),
+                    warehouseWithdrawal.getProductId(),
+                    quantity
+            ).setScale(6, RoundingMode.HALF_UP);
+            totalCost = quantity.multiply(averagePrice).setScale(6, RoundingMode.HALF_UP);
+        }
         
         warehouseWithdrawal.setUnitPriceEur(averagePrice);
         warehouseWithdrawal.setTotalCostEur(totalCost);
@@ -90,9 +101,19 @@ public class WarehouseWithdrawService implements IWarehouseWithdrawService {
             savedWithdrawal = warehouseWithdrawalRepository.save(savedWithdrawal);
         }
 
-        // If shipmentId is specified, update total vehicle cost
-        if (warehouseWithdrawal.getShipmentId() != null) {
-            shipmentService.addWithdrawalCost(warehouseWithdrawal.getShipmentId(), totalCost);
+        // If vehicleId is specified, update total vehicle cost
+        if (warehouseWithdrawal.getVehicleId() != null) {
+            vehicleService.addWithdrawalCost(warehouseWithdrawal.getVehicleId(), totalCost);
+        } else {
+            // Apply minimum remaining check only if it's not a vehicle withdrawal
+            BigDecimal minimumRemaining = BigDecimal.ONE;
+            BigDecimal remainingAfterWithdrawal = availableQuantity.subtract(quantity);
+            if (remainingAfterWithdrawal.compareTo(minimumRemaining) < 0) {
+                BigDecimal maxAllowedQuantity = availableQuantity.subtract(minimumRemaining);
+                throw new PurchaseException("INSUFFICIENT_PRODUCT", String.format(
+                        "Cannot withdraw all product. At least %s unit must remain on warehouse. Available: %s, maximum allowed withdrawal: %s",
+                        minimumRemaining, availableQuantity, maxAllowedQuantity));
+            }
         }
 
         log.info("Warehouse withdrawal created: product removed from warehouse {}. Quantity: {}, Unit price: {}, Total cost: {}", 
@@ -135,41 +156,69 @@ public class WarehouseWithdrawService implements IWarehouseWithdrawService {
 
         BigDecimal delta = newQuantity.subtract(originalQuantity);
         if (delta.compareTo(BigDecimal.ZERO) > 0) {
-            if (!warehouseProductBalanceService.hasEnoughProduct(withdrawal.getWarehouseId(), withdrawal.getProductId(), delta)) {
-                WarehouseProductBalance balance =
-                        warehouseProductBalanceService.getBalance(withdrawal.getWarehouseId(), withdrawal.getProductId());
+            WarehouseProductBalance balance =
+                    warehouseProductBalanceService.getBalance(withdrawal.getWarehouseId(), withdrawal.getProductId());
 
+            if (balance == null) {
                 throw new PurchaseException("INSUFFICIENT_PRODUCT", String.format(
-                        "Insufficient product on warehouse. Available: %s, requested additionally: %s",
-                        balance != null ? balance.getQuantity() : BigDecimal.ZERO,
+                        "Insufficient product on warehouse. Available: 0, requested additionally: %s",
                         delta));
             }
 
-            BigDecimal additionalQuantity = delta.setScale(2, RoundingMode.HALF_UP);
-            warehouseProductBalanceService.removeProduct(
-                    withdrawal.getWarehouseId(),
-                    withdrawal.getProductId(),
-                    additionalQuantity
-            );
+            BigDecimal availableQuantity = balance.getQuantity();
 
-            if (withdrawal.getShipmentId() != null) {
-                BigDecimal additionalCost = unitPrice.multiply(additionalQuantity).setScale(6, RoundingMode.HALF_UP);
-                shipmentService.addWithdrawalCost(withdrawal.getShipmentId(), additionalCost);
+            if (availableQuantity.compareTo(delta) < 0) {
+                throw new PurchaseException("INSUFFICIENT_PRODUCT", String.format(
+                        "Insufficient product on warehouse. Available: %s, requested additionally: %s",
+                        availableQuantity, delta));
+            }
+
+            BigDecimal additionalQuantity = delta.setScale(2, RoundingMode.HALF_UP);
+            BigDecimal additionalCost = unitPrice.multiply(additionalQuantity).setScale(6, RoundingMode.HALF_UP);
+
+            if (withdrawal.getVehicleId() != null) {
+                warehouseProductBalanceService.removeProductWithCost(
+                        withdrawal.getWarehouseId(),
+                        withdrawal.getProductId(),
+                        additionalQuantity,
+                        additionalCost
+                );
+                vehicleService.addWithdrawalCost(withdrawal.getVehicleId(), additionalCost);
+            } else {
+                BigDecimal minimumRemaining = BigDecimal.ONE;
+                BigDecimal remainingAfterWithdrawal = availableQuantity.subtract(delta);
+                if (remainingAfterWithdrawal.compareTo(minimumRemaining) < 0) {
+                    BigDecimal maxAllowedDelta = availableQuantity.subtract(minimumRemaining);
+                    throw new PurchaseException("INSUFFICIENT_PRODUCT", String.format(
+                            "Cannot withdraw all product. At least %s unit must remain on warehouse. Available: %s, maximum allowed additional withdrawal: %s",
+                            minimumRemaining, availableQuantity, maxAllowedDelta));
+                }
+                warehouseProductBalanceService.removeProduct(
+                        withdrawal.getWarehouseId(),
+                        withdrawal.getProductId(),
+                        additionalQuantity
+                );
             }
 
             log.info("Withdrawal {} increased by {}", id, additionalQuantity);
         } else if (delta.compareTo(BigDecimal.ZERO) < 0) {
             BigDecimal quantityToReturn = delta.abs().setScale(2, RoundingMode.HALF_UP);
+            BigDecimal costToReturn = unitPrice.multiply(quantityToReturn).setScale(6, RoundingMode.HALF_UP);
 
-            warehouseProductBalanceService.addProductQuantityOnly(
-                    withdrawal.getWarehouseId(),
-                    withdrawal.getProductId(),
-                    quantityToReturn
-            );
-
-            if (withdrawal.getShipmentId() != null) {
-                BigDecimal costToReturn = unitPrice.multiply(quantityToReturn).setScale(6, RoundingMode.HALF_UP);
-                shipmentService.subtractWithdrawalCost(withdrawal.getShipmentId(), costToReturn);
+            if (withdrawal.getVehicleId() != null) {
+                warehouseProductBalanceService.addProduct(
+                        withdrawal.getWarehouseId(),
+                        withdrawal.getProductId(),
+                        quantityToReturn,
+                        costToReturn
+                );
+                vehicleService.subtractWithdrawalCost(withdrawal.getVehicleId(), costToReturn);
+            } else {
+                warehouseProductBalanceService.addProductQuantityOnly(
+                        withdrawal.getWarehouseId(),
+                        withdrawal.getProductId(),
+                        quantityToReturn
+                );
             }
 
             log.info("Withdrawal {} decreased by {}", id, quantityToReturn);
@@ -284,17 +333,23 @@ public class WarehouseWithdrawService implements IWarehouseWithdrawService {
         }
 
         quantity = quantity.setScale(2, RoundingMode.HALF_UP);
+        BigDecimal unitPrice = resolveUnitPrice(withdrawal);
+        BigDecimal totalCost = calculateTotalCost(unitPrice, quantity);
 
-        warehouseProductBalanceService.addProductQuantityOnly(
-                withdrawal.getWarehouseId(),
-                withdrawal.getProductId(),
-                quantity
-        );
-
-        if (withdrawal.getShipmentId() != null) {
-            BigDecimal unitPrice = resolveUnitPrice(withdrawal);
-            BigDecimal totalCost = calculateTotalCost(unitPrice, quantity);
-            shipmentService.subtractWithdrawalCost(withdrawal.getShipmentId(), totalCost);
+        if (withdrawal.getVehicleId() != null) {
+            warehouseProductBalanceService.addProduct(
+                    withdrawal.getWarehouseId(),
+                    withdrawal.getProductId(),
+                    quantity,
+                    totalCost
+            );
+            vehicleService.subtractWithdrawalCost(withdrawal.getVehicleId(), totalCost);
+        } else {
+            warehouseProductBalanceService.addProductQuantityOnly(
+                    withdrawal.getWarehouseId(),
+                    withdrawal.getProductId(),
+                    quantity
+            );
         }
 
         log.info("Returned withdrawal {} to warehouse {}: quantity={}",

@@ -13,8 +13,8 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @Entity
-@Table(name = "shipments")
-public class Shipment {
+@Table(name = "vehicles")
+public class Vehicle {
     
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -41,6 +41,9 @@ public class Shipment {
     @Column(name = "user_id")
     private Long userId;
     
+    @Column(name = "is_our_vehicle", nullable = false)
+    private Boolean isOurVehicle = true;
+    
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -49,18 +52,12 @@ public class Shipment {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
     
-    /**
-     * Adds withdrawal cost to total vehicle cost
-     */
     public void addWithdrawalCost(BigDecimal withdrawalCost) {
         if (withdrawalCost != null && withdrawalCost.compareTo(BigDecimal.ZERO) > 0) {
             this.totalCostEur = this.totalCostEur.add(withdrawalCost);
         }
     }
     
-    /**
-     * Subtracts withdrawal cost from total vehicle cost (when withdrawal is deleted)
-     */
     public void subtractWithdrawalCost(BigDecimal withdrawalCost) {
         if (withdrawalCost != null && withdrawalCost.compareTo(BigDecimal.ZERO) > 0) {
             this.totalCostEur = this.totalCostEur.subtract(withdrawalCost);

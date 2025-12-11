@@ -77,7 +77,7 @@
             <button class="button" id="add-entry-btn">Додати надходження</button>
             <button class="button" id="move-btn">Переміщення</button>
             <button class="button" id="withdraw-btn">Списати баланс</button>
-            <button class="button" id="shipments-btn">Відвантаження машин</button>
+            <button class="button" id="vehicles-btn">Відвантаження машин</button>
         </div>
         <div class="button-row">
             <button class="button" id="entries-btn">Переглянути історію надходжень</button>
@@ -714,22 +714,24 @@
 </div>
 
 
-<div id="shipments-container" class="shipments-container" style="display: none;">
-        <div class="shipments-header">
+            <button class="button" id="vehicles-btn">Відвантаження машин</button>
+
+<div id="vehicles-container" class="vehicles-container" style="display: none;">
+        <div class="vehicles-header">
             <h3>Відвантаження машин</h3>
-            <div class="shipments-controls">
-                <button class="button" id="create-shipment-btn">Створити машину</button>
-                <div class="shipments-filters">
+            <div class="vehicles-controls">
+                <button class="button" id="create-vehicle-btn">Створити машину</button>
+                <div class="vehicles-filters">
                     <label>Дата від:</label>
-                    <input type="date" id="shipments-date-from">
+                    <input type="date" id="vehicles-date-from">
                     <label>Дата до:</label>
-                    <input type="date" id="shipments-date-to">
-                    <button class="button" id="apply-shipments-filters">Застосувати</button>
+                    <input type="date" id="vehicles-date-to">
+                    <button class="button" id="apply-vehicles-filters">Застосувати</button>
                 </div>
             </div>
         </div>
         
-        <table class="shipments-table">
+        <table class="vehicles-table">
             <thead>
                 <tr>
                     <th>Дата відвантаження</th>
@@ -740,152 +742,153 @@
                     <th>Коментар</th>
                 </tr>
             </thead>
-            <tbody id="shipments-tbody">
+            <tbody id="vehicles-tbody">
                 <!-- Will be filled dynamically -->
             </tbody>
         </table>
     </div>
 </div>
 
-<!-- Create Shipment Modal -->
-<div id="create-shipment-modal" class="modal">
+<!-- Create Vehicle Modal -->
+<div id="create-vehicle-modal" class="modal">
     <div class="modal-content">
         <span class="close">×</span>
         <h3>Створити машину</h3>
-        <form id="create-shipment-form">
-            <label for="shipment-date">Дата відвантаження:</label>
-            <input type="date" id="shipment-date" required>
+        <form id="create-vehicle-form">
+            <label for="vehicle-date">Дата відвантаження:</label>
+            <input type="date" id="vehicle-date" required>
             
-            <label for="shipment-vehicle-number">Номер машини:</label>
-            <input type="text" id="shipment-vehicle-number">
+            <label for="vehicle-vehicle-number">Номер машини:</label>
+            <input type="text" id="vehicle-vehicle-number">
             
-            <label for="shipment-invoice-ua">Інвойс УА:</label>
-            <input type="text" id="shipment-invoice-ua">
+            <label for="vehicle-invoice-ua">Інвойс УА:</label>
+            <input type="text" id="vehicle-invoice-ua">
             
-            <label for="shipment-invoice-eu">Інвойс ЄС:</label>
-            <input type="text" id="shipment-invoice-eu">
+            <label for="vehicle-invoice-eu">Інвойс ЄС:</label>
+            <input type="text" id="vehicle-invoice-eu">
             
-            <label for="shipment-description">Коментар:</label>
-            <textarea id="shipment-description" rows="3"></textarea>
+            <label for="vehicle-description">Коментар:</label>
+            <textarea id="vehicle-description" rows="3"></textarea>
             
             <button type="submit" class="button">Створити</button>
         </form>
     </div>
 </div>
 
-<!-- Shipment Details Modal -->
-<div id="shipment-details-modal" class="modal">
+<!-- Vehicle Details Modal -->
+<div id="vehicle-details-modal" class="modal">
     <div class="modal-content large-modal">
         <span class="close">×</span>
         <h3>Деталі машини</h3>
         
-        <div id="shipment-info">
-            <form id="update-shipment-form" class="shipment-info-form">
+        <div id="vehicle-info">
+            <form id="update-vehicle-form" class="vehicle-info-form">
                 <div class="form-row">
-                    <label for="detail-shipment-date">Дата відвантаження:</label>
-                    <input type="date" id="detail-shipment-date" required disabled>
+                    <label for="detail-vehicle-date">Дата відвантаження:</label>
+                    <input type="date" id="detail-vehicle-date" required disabled>
                 </div>
                 <div class="form-row">
-                    <label for="detail-shipment-vehicle-number">Номер машини:</label>
-                    <input type="text" id="detail-shipment-vehicle-number" disabled>
+                    <label for="detail-vehicle-vehicle-number">Номер машини:</label>
+                    <input type="text" id="detail-vehicle-vehicle-number" disabled>
                 </div>
                 <div class="form-row">
-                    <label for="detail-shipment-invoice-ua">Інвойс УА:</label>
-                    <input type="text" id="detail-shipment-invoice-ua" disabled>
+                    <label for="detail-vehicle-invoice-ua">Інвойс УА:</label>
+                    <input type="text" id="detail-vehicle-invoice-ua" disabled>
                 </div>
                 <div class="form-row">
-                    <label for="detail-shipment-invoice-eu">Інвойс ЄС:</label>
-                    <input type="text" id="detail-shipment-invoice-eu" disabled>
+                    <label for="detail-vehicle-invoice-eu">Інвойс ЄС:</label>
+                    <input type="text" id="detail-vehicle-invoice-eu" disabled>
                 </div>
                 <div class="form-row">
-                    <label for="detail-shipment-description">Коментар:</label>
-                    <textarea id="detail-shipment-description" rows="3" disabled></textarea>
+                    <label for="detail-vehicle-description">Коментар:</label>
+                    <textarea id="detail-vehicle-description" rows="3" disabled></textarea>
                 </div>
                 <div class="form-actions">
-                    <button type="button" class="button button-secondary" id="edit-shipment-btn">Редагувати</button>
-                    <button type="submit" class="button" id="save-shipment-btn" style="display: none;">Зберегти зміни</button>
+                    <button type="button" class="button button-secondary" id="edit-vehicle-btn">Редагувати</button>
+                    <button type="submit" class="button" id="save-vehicle-btn" style="display: none;">Зберегти зміни</button>
                 </div>
             </form>
         </div>
 
-        <div class="shipment-items-body">
+        <div class="vehicle-items-body">
         <h4>Товари в машині</h4>
-        <table class="shipment-items-table">
+        <table class="vehicle-items-table">
             <thead>
                 <tr>
                     <th>Товар</th>
+                    <th>Склад</th>
                     <th>Кількість</th>
                     <th>Ціна за кг</th>
                     <th>Загальна вартість</th>
                     <th>Дата списання</th>
                 </tr>
             </thead>
-            <tbody id="shipment-items-tbody">
+            <tbody id="vehicle-items-tbody">
                 <!-- Will be filled dynamically -->
             </tbody>
         </table>
         
-        <div class="shipment-total">
-            <strong>Загальна вартість машини: <span id="shipment-total-cost">0</span> EUR</strong>
+        <div class="vehicle-total">
+            <strong>Загальна вартість машини: <span id="vehicle-total-cost">0</span> EUR</strong>
         </div>
         
-        <div class="shipment-actions-bottom">
-            <button class="button" id="add-product-to-shipment-btn">Додати товар</button>
-            <button class="button button-danger" id="delete-shipment-btn">Видалити машину</button>
+        <div class="vehicle-actions-bottom">
+            <button class="button" id="add-product-to-vehicle-btn">Додати товар</button>
+            <button class="button button-danger" id="delete-vehicle-btn">Видалити машину</button>
         </div>
             </div>
     </div>
 </div>
 
-<!-- Add Product to Shipment Modal -->
-<div id="add-product-to-shipment-modal" class="modal">
+<!-- Add Product to Vehicle Modal -->
+<div id="add-product-to-vehicle-modal" class="modal">
     <div class="modal-content">
         <span class="close">×</span>
         <h3>Додати товар до машини</h3>
-        <form id="add-product-to-shipment-form">
-            <label for="shipment-warehouse-id">Склад:</label>
-            <select id="shipment-warehouse-id" required>
+        <form id="add-product-to-vehicle-form">
+            <label for="vehicle-warehouse-id">Склад:</label>
+            <select id="vehicle-warehouse-id" required>
                 <option value="">Оберіть склад</option>
             </select>
 
-            <label for="shipment-product-id">Товар:</label>
-            <select id="shipment-product-id" required>
+            <label for="vehicle-product-id">Товар:</label>
+            <select id="vehicle-product-id" required>
                 <option value="">Оберіть товар</option>
             </select>
 
-            <label for="shipment-quantity">Кількість (кг):</label>
-            <input type="number" id="shipment-quantity" step="0.01" min="0.01" placeholder="Кількість (кг)" required>
+            <label for="vehicle-quantity">Кількість (кг):</label>
+            <input type="number" id="vehicle-quantity" step="0.01" min="0.01" placeholder="Кількість (кг)" required>
 
             <button type="submit" class="button">Додати</button>
         </form>
     </div>
 </div>
 
-<!-- Edit Shipment Item Modal -->
-<div id="edit-shipment-item-modal" class="modal">
+<!-- Edit Vehicle Item Modal -->
+<div id="edit-vehicle-item-modal" class="modal">
     <div class="modal-content">
         <span class="close">×</span>
         <h3>Редагувати товар у машині</h3>
-        <form id="edit-shipment-item-form">
+        <form id="edit-vehicle-item-form">
             <div class="edit-mode-switch">
                 <label>
-                    <input type="radio" name="edit-shipment-item-mode" value="quantity" checked>
+                    <input type="radio" name="edit-vehicle-item-mode" value="quantity" checked>
                     Змінити кількість
                 </label>
                 <label>
-                    <input type="radio" name="edit-shipment-item-mode" value="totalCost">
+                    <input type="radio" name="edit-vehicle-item-mode" value="totalCost">
                     Змінити загальну вартість
                 </label>
             </div>
 
             <div class="form-row">
-                <label for="edit-shipment-item-quantity">Нова кількість (кг):</label>
-                <input type="number" id="edit-shipment-item-quantity" step="0.01" min="0" disabled>
+                <label for="edit-vehicle-item-quantity">Нова кількість (кг):</label>
+                <input type="number" id="edit-vehicle-item-quantity" step="0.01" min="0" disabled>
             </div>
 
             <div class="form-row">
-                <label for="edit-shipment-item-total-cost">Нова загальна вартість (EUR):</label>
-                <input type="number" id="edit-shipment-item-total-cost" step="0.000001" min="0" disabled>
+                <label for="edit-vehicle-item-total-cost">Нова загальна вартість (EUR):</label>
+                <input type="number" id="edit-vehicle-item-total-cost" step="0.000001" min="0" disabled>
             </div>
 
             <div class="form-actions">

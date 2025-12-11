@@ -304,6 +304,17 @@
     <div class="modal-content">
         <span class="close" id="closeCreatePurchaseModal">&times;</span>
         <h2>Створення закупівлі</h2>
+        <div id="exchange-rate-warning" style="display: none; background-color: #fff3cd; border: 2px solid #ffc107; border-radius: 8px; padding: 15px; margin-bottom: 20px; color: #856404;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink: 0;">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" fill="#856404"/>
+                </svg>
+                <div>
+                    <strong style="font-size: 16px; display: block; margin-bottom: 5px;">⚠️ УВАГА: Курс валют не актуальний!</strong>
+                    <div style="font-size: 14px;">Курс валют не оновлювався сьогодні. Будь ласка, попросіть бухгалтера оновити курс валют перед створенням закупівлі.</div>
+                </div>
+            </div>
+        </div>
         <form id="createPurchaseForm">
             <input type="hidden" id="purchaseClientId" name="clientId">
             <input type="hidden" id="purchaseSourceId" name="sourceId">

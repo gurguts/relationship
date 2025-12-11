@@ -61,6 +61,12 @@ public class PageController {
         return "stock";
     }
 
+    @PreAuthorize("hasAuthority('declarant:view')")
+    @GetMapping("/declarant")
+    public String getDeclarantPage() {
+        return "declarant";
+    }
+
     @PreAuthorize("hasAuthority('analytics:view')")
     @GetMapping("/analytics")
     public String getAnalyticsPage() {

@@ -1117,8 +1117,8 @@ const discrepanciesBtn = document.getElementById('discrepancies-btn');
 const discrepanciesContainer = document.getElementById('discrepancies-container');
 const transfersBtn = document.getElementById('transfers-btn');
 const transfersContainer = document.getElementById('transfers-container');
-const shipmentsBtn = document.getElementById('shipments-btn');
-const shipmentsContainer = document.getElementById('shipments-container');
+const vehiclesBtn = document.getElementById('vehicles-btn');
+const vehiclesContainer = document.getElementById('vehicles-container');
 const closeBtns = document.getElementsByClassName('close');
 const editTransferModal = document.getElementById('edit-transfer-modal');
 const editTransferForm = document.getElementById('edit-transfer-form');
@@ -1182,7 +1182,7 @@ entriesBtn.addEventListener('click', async () => {
         // Hide other containers
         document.getElementById('history-container').style.display = 'none';
         transfersContainer.style.display = 'none';
-        shipmentsContainer.style.display = 'none';
+        vehiclesContainer.style.display = 'none';
         if (discrepanciesContainer) discrepanciesContainer.style.display = 'none';
         
         entriesContainer.style.display = 'block';
@@ -1231,8 +1231,8 @@ Array.from(closeBtns).forEach(btn => {
 
 window.addEventListener('click', (e) => {
     if (e.target === withdrawModal || e.target === editModal || e.target === moveModal || e.target === entryModal ||
-        e.target === driverBalancesModal || e.target === createShipmentModal ||
-        e.target === shipmentDetailsModal || e.target === addProductToShipmentModal || e.target === editShipmentItemModal ||
+        e.target === driverBalancesModal || e.target === createVehicleModal ||
+        e.target === vehicleDetailsModal || e.target === addProductToVehicleModal || e.target === editVehicleItemModal ||
         e.target === editTransferModal || e.target === balanceEditModal) {
         closeModal(e.target.id);
     }
@@ -1261,18 +1261,18 @@ function closeModal(modalId) {
         if (driverNoBalanceWarning) {
             driverNoBalanceWarning.style.display = 'none';
         }
-    } else if (modalId === 'create-shipment-modal') {
-        document.getElementById('create-shipment-form').reset();
-    } else if (modalId === 'add-product-to-shipment-modal') {
-        document.getElementById('add-product-to-shipment-form').reset();
-    } else if (modalId === 'shipment-details-modal') {
-        resetShipmentFormState();
-    } else if (modalId === 'edit-shipment-item-modal') {
-        if (editShipmentItemForm) {
-            editShipmentItemForm.reset();
+    } else if (modalId === 'create-vehicle-modal') {
+        document.getElementById('create-vehicle-form').reset();
+    } else if (modalId === 'add-product-to-vehicle-modal') {
+        document.getElementById('add-product-to-vehicle-form').reset();
+    } else if (modalId === 'vehicle-details-modal') {
+        resetVehicleFormState();
+    } else if (modalId === 'edit-vehicle-item-modal') {
+        if (editVehicleItemForm) {
+            editVehicleItemForm.reset();
         }
-        currentShipmentItemId = null;
-        updateShipmentItemMode();
+        currentVehicleItemId = null;
+        updateVehicleItemMode();
     } else if (modalId === 'edit-transfer-modal') {
         if (editTransferForm) {
             editTransferForm.reset();
@@ -1296,7 +1296,7 @@ historyBtn.addEventListener('click', () => {
         // Hide other containers
         document.getElementById('entries-container').style.display = 'none';
         transfersContainer.style.display = 'none';
-        shipmentsContainer.style.display = 'none';
+        vehiclesContainer.style.display = 'none';
         if (discrepanciesContainer) discrepanciesContainer.style.display = 'none';
         
         historyContainer.style.display = 'block';
@@ -1329,7 +1329,7 @@ if (driverBalancesBtn) {
             if (historyContainer) historyContainer.style.display = 'none';
             if (entriesContainer) entriesContainer.style.display = 'none';
             if (transfersContainer) transfersContainer.style.display = 'none';
-            if (shipmentsContainer) shipmentsContainer.style.display = 'none';
+            if (vehiclesContainer) vehiclesContainer.style.display = 'none';
         } else {
             // Hide container
             discrepanciesContainer.style.display = 'none';
@@ -1356,7 +1356,7 @@ if (transfersBtn) {
         } else {
             historyContainer.style.display = 'none';
             entriesContainer.style.display = 'none';
-            shipmentsContainer.style.display = 'none';
+            vehiclesContainer.style.display = 'none';
             if (discrepanciesContainer) discrepanciesContainer.style.display = 'none';
 
             transfersContainer.style.display = 'block';
@@ -1707,61 +1707,61 @@ async function initialize() {
 initialize();
 
 // ========================================
-// SHIPMENTS FUNCTIONALITY
+// VEHICLES FUNCTIONALITY
 // ========================================
 
-const createShipmentBtn = document.getElementById('create-shipment-btn');
-const createShipmentModal = document.getElementById('create-shipment-modal');
-const shipmentDetailsModal = document.getElementById('shipment-details-modal');
-const createShipmentForm = document.getElementById('create-shipment-form');
-const addProductToShipmentModal = document.getElementById('add-product-to-shipment-modal');
-const addProductToShipmentForm = document.getElementById('add-product-to-shipment-form');
-const updateShipmentForm = document.getElementById('update-shipment-form');
-const detailShipmentDateInput = document.getElementById('detail-shipment-date');
-const detailShipmentVehicleInput = document.getElementById('detail-shipment-vehicle-number');
-const detailShipmentInvoiceUaInput = document.getElementById('detail-shipment-invoice-ua');
-const detailShipmentInvoiceEuInput = document.getElementById('detail-shipment-invoice-eu');
-const detailShipmentDescriptionInput = document.getElementById('detail-shipment-description');
-const editShipmentBtn = document.getElementById('edit-shipment-btn');
-const saveShipmentBtn = document.getElementById('save-shipment-btn');
-const editShipmentItemModal = document.getElementById('edit-shipment-item-modal');
-const editShipmentItemForm = document.getElementById('edit-shipment-item-form');
-const editShipmentItemQuantityInput = document.getElementById('edit-shipment-item-quantity');
-const editShipmentItemTotalCostInput = document.getElementById('edit-shipment-item-total-cost');
-const editShipmentItemModeRadios = document.querySelectorAll('input[name="edit-shipment-item-mode"]');
+const createVehicleBtn = document.getElementById('create-vehicle-btn');
+const createVehicleModal = document.getElementById('create-vehicle-modal');
+const vehicleDetailsModal = document.getElementById('vehicle-details-modal');
+const createVehicleForm = document.getElementById('create-vehicle-form');
+const addProductToVehicleModal = document.getElementById('add-product-to-vehicle-modal');
+const addProductToVehicleForm = document.getElementById('add-product-to-vehicle-form');
+const updateVehicleForm = document.getElementById('update-vehicle-form');
+const detailVehicleDateInput = document.getElementById('detail-vehicle-date');
+const detailVehicleVehicleInput = document.getElementById('detail-vehicle-vehicle-number');
+const detailVehicleInvoiceUaInput = document.getElementById('detail-vehicle-invoice-ua');
+const detailVehicleInvoiceEuInput = document.getElementById('detail-vehicle-invoice-eu');
+const detailVehicleDescriptionInput = document.getElementById('detail-vehicle-description');
+const editVehicleBtn = document.getElementById('edit-vehicle-btn');
+const saveVehicleBtn = document.getElementById('save-vehicle-btn');
+const editVehicleItemModal = document.getElementById('edit-vehicle-item-modal');
+const editVehicleItemForm = document.getElementById('edit-vehicle-item-form');
+const editVehicleItemQuantityInput = document.getElementById('edit-vehicle-item-quantity');
+const editVehicleItemTotalCostInput = document.getElementById('edit-vehicle-item-total-cost');
+const editVehicleItemModeRadios = document.querySelectorAll('input[name="edit-vehicle-item-mode"]');
 
-let currentShipmentId = null;
-let shipmentsCache = [];
-let currentShipmentDetails = null;
-let currentShipmentItems = new Map();
-let currentShipmentItemId = null;
+let currentVehicleId = null;
+let vehiclesCache = [];
+let currentVehicleDetails = null;
+let currentVehicleItems = new Map();
+let currentVehicleItemId = null;
 let currentTransferItem = null;
 let currentBalanceEditData = null;
 
-function populateShipmentForm(shipment) {
-    if (!shipment) {
-        if (detailShipmentDateInput) detailShipmentDateInput.value = '';
-        if (detailShipmentVehicleInput) detailShipmentVehicleInput.value = '';
-        if (detailShipmentInvoiceUaInput) detailShipmentInvoiceUaInput.value = '';
-        if (detailShipmentInvoiceEuInput) detailShipmentInvoiceEuInput.value = '';
-        if (detailShipmentDescriptionInput) detailShipmentDescriptionInput.value = '';
+function populateVehicleForm(vehicle) {
+    if (!vehicle) {
+        if (detailVehicleDateInput) detailVehicleDateInput.value = '';
+        if (detailVehicleVehicleInput) detailVehicleVehicleInput.value = '';
+        if (detailVehicleInvoiceUaInput) detailVehicleInvoiceUaInput.value = '';
+        if (detailVehicleInvoiceEuInput) detailVehicleInvoiceEuInput.value = '';
+        if (detailVehicleDescriptionInput) detailVehicleDescriptionInput.value = '';
         return;
     }
 
-    if (detailShipmentDateInput) detailShipmentDateInput.value = shipment.shipmentDate || '';
-    if (detailShipmentVehicleInput) detailShipmentVehicleInput.value = shipment.vehicleNumber || '';
-    if (detailShipmentInvoiceUaInput) detailShipmentInvoiceUaInput.value = shipment.invoiceUa || '';
-    if (detailShipmentInvoiceEuInput) detailShipmentInvoiceEuInput.value = shipment.invoiceEu || '';
-    if (detailShipmentDescriptionInput) detailShipmentDescriptionInput.value = shipment.description || '';
+    if (detailVehicleDateInput) detailVehicleDateInput.value = vehicle.vehicleDate || '';
+    if (detailVehicleVehicleInput) detailVehicleVehicleInput.value = vehicle.vehicleNumber || '';
+    if (detailVehicleInvoiceUaInput) detailVehicleInvoiceUaInput.value = vehicle.invoiceUa || '';
+    if (detailVehicleInvoiceEuInput) detailVehicleInvoiceEuInput.value = vehicle.invoiceEu || '';
+    if (detailVehicleDescriptionInput) detailVehicleDescriptionInput.value = vehicle.description || '';
 }
 
-function setShipmentFormEditable(isEditable) {
+function setVehicleFormEditable(isEditable) {
     const fields = [
-        detailShipmentDateInput,
-        detailShipmentVehicleInput,
-        detailShipmentInvoiceUaInput,
-        detailShipmentInvoiceEuInput,
-        detailShipmentDescriptionInput
+        detailVehicleDateInput,
+        detailVehicleVehicleInput,
+        detailVehicleInvoiceUaInput,
+        detailVehicleInvoiceEuInput,
+        detailVehicleDescriptionInput
     ];
 
     fields.forEach(field => {
@@ -1770,108 +1770,106 @@ function setShipmentFormEditable(isEditable) {
         }
     });
 
-    if (saveShipmentBtn) {
-        saveShipmentBtn.style.display = isEditable ? 'inline-flex' : 'none';
+    if (saveVehicleBtn) {
+        saveVehicleBtn.style.display = isEditable ? 'inline-flex' : 'none';
     }
-    if (editShipmentBtn) {
-        editShipmentBtn.style.display = isEditable ? 'none' : 'inline-flex';
+    if (editVehicleBtn) {
+        editVehicleBtn.style.display = isEditable ? 'none' : 'inline-flex';
     }
 }
 
-function resetShipmentFormState() {
-    populateShipmentForm(currentShipmentDetails);
-    setShipmentFormEditable(false);
+function resetVehicleFormState() {
+    populateVehicleForm(currentVehicleDetails);
+    setVehicleFormEditable(false);
 }
 
-if (updateShipmentForm) {
-    setShipmentFormEditable(false);
+if (updateVehicleForm) {
+    setVehicleFormEditable(false);
 }
 
-if (editShipmentBtn) {
-    editShipmentBtn.addEventListener('click', () => {
-        if (!currentShipmentDetails) {
+if (editVehicleBtn) {
+    editVehicleBtn.addEventListener('click', () => {
+        if (!currentVehicleDetails) {
             return;
         }
-        populateShipmentForm(currentShipmentDetails);
-        setShipmentFormEditable(true);
-        detailShipmentDateInput?.focus();
+        populateVehicleForm(currentVehicleDetails);
+        setVehicleFormEditable(true);
+        detailVehicleDateInput?.focus();
     });
 }
 
-// Open shipments container
-if (shipmentsBtn) {
-    shipmentsBtn.addEventListener('click', async () => {
-        if (shipmentsContainer.style.display === 'block') {
-            // Close shipments container
-            shipmentsContainer.style.display = 'none';
+// Open vehicles container
+if (vehiclesBtn) {
+    vehiclesBtn.addEventListener('click', async () => {
+        if (vehiclesContainer.style.display === 'block') {
+            vehiclesContainer.style.display = 'none';
         } else {
-            // Hide other containers
             document.getElementById('history-container').style.display = 'none';
             document.getElementById('entries-container').style.display = 'none';
             transfersContainer.style.display = 'none';
             if (discrepanciesContainer) discrepanciesContainer.style.display = 'none';
             
-            // Show shipments container
-            shipmentsContainer.style.display = 'block';
-            await loadShipments();
+            vehiclesContainer.style.display = 'block';
+            await loadVehicles();
         }
     });
 }
 
-// Open create shipment modal
-if (createShipmentBtn) {
-    createShipmentBtn.addEventListener('click', () => {
-        document.getElementById('shipment-date').valueAsDate = new Date();
-        createShipmentModal.style.display = 'flex';
-        createShipmentModal.classList.add('open');
+// Open create vehicle modal
+if (createVehicleBtn) {
+    createVehicleBtn.addEventListener('click', () => {
+        document.getElementById('vehicle-date').valueAsDate = new Date();
+        createVehicleModal.style.display = 'flex';
+        createVehicleModal.classList.add('open');
         document.body.classList.add('modal-open');
     });
 }
 
-// Create shipment form submit
-if (createShipmentForm) {
-    createShipmentForm.addEventListener('submit', async (e) => {
+// Create vehicle form submit
+if (createVehicleForm) {
+    createVehicleForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         
-        const shipmentData = {
-            shipmentDate: document.getElementById('shipment-date').value,
-            vehicleNumber: document.getElementById('shipment-vehicle-number').value,
-            invoiceUa: document.getElementById('shipment-invoice-ua').value,
-            invoiceEu: document.getElementById('shipment-invoice-eu').value,
-            description: document.getElementById('shipment-description').value
+        const vehicleData = {
+            vehicleDate: document.getElementById('vehicle-date').value,
+            vehicleNumber: document.getElementById('vehicle-number').value,
+            invoiceUa: document.getElementById('vehicle-invoice-ua').value,
+            invoiceEu: document.getElementById('vehicle-invoice-eu').value,
+            description: document.getElementById('vehicle-description').value,
+            isOurVehicle: true
         };
         
         try {
-            const response = await fetch('/api/v1/shipments', {
+            const response = await fetch('/api/v1/vehicles', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(shipmentData)
+                body: JSON.stringify(vehicleData)
             });
             
             if (!response.ok) {
-                throw new Error('Failed to create shipment');
+                throw new Error('Failed to create vehicle');
             }
             
             const result = await response.json();
             showMessage('Машину успішно створено', 'success');
             
-            closeModal('create-shipment-modal');
-            createShipmentForm.reset();
+            closeModal('create-vehicle-modal');
+            createVehicleForm.reset();
             
-            await loadShipments();
+            await loadVehicles();
         } catch (error) {
             showMessage('Помилка при створенні машини', 'error');
         }
     });
 }
 
-// Load shipments list
-async function loadShipments() {
-    const dateFrom = document.getElementById('shipments-date-from')?.value;
-    const dateTo = document.getElementById('shipments-date-to')?.value;
+// Load vehicles list
+async function loadVehicles() {
+    const dateFrom = document.getElementById('vehicles-date-from')?.value;
+    const dateTo = document.getElementById('vehicles-date-to')?.value;
     
     try {
-        let url = '/api/v1/shipments/by-date-range?';
+        let url = '/api/v1/vehicles/by-date-range?';
         
         if (dateFrom && dateTo) {
             url += `fromDate=${dateFrom}&toDate=${dateTo}`;
@@ -1886,130 +1884,131 @@ async function loadShipments() {
         const response = await fetch(url);
         
         if (!response.ok) {
-            throw new Error('Failed to load shipments');
+            throw new Error('Failed to load vehicles');
         }
         
-        shipmentsCache = await response.json();
-        renderShipments(shipmentsCache);
+        vehiclesCache = await response.json();
+        renderVehicles(vehiclesCache);
     } catch (error) {
         showMessage('Помилка завантаження машин', 'error');
         
         // Show empty table even on error
-        const tbody = document.getElementById('shipments-tbody');
+        const tbody = document.getElementById('vehicles-tbody');
         if (tbody) {
             tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">Помилка завантаження даних</td></tr>';
         }
     }
 }
 
-// Render shipments table
-function renderShipments(shipments) {
-    const tbody = document.getElementById('shipments-tbody');
+// Render vehicles table
+function renderVehicles(vehicles) {
+    const tbody = document.getElementById('vehicles-tbody');
     
     if (!tbody) {
         return;
     }
     
-    if (!shipments || shipments.length === 0) {
+    if (!vehicles || vehicles.length === 0) {
         tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">Немає даних</td></tr>';
         return;
     }
     
-    tbody.innerHTML = shipments.map(shipment => `
-        <tr onclick="viewShipmentDetails(${shipment.id})" style="cursor: pointer;">
-            <td>${shipment.shipmentDate}</td>
-            <td>${shipment.vehicleNumber || '-'}</td>
-            <td>${shipment.invoiceUa || '-'}</td>
-            <td>${shipment.invoiceEu || '-'}</td>
-            <td style="font-weight: bold; color: #FF6F00;">${formatNumber(shipment.totalCostEur, 2)} EUR</td>
-            <td>${shipment.description || '-'}</td>
+    tbody.innerHTML = vehicles.map(vehicle => `
+        <tr onclick="viewVehicleDetails(${vehicle.id})" style="cursor: pointer;">
+            <td>${vehicle.vehicleDate}</td>
+            <td>${vehicle.vehicleNumber || '-'}</td>
+            <td>${vehicle.invoiceUa || '-'}</td>
+            <td>${vehicle.invoiceEu || '-'}</td>
+            <td style="font-weight: bold; color: #FF6F00;">${formatNumber(vehicle.totalCostEur, 2)} EUR</td>
+            <td>${vehicle.description || '-'}</td>
         </tr>
     `).join('');
 }
 
-// View shipment details
-async function viewShipmentDetails(shipmentId) {
-    currentShipmentId = shipmentId;
+// View vehicle details
+async function viewVehicleDetails(vehicleId) {
+    currentVehicleId = vehicleId;
     
     try {
-        const response = await fetch(`/api/v1/shipments/${shipmentId}`);
+        const response = await fetch(`/api/v1/vehicles/${vehicleId}`);
         
         if (!response.ok) {
-            throw new Error('Failed to load shipment details');
+            throw new Error('Failed to load vehicle details');
         }
         
-        const shipment = await response.json();
-        renderShipmentDetails(shipment);
+        const vehicle = await response.json();
+        renderVehicleDetails(vehicle);
         
-        shipmentDetailsModal.style.display = 'flex';
-        shipmentDetailsModal.classList.add('open');
+        vehicleDetailsModal.style.display = 'flex';
+        vehicleDetailsModal.classList.add('open');
         document.body.classList.add('modal-open');
     } catch (error) {
         showMessage('Помилка завантаження деталей машини', 'error');
     }
 }
 
-// Render shipment details
-function renderShipmentDetails(shipment) {
-    currentShipmentDetails = shipment;
-    currentShipmentItems = new Map();
-    populateShipmentForm(shipment);
-    setShipmentFormEditable(false);
+// Render vehicle details
+function renderVehicleDetails(vehicle) {
+    currentVehicleDetails = vehicle;
+    currentVehicleItems = new Map();
+    populateVehicleForm(vehicle);
+    setVehicleFormEditable(false);
     
-    const itemsTbody = document.getElementById('shipment-items-tbody');
+    const itemsTbody = document.getElementById('vehicle-items-tbody');
     
-    if (!shipment.items || shipment.items.length === 0) {
-        itemsTbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">Товари ще не додані</td></tr>';
+    if (!vehicle.items || vehicle.items.length === 0) {
+        itemsTbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">Товари ще не додані</td></tr>';
     } else {
-        itemsTbody.innerHTML = shipment.items.map(item => {
+        itemsTbody.innerHTML = vehicle.items.map(item => {
             const productName = findNameByIdFromMap(productMap, item.productId) || 'Невідомий товар';
             const warehouseName = findNameByIdFromMap(warehouseMap, item.warehouseId) || 'Невідомий склад';
 
-            currentShipmentItems.set(Number(item.withdrawalId), {
+            currentVehicleItems.set(Number(item.withdrawalId), {
                 ...item,
                 productName,
                 warehouseName
             });
 
             return `
-                <tr class="shipment-item-row" data-item-id="${item.withdrawalId}" style="cursor: pointer;">
+                <tr class="vehicle-item-row" data-item-id="${item.withdrawalId}" style="cursor: pointer;">
                     <td>${productName}</td>
+                    <td>${warehouseName}</td>
                     <td>${formatNumber(item.quantity, 2)} кг</td>
                     <td style="text-align: right;">${formatNumber(item.unitPriceEur, 6)} EUR</td>
                     <td style="text-align: right; font-weight: bold;">${formatNumber(item.totalCostEur, 6)} EUR</td>
-                    <td>${item.withdrawalDate || shipment.shipmentDate}</td>
+                    <td>${item.withdrawalDate || vehicle.vehicleDate}</td>
                 </tr>
             `;
         }).join('');
     }
     
-    document.getElementById('shipment-total-cost').textContent = formatNumber(shipment.totalCostEur, 2);
+    document.getElementById('vehicle-total-cost').textContent = formatNumber(vehicle.totalCostEur, 2);
 }
 
-// Add product to shipment button
-document.getElementById('add-product-to-shipment-btn')?.addEventListener('click', () => {
+// Add product to vehicle button
+document.getElementById('add-product-to-vehicle-btn')?.addEventListener('click', () => {
     // Populate warehouses and products
-    populateWarehouses('shipment-warehouse-id');
-    populateProducts('shipment-product-id');
+    populateWarehouses('vehicle-warehouse-id');
+    populateProducts('vehicle-product-id');
     
-    addProductToShipmentModal.style.display = 'flex';
-    addProductToShipmentModal.classList.add('open');
+    addProductToVehicleModal.style.display = 'flex';
+    addProductToVehicleModal.classList.add('open');
     document.body.classList.add('modal-open');
 });
 
-// Add product to shipment form submit
-if (addProductToShipmentForm) {
-    addProductToShipmentForm.addEventListener('submit', async (e) => {
+// Add product to vehicle form submit
+if (addProductToVehicleForm) {
+    addProductToVehicleForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         
         const data = {
-            warehouseId: Number(document.getElementById('shipment-warehouse-id').value),
-            productId: Number(document.getElementById('shipment-product-id').value),
-            quantity: Number(document.getElementById('shipment-quantity').value)
+            warehouseId: Number(document.getElementById('vehicle-warehouse-id').value),
+            productId: Number(document.getElementById('vehicle-product-id').value),
+            quantity: Number(document.getElementById('vehicle-quantity').value)
         };
         
         try {
-            const response = await fetch(`/api/v1/shipments/${currentShipmentId}/products`, {
+            const response = await fetch(`/api/v1/vehicles/${currentVehicleId}/products`, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify(data)
@@ -2017,20 +2016,20 @@ if (addProductToShipmentForm) {
             
             if (!response.ok) {
                 const errorData = await response.json();
-                throw new Error(errorData.message || 'Failed to add product to shipment');
+                throw new Error(errorData.message || 'Failed to add product to vehicle');
             }
             
-            const updatedShipment = await response.json();
+            const updatedVehicle = await response.json();
             
             showMessage('Товар успішно додано до машини', 'success');
-            closeModal('add-product-to-shipment-modal');
-            addProductToShipmentForm.reset();
+            closeModal('add-product-to-vehicle-modal');
+            addProductToVehicleForm.reset();
             
-            // Refresh shipment details
-            renderShipmentDetails(updatedShipment);
+            // Refresh vehicle details
+            renderVehicleDetails(updatedVehicle);
             
-            // Refresh shipments list in table
-            await loadShipments();
+            // Refresh vehicles list in table
+            await loadVehicles();
             
             // Reload balance
     loadBalance();
@@ -2040,33 +2039,33 @@ if (addProductToShipmentForm) {
     });
 }
 
-// Delete shipment button
-document.getElementById('delete-shipment-btn')?.addEventListener('click', async () => {
+// Delete vehicle button
+document.getElementById('delete-vehicle-btn')?.addEventListener('click', async () => {
     if (!confirm('Ви впевнені, що хочете видалити цю машину?')) {
         return;
     }
     
     try {
-        const response = await fetch(`/api/v1/shipments/${currentShipmentId}`, {
+        const response = await fetch(`/api/v1/vehicles/${currentVehicleId}`, {
             method: 'DELETE'
         });
         
         if (!response.ok) {
-            throw new Error('Failed to delete shipment');
+            throw new Error('Failed to delete vehicle');
         }
         
         showMessage('Машину успішно видалено', 'success');
-        closeModal('shipment-details-modal');
-        await loadShipments();
+        closeModal('vehicle-details-modal');
+        await loadVehicles();
         await loadBalance();
     } catch (error) {
         showMessage('Помилка при видаленні машини', 'error');
     }
 });
 
-// Apply shipments filters
-document.getElementById('apply-shipments-filters')?.addEventListener('click', async () => {
-    await loadShipments();
+// Apply vehicles filters
+document.getElementById('apply-vehicles-filters')?.addEventListener('click', async () => {
+    await loadVehicles();
 });
 
 function exportTableToExcel(tableId, filename = 'withdrawal_data') {
@@ -2583,20 +2582,20 @@ if (exportTransfersBtn) {
     exportTransfersBtn.addEventListener('click', exportTransfersToExcel);
 }
 
-if (updateShipmentForm) {
-    updateShipmentForm.addEventListener('submit', async (e) => {
+if (updateVehicleForm) {
+    updateVehicleForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        if (!currentShipmentId) {
+        if (!currentVehicleId) {
             showMessage('Не вдалося визначити машину для оновлення', 'error');
             return;
         }
         
         const payload = {
-            shipmentDate: detailShipmentDateInput?.value || null,
-            vehicleNumber: detailShipmentVehicleInput?.value ?? null,
-            invoiceUa: detailShipmentInvoiceUaInput?.value ?? null,
-            invoiceEu: detailShipmentInvoiceEuInput?.value ?? null,
-            description: detailShipmentDescriptionInput?.value ?? null
+            vehicleDate: detailVehicleDateInput?.value || null,
+            vehicleNumber: detailVehicleVehicleInput?.value ?? null,
+            invoiceUa: detailVehicleInvoiceUaInput?.value ?? null,
+            invoiceEu: detailVehicleInvoiceEuInput?.value ?? null,
+            description: detailVehicleDescriptionInput?.value ?? null
         };
         
         Object.keys(payload).forEach(key => {
@@ -2606,13 +2605,13 @@ if (updateShipmentForm) {
             }
         });
         
-        if (!payload.shipmentDate) {
+        if (!payload.vehicleDate) {
             showMessage('Вкажіть дату відвантаження', 'error');
             return;
         }
         
         try {
-            const response = await fetch(`/api/v1/shipments/${currentShipmentId}`, {
+            const response = await fetch(`/api/v1/vehicles/${currentVehicleId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -2623,12 +2622,12 @@ if (updateShipmentForm) {
                 throw new Error(errorData.message || 'Не вдалося оновити машину');
             }
             
-            const updatedShipment = await response.json();
+            const updatedVehicle = await response.json();
             showMessage('Дані машини оновлено', 'success');
-            renderShipmentDetails(updatedShipment);
-            await loadShipments();
+            renderVehicleDetails(updatedVehicle);
+            await loadVehicles();
             await loadBalance();
-            closeModal('edit-shipment-item-modal');
+            closeModal('edit-vehicle-item-modal');
         } catch (error) {
             showMessage(error.message || 'Помилка при оновленні машини', 'error');
         }
@@ -2788,25 +2787,25 @@ async function initializeTransfersFilters() {
     updateTransfersSelectedFilters();
 }
 
-function updateShipmentItemMode() {
-    const mode = document.querySelector('input[name="edit-shipment-item-mode"]:checked')?.value;
+function updateVehicleItemMode() {
+    const mode = document.querySelector('input[name="edit-vehicle-item-mode"]:checked')?.value;
     if (!mode) {
         return;
     }
 
     const quantityEnabled = mode === 'quantity';
 
-    if (editShipmentItemQuantityInput) {
-        editShipmentItemQuantityInput.disabled = !quantityEnabled;
-        editShipmentItemQuantityInput.classList.toggle('shipment-item-edit-disabled', !quantityEnabled);
+    if (editVehicleItemQuantityInput) {
+        editVehicleItemQuantityInput.disabled = !quantityEnabled;
+        editVehicleItemQuantityInput.classList.toggle('vehicle-item-edit-disabled', !quantityEnabled);
     }
-    if (editShipmentItemTotalCostInput) {
-        editShipmentItemTotalCostInput.disabled = quantityEnabled;
-        editShipmentItemTotalCostInput.classList.toggle('shipment-item-edit-disabled', quantityEnabled);
+    if (editVehicleItemTotalCostInput) {
+        editVehicleItemTotalCostInput.disabled = quantityEnabled;
+        editVehicleItemTotalCostInput.classList.toggle('vehicle-item-edit-disabled', quantityEnabled);
     }
 
-    if (editShipmentItemModeRadios.length > 0) {
-        editShipmentItemModeRadios.forEach(radio => {
+    if (editVehicleItemModeRadios.length > 0) {
+        editVehicleItemModeRadios.forEach(radio => {
             const label = radio.closest('label');
             if (label) {
                 label.classList.toggle('active', radio.checked);
@@ -2815,81 +2814,81 @@ function updateShipmentItemMode() {
     }
 }
 
-function openEditShipmentItemModal(itemId) {
-    if (!currentShipmentDetails) {
+function openEditVehicleItemModal(itemId) {
+    if (!currentVehicleDetails) {
         showMessage('Неможливо відредагувати товар: машина не вибрана', 'error');
         return;
     }
 
-    const item = currentShipmentItems.get(Number(itemId));
+    const item = currentVehicleItems.get(Number(itemId));
     if (!item) {
         showMessage('Товар не знайдений або вже оновлений', 'error');
         return;
     }
 
-    currentShipmentItemId = Number(itemId);
+    currentVehicleItemId = Number(itemId);
 
-    if (editShipmentItemQuantityInput) {
-        editShipmentItemQuantityInput.value = parseFloat(item.quantity).toFixed(2);
+    if (editVehicleItemQuantityInput) {
+        editVehicleItemQuantityInput.value = parseFloat(item.quantity).toFixed(2);
     }
-    if (editShipmentItemTotalCostInput) {
-        editShipmentItemTotalCostInput.value = parseFloat(item.totalCostEur).toFixed(6);
+    if (editVehicleItemTotalCostInput) {
+        editVehicleItemTotalCostInput.value = parseFloat(item.totalCostEur).toFixed(6);
     }
 
-    const quantityModeRadio = document.querySelector('input[name="edit-shipment-item-mode"][value="quantity"]');
+    const quantityModeRadio = document.querySelector('input[name="edit-vehicle-item-mode"][value="quantity"]');
     if (quantityModeRadio) {
         quantityModeRadio.checked = true;
     }
-    updateShipmentItemMode();
+    updateVehicleItemMode();
 
-    if (editShipmentItemModal) {
-        editShipmentItemModal.style.display = 'flex';
-        editShipmentItemModal.classList.add('open');
+    if (editVehicleItemModal) {
+        editVehicleItemModal.style.display = 'flex';
+        editVehicleItemModal.classList.add('open');
     }
     document.body.classList.add('modal-open');
 }
 
-const shipmentItemsTbody = document.getElementById('shipment-items-tbody');
-if (shipmentItemsTbody) {
-    shipmentItemsTbody.addEventListener('click', (event) => {
+const vehicleItemsTbody = document.getElementById('vehicle-items-tbody');
+if (vehicleItemsTbody) {
+    vehicleItemsTbody.addEventListener('click', (event) => {
         const row = event.target.closest('tr[data-item-id]');
         if (!row) {
             return;
         }
         const itemId = row.dataset.itemId;
         if (itemId) {
-            openEditShipmentItemModal(itemId);
+            openEditVehicleItemModal(itemId);
         }
     });
 }
 
-if (editShipmentItemModeRadios.length > 0) {
-    editShipmentItemModeRadios.forEach(radio => {
-        radio.addEventListener('change', updateShipmentItemMode);
+if (editVehicleItemModeRadios.length > 0) {
+    editVehicleItemModeRadios.forEach(radio => {
+        radio.addEventListener('change', updateVehicleItemMode);
     });
-    updateShipmentItemMode();
+    updateVehicleItemMode();
 }
 
-if (editShipmentItemForm) {
-    editShipmentItemForm.addEventListener('submit', async (event) => {
+if (editVehicleItemForm) {
+    editVehicleItemForm.addEventListener('submit', async (event) => {
         event.preventDefault();
 
-        if (!currentShipmentId || currentShipmentItemId === null) {
+        if (!currentVehicleId || currentVehicleItemId === null) {
             showMessage('Не вдалося визначити товар для оновлення', 'error');
             return;
         }
 
-        const item = currentShipmentItems.get(Number(currentShipmentItemId));
+        const item = currentVehicleItems.get(Number(currentVehicleItemId));
         if (!item) {
             showMessage('Товар не знайдений або вже оновлений', 'error');
             return;
         }
 
-        const mode = document.querySelector('input[name="edit-shipment-item-mode"]:checked')?.value;
+        const mode = document.querySelector('input[name="edit-vehicle-item-mode"]:checked')?.value;
         const payload = {};
 
         if (mode === 'quantity') {
-            const newQuantityValue = parseFloat(editShipmentItemQuantityInput.value);
+            const newQuantityValue = parseFloat(editVehicleItemQuantityInput.value);
             if (Number.isNaN(newQuantityValue) || newQuantityValue < 0) {
                 showMessage('Вкажіть коректну кількість', 'error');
                 return;
@@ -2911,7 +2910,7 @@ if (editShipmentItemForm) {
 
             payload.quantity = roundedQuantity;
         } else if (mode === 'totalCost') {
-            const newTotalValue = parseFloat(editShipmentItemTotalCostInput.value);
+            const newTotalValue = parseFloat(editVehicleItemTotalCostInput.value);
             if (newTotalValue === undefined || newTotalValue === null || isNaN(newTotalValue) || newTotalValue <= 0) {
                 showMessage('Вкажіть коректну загальну вартість', 'error');
                 return;
@@ -2930,7 +2929,7 @@ if (editShipmentItemForm) {
         }
 
         try {
-            const response = await fetch(`/api/v1/shipments/${currentShipmentId}/products/${currentShipmentItemId}`, {
+            const response = await fetch(`/api/v1/vehicles/${currentVehicleId}/products/${currentVehicleItemId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -2941,11 +2940,11 @@ if (editShipmentItemForm) {
                 throw new Error(errorData.message || 'Не вдалося оновити товар у машині');
             }
 
-            const updatedShipment = await response.json();
+            const updatedVehicle = await response.json();
             showMessage('Дані товару у машині оновлено', 'success');
-            renderShipmentDetails(updatedShipment);
-            await loadShipments();
-            closeModal('edit-shipment-item-modal');
+            renderVehicleDetails(updatedVehicle);
+            await loadVehicles();
+            closeModal('edit-vehicle-item-modal');
             await loadBalance();
         } catch (error) {
             showMessage(error.message || 'Помилка при оновленні товару у машині', 'error');
@@ -3350,7 +3349,7 @@ if (balanceHistoryBtn) {
             // Hide other containers
             document.getElementById('entries-container').style.display = 'none';
             transfersContainer.style.display = 'none';
-            shipmentsContainer.style.display = 'none';
+            vehiclesContainer.style.display = 'none';
             
             historyContainer.style.display = 'block';
             document.getElementById('open-history-filter-modal').style.display = 'inline-block';

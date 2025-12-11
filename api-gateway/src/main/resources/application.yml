@@ -18,7 +18,7 @@ spring:
         - id: web-app
           uri: http://localhost:8081
           predicates:
-            - Path=/login,/clients,/routes,/purchase,/sale,/settings,/administration,/containers,/inventory,/warehouse,/finance,/stock,/analytics,/profile,/static/**,/css/**,/js/**,/favicon/**,/img/**
+            - Path=/login,/clients,/routes,/purchase,/sale,/settings,/administration,/containers,/inventory,/warehouse,/finance,/stock,/analytics,/profile,/declarant,/static/**,/css/**,/js/**,/favicon/**,/img/**
           filters:
             - CustomTokenRelayFilterFactory
 

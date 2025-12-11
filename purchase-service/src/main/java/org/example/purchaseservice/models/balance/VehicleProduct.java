@@ -11,15 +11,15 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @Entity
-@Table(name = "shipment_products")
-public class ShipmentProduct {
+@Table(name = "vehicle_products")
+public class VehicleProduct {
     
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
-    @Column(name = "shipment_id", nullable = false)
-    private Long shipmentId;
+    @Column(name = "vehicle_id", nullable = false)
+    private Long vehicleId;
     
     @Column(name = "warehouse_id", nullable = false)
     private Long warehouseId;

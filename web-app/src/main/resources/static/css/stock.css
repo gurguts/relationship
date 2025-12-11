@@ -1549,7 +1549,7 @@ tr:hover {
     display: flex;
 }
 
-.shipment-items-body{
+.vehicle-items-body{
     padding: 15px;
 }
 
@@ -1722,10 +1722,10 @@ tr:hover {
 }
 
 /* ========================================
-   SHIPMENTS STYLES
+   VEHICLES STYLES
    ======================================== */
 
-.shipments-container {
+.vehicles-container {
     background: linear-gradient(135deg, #f8f9fa, #e9ecef);
     border-radius: 15px;
     padding: 25px;
@@ -1733,14 +1733,14 @@ tr:hover {
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
 }
 
-.shipments-header {
+.vehicles-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 20px;
 }
 
-.shipments-header h3 {
+.vehicles-header h3 {
     color: #495057;
     font-size: 1.4rem;
     font-weight: 600;
@@ -1751,32 +1751,32 @@ tr:hover {
     letter-spacing: 1px;
 }
 
-.shipments-controls {
+.vehicles-controls {
     display: flex;
     gap: 15px;
     align-items: center;
 }
 
-.shipments-filters {
+.vehicles-filters {
     display: flex;
     gap: 10px;
     align-items: center;
 }
 
-.shipments-filters label {
+.vehicles-filters label {
     font-size: 14px;
     font-weight: 500;
     color: #495057;
 }
 
-.shipments-filters input {
+.vehicles-filters input {
     padding: 8px 12px;
     border: 1px solid #ddd;
     border-radius: 4px;
     font-size: 14px;
 }
 
-.shipments-table {
+.vehicles-table {
     width: 100%;
     border-collapse: collapse;
     margin-top: 20px;
@@ -1786,14 +1786,14 @@ tr:hover {
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
 }
 
-.shipments-table th,
-.shipments-table td {
+.vehicles-table th,
+.vehicles-table td {
     padding: 15px 20px;
     text-align: left;
     border-bottom: 1px solid #f1f3f4;
 }
 
-.shipments-table th {
+.vehicles-table th {
     background: linear-gradient(135deg, #FF6F00, #FF8F00, #FF6F00);
     color: white;
     font-weight: 600;
@@ -1802,17 +1802,17 @@ tr:hover {
     letter-spacing: 0.5px;
 }
 
-.shipments-table tbody tr {
+.vehicles-table tbody tr {
     transition: all 0.3s ease;
     cursor: pointer;
 }
 
-.shipments-table tbody tr:hover {
+.vehicles-table tbody tr:hover {
     background: linear-gradient(135deg, #fff8f0, #fff0e0);
     box-shadow: 0 4px 15px rgba(255, 111, 0, 0.1);
 }
 
-.shipment-items-table {
+.vehicle-items-table {
     width: 100%;
     border-collapse: collapse;
     margin-top: 20px;
@@ -1821,56 +1821,56 @@ tr:hover {
     overflow: hidden;
 }
 
-.shipment-items-table th,
-.shipment-items-table td {
+.vehicle-items-table th,
+.vehicle-items-table td {
     padding: 12px 15px;
     text-align: left;
     border-bottom: 1px solid #f1f3f4;
 }
 
-.shipment-items-table th {
+.vehicle-items-table th {
     background: linear-gradient(135deg, #FFB74D, #FFA726);
     color: white;
     font-weight: 600;
     font-size: 0.85rem;
 }
 
-.shipment-items-table tbody tr:hover {
+.vehicle-items-table tbody tr:hover {
     background: #fff8f0;
 }
 
-#shipment-info {
+#vehicle-info {
     background: linear-gradient(135deg, #fff8f0, #ffe8d0);
 }
 
-#shipment-info p {
+#vehicle-info p {
     margin: 8px 0;
     font-size: 14px;
     color: #495057;
 }
 
-#shipment-info strong {
+#vehicle-info strong {
     color: #FF6F00;
     font-weight: 600;
 }
 
-.shipment-info-form {
+.vehicle-info-form {
     display: grid;
     gap: 12px;
 }
 
-.shipment-info-form .form-row {
+.vehicle-info-form .form-row {
     display: flex;
     flex-direction: column;
 }
 
-.shipment-info-form label {
+.vehicle-info-form label {
     font-weight: 600;
     color: #FF6F00;
 }
 
-.shipment-info-form input,
-.shipment-info-form textarea {
+.vehicle-info-form input,
+.vehicle-info-form textarea {
     padding: 10px;
     border: 1px solid #FFB74D;
     border-radius: 6px;
@@ -1879,19 +1879,19 @@ tr:hover {
     color: #333;
 }
 
-.shipment-info-form input:disabled,
-.shipment-info-form textarea:disabled {
+.vehicle-info-form input:disabled,
+.vehicle-info-form textarea:disabled {
     background: #f8f9fa;
     color: #6c757d;
     cursor: not-allowed;
     border-color: #ffe0b2;
 }
 
-.shipment-info-form textarea {
+.vehicle-info-form textarea {
     resize: vertical;
 }
 
-.shipment-info-form .form-actions {
+.vehicle-info-form .form-actions {
     display: flex;
     justify-content: flex-end;
     margin-top: 10px;
@@ -1944,11 +1944,11 @@ tr:hover {
     color: #6c757d;
 }
 
-.shipment-item-edit-disabled {
+.vehicle-item-edit-disabled {
     opacity: 0.6;
 }
 
-.shipment-total {
+.vehicle-total {
     text-align: right;
     padding: 20px;
     background: linear-gradient(135deg, #fff8f0, #ffe8d0);
@@ -1958,7 +1958,7 @@ tr:hover {
     color: #FF6F00;
 }
 
-.shipment-actions-bottom {
+.vehicle-actions-bottom {
     display: flex;
     gap: 10px;
     justify-content: flex-end;

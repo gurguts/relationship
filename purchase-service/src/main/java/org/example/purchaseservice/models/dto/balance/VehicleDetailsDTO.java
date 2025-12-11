@@ -10,7 +10,7 @@ import java.util.List;
 
 @Data
 @Builder
-public class ShipmentDetailsDTO {
+public class VehicleDetailsDTO {
     private Long id;
     private LocalDate shipmentDate;
     private String vehicleNumber;
@@ -20,11 +20,11 @@ public class ShipmentDetailsDTO {
     private BigDecimal totalCostEur;
     private Long userId;
     private LocalDateTime createdAt;
-    private List<ShipmentItemDTO> items;
+    private List<VehicleItemDTO> items;
     
     @Data
     @Builder
-    public static class ShipmentItemDTO {
+    public static class VehicleItemDTO {
         private Long withdrawalId;
         private Long productId;
         private String productName;
