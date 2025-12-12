@@ -440,7 +440,7 @@ function buildDynamicTable() {
     });
 
     if (typeof initColumnResizer === 'function' && currentClientTypeId) {
-        setTimeout(() => {
+    setTimeout(() => {
             initColumnResizer(currentClientTypeId);
             if (typeof applyColumnWidths === 'function') {
                 applyColumnWidths(currentClientTypeId);
@@ -600,14 +600,14 @@ function buildDynamicFilters() {
 
                     if (field.listValues && field.listValues.length > 0) {
                         field.listValues.forEach(listValue => {
-                            const option = document.createElement('option');
+            const option = document.createElement('option');
                             option.value = listValue.id;
                             option.textContent = listValue.value;
                             select.appendChild(option);
                         });
                     }
 
-                    setTimeout(() => {
+    setTimeout(() => {
                         if (typeof createCustomSelect === 'function') {
                             const existingContainer = document.querySelector(`.custom-select-container[data-for="${selectId}"]`);
                             if (existingContainer) {
@@ -2103,7 +2103,7 @@ async function showClientTypeSelectionModal() {
         } else if (accessibleClientTypes.length === 1) {
             window.location.href = `/routes?type=${accessibleClientTypes[0].id}`;
             return;
-        } else {
+    } else {
             listContainer.innerHTML = '';
             accessibleClientTypes.forEach(type => {
                 const card = document.createElement('div');

@@ -1719,8 +1719,6 @@ const addProductToVehicleForm = document.getElementById('add-product-to-vehicle-
 const updateVehicleForm = document.getElementById('update-vehicle-form');
 const detailVehicleDateInput = document.getElementById('detail-vehicle-date');
 const detailVehicleVehicleInput = document.getElementById('detail-vehicle-vehicle-number');
-const detailVehicleInvoiceUaInput = document.getElementById('detail-vehicle-invoice-ua');
-const detailVehicleInvoiceEuInput = document.getElementById('detail-vehicle-invoice-eu');
 const detailVehicleDescriptionInput = document.getElementById('detail-vehicle-description');
 const editVehicleBtn = document.getElementById('edit-vehicle-btn');
 const saveVehicleBtn = document.getElementById('save-vehicle-btn');
@@ -1742,16 +1740,12 @@ function populateVehicleForm(vehicle) {
     if (!vehicle) {
         if (detailVehicleDateInput) detailVehicleDateInput.value = '';
         if (detailVehicleVehicleInput) detailVehicleVehicleInput.value = '';
-        if (detailVehicleInvoiceUaInput) detailVehicleInvoiceUaInput.value = '';
-        if (detailVehicleInvoiceEuInput) detailVehicleInvoiceEuInput.value = '';
         if (detailVehicleDescriptionInput) detailVehicleDescriptionInput.value = '';
         return;
     }
 
-    if (detailVehicleDateInput) detailVehicleDateInput.value = vehicle.vehicleDate || '';
+    if (detailVehicleDateInput) detailVehicleDateInput.value = vehicle.shipmentDate || '';
     if (detailVehicleVehicleInput) detailVehicleVehicleInput.value = vehicle.vehicleNumber || '';
-    if (detailVehicleInvoiceUaInput) detailVehicleInvoiceUaInput.value = vehicle.invoiceUa || '';
-    if (detailVehicleInvoiceEuInput) detailVehicleInvoiceEuInput.value = vehicle.invoiceEu || '';
     if (detailVehicleDescriptionInput) detailVehicleDescriptionInput.value = vehicle.description || '';
 }
 
@@ -1759,8 +1753,6 @@ function setVehicleFormEditable(isEditable) {
     const fields = [
         detailVehicleDateInput,
         detailVehicleVehicleInput,
-        detailVehicleInvoiceUaInput,
-        detailVehicleInvoiceEuInput,
         detailVehicleDescriptionInput
     ];
 
@@ -1831,10 +1823,8 @@ if (createVehicleForm) {
         e.preventDefault();
         
         const vehicleData = {
-            vehicleDate: document.getElementById('vehicle-date').value,
-            vehicleNumber: document.getElementById('vehicle-number').value,
-            invoiceUa: document.getElementById('vehicle-invoice-ua').value,
-            invoiceEu: document.getElementById('vehicle-invoice-eu').value,
+            shipmentDate: document.getElementById('vehicle-date').value,
+            vehicleNumber: document.getElementById('vehicle-vehicle-number').value,
             description: document.getElementById('vehicle-description').value,
             isOurVehicle: true
         };
@@ -1895,7 +1885,7 @@ async function loadVehicles() {
         // Show empty table even on error
         const tbody = document.getElementById('vehicles-tbody');
         if (tbody) {
-            tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">Помилка завантаження даних</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;">Помилка завантаження даних</td></tr>';
         }
     }
 }
@@ -1909,16 +1899,14 @@ function renderVehicles(vehicles) {
     }
     
     if (!vehicles || vehicles.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">Немає даних</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;">Немає даних</td></tr>';
         return;
     }
     
     tbody.innerHTML = vehicles.map(vehicle => `
         <tr onclick="viewVehicleDetails(${vehicle.id})" style="cursor: pointer;">
-            <td>${vehicle.vehicleDate}</td>
+            <td>${vehicle.shipmentDate}</td>
             <td>${vehicle.vehicleNumber || '-'}</td>
-            <td>${vehicle.invoiceUa || '-'}</td>
-            <td>${vehicle.invoiceEu || '-'}</td>
             <td style="font-weight: bold; color: #FF6F00;">${formatNumber(vehicle.totalCostEur, 2)} EUR</td>
             <td>${vehicle.description || '-'}</td>
         </tr>
@@ -1976,7 +1964,7 @@ function renderVehicleDetails(vehicle) {
                     <td>${formatNumber(item.quantity, 2)} кг</td>
                     <td style="text-align: right;">${formatNumber(item.unitPriceEur, 6)} EUR</td>
                     <td style="text-align: right; font-weight: bold;">${formatNumber(item.totalCostEur, 6)} EUR</td>
-                    <td>${item.withdrawalDate || vehicle.vehicleDate}</td>
+                    <td>${item.withdrawalDate || vehicle.shipmentDate}</td>
                 </tr>
             `;
         }).join('');
@@ -2591,10 +2579,8 @@ if (updateVehicleForm) {
         }
         
         const payload = {
-            vehicleDate: detailVehicleDateInput?.value || null,
+            shipmentDate: detailVehicleDateInput?.value || null,
             vehicleNumber: detailVehicleVehicleInput?.value ?? null,
-            invoiceUa: detailVehicleInvoiceUaInput?.value ?? null,
-            invoiceEu: detailVehicleInvoiceEuInput?.value ?? null,
             description: detailVehicleDescriptionInput?.value ?? null
         };
         
@@ -2605,7 +2591,7 @@ if (updateVehicleForm) {
             }
         });
         
-        if (!payload.vehicleDate) {
+        if (!payload.shipmentDate) {
             showMessage('Вкажіть дату відвантаження', 'error');
             return;
         }

@@ -16,5 +16,5 @@ public interface WarehouseWithdrawalRepository extends JpaRepository<WarehouseWi
 
     List<WarehouseWithdrawal> findAllByWithdrawalDateLessThanEqual(LocalDate date);
     
-    List<WarehouseWithdrawal> findByShipmentId(Long shipmentId);
+    List<WarehouseWithdrawal> findByVehicleId(Long vehicleId);
 }

@@ -20,6 +20,22 @@ public class VehicleDetailsDTO {
     private BigDecimal totalCostEur;
     private Long userId;
     private LocalDateTime createdAt;
+    private String sender;
+    private String receiver;
+    private String destinationCountry;
+    private String destinationPlace;
+    private String product;
+    private String productQuantity;
+    private String declarationNumber;
+    private String terminal;
+    private String driverFullName;
+    private Boolean isOurVehicle;
+    private Boolean eur1;
+    private Boolean fito;
+    private LocalDate customsDate;
+    private LocalDate customsClearanceDate;
+    private LocalDate unloadingDate;
+    private CarrierDetailsDTO carrier;
     private List<VehicleItemDTO> items;
     
     @Data

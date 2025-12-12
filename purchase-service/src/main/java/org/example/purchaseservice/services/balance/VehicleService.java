@@ -3,9 +3,11 @@ package org.example.purchaseservice.services.balance;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.purchaseservice.exceptions.PurchaseException;
+import org.example.purchaseservice.models.balance.Carrier;
 import org.example.purchaseservice.models.balance.Vehicle;
 import org.example.purchaseservice.models.balance.VehicleProduct;
 import org.example.purchaseservice.models.dto.balance.VehicleUpdateDTO;
+import org.example.purchaseservice.repositories.CarrierRepository;
 import org.example.purchaseservice.repositories.VehicleRepository;
 import org.example.purchaseservice.repositories.VehicleProductRepository;
 import org.springframework.stereotype.Service;
@@ -23,23 +25,51 @@ public class VehicleService {
     private final VehicleRepository vehicleRepository;
     private final VehicleProductRepository vehicleProductRepository;
     private final WarehouseProductBalanceService warehouseProductBalanceService;
+    private final CarrierRepository carrierRepository;
 
     @Transactional
     public Vehicle createVehicle(LocalDate shipmentDate, String vehicleNumber,
                                     String invoiceUa, String invoiceEu,
-                                    String description, Long userId, Boolean isOurVehicle) {
+                                    String description, Long userId, Boolean isOurVehicle,
+                                    String sender, String receiver, String destinationCountry,
+                                    String destinationPlace, String product, String productQuantity,
+                                    String declarationNumber, String terminal, String driverFullName,
+                                    Boolean eur1, Boolean fito, LocalDate customsDate,
+                                    LocalDate customsClearanceDate, LocalDate unloadingDate,
+                                    Long carrierId) {
         log.info("Creating new vehicle: date={}, vehicle={}, invoiceUa={}, invoiceEu={}, isOurVehicle={}", 
                 shipmentDate, vehicleNumber, invoiceUa, invoiceEu, isOurVehicle);
         
         Vehicle vehicle = new Vehicle();
-        vehicle.setShipmentDate(shipmentDate);
+        vehicle.setShipmentDate(shipmentDate != null ? shipmentDate : LocalDate.now());
         vehicle.setVehicleNumber(vehicleNumber);
         vehicle.setInvoiceUa(invoiceUa);
         vehicle.setInvoiceEu(invoiceEu);
         vehicle.setDescription(description);
         vehicle.setUserId(userId);
-        vehicle.setIsOurVehicle(isOurVehicle != null ? isOurVehicle : true);
+        vehicle.setIsOurVehicle(isOurVehicle != null ? isOurVehicle : false);
         vehicle.setTotalCostEur(BigDecimal.ZERO);
+        vehicle.setSender(normalizeString(sender));
+        vehicle.setReceiver(normalizeString(receiver));
+        vehicle.setDestinationCountry(normalizeString(destinationCountry));
+        vehicle.setDestinationPlace(normalizeString(destinationPlace));
+        vehicle.setProduct(normalizeString(product));
+        vehicle.setProductQuantity(normalizeString(productQuantity));
+        vehicle.setDeclarationNumber(normalizeString(declarationNumber));
+        vehicle.setTerminal(normalizeString(terminal));
+        vehicle.setDriverFullName(normalizeString(driverFullName));
+        vehicle.setEur1(eur1 != null ? eur1 : false);
+        vehicle.setFito(fito != null ? fito : false);
+        vehicle.setCustomsDate(customsDate);
+        vehicle.setCustomsClearanceDate(customsClearanceDate);
+        vehicle.setUnloadingDate(unloadingDate);
+        
+        if (carrierId != null) {
+            Carrier carrier = carrierRepository.findById(carrierId)
+                    .orElseThrow(() -> new PurchaseException("CARRIER_NOT_FOUND",
+                            String.format("Carrier not found: id=%d", carrierId)));
+            vehicle.setCarrier(carrier);
+        }
         
         Vehicle saved = vehicleRepository.save(vehicle);
         log.info("Vehicle created: id={}", saved.getId());
@@ -247,6 +277,40 @@ public class VehicleService {
         vehicle.setInvoiceUa(normalizeString(dto.getInvoiceUa()));
         vehicle.setInvoiceEu(normalizeString(dto.getInvoiceEu()));
         vehicle.setDescription(normalizeString(dto.getDescription()));
+        vehicle.setSender(normalizeString(dto.getSender()));
+        vehicle.setReceiver(normalizeString(dto.getReceiver()));
+        vehicle.setDestinationCountry(normalizeString(dto.getDestinationCountry()));
+        vehicle.setDestinationPlace(normalizeString(dto.getDestinationPlace()));
+        vehicle.setProduct(normalizeString(dto.getProduct()));
+        vehicle.setProductQuantity(normalizeString(dto.getProductQuantity()));
+        vehicle.setDeclarationNumber(normalizeString(dto.getDeclarationNumber()));
+        vehicle.setTerminal(normalizeString(dto.getTerminal()));
+        vehicle.setDriverFullName(normalizeString(dto.getDriverFullName()));
+        
+        if (dto.getEur1() != null) {
+            vehicle.setEur1(dto.getEur1());
+        }
+        
+        if (dto.getIsOurVehicle() != null) {
+            vehicle.setIsOurVehicle(dto.getIsOurVehicle());
+        }
+        
+        if (dto.getFito() != null) {
+            vehicle.setFito(dto.getFito());
+        }
+        
+        vehicle.setCustomsDate(dto.getCustomsDate());
+        vehicle.setCustomsClearanceDate(dto.getCustomsClearanceDate());
+        vehicle.setUnloadingDate(dto.getUnloadingDate());
+        
+        if (dto.getCarrierId() != null) {
+            Carrier carrier = carrierRepository.findById(dto.getCarrierId())
+                    .orElseThrow(() -> new PurchaseException("CARRIER_NOT_FOUND",
+                            String.format("Carrier not found: id=%d", dto.getCarrierId())));
+            vehicle.setCarrier(carrier);
+        } else if (dto.getCarrierId() == null && vehicle.getCarrier() != null) {
+            vehicle.setCarrier(null);
+        }
         
         Vehicle saved = vehicleRepository.save(vehicle);
         log.info("Vehicle updated: id={}", saved.getId());

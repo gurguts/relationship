@@ -3,9 +3,11 @@ package org.example.purchaseservice.restControllers.balance;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.example.purchaseservice.models.balance.Carrier;
 import org.example.purchaseservice.models.balance.Vehicle;
 import org.example.purchaseservice.models.balance.VehicleProduct;
 import org.example.purchaseservice.models.dto.balance.AddProductToVehicleDTO;
+import org.example.purchaseservice.models.dto.balance.CarrierDetailsDTO;
 import org.example.purchaseservice.models.dto.balance.VehicleCreateDTO;
 import org.example.purchaseservice.models.dto.balance.VehicleDetailsDTO;
 import org.example.purchaseservice.models.dto.balance.VehicleProductUpdateDTO;
@@ -44,7 +46,22 @@ public class VehicleController {
                 dto.getInvoiceEu(),
                 dto.getDescription(),
                 userId,
-                dto.getIsOurVehicle()
+                dto.getIsOurVehicle(),
+                dto.getSender(),
+                dto.getReceiver(),
+                dto.getDestinationCountry(),
+                dto.getDestinationPlace(),
+                dto.getProduct(),
+                dto.getProductQuantity(),
+                dto.getDeclarationNumber(),
+                dto.getTerminal(),
+                dto.getDriverFullName(),
+                dto.getEur1(),
+                dto.getFito(),
+                dto.getCustomsDate(),
+                dto.getCustomsClearanceDate(),
+                dto.getUnloadingDate(),
+                dto.getCarrierId()
         );
         
         VehicleDetailsDTO detailsDTO = mapToDetailsDTO(vehicle);
@@ -185,6 +202,21 @@ public class VehicleController {
                         .build())
                 .collect(Collectors.toList());
         
+        CarrierDetailsDTO carrierDTO = null;
+        if (vehicle.getCarrier() != null) {
+            Carrier carrier = vehicle.getCarrier();
+            carrierDTO = CarrierDetailsDTO.builder()
+                    .id(carrier.getId())
+                    .companyName(carrier.getCompanyName())
+                    .registrationAddress(carrier.getRegistrationAddress())
+                    .phoneNumber(carrier.getPhoneNumber())
+                    .code(carrier.getCode())
+                    .account(carrier.getAccount())
+                    .createdAt(carrier.getCreatedAt())
+                    .updatedAt(carrier.getUpdatedAt())
+                    .build();
+        }
+        
         return VehicleDetailsDTO.builder()
                 .id(vehicle.getId())
                 .shipmentDate(vehicle.getShipmentDate())
@@ -195,6 +227,22 @@ public class VehicleController {
                 .totalCostEur(vehicle.getTotalCostEur())
                 .userId(vehicle.getUserId())
                 .createdAt(vehicle.getCreatedAt())
+                .sender(vehicle.getSender())
+                .receiver(vehicle.getReceiver())
+                .destinationCountry(vehicle.getDestinationCountry())
+                .destinationPlace(vehicle.getDestinationPlace())
+                .product(vehicle.getProduct())
+                .productQuantity(vehicle.getProductQuantity())
+                .declarationNumber(vehicle.getDeclarationNumber())
+                .terminal(vehicle.getTerminal())
+                .driverFullName(vehicle.getDriverFullName())
+                .isOurVehicle(vehicle.getIsOurVehicle())
+                .eur1(vehicle.getEur1())
+                .fito(vehicle.getFito())
+                .customsDate(vehicle.getCustomsDate())
+                .customsClearanceDate(vehicle.getCustomsClearanceDate())
+                .unloadingDate(vehicle.getUnloadingDate())
+                .carrier(carrierDTO)
                 .items(items)
                 .build();
     }

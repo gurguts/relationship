@@ -44,6 +44,52 @@ public class Vehicle {
     @Column(name = "is_our_vehicle", nullable = false)
     private Boolean isOurVehicle = true;
     
+    @Column(name = "sender", length = 255)
+    private String sender;
+    
+    @Column(name = "receiver", length = 255)
+    private String receiver;
+    
+    @Column(name = "destination_country", length = 100)
+    private String destinationCountry;
+    
+    @Column(name = "destination_place", length = 255)
+    private String destinationPlace;
+    
+    @Column(name = "product", length = 255)
+    private String product;
+    
+    @Column(name = "product_quantity", length = 100)
+    private String productQuantity;
+    
+    @Column(name = "declaration_number", length = 100)
+    private String declarationNumber;
+    
+    @Column(name = "terminal", length = 100)
+    private String terminal;
+    
+    @Column(name = "driver_full_name", length = 255)
+    private String driverFullName;
+    
+    @Column(name = "eur1", nullable = false)
+    private Boolean eur1 = false;
+    
+    @Column(name = "fito", nullable = false)
+    private Boolean fito = false;
+    
+    @Column(name = "customs_date")
+    private LocalDate customsDate;
+    
+    @Column(name = "customs_clearance_date")
+    private LocalDate customsClearanceDate;
+    
+    @Column(name = "unloading_date")
+    private LocalDate unloadingDate;
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "carrier_id")
+    private Carrier carrier;
+    
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
