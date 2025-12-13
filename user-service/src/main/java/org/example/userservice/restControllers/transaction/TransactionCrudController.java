@@ -14,6 +14,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/transaction")
@@ -69,10 +71,28 @@ public class TransactionCrudController {
                 updateDTO.getDescription(),
                 updateDTO.getAmount(),
                 updateDTO.getExchangeRate(),
-                updateDTO.getCommission()
+                updateDTO.getCommission(),
+                updateDTO.getConvertedAmount()
         );
         TransactionDTO response = transactionMapper.transactionToTransactionDTO(updated);
         return ResponseEntity.ok(response);
+    }
+
+    @PreAuthorize("hasAuthority('finance:view') or hasAuthority('declarant:view')")
+    @GetMapping("/vehicle/{vehicleId}")
+    public ResponseEntity<List<TransactionDTO>> getTransactionsByVehicleId(@PathVariable Long vehicleId) {
+        List<Transaction> transactions = accountTransactionService.getTransactionsByVehicleId(vehicleId);
+        List<TransactionDTO> response = transactions.stream()
+                .map(transactionMapper::transactionToTransactionDTO)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(response);
+    }
+
+    @PreAuthorize("hasAuthority('warehouse:delete') or hasAuthority('declarant:delete')")
+    @DeleteMapping("/vehicle/{vehicleId}")
+    public ResponseEntity<Void> deleteTransactionsByVehicleId(@PathVariable Long vehicleId) {
+        accountTransactionService.deleteTransactionsByVehicleId(vehicleId);
+        return ResponseEntity.noContent().build();
     }
 
 }

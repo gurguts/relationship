@@ -10,7 +10,8 @@ const transactionTypeMap = {
     'EXTERNAL_EXPENSE': 'Зовнішня витрата',
     'CLIENT_PAYMENT': 'Оплата клієнту',
     'CURRENCY_CONVERSION': 'Конвертація валют',
-    'PURCHASE': 'Закупівля'
+    'PURCHASE': 'Закупівля',
+    'VEHICLE_EXPENSE': 'Витрати на машину'
 };
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -108,7 +109,7 @@ async function loadCategories() {
             categories = await response.json();
         } else {
             // Load all categories
-            const types = ['INTERNAL_TRANSFER', 'EXTERNAL_INCOME', 'EXTERNAL_EXPENSE', 'CLIENT_PAYMENT', 'CURRENCY_CONVERSION'];
+            const types = ['INTERNAL_TRANSFER', 'EXTERNAL_INCOME', 'EXTERNAL_EXPENSE', 'CLIENT_PAYMENT', 'CURRENCY_CONVERSION', 'VEHICLE_EXPENSE'];
             const promises = types.map(type => 
                 fetch(`${API_BASE}/transaction-categories/type/${type}`)
                     .then(r => r.ok ? r.json() : [])

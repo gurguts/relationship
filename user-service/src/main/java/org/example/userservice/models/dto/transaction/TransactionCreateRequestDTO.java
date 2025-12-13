@@ -18,5 +18,6 @@ public class TransactionCreateRequestDTO {
     private Long clientId;
     private String description;
     private BigDecimal commission;
+    private Long vehicleId;
 }
 

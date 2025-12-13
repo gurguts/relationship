@@ -60,4 +60,7 @@ public class Transaction {
 
     @Column(name = "commission", precision = 20, scale = 2)
     private BigDecimal commission;
+
+    @Column(name = "vehicle_id")
+    private Long vehicleId;
 }

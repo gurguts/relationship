@@ -8,6 +8,7 @@ public enum TransactionType {
     EXTERNAL_EXPENSE,
     CLIENT_PAYMENT,
     CURRENCY_CONVERSION,
-    PURCHASE
+    PURCHASE,
+    VEHICLE_EXPENSE
 }
 

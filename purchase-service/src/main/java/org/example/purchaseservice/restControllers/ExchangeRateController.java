@@ -32,6 +32,13 @@ public class ExchangeRateController {
         return ResponseEntity.ok(dtos);
     }
     
+    @PreAuthorize("hasAuthority('purchase:view')")
+    @GetMapping("/{currency}/rate")
+    public ResponseEntity<java.math.BigDecimal> getExchangeRateToEur(@PathVariable String currency) {
+        java.math.BigDecimal rate = exchangeRateService.getExchangeRateToEur(currency);
+        return ResponseEntity.ok(rate);
+    }
+    
     @PreAuthorize("hasAuthority('settings_exchange:edit')")
     @PutMapping("/{currency}")
     public ResponseEntity<ExchangeRateDTO> updateExchangeRate(

@@ -3,6 +3,7 @@ package org.example.userservice.services.transaction;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.userservice.clients.ClientApiClient;
+import org.example.userservice.clients.VehicleApiClient;
 import org.example.userservice.mappers.TransactionMapper;
 import org.example.userservice.models.account.Account;
 import org.example.userservice.models.dto.PageResponse;
@@ -34,6 +35,7 @@ public class TransactionSearchService implements ITransactionSearchService {
     private final TransactionRepository transactionRepository;
     private final TransactionMapper transactionMapper;
     private final ClientApiClient clientApiClient;
+    private final VehicleApiClient vehicleApiClient;
     private final AccountRepository accountRepository;
     private final TransactionCategoryRepository transactionCategoryRepository;
 
@@ -95,6 +97,32 @@ public class TransactionSearchService implements ITransactionSearchService {
                 : StreamSupport.stream(transactionCategoryRepository.findAllById(categoryIds).spliterator(), false)
                 .collect(Collectors.toMap(TransactionCategory::getId, TransactionCategory::getName));
 
+        List<Long> vehicleIds = transactionPage.getContent().stream()
+                .map(Transaction::getVehicleId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+
+        Map<Long, String> vehicleNumberMap;
+        if (vehicleIds.isEmpty()) {
+            vehicleNumberMap = Collections.emptyMap();
+        } else {
+            try {
+                List<Map<Long, String>> vehiclesResponse = vehicleApiClient.getVehicles(vehicleIds);
+                vehicleNumberMap = vehiclesResponse.stream()
+                        .flatMap(map -> map.entrySet().stream())
+                        .collect(Collectors.toMap(
+                                Map.Entry::getKey,
+                                Map.Entry::getValue,
+                                (a, _) -> a
+                        ));
+            } catch (Exception e) {
+                log.warn("Failed to fetch vehicle numbers: {}", e.getMessage());
+                vehicleNumberMap = Collections.emptyMap();
+            }
+        }
+        final Map<Long, String> finalVehicleNumberMap = vehicleNumberMap;
+
         List<TransactionPageDTO> content = transactionPage.getContent().stream()
                 .map(transaction -> {
                     TransactionPageDTO dto = transactionMapper.transactionToTransactionPageDTO(transaction);
@@ -106,6 +134,8 @@ public class TransactionSearchService implements ITransactionSearchService {
                             ? accountNameMap.getOrDefault(transaction.getToAccountId(), "") : "");
                     dto.setCategoryName(transaction.getCategoryId() != null 
                             ? categoryNameMap.getOrDefault(transaction.getCategoryId(), "") : "");
+                    dto.setVehicleNumber(transaction.getVehicleId() != null 
+                            ? finalVehicleNumberMap.getOrDefault(transaction.getVehicleId(), "") : "");
                     return dto;
                 })
                 .toList();

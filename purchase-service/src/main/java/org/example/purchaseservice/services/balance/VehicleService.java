@@ -3,19 +3,28 @@ package org.example.purchaseservice.services.balance;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.purchaseservice.exceptions.PurchaseException;
+import org.example.purchaseservice.models.PageResponse;
 import org.example.purchaseservice.models.balance.Carrier;
 import org.example.purchaseservice.models.balance.Vehicle;
 import org.example.purchaseservice.models.balance.VehicleProduct;
+import org.example.purchaseservice.models.dto.balance.CarrierDetailsDTO;
+import org.example.purchaseservice.models.dto.balance.VehicleDetailsDTO;
 import org.example.purchaseservice.models.dto.balance.VehicleUpdateDTO;
+import org.example.purchaseservice.clients.TransactionApiClient;
 import org.example.purchaseservice.repositories.CarrierRepository;
 import org.example.purchaseservice.repositories.VehicleRepository;
 import org.example.purchaseservice.repositories.VehicleProductRepository;
+import org.example.purchaseservice.spec.VehicleSpecification;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -26,6 +35,7 @@ public class VehicleService {
     private final VehicleProductRepository vehicleProductRepository;
     private final WarehouseProductBalanceService warehouseProductBalanceService;
     private final CarrierRepository carrierRepository;
+    private final TransactionApiClient transactionApiClient;
 
     @Transactional
     public Vehicle createVehicle(LocalDate shipmentDate, String vehicleNumber,
@@ -111,6 +121,10 @@ public class VehicleService {
 
     public Vehicle getVehicle(Long vehicleId) {
         return vehicleRepository.findById(vehicleId).orElse(null);
+    }
+    
+    public List<Vehicle> getVehiclesByIds(List<Long> ids) {
+        return vehicleRepository.findAllById(ids);
     }
 
     public List<Vehicle> getVehiclesByDate(LocalDate date) {
@@ -400,6 +414,15 @@ public class VehicleService {
                 .orElseThrow(() -> new PurchaseException("VEHICLE_NOT_FOUND",
                         String.format("Vehicle not found: id=%d", vehicleId)));
 
+        try {
+            transactionApiClient.deleteTransactionsByVehicleId(vehicleId);
+            log.info("Successfully deleted all transactions for vehicle: id={}", vehicleId);
+        } catch (Exception e) {
+            log.error("Failed to delete transactions for vehicle: id={}, error: {}", vehicleId, e.getMessage());
+            throw new PurchaseException("FAILED_TO_DELETE_TRANSACTIONS",
+                    String.format("Failed to delete transactions for vehicle: %s", e.getMessage()));
+        }
+
         List<VehicleProduct> products = vehicleProductRepository.findByVehicleId(vehicleId);
 
         for (VehicleProduct product : products) {
@@ -416,6 +439,87 @@ public class VehicleService {
         vehicleProductRepository.deleteAll(products);
         vehicleRepository.delete(vehicle);
         log.info("Vehicle deleted and products returned to warehouse: id={}", vehicleId);
+    }
+
+    public PageResponse<VehicleDetailsDTO> searchVehicles(String query, Pageable pageable, Map<String, List<String>> filterParams) {
+        log.info("Searching vehicles: query={}, page={}, size={}, filters={}", 
+                query, pageable.getPageNumber(), pageable.getPageSize(), filterParams);
+        
+        VehicleSpecification spec = new VehicleSpecification(query, filterParams);
+        Page<Vehicle> vehiclePage = vehicleRepository.findAll(spec, pageable);
+        
+        List<VehicleDetailsDTO> dtos = vehiclePage.getContent().stream()
+                .map(this::mapToDetailsDTO)
+                .collect(Collectors.toList());
+        
+        return new PageResponse<>(
+                vehiclePage.getNumber(),
+                vehiclePage.getSize(),
+                vehiclePage.getTotalElements(),
+                vehiclePage.getTotalPages(),
+                dtos
+        );
+    }
+
+    public VehicleDetailsDTO mapToDetailsDTO(Vehicle vehicle) {
+        List<VehicleProduct> products = vehicleProductRepository.findByVehicleId(vehicle.getId());
+        
+        List<VehicleDetailsDTO.VehicleItemDTO> items = products.stream()
+                .map(p -> VehicleDetailsDTO.VehicleItemDTO.builder()
+                        .withdrawalId(p.getId())
+                        .productId(p.getProductId())
+                        .productName(null)
+                        .warehouseId(p.getWarehouseId())
+                        .quantity(p.getQuantity())
+                        .unitPriceEur(p.getUnitPriceEur())
+                        .totalCostEur(p.getTotalCostEur())
+                        .withdrawalDate(p.getAddedAt() != null ? p.getAddedAt().toLocalDate() : vehicle.getShipmentDate())
+                        .build())
+                .collect(Collectors.toList());
+        
+        CarrierDetailsDTO carrierDTO = null;
+        if (vehicle.getCarrier() != null) {
+            Carrier carrier = vehicle.getCarrier();
+            carrierDTO = CarrierDetailsDTO.builder()
+                    .id(carrier.getId())
+                    .companyName(carrier.getCompanyName())
+                    .registrationAddress(carrier.getRegistrationAddress())
+                    .phoneNumber(carrier.getPhoneNumber())
+                    .code(carrier.getCode())
+                    .account(carrier.getAccount())
+                    .createdAt(carrier.getCreatedAt())
+                    .updatedAt(carrier.getUpdatedAt())
+                    .build();
+        }
+        
+        return VehicleDetailsDTO.builder()
+                .id(vehicle.getId())
+                .shipmentDate(vehicle.getShipmentDate())
+                .vehicleNumber(vehicle.getVehicleNumber())
+                .invoiceUa(vehicle.getInvoiceUa())
+                .invoiceEu(vehicle.getInvoiceEu())
+                .description(vehicle.getDescription())
+                .totalCostEur(vehicle.getTotalCostEur())
+                .userId(vehicle.getUserId())
+                .createdAt(vehicle.getCreatedAt())
+                .sender(vehicle.getSender())
+                .receiver(vehicle.getReceiver())
+                .destinationCountry(vehicle.getDestinationCountry())
+                .destinationPlace(vehicle.getDestinationPlace())
+                .product(vehicle.getProduct())
+                .productQuantity(vehicle.getProductQuantity())
+                .declarationNumber(vehicle.getDeclarationNumber())
+                .terminal(vehicle.getTerminal())
+                .driverFullName(vehicle.getDriverFullName())
+                .isOurVehicle(vehicle.getIsOurVehicle())
+                .eur1(vehicle.getEur1())
+                .fito(vehicle.getFito())
+                .customsDate(vehicle.getCustomsDate())
+                .customsClearanceDate(vehicle.getCustomsClearanceDate())
+                .unloadingDate(vehicle.getUnloadingDate())
+                .carrier(carrierDTO)
+                .items(items)
+                .build();
     }
 }
 

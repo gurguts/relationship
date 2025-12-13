@@ -26,4 +26,6 @@ public class TransactionPageDTO {
     private String fromAccountName;
     private String toAccountName;
     private BigDecimal commission;
+    private Long vehicleId;
+    private String vehicleNumber;
 }

@@ -103,7 +103,6 @@ function populateCarriers(selectId) {
 
 const createVehicleBtn = document.getElementById('create-vehicle-btn');
 const createVehicleForm = document.getElementById('create-vehicle-form');
-const addProductToVehicleForm = document.getElementById('add-product-to-vehicle-form');
 const updateVehicleForm = document.getElementById('update-vehicle-form');
 const detailVehicleDateInput = document.getElementById('detail-vehicle-date');
 const detailVehicleVehicleInput = document.getElementById('detail-vehicle-vehicle-number');
@@ -137,6 +136,10 @@ const editVehicleItemModeRadios = document.querySelectorAll('input[name="edit-ve
 let currentVehicleId = null;
 let vehiclesCache = [];
 let currentVehicleDetails = null;
+let currentPage = 0;
+let pageSize = 20;
+let totalPages = 0;
+let totalElements = 0;
 let currentVehicleItems = new Map();
 let currentVehicleItemId = null;
 
@@ -301,107 +304,77 @@ if (createVehicleForm) {
             closeModal('create-vehicle-modal');
             document.getElementById('create-vehicle-form')?.reset();
             
-            await loadVehicles();
+            await loadVehicles(0);
         } catch (error) {
             showMessage(error.message || 'Помилка при створенні машини', 'error');
         }
     });
 }
 
-function searchInVehicle(vehicle, searchTerm) {
-    if (!searchTerm || searchTerm.trim() === '') return true;
-    
-    const term = searchTerm.toLowerCase().trim();
-    const searchableFields = [
-        vehicle.shipmentDate?.toString() || '',
-        vehicle.vehicleNumber || '',
-        vehicle.invoiceUa || '',
-        vehicle.invoiceEu || '',
-        vehicle.sender || '',
-        vehicle.receiver || '',
-        vehicle.destinationCountry || '',
-        vehicle.destinationPlace || '',
-        vehicle.product || '',
-        vehicle.productQuantity || '',
-        vehicle.declarationNumber || '',
-        vehicle.terminal || '',
-        vehicle.driverFullName || '',
-        vehicle.description || '',
-        formatCarrier(vehicle.carrier),
-        formatNumber(vehicle.totalCostEur, 2)
-    ];
-    
-    return searchableFields.some(field => field.toLowerCase().includes(term));
-}
 
-function filterVehicles(vehicles) {
-    if (!vehicles || vehicles.length === 0) return vehicles;
+function buildFilters() {
+    const filters = {};
     
-    let filtered = [...vehicles];
-    
-    const searchTerm = document.getElementById('vehicles-search-input')?.value || '';
-    if (searchTerm) {
-        filtered = filtered.filter(vehicle => searchInVehicle(vehicle, searchTerm));
+    const dateFrom = document.getElementById('vehicles-date-from-filter')?.value;
+    const dateTo = document.getElementById('vehicles-date-to-filter')?.value;
+    if (dateFrom) {
+        filters.shipmentDateFrom = [dateFrom];
+    }
+    if (dateTo) {
+        filters.shipmentDateTo = [dateTo];
     }
     
     const isOurVehicleFilter = document.getElementById('vehicles-is-our-vehicle-filter')?.checked;
     if (isOurVehicleFilter !== undefined && isOurVehicleFilter) {
-        filtered = filtered.filter(vehicle => vehicle.isOurVehicle === true);
+        filters.isOurVehicle = ['true'];
     }
     
     const customsDateFrom = document.getElementById('vehicles-customs-date-from-filter')?.value;
     const customsDateTo = document.getElementById('vehicles-customs-date-to-filter')?.value;
-    if (customsDateFrom || customsDateTo) {
-        filtered = filtered.filter(vehicle => {
-            if (!vehicle.customsDate) return false;
-            const date = new Date(vehicle.customsDate);
-            if (customsDateFrom && date < new Date(customsDateFrom)) return false;
-            if (customsDateTo && date > new Date(customsDateTo)) return false;
-            return true;
-        });
+    if (customsDateFrom) {
+        filters.customsDateFrom = [customsDateFrom];
+    }
+    if (customsDateTo) {
+        filters.customsDateTo = [customsDateTo];
     }
     
     const customsClearanceDateFrom = document.getElementById('vehicles-customs-clearance-date-from-filter')?.value;
     const customsClearanceDateTo = document.getElementById('vehicles-customs-clearance-date-to-filter')?.value;
-    if (customsClearanceDateFrom || customsClearanceDateTo) {
-        filtered = filtered.filter(vehicle => {
-            if (!vehicle.customsClearanceDate) return false;
-            const date = new Date(vehicle.customsClearanceDate);
-            if (customsClearanceDateFrom && date < new Date(customsClearanceDateFrom)) return false;
-            if (customsClearanceDateTo && date > new Date(customsClearanceDateTo)) return false;
-            return true;
-        });
+    if (customsClearanceDateFrom) {
+        filters.customsClearanceDateFrom = [customsClearanceDateFrom];
+    }
+    if (customsClearanceDateTo) {
+        filters.customsClearanceDateTo = [customsClearanceDateTo];
     }
     
     const unloadingDateFrom = document.getElementById('vehicles-unloading-date-from-filter')?.value;
     const unloadingDateTo = document.getElementById('vehicles-unloading-date-to-filter')?.value;
-    if (unloadingDateFrom || unloadingDateTo) {
-        filtered = filtered.filter(vehicle => {
-            if (!vehicle.unloadingDate) return false;
-            const date = new Date(vehicle.unloadingDate);
-            if (unloadingDateFrom && date < new Date(unloadingDateFrom)) return false;
-            if (unloadingDateTo && date > new Date(unloadingDateTo)) return false;
-            return true;
-        });
+    if (unloadingDateFrom) {
+        filters.unloadingDateFrom = [unloadingDateFrom];
+    }
+    if (unloadingDateTo) {
+        filters.unloadingDateTo = [unloadingDateTo];
     }
     
-    return filtered;
+    return filters;
 }
 
-async function loadVehicles() {
-    const dateFrom = document.getElementById('vehicles-date-from-filter')?.value;
-    const dateTo = document.getElementById('vehicles-date-to-filter')?.value;
+async function loadVehicles(page = 0) {
+    currentPage = page;
+    
+    const searchTerm = document.getElementById('vehicles-search-input')?.value || '';
+    const filters = buildFilters();
+    const filtersJson = Object.keys(filters).length > 0 ? JSON.stringify(filters) : '';
     
     try {
-        let url = '/api/v1/vehicles/all/by-date-range?';
+        let url = `/api/v1/vehicles/search?page=${page}&size=${pageSize}&sort=id&direction=DESC`;
         
-        if (dateFrom && dateTo) {
-            url += `fromDate=${dateFrom}&toDate=${dateTo}`;
-        } else {
-            const today = new Date();
-            const last30Days = new Date();
-            last30Days.setDate(today.getDate() - 30);
-            url += `fromDate=${last30Days.toISOString().split('T')[0]}&toDate=${today.toISOString().split('T')[0]}`;
+        if (searchTerm) {
+            url += `&q=${encodeURIComponent(searchTerm)}`;
+        }
+        
+        if (filtersJson) {
+            url += `&filters=${encodeURIComponent(filtersJson)}`;
         }
         
         const response = await fetch(url);
@@ -410,10 +383,15 @@ async function loadVehicles() {
             throw new Error('Failed to load vehicles');
         }
         
-        vehiclesCache = await response.json();
-        const filtered = filterVehicles(vehiclesCache);
-        renderVehicles(filtered);
+        const data = await response.json();
+        vehiclesCache = data.content || [];
+        totalPages = data.totalPages || 0;
+        totalElements = data.totalElements || 0;
+        
+        renderVehicles(vehiclesCache);
+        renderPagination();
     } catch (error) {
+        console.error('Error loading vehicles:', error);
         showMessage('Помилка завантаження машин', 'error');
         
         const tbody = document.getElementById('vehicles-tbody');
@@ -421,6 +399,59 @@ async function loadVehicles() {
             tbody.innerHTML = '<tr class="loading-row"><td colspan="21" style="text-align: center; color: var(--text-muted);">Помилка завантаження даних</td></tr>';
         }
     }
+}
+
+function renderPagination() {
+    const paginationContainer = document.getElementById('vehicles-pagination');
+    if (!paginationContainer) return;
+    
+    if (totalPages <= 1) {
+        paginationContainer.innerHTML = '';
+        return;
+    }
+    
+    let paginationHTML = '<div class="pagination">';
+    
+    paginationHTML += `<button class="pagination-btn" ${currentPage === 0 ? 'disabled' : ''} onclick="loadVehicles(0)">
+        <span>«</span>
+    </button>`;
+    
+    paginationHTML += `<button class="pagination-btn" ${currentPage === 0 ? 'disabled' : ''} onclick="loadVehicles(${currentPage - 1})">
+        <span>‹</span>
+    </button>`;
+    
+    const startPage = Math.max(0, currentPage - 2);
+    const endPage = Math.min(totalPages - 1, currentPage + 2);
+    
+    if (startPage > 0) {
+        paginationHTML += `<button class="pagination-btn" onclick="loadVehicles(0)">1</button>`;
+        if (startPage > 1) {
+            paginationHTML += `<span class="pagination-ellipsis">...</span>`;
+        }
+    }
+    
+    for (let i = startPage; i <= endPage; i++) {
+        paginationHTML += `<button class="pagination-btn ${i === currentPage ? 'active' : ''}" onclick="loadVehicles(${i})">${i + 1}</button>`;
+    }
+    
+    if (endPage < totalPages - 1) {
+        if (endPage < totalPages - 2) {
+            paginationHTML += `<span class="pagination-ellipsis">...</span>`;
+        }
+        paginationHTML += `<button class="pagination-btn" onclick="loadVehicles(${totalPages - 1})">${totalPages}</button>`;
+    }
+    
+    paginationHTML += `<button class="pagination-btn" ${currentPage >= totalPages - 1 ? 'disabled' : ''} onclick="loadVehicles(${currentPage + 1})">
+        <span>›</span>
+    </button>`;
+    
+    paginationHTML += `<button class="pagination-btn" ${currentPage >= totalPages - 1 ? 'disabled' : ''} onclick="loadVehicles(${totalPages - 1})">
+        <span>»</span>
+    </button>`;
+    
+    paginationHTML += '</div>';
+    
+    paginationContainer.innerHTML = paginationHTML;
 }
 
 function formatDate(dateString) {
@@ -445,7 +476,11 @@ function renderVehicles(vehicles) {
     }
     
     if (countElement) {
-        countElement.textContent = vehicles && vehicles.length > 0 ? `${vehicles.length} ${vehicles.length === 1 ? 'машина' : 'машин'}` : '0 машин';
+        const start = currentPage * pageSize + 1;
+        const end = Math.min((currentPage + 1) * pageSize, totalElements);
+        countElement.textContent = totalElements > 0 
+            ? `Показано ${start}-${end} з ${totalElements} ${totalElements === 1 ? 'машини' : 'машин'}`
+            : '0 машин';
     }
     
     if (!vehicles || vehicles.length === 0) {
@@ -481,6 +516,7 @@ function renderVehicles(vehicles) {
     `).join('');
     
     applySavedColumnWidths();
+    initializeColumnResize();
 }
 
 function applySavedColumnWidths() {
@@ -527,6 +563,8 @@ async function viewVehicleDetails(vehicleId) {
         document.querySelector('.tab-btn[data-tab="info"]')?.classList.add('active');
         document.getElementById('tab-info')?.classList.add('active');
         
+        await loadVehicleExpenses(vehicleId);
+        
         openModal('vehicle-details-modal');
     } catch (error) {
         showMessage('Помилка завантаження деталей машини', 'error');
@@ -570,47 +608,6 @@ function renderVehicleDetails(vehicle) {
     document.getElementById('vehicle-total-cost').textContent = formatNumber(vehicle.totalCostEur, 2);
 }
 
-document.getElementById('add-product-to-vehicle-btn')?.addEventListener('click', () => {
-    populateWarehouses('vehicle-warehouse-id');
-    populateProducts('vehicle-product-id');
-    openModal('add-product-to-vehicle-modal');
-});
-
-if (addProductToVehicleForm) {
-    addProductToVehicleForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        const data = {
-            warehouseId: Number(document.getElementById('vehicle-warehouse-id').value),
-            productId: Number(document.getElementById('vehicle-product-id').value),
-            quantity: Number(document.getElementById('vehicle-quantity').value)
-        };
-        
-        try {
-            const response = await fetch(`/api/v1/vehicles/${currentVehicleId}/products`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(data)
-            });
-            
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Failed to add product to vehicle');
-            }
-            
-            const updatedVehicle = await response.json();
-            
-            showMessage('Товар успішно додано до машини', 'success');
-            closeModal('add-product-to-vehicle-modal');
-            document.getElementById('add-product-to-vehicle-form')?.reset();
-            
-            renderVehicleDetails(updatedVehicle);
-            await loadVehicles();
-        } catch (error) {
-            showMessage(error.message || 'Помилка при додаванні товару до машини', 'error');
-        }
-    });
-}
 
 function deleteVehicle() {
     if (!currentVehicleId) {
@@ -634,7 +631,7 @@ function deleteVehicle() {
             
             showMessage('Машину успішно видалено', 'success');
             closeModal('vehicle-details-modal');
-            await loadVehicles();
+            await loadVehicles(0);
         } catch (error) {
             showMessage('Помилка при видаленні машини', 'error');
         }
@@ -645,7 +642,7 @@ document.getElementById('delete-vehicle-btn')?.addEventListener('click', deleteV
 document.getElementById('delete-vehicle-from-details-btn')?.addEventListener('click', deleteVehicle);
 
 document.getElementById('apply-vehicles-filters')?.addEventListener('click', async () => {
-    await loadVehicles();
+    await loadVehicles(0);
     closeModal('vehicles-filter-modal');
 });
 
@@ -664,14 +661,15 @@ document.getElementById('clear-vehicles-filters')?.addEventListener('click', () 
         searchInput.value = '';
     }
     setDefaultVehicleDates();
-    loadVehicles();
+    loadVehicles(0);
 });
 
+let searchTimeout;
 document.getElementById('vehicles-search-input')?.addEventListener('input', () => {
-    if (vehiclesCache && vehiclesCache.length > 0) {
-        const filtered = filterVehicles(vehiclesCache);
-        renderVehicles(filtered);
-    }
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+        loadVehicles(0);
+    }, 500);
 });
 
 document.getElementById('open-vehicles-filter-modal')?.addEventListener('click', () => {
@@ -742,7 +740,7 @@ if (updateVehicleForm) {
             const updatedVehicle = await response.json();
             showMessage('Дані машини оновлено', 'success');
             renderVehicleDetails(updatedVehicle);
-            await loadVehicles();
+            await loadVehicles(0);
         } catch (error) {
             showMessage(error.message || 'Помилка при оновленні машини', 'error');
         }
@@ -901,7 +899,7 @@ if (editVehicleItemForm) {
             const updatedVehicle = await response.json();
             showMessage('Дані товару у машині оновлено', 'success');
             renderVehicleDetails(updatedVehicle);
-            await loadVehicles();
+            await loadVehicles(0);
             closeModal('edit-vehicle-item-modal');
         } catch (error) {
             showMessage(error.message || 'Помилка при оновленні товару у машині', 'error');
@@ -928,8 +926,6 @@ function closeModal(modalId) {
     
     if (modalId === 'create-vehicle-modal') {
         document.getElementById('create-vehicle-form')?.reset();
-    } else if (modalId === 'add-product-to-vehicle-modal') {
-        document.getElementById('add-product-to-vehicle-form')?.reset();
     } else if (modalId === 'vehicle-details-modal') {
         resetVehicleFormState();
     } else if (modalId === 'edit-vehicle-item-modal') {
@@ -969,6 +965,10 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
         const content = document.getElementById(`tab-${tabName}`);
         if (content) {
             content.classList.add('active');
+        }
+        
+        if (tabName === 'expenses' && currentVehicleId) {
+            loadVehicleExpenses(currentVehicleId);
         }
     });
 });
@@ -1130,6 +1130,10 @@ function initializeColumnResize() {
     const headers = table.querySelectorAll('.resizable-header');
     
     headers.forEach(header => {
+        if (header.querySelector('.resize-handle')) {
+            return;
+        }
+        
         const resizeHandle = document.createElement('div');
         resizeHandle.className = 'resize-handle';
         header.style.position = 'relative';
@@ -1189,10 +1193,254 @@ async function initialize() {
     await fetchCarriers();
     populateCarriers('vehicle-carrier-id');
     populateCarriers('detail-vehicle-carrier-id');
+    await loadAccounts();
     setDefaultVehicleDates();
-    await loadVehicles();
+    await loadVehicles(0);
     initializeColumnResize();
 }
+
+let accountsCache = [];
+let categoriesCache = new Map();
+let categoryNameMap = new Map();
+
+async function loadAccounts() {
+    try {
+        const response = await fetch('/api/v1/accounts');
+        if (!response.ok) {
+            throw new Error('Failed to load accounts');
+        }
+        accountsCache = await response.json();
+    } catch (error) {
+        console.error('Error loading accounts:', error);
+        handleError(error);
+    }
+}
+
+function populateAccounts(selectId) {
+    const select = document.getElementById(selectId);
+    if (!select) return;
+    select.innerHTML = '<option value="">Оберіть рахунок</option>';
+    accountsCache.forEach(account => {
+        const option = document.createElement('option');
+        option.value = account.id;
+        option.textContent = account.name || `Рахунок #${account.id}`;
+        select.appendChild(option);
+    });
+}
+
+async function loadCategoriesForVehicleExpense() {
+    try {
+        const response = await fetch('/api/v1/transaction-categories/type/VEHICLE_EXPENSE');
+        if (!response.ok) {
+            throw new Error('Failed to load categories');
+        }
+        const categories = await response.json();
+        categoriesCache.set('VEHICLE_EXPENSE', categories);
+        categoryNameMap.clear();
+        categories.forEach(cat => {
+            categoryNameMap.set(cat.id, cat.name);
+        });
+        return categories;
+    } catch (error) {
+        console.error('Error loading categories:', error);
+        return [];
+    }
+}
+
+function populateCategories(selectId, categories) {
+    const select = document.getElementById(selectId);
+    if (!select) return;
+    select.innerHTML = '<option value="">Оберіть категорію</option>';
+    if (categories && categories.length > 0) {
+        categories.forEach(category => {
+            const option = document.createElement('option');
+            option.value = category.id;
+            option.textContent = category.name;
+            select.appendChild(option);
+        });
+    }
+}
+
+function populateCurrencies(selectId, accountId) {
+    const select = document.getElementById(selectId);
+    if (!select) return;
+    select.innerHTML = '<option value="">Оберіть валюту</option>';
+    
+    if (!accountId) return;
+    
+    const account = accountsCache.find(a => a.id === parseInt(accountId));
+    if (account && account.currencies) {
+        account.currencies.forEach(currency => {
+            const option = document.createElement('option');
+            option.value = currency;
+            option.textContent = currency;
+            select.appendChild(option);
+        });
+    }
+}
+
+async function loadVehicleExpenses(vehicleId) {
+    const tbody = document.getElementById('vehicle-expenses-tbody');
+    if (!tbody) return;
+    
+    try {
+        if (!categoriesCache.has('VEHICLE_EXPENSE') || categoriesCache.get('VEHICLE_EXPENSE')?.length === 0) {
+            await loadCategoriesForVehicleExpense();
+        }
+        
+        const response = await fetch(`/api/v1/transaction/vehicle/${vehicleId}`);
+        if (!response.ok) {
+            throw new Error('Failed to load vehicle expenses');
+        }
+        
+        const transactions = await response.json();
+        
+        if (!transactions || transactions.length === 0) {
+            tbody.innerHTML = '<tr class="loading-row"><td colspan="8" style="text-align: center; color: var(--text-muted);">Немає витрат</td></tr>';
+            return;
+        }
+        
+        const accountMap = new Map(accountsCache.map(a => [a.id, a]));
+        
+        tbody.innerHTML = transactions.map(transaction => {
+            const account = accountMap.get(transaction.fromAccountId);
+            const accountName = account ? (account.name || `Рахунок #${account.id}`) : '-';
+            const date = transaction.createdAt ? new Date(transaction.createdAt).toLocaleDateString('uk-UA') : '-';
+            const categoryName = transaction.categoryId ? (categoryNameMap.get(transaction.categoryId) || 'Категорія') : '-';
+            const exchangeRate = transaction.exchangeRate ? formatNumber(transaction.exchangeRate, 6) : '-';
+            const convertedAmount = transaction.convertedAmount ? formatNumber(transaction.convertedAmount, 2) : '-';
+            
+            return `
+                <tr>
+                    <td>${date}</td>
+                    <td>${formatNumber(transaction.amount, 2)}</td>
+                    <td>${transaction.currency || '-'}</td>
+                    <td>${exchangeRate}</td>
+                    <td>${convertedAmount}</td>
+                    <td>${categoryName}</td>
+                    <td>${accountName}</td>
+                    <td>${transaction.description || '-'}</td>
+                </tr>
+            `;
+        }).join('');
+    } catch (error) {
+        console.error('Error loading vehicle expenses:', error);
+        tbody.innerHTML = '<tr class="loading-row"><td colspan="8" style="text-align: center; color: var(--danger);">Помилка завантаження витрат</td></tr>';
+    }
+}
+
+document.getElementById('create-vehicle-expense-btn')?.addEventListener('click', async () => {
+    if (!currentVehicleId) {
+        showMessage('Не вдалося визначити машину', 'error');
+        return;
+    }
+    
+    if (accountsCache.length === 0) {
+        await loadAccounts();
+    }
+    
+    populateAccounts('expense-from-account');
+    
+    const categories = await loadCategoriesForVehicleExpense();
+    populateCategories('expense-category', categories);
+    
+    document.getElementById('expense-from-account').value = '';
+    document.getElementById('expense-category').value = '';
+    document.getElementById('expense-amount').value = '';
+    document.getElementById('expense-currency').value = '';
+    document.getElementById('expense-description').value = '';
+    
+    openModal('create-vehicle-expense-modal');
+});
+
+document.getElementById('expense-from-account')?.addEventListener('change', (e) => {
+    const accountId = e.target.value;
+    populateCurrencies('expense-currency', accountId);
+});
+
+document.getElementById('create-vehicle-expense-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    if (!currentVehicleId) {
+        showMessage('Не вдалося визначити машину', 'error');
+        return;
+    }
+    
+    const formData = {
+        type: 'VEHICLE_EXPENSE',
+        fromAccountId: parseInt(document.getElementById('expense-from-account').value),
+        categoryId: parseInt(document.getElementById('expense-category').value),
+        amount: parseFloat(document.getElementById('expense-amount').value),
+        currency: document.getElementById('expense-currency').value,
+        description: document.getElementById('expense-description').value,
+        vehicleId: currentVehicleId
+    };
+    
+    try {
+        const response = await fetch('/api/v1/transaction', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(formData)
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Failed to create vehicle expense');
+        }
+        
+        showMessage('Витрату успішно створено', 'success');
+        closeModal('create-vehicle-expense-modal');
+        document.getElementById('create-vehicle-expense-form')?.reset();
+        
+        await loadVehicleExpenses(currentVehicleId);
+    } catch (error) {
+        showMessage(error.message || 'Помилка при створенні витрати', 'error');
+    }
+});
+
+document.getElementById('export-vehicles-btn')?.addEventListener('click', async () => {
+    try {
+        const searchTerm = document.getElementById('vehicles-search-input')?.value || '';
+        const filters = buildFilters();
+        const filtersJson = Object.keys(filters).length > 0 ? JSON.stringify(filters) : '';
+        
+        let url = `/api/v1/vehicles/export`;
+        const params = new URLSearchParams();
+        
+        if (searchTerm) {
+            params.append('q', searchTerm);
+        }
+        
+        if (filtersJson) {
+            params.append('filters', filtersJson);
+        }
+        
+        if (params.toString()) {
+            url += '?' + params.toString();
+        }
+        
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+            throw new Error('Failed to export vehicles');
+        }
+        
+        const blob = await response.blob();
+        const downloadUrl = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.download = `vehicles_${new Date().toISOString().split('T')[0]}.xlsx`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(downloadUrl);
+        
+        showMessage('Експорт успішно виконано', 'success');
+    } catch (error) {
+        console.error('Error exporting vehicles:', error);
+        showMessage('Помилка експорту: ' + error.message, 'error');
+    }
+});
 
 initialize();
 

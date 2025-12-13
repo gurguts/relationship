@@ -1,8 +1,10 @@
 :root {
-    --primary: #6366f1;
-    --primary-dark: #4f46e5;
-    --primary-light: #818cf8;
-    --secondary: #8b5cf6;
+    --bright-blue: #42A5F5;
+    --dark-blue: #1976D2;
+    --primary: #42A5F5;
+    --primary-dark: #1976D2;
+    --primary-light: #64B5F6;
+    --secondary: #1976D2;
     --success: #10b981;
     --warning: #f59e0b;
     --danger: #ef4444;
@@ -111,7 +113,8 @@ body {
 
 .table-header {
     padding: 1.5rem 2rem;
-    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+    background: linear-gradient(135deg, var(--bright-blue, #42A5F5), var(--dark-blue, #1976D2), var(--bright-blue, #42A5F5));
+    background-size: 200% 200%;
     color: white;
     display: flex;
     justify-content: space-between;
@@ -235,6 +238,11 @@ body {
     transform: translateX(4px);
 }
 
+#manage-carriers-modal .modern-table tbody tr:hover {
+    background: var(--bg-primary);
+    transform: none;
+}
+
 .modern-table tbody tr.loading-row {
     text-align: center;
     padding: 3rem;
@@ -297,14 +305,18 @@ body {
 }
 
 .btn-primary {
-    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+    background: linear-gradient(135deg, var(--bright-blue, #42A5F5), var(--dark-blue, #1976D2), var(--bright-blue, #42A5F5));
+    background-size: 200% 200%;
+    background-position: 0 50%;
     color: white;
-    box-shadow: var(--shadow);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
 }
 
 .btn-primary:hover {
+    background-position: 100% 50%;
     transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
 }
 
 .btn-primary:active {
@@ -408,7 +420,8 @@ body.modal-open {
 
 .modal-header {
     padding: 1.5rem 2rem;
-    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+    background: linear-gradient(135deg, var(--bright-blue, #42A5F5), var(--dark-blue, #1976D2), var(--bright-blue, #42A5F5));
+    background-size: 200% 200%;
     color: white;
     display: flex;
     justify-content: space-between;
@@ -626,15 +639,29 @@ body.modal-open {
     margin-bottom: 1.5rem;
 }
 
-.products-header h4 {
+.products-header h4,
+.expenses-header h4 {
     margin: 0;
     font-size: 1.25rem;
     font-weight: 600;
     color: var(--text-primary);
 }
 
+.expenses-section {
+    padding: 1.5rem 0;
+}
+
+.expenses-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding: 0 0.5rem;
+}
+
 .vehicle-total-card {
-    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+    background: linear-gradient(135deg, var(--bright-blue, #42A5F5), var(--dark-blue, #1976D2), var(--bright-blue, #42A5F5));
+    background-size: 200% 200%;
     border-radius: var(--border-radius);
     padding: 1.5rem 2rem;
     margin: 2rem 0;
@@ -828,4 +855,51 @@ body.modal-open {
     .modal-footer .btn {
         width: 100%;
     }
+}
+
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.pagination-btn {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: var(--transition);
+    min-width: 2.5rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.pagination-btn:hover:not(:disabled) {
+    background: var(--bg-secondary);
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.pagination-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.pagination-btn.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+
+.pagination-ellipsis {
+    padding: 0.5rem;
+    color: var(--text-muted);
+    user-select: none;
 }

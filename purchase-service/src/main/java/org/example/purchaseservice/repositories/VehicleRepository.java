@@ -2,6 +2,7 @@ package org.example.purchaseservice.repositories;
 
 import org.example.purchaseservice.models.balance.Vehicle;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -10,7 +11,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 @Repository
-public interface VehicleRepository extends JpaRepository<Vehicle, Long> {
+public interface VehicleRepository extends JpaRepository<Vehicle, Long>, JpaSpecificationExecutor<Vehicle> {
 
     List<Vehicle> findByShipmentDate(LocalDate shipmentDate);
 

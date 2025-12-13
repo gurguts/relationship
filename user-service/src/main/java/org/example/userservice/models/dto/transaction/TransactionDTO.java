@@ -23,4 +23,5 @@ public class TransactionDTO {
     private String convertedCurrency;
     private BigDecimal convertedAmount;
     private BigDecimal commission;
+    private Long vehicleId;
 }

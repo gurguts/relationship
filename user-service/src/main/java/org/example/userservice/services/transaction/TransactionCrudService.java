@@ -11,7 +11,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.util.Optional;
 
 @Slf4j
 @Service
@@ -41,19 +40,11 @@ public class TransactionCrudService implements ITransactionCrudService {
         // This method only updates the transaction amount in the database
     }
 
+    private final AccountTransactionService accountTransactionService;
+
     @Override
     public void delete(Long transactionId) {
-        Optional<Transaction> transaction = transactionRepository.findById(transactionId);
-
-        if (transaction.isEmpty()) {
-            throw new TransactionNotFoundException(String.format("Transaction not found with id: %d", transactionId));
-        }
-
-        Transaction t = transaction.get();
-        
-        // Note: Balance rollback is now handled by AccountTransactionService
-        // This method only deletes the transaction from the database
-        transactionRepository.delete(t);
+        accountTransactionService.deleteTransaction(transactionId);
     }
 
 }

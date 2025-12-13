@@ -57,6 +57,10 @@
                 <span class="btn-icon">➕</span>
                 Створити машину
             </button>
+            <button class="btn btn-secondary" id="export-vehicles-btn">
+                <span class="btn-icon">📥</span>
+                Експорт в Excel
+            </button>
             <button class="btn btn-outline" id="manage-carriers-btn">
                 <span class="btn-icon">🚚</span>
                 Перевізники
@@ -116,6 +120,7 @@
                     </tbody>
                 </table>
             </div>
+            <div id="vehicles-pagination" style="padding: 1rem 2rem; border-top: 1px solid var(--border-color); background: var(--bg-secondary);"></div>
         </div>
     </div>
 </div>
@@ -209,7 +214,7 @@
 <div class="modal-overlay" id="create-vehicle-modal">
     <div class="modal-container modal-large">
         <div class="modal-header">
-            <h3>➕ Створити машину</h3>
+            <h3>Створити машину</h3>
             <button class="modal-close">×</button>
         </div>
         <div class="modal-body">
@@ -344,13 +349,14 @@
 <div class="modal-overlay" id="vehicle-details-modal">
     <div class="modal-container modal-extra-large">
         <div class="modal-header">
-            <h3>📋 Деталі машини</h3>
+            <h3>Деталі машини</h3>
             <button class="modal-close">×</button>
         </div>
         <div class="modal-body">
             <div class="vehicle-details-tabs">
                 <button class="tab-btn active" data-tab="info">Інформація</button>
                 <button class="tab-btn" data-tab="products">Товари</button>
+                <button class="tab-btn" data-tab="expenses">Витрати на машину</button>
             </div>
 
             <div class="tab-content active" id="tab-info">
@@ -489,7 +495,6 @@
                 <div class="products-section">
                     <div class="products-header">
                         <h4>Товари в машині</h4>
-                        <button class="btn btn-primary btn-sm" id="add-product-to-vehicle-btn">➕ Додати товар</button>
                     </div>
                     <div class="table-wrapper">
                         <table class="modern-table">
@@ -522,40 +527,80 @@
                     </div>
                 </div>
             </div>
+
+            <div class="tab-content" id="tab-expenses">
+                <div class="expenses-section">
+                    <div class="expenses-header">
+                        <h4>Витрати на машину</h4>
+                        <button class="btn btn-primary btn-sm" id="create-vehicle-expense-btn">Створити витрату</button>
+                    </div>
+                    <div class="table-wrapper">
+                        <table class="modern-table">
+                            <thead>
+                                <tr>
+                                    <th>Дата</th>
+                                    <th>Сума</th>
+                                    <th>Валюта</th>
+                                    <th>Курс</th>
+                                    <th>Сума в EUR</th>
+                                    <th>Категорія</th>
+                                    <th>Рахунок</th>
+                                    <th>Опис</th>
+                                </tr>
+                            </thead>
+                            <tbody id="vehicle-expenses-tbody">
+                                <tr class="loading-row">
+                                    <td colspan="8">Завантаження...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
 
-<!-- Add Product to Vehicle Modal -->
-<div class="modal-overlay" id="add-product-to-vehicle-modal">
+<!-- Create Vehicle Expense Modal -->
+<div class="modal-overlay" id="create-vehicle-expense-modal">
     <div class="modal-container">
         <div class="modal-header">
-            <h3>➕ Додати товар до машини</h3>
+            <h3>Створити витрату на машину</h3>
             <button class="modal-close">×</button>
         </div>
         <div class="modal-body">
-            <form id="add-product-to-vehicle-form">
+            <form id="create-vehicle-expense-form">
                 <div class="form-group">
-                    <label for="vehicle-warehouse-id">Склад *</label>
-                    <select id="vehicle-warehouse-id" class="form-input" required>
-                        <option value="">Оберіть склад</option>
+                    <label for="expense-from-account">З рахунку *</label>
+                    <select id="expense-from-account" class="form-input" required>
+                        <option value="">Оберіть рахунок</option>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label for="vehicle-product-id">Товар *</label>
-                    <select id="vehicle-product-id" class="form-input" required>
-                        <option value="">Оберіть товар</option>
+                    <label for="expense-category">Категорія *</label>
+                    <select id="expense-category" class="form-input" required>
+                        <option value="">Оберіть категорію</option>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label for="vehicle-quantity">Кількість (кг) *</label>
-                    <input type="number" id="vehicle-quantity" step="0.01" min="0.01" class="form-input" placeholder="Кількість (кг)" required>
+                    <label for="expense-amount">Сума *</label>
+                    <input type="number" id="expense-amount" step="0.01" min="0.01" class="form-input" placeholder="Сума" required>
+                </div>
+                <div class="form-group">
+                    <label for="expense-currency">Валюта *</label>
+                    <select id="expense-currency" class="form-input" required>
+                        <option value="">Оберіть валюту</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="expense-description">Опис</label>
+                    <textarea id="expense-description" rows="3" class="form-input" placeholder="Опис витрати"></textarea>
                 </div>
             </form>
         </div>
         <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" onclick="closeModal('add-product-to-vehicle-modal')">Скасувати</button>
-            <button type="submit" form="add-product-to-vehicle-form" class="btn btn-primary">Додати</button>
+            <button type="button" class="btn btn-secondary" onclick="closeModal('create-vehicle-expense-modal')">Скасувати</button>
+            <button type="submit" form="create-vehicle-expense-form" class="btn btn-primary">Створити</button>
         </div>
     </div>
 </div>
@@ -600,12 +645,12 @@
 <div class="modal-overlay" id="manage-carriers-modal">
     <div class="modal-container modal-extra-large">
         <div class="modal-header">
-            <h3>🚚 Управління перевізниками</h3>
+            <h3>Управління перевізниками</h3>
             <button class="modal-close">×</button>
         </div>
         <div class="modal-body">
             <div style="margin-bottom: 1.5rem;">
-                <button class="btn btn-primary" id="create-carrier-btn">➕ Створити перевізника</button>
+                <button class="btn btn-primary" id="create-carrier-btn">Створити перевізника</button>
             </div>
             <div class="table-wrapper">
                 <table class="modern-table">
@@ -634,7 +679,7 @@
 <div class="modal-overlay" id="carrier-form-modal">
     <div class="modal-container">
         <div class="modal-header">
-            <h3 id="carrier-form-title">➕ Створити перевізника</h3>
+            <h3 id="carrier-form-title">Створити перевізника</h3>
             <button class="modal-close">×</button>
         </div>
         <div class="modal-body">

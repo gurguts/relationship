@@ -11,7 +11,8 @@ const transactionTypeMap = {
     'EXTERNAL_EXPENSE': 'Зовнішня витрата',
     'CLIENT_PAYMENT': 'Оплата клієнту',
     'CURRENCY_CONVERSION': 'Конвертація валют',
-    'PURCHASE': 'Закупівля'
+    'PURCHASE': 'Закупівля',
+    'VEHICLE_EXPENSE': 'Витрати на машину'
 };
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -598,7 +599,7 @@ function renderTransactions(transactions) {
 
     if (transactions.length === 0) {
         const row = document.createElement('tr');
-        row.innerHTML = '<td colspan="9" style="text-align: center;">Транзакції не знайдено</td>';
+        row.innerHTML = '<td colspan="10" style="text-align: center;">Транзакції не знайдено</td>';
         tbody.appendChild(row);
         return;
     }
@@ -614,6 +615,7 @@ function renderTransactions(transactions) {
         const currency = transaction.currency || '—';
         const client = transaction.clientCompany || '—';
         const description = transaction.description || '—';
+        const vehicle = transaction.vehicleNumber || '—';
 
         // For currency conversion, show converted amount
         // For internal transfer, show commission if exists
@@ -628,6 +630,7 @@ function renderTransactions(transactions) {
         row.innerHTML = `
             <td>${date}</td>
             <td>${type}</td>
+            <td>${vehicle}</td>
             <td>${category}</td>
             <td>${fromAccount}</td>
             <td>${toAccount}</td>
@@ -749,6 +752,49 @@ async function handleUpdateTransaction(e) {
         ? parseFloat(exchangeRateInput.value) 
         : null;
     
+    // If amount is 0, delete the transaction
+    if (amount === 0 || isNaN(amount)) {
+        if (!confirm('Ви впевнені, що хочете видалити цю транзакцію? Гроші будуть повернуті.')) {
+            return;
+        }
+        
+        try {
+            const response = await fetch(`${API_BASE}/transaction/${transactionId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            if (!response.ok) {
+                const error = await response.text();
+                throw new Error(error || 'Failed to delete transaction');
+            }
+            
+            showFinanceMessage('Транзакцію успішно видалено', 'success');
+            closeEditTransactionModal();
+            
+            // Reload data based on active tab
+            const activeTab = document.querySelector('.tab-btn.active');
+            if (activeTab) {
+                const activeTabName = activeTab.getAttribute('data-tab');
+                if (activeTabName === 'transactions') {
+                    loadTransactions(); // Reload transactions list
+                } else if (activeTabName === 'accounts') {
+                    // Reload accounts and balances to reflect changes
+                    await loadAccountsAndBranches();
+                }
+            } else {
+                // Default: reload transactions if no active tab detected
+                loadTransactions();
+            }
+        } catch (error) {
+            console.error('Error deleting transaction:', error);
+            showFinanceMessage('Помилка видалення транзакції: ' + error.message, 'error');
+        }
+        return;
+    }
+    
     const updateData = {
         categoryId: categoryId ? parseInt(categoryId) : null,
         description: description || null,
@@ -848,7 +894,7 @@ async function populateTransactionFilters() {
 
     // Load all categories for filter
     try {
-        const types = ['INTERNAL_TRANSFER', 'EXTERNAL_INCOME', 'EXTERNAL_EXPENSE', 'CLIENT_PAYMENT', 'CURRENCY_CONVERSION'];
+        const types = ['INTERNAL_TRANSFER', 'EXTERNAL_INCOME', 'EXTERNAL_EXPENSE', 'CLIENT_PAYMENT', 'CURRENCY_CONVERSION', 'VEHICLE_EXPENSE'];
         const promises = types.map(type => 
             fetch(`${API_BASE}/transaction-categories/type/${type}`)
                 .then(r => r.ok ? r.json() : [])
@@ -1086,6 +1132,10 @@ function handleTransactionTypeChange() {
             conversionReceivedAmountInput.required = true;
         }
         updateConversionExchangeRateDisplay();
+    } else if (type === 'VEHICLE_EXPENSE') {
+        fromAccountGroup.style.display = 'block';
+        currencyGroup.style.display = 'block';
+        amountGroup.style.display = 'block';
     }
     
     // Remove required attribute from received amount for non-transfer types
@@ -1217,6 +1267,12 @@ async function handleCreateTransaction(e) {
             return;
         }
         formData.clientId = parseInt(clientId);
+    } else if (type === 'VEHICLE_EXPENSE') {
+        formData.fromAccountId = parseInt(document.getElementById('from-account').value);
+        const vehicleId = document.getElementById('transaction-vehicle-id')?.value;
+        if (vehicleId) {
+            formData.vehicleId = parseInt(vehicleId);
+        }
     } else if (type === 'CURRENCY_CONVERSION') {
         const accountId = parseInt(document.getElementById('conversion-account').value);
         formData.fromAccountId = accountId;

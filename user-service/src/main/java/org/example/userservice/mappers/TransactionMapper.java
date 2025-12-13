@@ -31,6 +31,7 @@ public class TransactionMapper {
         transactionDTO.setConvertedCurrency(transaction.getConvertedCurrency());
         transactionDTO.setConvertedAmount(transaction.getConvertedAmount());
         transactionDTO.setCommission(transaction.getCommission());
+        transactionDTO.setVehicleId(transaction.getVehicleId());
 
         return transactionDTO;
     }
@@ -52,6 +53,7 @@ public class TransactionMapper {
         transaction.setClientId(dto.getClientId());
         transaction.setDescription(dto.getDescription());
         transaction.setCommission(dto.getCommission());
+        transaction.setVehicleId(dto.getVehicleId());
 
         return transaction;
     }
@@ -77,6 +79,7 @@ public class TransactionMapper {
         dto.setConvertedCurrency(transaction.getConvertedCurrency());
         dto.setConvertedAmount(transaction.getConvertedAmount());
         dto.setCommission(transaction.getCommission());
+        dto.setVehicleId(transaction.getVehicleId());
 
         return dto;
     }
