@@ -42,12 +42,28 @@ public class PurchaseSearchController {
             @RequestParam(name = "q", required = false) String query,
             @RequestParam(name = "page", defaultValue = "0") @Min(0) int page,
             @RequestParam(name = "size", defaultValue = "20") @Min(1) int size,
-            @RequestParam(name = "sort", defaultValue = "id") String sort,
-            @RequestParam(name = "direction", defaultValue = "ASC") String direction,
+            @RequestParam(name = "sort", defaultValue = "createdAt") String sort,
+            @RequestParam(name = "direction", defaultValue = "DESC") String direction,
             @RequestParam(name = "filters", required = false) String filters) {
 
-        Sort.Direction sortDirection = Sort.Direction.fromString(direction);
-        Sort sortBy = Sort.by(sortDirection, sort);
+        String actualSortProperty = sort;
+        Sort.Direction actualSortDirection = Sort.Direction.fromString(direction);
+        
+        String[] validSortFields = {"quantity", "unitPrice", "totalPrice", "currency", "totalPriceEur", "exchangeRate", "paymentMethod", "createdAt", "updatedAt"};
+        boolean isValidSort = false;
+        for (String validField : validSortFields) {
+            if (validField.equals(sort)) {
+                isValidSort = true;
+                break;
+            }
+        }
+        
+        if (!isValidSort) {
+            actualSortProperty = "createdAt";
+            actualSortDirection = Sort.Direction.DESC;
+        }
+        
+        Sort sortBy = Sort.by(actualSortDirection, actualSortProperty);
         Pageable pageable = PageRequest.of(page, size, sortBy);
 
         Map<String, List<String>> filterParams;

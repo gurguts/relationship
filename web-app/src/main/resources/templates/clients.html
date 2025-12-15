@@ -40,26 +40,53 @@
                 <ul id="client-types-dropdown" class="dropdown-menu" style="display: none;">
                 </ul>
             </li>
-            <li id="nav-routes"><a href="/routes">
-                Маршрути
-            </a></li>
-            <li id="nav-purchase"><a href="/purchase">
-                Закупівлі
-            </a></li>
-            <li id="nav-containers"><a href="/containers">
-                Тари
-            </a></li>
+            <li id="nav-routes" class="dropdown">
+                <a href="#" onclick="return false;">
+                    Маршрути
+                    <span class="dropdown-arrow">▼</span>
+                </a>
+                <ul id="route-types-dropdown" class="dropdown-menu" style="display: none;">
+                </ul>
+            </li>
+            <li id="nav-purchase" class="dropdown">
+                <a href="#" onclick="return false;">
+                    Закупівлі
+                    <span class="dropdown-arrow">▼</span>
+                </a>
+                <ul id="purchase-types-dropdown" class="dropdown-menu" style="display: none;">
+                </ul>
+            </li>
+            <li id="nav-containers" class="dropdown">
+                <a href="#" onclick="return false;">
+                    Тари
+                    <span class="dropdown-arrow">▼</span>
+                </a>
+                <ul id="container-types-dropdown" class="dropdown-menu" style="display: none;">
+                </ul>
+            </li>
             <li id="nav-inventory"><a href="/inventory">
                 Баланс тари
             </a></li>
+            <li id="nav-finance"><a href="/finance">
+                Фінанси
+            </a></li>
             <li id="nav-stock"><a href="/stock">
                 Склад
+            </a></li>
+            <li id="nav-declarant"><a href="/declarant">
+                Декларант
             </a></li>
             <li id="nav-analytics"><a href="/analytics">
                 Аналітика
             </a></li>
             <li id="nav-settings"><a href="/settings" class="setting-icon-block">
                 Налаштування
+            </a></li>
+            <li id="nav-administration"><a href="/administration">
+                Адміністрація
+            </a></li>
+            <li id="nav-profile"><a href="/profile">
+                Мій профіль
             </a></li>
             <li>
                 <a href="#" id="logout">
@@ -136,11 +163,11 @@
     <div class="modal-export-data-content">
         <h3>Виберіть поля для експорту</h3>
         <form id="exportFieldsForm">
-            <label><input type="checkbox" name="fields" value="id" checked> Id</label><br>
-            <label><input type="checkbox" name="fields" value="company" checked> Компанія</label><br>
-            <label><input type="checkbox" name="fields" value="createdAt" checked> Дата створення</label><br>
-            <label><input type="checkbox" name="fields" value="updatedAt" checked> Дата оновлення</label><br>
-            <label><input type="checkbox" name="fields" value="source" checked> Залучення</label><br>
+            <label><input type="checkbox" name="fields" value="id" checked> Id</label>
+            <label><input type="checkbox" name="fields" value="company" checked> Компанія</label>
+            <label><input type="checkbox" name="fields" value="createdAt" checked> Дата створення</label>
+            <label><input type="checkbox" name="fields" value="updatedAt" checked> Дата оновлення</label>
+            <label><input type="checkbox" name="fields" value="source" checked> Залучення</label>
 
         </form>
         <button id="exportConfirm" class="btn btn-primary">Експортувати</button>

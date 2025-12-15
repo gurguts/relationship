@@ -338,15 +338,23 @@ function showClientModal(client) {
     }, 10);
 
     document.getElementById('close-modal-client').addEventListener('click', () => {
-        modal.classList.remove('open');
-        setTimeout(() => {
-            closeModal();
-        });
+        if (!editing) {
+            modal.classList.remove('open');
+            setTimeout(() => {
+                closeModal();
+            });
+        } else {
+            showMessage('Збережіть або відмініть зміни', 'error');
+        }
     });
 
     window.onclick = function (event) {
         if (event.target === modal) {
-            closeModal();
+            if (!editing) {
+                closeModal();
+            } else {
+                showMessage('Збережіть або відмініть зміни', 'error');
+            }
         }
     }
 

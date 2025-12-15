@@ -555,6 +555,162 @@ function initColumnResizerForPurchase(containerId, storageKey) {
     }
 }
 
+function initColumnResizerForContainers(containerId, storageKey) {
+    const table = document.querySelector(`#${containerId} table`);
+    if (!table) return;
+    
+    const thead = table.querySelector('thead tr');
+    if (!thead) return;
+    
+    const ths = thead.querySelectorAll('th');
+    
+    ths.forEach(th => {
+        const existingResizer = th.querySelector('.column-resizer');
+        if (existingResizer) {
+            existingResizer.remove();
+        }
+    });
+    
+    let colgroup = table.querySelector('colgroup');
+    if (!colgroup) {
+        colgroup = document.createElement('colgroup');
+        table.insertBefore(colgroup, table.firstChild);
+    } else {
+        colgroup.innerHTML = '';
+    }
+    
+    const savedWidths = loadColumnWidths(storageKey);
+    const columnWidths = [];
+    
+    ths.forEach((th, index) => {
+        let width = null;
+        
+        const savedWidth = savedWidths[index];
+        if (savedWidth) {
+            width = savedWidth;
+        } else if (th.style.width) {
+            const styleWidth = parseInt(th.style.width);
+            if (!isNaN(styleWidth) && styleWidth > 0) {
+                width = styleWidth;
+            }
+        }
+        
+        if (!width) {
+            width = th.offsetWidth || 150;
+        }
+        
+        columnWidths[index] = width;
+        
+        const col = document.createElement('col');
+        col.style.width = width + 'px';
+        col.setAttribute('width', width);
+        colgroup.appendChild(col);
+        
+        th.style.width = width + 'px';
+        th.style.minWidth = width + 'px';
+        th.style.maxWidth = width + 'px';
+        
+        const resizer = document.createElement('div');
+        resizer.className = 'column-resizer';
+        resizer.style.width = '4px';
+        resizer.style.height = '100%';
+        resizer.style.position = 'absolute';
+        resizer.style.right = '0';
+        resizer.style.top = '0';
+        resizer.style.cursor = 'col-resize';
+        resizer.style.userSelect = 'none';
+        resizer.style.zIndex = '10';
+        
+        th.style.position = 'relative';
+        th.appendChild(resizer);
+        
+        let isResizing = false;
+        let startX = 0;
+        let startWidth = 0;
+        
+        resizer.addEventListener('mousedown', (e) => {
+            isResizing = true;
+            startX = e.clientX;
+            startWidth = width;
+            e.preventDefault();
+        });
+        
+        document.addEventListener('mousemove', (e) => {
+            if (!isResizing) return;
+            
+            const diff = e.clientX - startX;
+            const newWidth = Math.max(50, startWidth + diff);
+            
+            width = newWidth;
+            columnWidths[index] = newWidth;
+            
+            col.style.width = newWidth + 'px';
+            col.setAttribute('width', newWidth);
+            th.style.width = newWidth + 'px';
+            th.style.minWidth = newWidth + 'px';
+            th.style.maxWidth = newWidth + 'px';
+        });
+        
+        document.addEventListener('mouseup', () => {
+            if (isResizing) {
+                isResizing = false;
+                saveColumnWidths(storageKey, columnWidths);
+            }
+        });
+    });
+}
+
+function applyColumnWidthsForContainers(containerId, storageKey) {
+    const table = document.querySelector(`#${containerId} table`);
+    if (!table) return;
+    
+    const thead = table.querySelector('thead tr');
+    if (!thead) return;
+    
+    const tbody = table.querySelector('tbody');
+    if (!tbody) return;
+    
+    const savedWidths = loadColumnWidths(storageKey);
+    if (!savedWidths || savedWidths.length === 0) return;
+    
+    let colgroup = table.querySelector('colgroup');
+    if (!colgroup) {
+        colgroup = document.createElement('colgroup');
+        table.insertBefore(colgroup, table.firstChild);
+    }
+    
+    const ths = thead.querySelectorAll('th');
+    ths.forEach((th, index) => {
+        if (savedWidths[index]) {
+            const width = savedWidths[index];
+            th.style.width = width + 'px';
+            th.style.minWidth = width + 'px';
+            th.style.maxWidth = width + 'px';
+            
+            let col = colgroup.children[index];
+            if (!col) {
+                col = document.createElement('col');
+                colgroup.appendChild(col);
+            }
+            col.style.width = width + 'px';
+            col.setAttribute('width', width);
+        }
+    });
+    
+    const rows = tbody.querySelectorAll('tr');
+    rows.forEach(row => {
+        const cells = row.querySelectorAll('td');
+        cells.forEach((cell, index) => {
+            if (savedWidths[index]) {
+                const width = savedWidths[index];
+                cell.style.width = width + 'px';
+                cell.style.minWidth = width + 'px';
+                cell.style.maxWidth = width + 'px';
+            }
+        });
+    });
+}
+
 function applyColumnWidthsForPurchase(containerId, storageKey) {
     const table = document.querySelector(`#${containerId} table`);
     if (!table) return;

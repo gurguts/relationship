@@ -34,5 +34,7 @@ public interface ClientFieldValueRepository extends JpaRepository<ClientFieldVal
     
     @Query("SELECT cfv FROM ClientFieldValue cfv WHERE cfv.field.id = :fieldId AND cfv.valueList.id IN :listValueIds")
     List<ClientFieldValue> findByFieldIdAndValueListIdIn(@Param("fieldId") Long fieldId, @Param("listValueIds") List<Long> listValueIds);
+    
+    List<ClientFieldValue> findByClientIdInOrderByClientIdAscDisplayOrderAsc(List<Long> clientIds);
 }
 

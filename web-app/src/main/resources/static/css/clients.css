@@ -522,6 +522,28 @@ input.custom-select-placeholder {
     overflow-y: auto;
 }
 
+.export-fields-section {
+    margin-bottom: 1.5em;
+}
+
+.export-fields-section h4 {
+    font-size: 1.2em;
+    margin-bottom: 0.5em;
+    color: var(--dark-blue);
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 0.3em;
+}
+
+.export-fields-section label {
+    display: block;
+    margin-bottom: 0.3em;
+    font-size: 0.95em;
+}
+
+.export-fields-section input[type="checkbox"] {
+    margin-right: 0.5em;
+}
+
 /*--client-type-selection-modal--*/
 
 .modal-client-type-selection {
@@ -741,11 +763,32 @@ input.custom-select-placeholder {
     text-transform: uppercase;
     font-weight: bold;
     border-bottom: 2px solid #ddd;
-    cursor: pointer;
     white-space: nowrap;
     font-size: 0.8em;
     font-family: Roboto, sans-serif;
     text-align: center;
+    position: relative;
+}
+
+#client-list th[data-sort] {
+    cursor: pointer;
+    user-select: none;
+}
+
+#client-list th[data-sort]:hover {
+    background-color: var(--dark-green, #45a049);
+}
+
+#client-list th.sort-asc::after {
+    content: ' ▲';
+    font-size: 0.7em;
+    opacity: 0.8;
+}
+
+#client-list th.sort-desc::after {
+    content: ' ▼';
+    font-size: 0.7em;
+    opacity: 0.8;
 }
 
 #client-list td {

@@ -32,7 +32,6 @@ function populateExportForm(formId) {
         if (!existingBaseFields.has(field.value)) {
             const label = document.createElement('label');
             label.innerHTML = `<input type="checkbox" name="fields" value="${field.value}" checked> ${field.label}`;
-            label.innerHTML += '<br>';
             form.appendChild(label);
         }
     });
@@ -59,7 +58,6 @@ function populateExportForm(formId) {
             if (!form.querySelector(`input[value="${fieldValue}"]`)) {
                 const label = document.createElement('label');
                 label.innerHTML = `<input type="checkbox" name="fields" value="${fieldValue}" checked> ${fieldLabel}`;
-                label.innerHTML += '<br>';
                 form.appendChild(label);
             }
         });

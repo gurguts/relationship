@@ -17,6 +17,8 @@ import org.example.purchaseservice.models.PaymentMethod;
 import org.example.purchaseservice.models.warehouse.WarehouseReceipt;
 import org.example.purchaseservice.models.dto.client.ClientDTO;
 import org.example.purchaseservice.models.dto.client.ClientSearchRequest;
+import org.example.purchaseservice.models.dto.clienttype.ClientFieldValueDTO;
+import org.example.purchaseservice.models.dto.clienttype.ClientTypeFieldDTO;
 import org.example.purchaseservice.models.dto.fields.*;
 import org.example.purchaseservice.models.dto.impl.IdNameDTO;
 import org.example.purchaseservice.models.dto.purchase.PurchaseReportDTO;
@@ -48,6 +50,7 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
 
     private final PurchaseRepository purchaseRepository;
     private final ClientApiClient clientApiClient;
+    private final ClientTypeFieldApiClient clientTypeFieldApiClient;
     private final UserClient userClient;
     private final IProductService productService;
     private final IWarehouseReceiptService warehouseReceiptService;
@@ -75,8 +78,20 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
         List<Purchase> purchaseList = fetchPurchases(
                 query, filterParams, clients.stream().map(ClientDTO::getId).toList(), filterIds.sourceIds(), sort);
         Map<Long, ClientDTO> clientMap = fetchClientMap(clients);
+        
+        Long clientTypeId = null;
+        if (filterParams != null && filterParams.containsKey("clientTypeId") && filterParams.get("clientTypeId") != null 
+                && !filterParams.get("clientTypeId").isEmpty()) {
+            try {
+                clientTypeId = Long.parseLong(filterParams.get("clientTypeId").get(0));
+            } catch (NumberFormatException e) {
+                log.warn("Invalid clientTypeId in filterParams: {}", filterParams.get("clientTypeId"));
+            }
+        }
+        
+        Map<Long, List<ClientFieldValueDTO>> clientFieldValuesMap = fetchClientFieldValues(clients.stream().map(ClientDTO::getId).toList());
 
-        Workbook workbook = generateWorkbook(purchaseList, selectedFields, filterIds, clientMap);
+        Workbook workbook = generateWorkbook(purchaseList, selectedFields, filterIds, clientMap, clientTypeId, clientFieldValuesMap);
         sendExcelFileResponse(workbook, response);
     }
 
@@ -158,15 +173,39 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
     }
 
     private List<ClientDTO> fetchClientIds(String query, Map<String, List<String>> filterParams) {
-        Map<String, List<String>> filteredParams = filterParams.entrySet().stream()
+        Long clientTypeId = null;
+        if (filterParams != null && filterParams.containsKey("clientTypeId") && filterParams.get("clientTypeId") != null 
+                && !filterParams.get("clientTypeId").isEmpty()) {
+            try {
+                clientTypeId = Long.parseLong(filterParams.get("clientTypeId").get(0));
+            } catch (NumberFormatException e) {
+                log.warn("Invalid clientTypeId in filterParams: {}", filterParams.get("clientTypeId"));
+            }
+        }
+        
+        Map<String, List<String>> filteredParams = filterParams != null ? filterParams.entrySet().stream()
                 .filter(entry -> {
                     String key = entry.getKey();
                     return key.equals("status") || key.equals("business") ||
-                            key.equals("route") || key.equals("region") || key.equals("source-client") ||
-                            key.equals("clientProduct");
+                            key.equals("route") || key.equals("region") || key.equals("clientProduct") ||
+                            key.equals("clientSource") ||
+                            key.equals("clientCreatedAtFrom") || key.equals("clientCreatedAtTo") ||
+                            key.equals("clientUpdatedAtFrom") || key.equals("clientUpdatedAtTo") ||
+                            key.startsWith("field");
                 })
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-        ClientSearchRequest clientRequest = new ClientSearchRequest(query, filteredParams);
+                .collect(Collectors.toMap(
+                    entry -> {
+                        String key = entry.getKey();
+                        if (key.equals("clientSource")) return "source";
+                        if (key.equals("clientCreatedAtFrom")) return "createdAtFrom";
+                        if (key.equals("clientCreatedAtTo")) return "createdAtTo";
+                        if (key.equals("clientUpdatedAtFrom")) return "updatedAtFrom";
+                        if (key.equals("clientUpdatedAtTo")) return "updatedAtTo";
+                        return key;
+                    },
+                    Map.Entry::getValue
+                )) : Collections.emptyMap();
+        ClientSearchRequest clientRequest = new ClientSearchRequest(query, filteredParams, clientTypeId);
         return clientApiClient.searchClients(clientRequest);
     }
 
@@ -195,77 +234,135 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
     }
 
     private Workbook generateWorkbook(List<Purchase> purchaseList, List<String> selectedFields, FilterIds filterIds,
-                                      Map<Long, ClientDTO> clientMap) {
+                                      Map<Long, ClientDTO> clientMap, Long clientTypeId, 
+                                      Map<Long, List<ClientFieldValueDTO>> clientFieldValuesMap) {
         Workbook workbook = new XSSFWorkbook();
         Sheet sheet = workbook.createSheet("Purchase Data");
 
-        Map<String, String> fieldToHeader = createFieldToHeaderMap();
-        createHeaderRow(sheet, selectedFields, fieldToHeader);
-        fillDataRows(sheet, purchaseList, selectedFields, filterIds, clientMap);
+        List<String> sortedFields = sortFields(selectedFields);
+        Map<String, String> fieldToHeader = createFieldToHeaderMap(sortedFields, clientTypeId);
+        createHeaderRow(sheet, sortedFields, fieldToHeader);
+        fillDataRows(sheet, purchaseList, sortedFields, filterIds, clientMap, clientFieldValuesMap);
 
         return workbook;
     }
+    
+    private List<String> sortFields(List<String> selectedFields) {
+        List<String> clientFields = new ArrayList<>();
+        List<String> purchaseFields = new ArrayList<>();
+        
+        for (String field : selectedFields) {
+            if (field.endsWith("-client") || field.startsWith("field_")) {
+                clientFields.add(field);
+            } else {
+                purchaseFields.add(field);
+            }
+        }
+        
+        List<String> sorted = new ArrayList<>(clientFields);
+        sorted.addAll(purchaseFields);
+        return sorted;
+    }
 
-    private Map<String, String> createFieldToHeaderMap() {
-        return Map.ofEntries(
-                Map.entry("id-client", "Id (клієнта)"),
-                Map.entry("company-client", "Компанія (клієнта)"),
-                Map.entry("person-client", "Контактна особа (клієнта)"),
-                Map.entry("phoneNumbers-client", "Номери телефонів (клієнта)"),
-                Map.entry("createdAt-client", "Дата створення (клієнта)"),
-                Map.entry("updatedAt-client", "Дата оновлення (клієнта)"),
-                Map.entry("status-client", "Статус (клієнта)"),
-                Map.entry("source-client", "Залучення (клієнта)"),
-                Map.entry("location-client", "Адреса (клієнта)"),
-                Map.entry("pricePurchase-client", "Ціна закупівлі (клієнта)"),
-                Map.entry("priceSale-client", "Ціна продажі (клієнта)"),
-                Map.entry("volumeMonth-client", "Орієнтований об'єм на місяць (клієнта)"),
-                Map.entry("route-client", "Маршрут (клієнта)"),
-                Map.entry("region-client", "Область (клієнта)"),
-                Map.entry("business-client", "Тип бізнесу (клієнта)"),
-                Map.entry("clientProduct-client", "Товар (клієнта)"),
-                Map.entry("edrpou-client", "ЄДРПОУ (клієнта)"),
-                Map.entry("enterpriseName-client", "Назва підприємства (клієнта)"),
-                Map.entry("vat-client", "ПДВ (клієнта)"),
-                Map.entry("comment-client", "Коментар (клієнта)"),
-                Map.entry("id", "Id"),
-                Map.entry("user", "Водій"),
-                Map.entry("source", "Залучення"),
-                Map.entry("product", "Товар"),
-                Map.entry("quantity", "Кількість"),
-                Map.entry("unitPrice", "Ціна за од"),
-                Map.entry("totalPrice", "Повна ціна"),
-                Map.entry("paymentMethod", "Метод оплати"),
-                Map.entry("currency", "Валюта"),
-                Map.entry("exchangeRate", "Курс"),
-                Map.entry("transaction", "Id транзакції"),
-                Map.entry("createdAt", "Дата створення"),
-                Map.entry("updatedAt", "Дата оновлення")
-        );
+    private Map<String, String> createFieldToHeaderMap(List<String> selectedFields, Long clientTypeId) {
+        Map<String, String> headerMap = new HashMap<>();
+        
+        headerMap.put("id-client", "Id (клієнта)");
+        headerMap.put("company-client", "Компанія (клієнта)");
+        headerMap.put("person-client", "Контактна особа (клієнта)");
+        headerMap.put("phoneNumbers-client", "Номери телефонів (клієнта)");
+        headerMap.put("createdAt-client", "Дата створення (клієнта)");
+        headerMap.put("updatedAt-client", "Дата оновлення (клієнта)");
+        headerMap.put("status-client", "Статус (клієнта)");
+        headerMap.put("source-client", "Залучення (клієнта)");
+        headerMap.put("location-client", "Адреса (клієнта)");
+        headerMap.put("pricePurchase-client", "Ціна закупівлі (клієнта)");
+        headerMap.put("priceSale-client", "Ціна продажі (клієнта)");
+        headerMap.put("volumeMonth-client", "Орієнтований об'єм на місяць (клієнта)");
+        headerMap.put("route-client", "Маршрут (клієнта)");
+        headerMap.put("region-client", "Область (клієнта)");
+        headerMap.put("business-client", "Тип бізнесу (клієнта)");
+        headerMap.put("clientProduct-client", "Товар (клієнта)");
+        headerMap.put("edrpou-client", "ЄДРПОУ (клієнта)");
+        headerMap.put("enterpriseName-client", "Назва підприємства (клієнта)");
+        headerMap.put("vat-client", "ПДВ (клієнта)");
+        headerMap.put("comment-client", "Коментар (клієнта)");
+        
+        headerMap.put("id", "Id");
+        headerMap.put("user", "Водій");
+        headerMap.put("source", "Залучення");
+        headerMap.put("product", "Товар");
+        headerMap.put("quantity", "Кількість");
+        headerMap.put("unitPrice", "Ціна за од");
+        headerMap.put("totalPrice", "Повна ціна");
+        headerMap.put("paymentMethod", "Метод оплати");
+        headerMap.put("currency", "Валюта");
+        headerMap.put("exchangeRate", "Курс");
+        headerMap.put("transaction", "Id транзакції");
+        headerMap.put("createdAt", "Дата створення");
+        headerMap.put("updatedAt", "Дата оновлення");
+        headerMap.put("comment", "Коментар");
+        
+        for (String field : selectedFields) {
+            if (field.startsWith("field_")) {
+                try {
+                    Long fieldId = Long.parseLong(field.substring(6));
+                    try {
+                        ClientTypeFieldDTO fieldDTO = clientTypeFieldApiClient.getFieldById(fieldId);
+                        if (fieldDTO != null && fieldDTO.getFieldLabel() != null) {
+                            headerMap.put(field, fieldDTO.getFieldLabel() + " (клієнта)");
+                        } else {
+                            headerMap.put(field, field + " (клієнта)");
+                        }
+                    } catch (Exception e) {
+                        log.warn("Failed to get field label for field {}: {}", field, e.getMessage());
+                        headerMap.put(field, field + " (клієнта)");
+                    }
+                } catch (NumberFormatException e) {
+                    log.warn("Invalid field ID in field name {}: {}", field, e.getMessage());
+                    headerMap.put(field, field + " (клієнта)");
+                }
+            }
+        }
+        
+        return headerMap;
     }
 
     private void createHeaderRow(Sheet sheet, List<String> selectedFields, Map<String, String> fieldToHeader) {
         Row headerRow = sheet.createRow(0);
         int colIndex = 0;
         for (String field : selectedFields) {
-            headerRow.createCell(colIndex++).setCellValue(fieldToHeader.get(field));
+            String header = fieldToHeader.getOrDefault(field, field);
+            headerRow.createCell(colIndex++).setCellValue(header);
         }
     }
 
     private void fillDataRows(Sheet sheet, List<Purchase> purchaseList, List<String> selectedFields, FilterIds filterIds,
-                              Map<Long, ClientDTO> clientMap) {
+                              Map<Long, ClientDTO> clientMap, Map<Long, List<ClientFieldValueDTO>> clientFieldValuesMap) {
         int rowIndex = 1;
         for (Purchase purchase : purchaseList) {
             Row row = sheet.createRow(rowIndex++);
             int colIndex = 0;
             ClientDTO client = clientMap.get(purchase.getClient());
+            List<ClientFieldValueDTO> fieldValues = client != null ? clientFieldValuesMap.getOrDefault(client.getId(), Collections.emptyList()) : Collections.emptyList();
             for (String field : selectedFields) {
-                row.createCell(colIndex++).setCellValue(getFieldValue(purchase, client, field, filterIds));
+                row.createCell(colIndex++).setCellValue(getFieldValue(purchase, client, field, filterIds, fieldValues));
             }
         }
     }
 
-    private String getFieldValue(Purchase purchase, ClientDTO client, String field, FilterIds filterIds) {
+    private String getFieldValue(Purchase purchase, ClientDTO client, String field, FilterIds filterIds, 
+                                  List<ClientFieldValueDTO> fieldValues) {
+        if (field.startsWith("field_")) {
+            try {
+                Long fieldId = Long.parseLong(field.substring(6));
+                return getDynamicFieldValue(fieldValues, fieldId);
+            } catch (NumberFormatException e) {
+                log.warn("Invalid field ID in field name {}: {}", field, e.getMessage());
+                return "";
+            }
+        }
+        
         if (field.endsWith("-client") && client != null) {
             return switch (field) {
                 case "id-client" -> client.getId() != null ? String.valueOf(client.getId()) : "";
@@ -293,7 +390,7 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
             };
         } else {
             return switch (field) {
-                case "idHEX0x20id" -> purchase.getId() != null ? String.valueOf(purchase.getId()) : "";
+                case "id" -> purchase.getId() != null ? String.valueOf(purchase.getId()) : "";
                 case "user" -> getNameFromDTOList(filterIds.userDTOs(), purchase.getUser());
                 case "source" -> getNameFromDTOList(filterIds.sourceDTOs(), purchase.getSource());
                 case "product" -> filterIds.productDTOs().stream()
@@ -316,6 +413,65 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
             };
         }
     }
+    
+    private String getDynamicFieldValue(List<ClientFieldValueDTO> fieldValues, Long fieldId) {
+        if (fieldValues == null || fieldValues.isEmpty()) {
+            return "";
+        }
+        
+        List<ClientFieldValueDTO> matchingValues = fieldValues.stream()
+                .filter(fv -> fv.getFieldId() != null && fv.getFieldId().equals(fieldId))
+                .sorted(Comparator.comparingInt(fv -> fv.getDisplayOrder() != null ? fv.getDisplayOrder() : 0))
+                .collect(Collectors.toList());
+        
+        if (matchingValues.isEmpty()) {
+            return "";
+        }
+        
+        ClientFieldValueDTO firstValue = matchingValues.get(0);
+        String fieldType = firstValue.getFieldType();
+        
+        if (matchingValues.size() > 1) {
+            return matchingValues.stream()
+                    .map(fv -> formatFieldValue(fv, fieldType))
+                    .filter(v -> !v.isEmpty())
+                    .collect(Collectors.joining(", "));
+        } else {
+            return formatFieldValue(firstValue, fieldType);
+        }
+    }
+    
+    private String formatFieldValue(ClientFieldValueDTO fieldValue, String fieldType) {
+        if (fieldValue == null) {
+            return "";
+        }
+        
+        return switch (fieldType) {
+            case "TEXT", "PHONE" -> fieldValue.getValueText() != null ? fieldValue.getValueText() : "";
+            case "NUMBER" -> fieldValue.getValueNumber() != null ? fieldValue.getValueNumber().toString() : "";
+            case "DATE" -> fieldValue.getValueDate() != null ? fieldValue.getValueDate().toString() : "";
+            case "BOOLEAN" -> {
+                if (fieldValue.getValueBoolean() == null) yield "";
+                yield fieldValue.getValueBoolean() ? "Так" : "Ні";
+            }
+            case "LIST" -> fieldValue.getValueListValue() != null ? fieldValue.getValueListValue() : "";
+            default -> "";
+        };
+    }
+    
+    private Map<Long, List<ClientFieldValueDTO>> fetchClientFieldValues(List<Long> clientIds) {
+        if (clientIds == null || clientIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        
+        try {
+            Map<Long, List<ClientFieldValueDTO>> result = clientApiClient.getClientFieldValuesBatch(clientIds);
+            return result != null ? result : Collections.emptyMap();
+        } catch (Exception e) {
+            log.warn("Failed to fetch field values batch for clients: {}", e.getMessage());
+            return Collections.emptyMap();
+        }
+    }
 
     private <T extends IdNameDTO> String getNameFromDTOList(List<T> dtoList, Long id) {
         if (id == null) return "";
@@ -328,7 +484,9 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
 
     private void sendExcelFileResponse(Workbook workbook, HttpServletResponse response) throws IOException {
         response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-        response.setHeader("Content-Disposition", "attachment; filename=purchase_data.xlsx");
+        String dateStr = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+        String filename = "purchase_data_" + dateStr + ".xlsx";
+        response.setHeader("Content-Disposition", "attachment; filename=" + filename);
         workbook.write(response.getOutputStream());
         workbook.close();
     }

@@ -58,7 +58,15 @@ public class ClientSearchController {
 
         Map<String, List<String>> filters = parseFilters(filtersJson);
         
-        Pageable pageable = PageRequest.of(page, size, Sort.by(sortDirection, sortProperty));
+        String actualSortProperty = sortProperty;
+        Sort.Direction actualSortDirection = sortDirection;
+        
+        if (sortProperty == null || (!sortProperty.equals("company") && !sortProperty.equals("source") && !sortProperty.equals("createdAt") && !sortProperty.equals("updatedAt"))) {
+            actualSortProperty = "updatedAt";
+            actualSortDirection = Sort.Direction.DESC;
+        }
+        
+        Pageable pageable = PageRequest.of(page, size, Sort.by(actualSortDirection, actualSortProperty));
 
         Page<ClientDTO> clients = clientService.searchClients(query, pageable, filters, clientTypeId)
                 .map(clientMapper::clientToClientDTO);

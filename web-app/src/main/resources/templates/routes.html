@@ -49,23 +49,45 @@
                 <ul id="route-types-dropdown" class="dropdown-menu" style="display: none;">
                 </ul>
             </li>
-            <li id="nav-purchase"><a href="/purchase">
-                Закупівлі
-            </a></li>
-            <li id="nav-containers"><a href="/containers">
-                Тари
-            </a></li>
+            <li id="nav-purchase" class="dropdown">
+                <a href="#" onclick="return false;">
+                    Закупівлі
+                    <span class="dropdown-arrow">▼</span>
+                </a>
+                <ul id="purchase-types-dropdown" class="dropdown-menu" style="display: none;">
+                </ul>
+            </li>
+            <li id="nav-containers" class="dropdown">
+                <a href="#" onclick="return false;">
+                    Тари
+                    <span class="dropdown-arrow">▼</span>
+                </a>
+                <ul id="container-types-dropdown" class="dropdown-menu" style="display: none;">
+                </ul>
+            </li>
             <li id="nav-inventory"><a href="/inventory">
                 Баланс тари
             </a></li>
+            <li id="nav-finance"><a href="/finance">
+                Фінанси
+            </a></li>
             <li id="nav-stock"><a href="/stock">
                 Склад
+            </a></li>
+            <li id="nav-declarant"><a href="/declarant">
+                Декларант
             </a></li>
             <li id="nav-analytics"><a href="/analytics">
                 Аналітика
             </a></li>
             <li id="nav-settings"><a href="/settings" class="setting-icon-block">
                 Налаштування
+            </a></li>
+            <li id="nav-administration"><a href="/administration">
+                Адміністрація
+            </a></li>
+            <li id="nav-profile"><a href="/profile">
+                Мій профіль
             </a></li>
             <li>
                 <a href="#" id="logout">

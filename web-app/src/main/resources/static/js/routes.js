@@ -419,16 +419,18 @@ function buildDynamicTable() {
         const th = document.createElement('th');
         th.textContent = field.fieldLabel;
         th.setAttribute('data-field-id', field.id);
+        
         if (field.isStatic) {
             th.setAttribute('data-static-field', field.staticFieldName);
-            if (field.staticFieldName === 'company') {
-                th.setAttribute('data-sort', 'company');
+            if (field.staticFieldName === 'company' || field.staticFieldName === 'source' || field.staticFieldName === 'createdAt' || field.staticFieldName === 'updatedAt') {
+                th.setAttribute('data-sort', field.staticFieldName);
+                th.style.cursor = 'pointer';
             }
-        } else if (field.fieldName === 'company') {
-            th.setAttribute('data-sort', 'company');
-        } else if (field.isSearchable) {
+        } else if (field.fieldName === 'company' || field.fieldName === 'source') {
             th.setAttribute('data-sort', field.fieldName);
+            th.style.cursor = 'pointer';
         }
+        
         if (field.columnWidth) {
             th.style.width = field.columnWidth + 'px';
             th.style.minWidth = field.columnWidth + 'px';
@@ -438,6 +440,8 @@ function buildDynamicTable() {
         th.style.flexGrow = '0';
         thead.appendChild(th);
     });
+    
+    setupSortHandlers();
 
     if (typeof initColumnResizer === 'function' && currentClientTypeId) {
     setTimeout(() => {
@@ -715,6 +719,8 @@ async function renderClients(clients) {
     } else {
         renderClientsWithDefaultFields(clients);
     }
+    
+    setupSortHandlers();
 
     if (typeof applyColumnWidths === 'function' && currentClientTypeId) {
         setTimeout(() => {
@@ -776,11 +782,11 @@ async function renderClientsWithDynamicFields(clients) {
                         break;
                     case 'createdAt':
                         cellValue = client.createdAt || '';
-                        html += `<td data-label="${field.fieldLabel}">${cellValue}</td>`;
+                        html += `<td data-label="${field.fieldLabel}" data-sort="createdAt" style="cursor: pointer;">${cellValue}</td>`;
                         break;
                     case 'updatedAt':
                         cellValue = client.updatedAt || '';
-                        html += `<td data-label="${field.fieldLabel}">${cellValue}</td>`;
+                        html += `<td data-label="${field.fieldLabel}" data-sort="updatedAt" style="cursor: pointer;">${cellValue}</td>`;
                         break;
                 }
             } else {
@@ -932,20 +938,54 @@ async function loadClientFieldValues(clientId) {
     }
 }
 
-document.querySelectorAll('th[data-sort]').forEach(th => {
-    th.addEventListener('click', () => {
+function updateSortIndicators() {
+    document.querySelectorAll('th[data-sort]').forEach(th => {
         const sortField = th.getAttribute('data-sort');
-
+        th.classList.remove('sort-asc', 'sort-desc');
+        
         if (currentSort === sortField) {
-            currentDirection = currentDirection === 'ASC' ? 'DESC' : 'ASC';
-        } else {
-            currentSort = sortField;
-            currentDirection = 'ASC';
+            if (currentDirection === 'ASC') {
+                th.classList.add('sort-asc');
+            } else {
+                th.classList.add('sort-desc');
+            }
         }
-
-        loadDataWithSort(0, 100, currentSort, currentDirection);
     });
-});
+}
+
+function getDefaultSortDirection(sortField) {
+    if (sortField === 'updatedAt' || sortField === 'createdAt') {
+        return 'DESC';
+    }
+    return 'ASC';
+}
+
+function setupSortHandlers() {
+    document.querySelectorAll('th[data-sort]').forEach(th => {
+        th.removeEventListener('click', handleSortClick);
+        th.addEventListener('click', handleSortClick);
+    });
+    updateSortIndicators();
+}
+
+function handleSortClick(event) {
+    const th = event.currentTarget;
+    const sortField = th.getAttribute('data-sort');
+    
+    if (!sortField || (sortField !== 'company' && sortField !== 'source' && sortField !== 'createdAt' && sortField !== 'updatedAt')) {
+        return;
+    }
+    
+    if (currentSort === sortField) {
+        currentDirection = currentDirection === 'ASC' ? 'DESC' : 'ASC';
+    } else {
+        currentSort = sortField;
+        currentDirection = getDefaultSortDirection(sortField);
+    }
+    
+    currentPage = 0;
+    loadDataWithSort(currentPage, pageSize, currentSort, currentDirection);
+}
 
 async function loadDataWithSort(page, size, sort, direction) {
     loaderBackdrop.style.display = 'flex';
@@ -1142,15 +1182,23 @@ async function showClientModal(client) {
     }, 10);
 
     document.getElementById('close-modal-client').addEventListener('click', () => {
-        modal.classList.remove('open');
-        setTimeout(() => {
-            closeModal();
-        });
+        if (!editing) {
+            modal.classList.remove('open');
+            setTimeout(() => {
+                closeModal();
+            });
+        } else {
+            showMessage('Збережіть або відмініть зміни', 'error');
+        }
     });
 
     window.onclick = function (event) {
         if (event.target === modal) {
-            closeModal();
+            if (!editing) {
+                closeModal();
+            } else {
+                showMessage('Збережіть або відмініть зміни', 'error');
+            }
         }
     }
 
@@ -1194,13 +1242,29 @@ async function showClientModal(client) {
     const canDelete = canDeleteClient(client);
 
     if (client.isActive === false) {
-        if (deleteButton) deleteButton.style.display = 'none';
-        if (restoreButton) restoreButton.style.display = 'block';
+        if (deleteButton) {
+            deleteButton.style.display = 'none';
+            deleteButton.dataset.originalDisplay = 'none';
+        }
+        if (restoreButton) {
+            restoreButton.style.display = 'block';
+            restoreButton.dataset.originalDisplay = 'block';
+        }
     } else {
         if (deleteButton) {
-            deleteButton.style.display = canDelete ? 'block' : 'none';
+            const displayValue = canDelete ? 'block' : 'none';
+            deleteButton.style.display = displayValue;
+            deleteButton.dataset.originalDisplay = displayValue;
         }
-        if (restoreButton) restoreButton.style.display = 'none';
+        if (restoreButton) {
+            restoreButton.style.display = 'none';
+            restoreButton.dataset.originalDisplay = 'none';
+        }
+    }
+    
+    // Сохраняем оригинальное состояние кнопки full-delete
+    if (fullDeleteButton) {
+        fullDeleteButton.dataset.originalDisplay = fullDeleteButton.style.display || 'block';
     }
     
     deleteButton.onclick = async () => {

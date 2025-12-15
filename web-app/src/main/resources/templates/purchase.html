@@ -57,20 +57,37 @@
                 <ul id="purchase-types-dropdown" class="dropdown-menu" style="display: none;">
                 </ul>
             </li>
-            <li id="nav-containers"><a href="/containers">
-                Тари
-            </a></li>
+            <li id="nav-containers" class="dropdown">
+                <a href="#" onclick="return false;">
+                    Тари
+                    <span class="dropdown-arrow">▼</span>
+                </a>
+                <ul id="container-types-dropdown" class="dropdown-menu" style="display: none;">
+                </ul>
+            </li>
             <li id="nav-inventory"><a href="/inventory">
                 Баланс тари
             </a></li>
+            <li id="nav-finance"><a href="/finance">
+                Фінанси
+            </a></li>
             <li id="nav-stock"><a href="/stock">
                 Склад
+            </a></li>
+            <li id="nav-declarant"><a href="/declarant">
+                Декларант
             </a></li>
             <li id="nav-analytics"><a href="/analytics">
                 Аналітика
             </a></li>
             <li id="nav-settings"><a href="/settings" class="setting-icon-block">
                 Налаштування
+            </a></li>
+            <li id="nav-administration"><a href="/administration">
+                Адміністрація
+            </a></li>
+            <li id="nav-profile"><a href="/profile">
+                Мій профіль
             </a></li>
             <li>
                 <a href="#" id="logout">
@@ -115,9 +132,8 @@
         </svg>
     </div>
 
-    <div class="open-modal-create-block">
-        <button id="open-modal">+</button>
-    </div>
+    <button id="exportToExcelData" class="btn btn-primary">Excel</button>
+
 </div>
 
 <div id="filterModal" class="modal-filter">
@@ -138,6 +154,40 @@
         <div id="client-types-selection-list" class="client-types-grid">
 
         </div>
+    </div>
+</div>
+
+<div id="exportModalData" class="modal-export-data" style="display: none;">
+    <div class="modal-export-data-content">
+        <h3>Виберіть поля для експорту</h3>
+        <form id="exportFieldsForm">
+            <div class="export-fields-section">
+                <h4>Поля закупівлі:</h4>
+                <label><input type="checkbox" name="fields" value="id" checked> Id закупівлі</label>
+                <label><input type="checkbox" name="fields" value="quantity" checked> Кількість</label>
+                <label><input type="checkbox" name="fields" value="unitPrice" checked> Ціна за одиницю</label>
+                <label><input type="checkbox" name="fields" value="totalPrice" checked> Всього сплачено</label>
+                <label><input type="checkbox" name="fields" value="currency" checked> Валюта</label>
+                <label><input type="checkbox" name="fields" value="exchangeRate" checked> Курс</label>
+                <label><input type="checkbox" name="fields" value="paymentMethod" checked> Метод оплати</label>
+                <label><input type="checkbox" name="fields" value="createdAt" checked> Дата створення</label>
+                <label><input type="checkbox" name="fields" value="updatedAt" checked> Дата оновлення</label>
+                <label><input type="checkbox" name="fields" value="user" checked> Водій</label>
+                <label><input type="checkbox" name="fields" value="product" checked> Товар</label>
+                <label><input type="checkbox" name="fields" value="source" checked> Залучення</label>
+                <label><input type="checkbox" name="fields" value="comment" checked> Коментар</label>
+            </div>
+            <div class="export-fields-section">
+                <h4>Поля клієнта:</h4>
+                <label><input type="checkbox" name="fields" value="id-client" checked> Id клієнта</label>
+                <label><input type="checkbox" name="fields" value="company-client" checked> Компанія</label>
+                <label><input type="checkbox" name="fields" value="createdAt-client" checked> Дата створення клієнта</label>
+                <label><input type="checkbox" name="fields" value="updatedAt-client" checked> Дата оновлення клієнта</label>
+                <label><input type="checkbox" name="fields" value="source-client" checked> Залучення клієнта</label>
+            </div>
+        </form>
+        <button id="exportConfirm" class="btn btn-primary">Експортувати</button>
+        <button id="exportCancel" class="btn btn-secondary">Скасування</button>
     </div>
 </div>
 
@@ -198,6 +248,7 @@
 <script src="/js/createCustomSelect.js"></script>
 <script src="/js/editClient.js"></script>
 <script src="/js/common.js"></script>
+<script src="/js/exportExcelPurchase.js"></script>
 <div id="client-modal" style="display: none;" data-source-id="" data-client-id="">
     <div class="modal-content-client">
         <span id="close-modal-client" class="close">&times;</span>

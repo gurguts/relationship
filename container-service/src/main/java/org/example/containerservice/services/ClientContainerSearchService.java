@@ -16,6 +16,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -46,15 +47,39 @@ public class ClientContainerSearchService {
     }
 
     private ClientData fetchClientData(String query, Map<String, List<String>> filterParams) {
-        Map<String, List<String>> filteredParams = filterParams.entrySet().stream()
+        Long clientTypeId = null;
+        if (filterParams != null && filterParams.containsKey("clientTypeId") && filterParams.get("clientTypeId") != null 
+                && !filterParams.get("clientTypeId").isEmpty()) {
+            try {
+                clientTypeId = Long.parseLong(filterParams.get("clientTypeId").get(0));
+            } catch (NumberFormatException e) {
+                log.warn("Invalid clientTypeId in filterParams: {}", filterParams.get("clientTypeId"));
+            }
+        }
+        
+        Map<String, List<String>> filteredParams = filterParams != null ? filterParams.entrySet().stream()
                 .filter(entry -> {
                     String key = entry.getKey();
-                    return key.equals("status") || key.equals("business") ||
-                            key.equals("route") || key.equals("region") || key.equals("source");
+                    return key.equals("source") ||
+                            key.equals("clientSource") ||
+                            key.equals("clientCreatedAtFrom") || key.equals("clientCreatedAtTo") ||
+                            key.equals("clientUpdatedAtFrom") || key.equals("clientUpdatedAtTo") ||
+                            key.startsWith("field");
                 })
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+                .collect(Collectors.toMap(
+                    entry -> {
+                        String key = entry.getKey();
+                        if (key.equals("clientSource")) return "source";
+                        if (key.equals("clientCreatedAtFrom")) return "createdAtFrom";
+                        if (key.equals("clientCreatedAtTo")) return "createdAtTo";
+                        if (key.equals("clientUpdatedAtFrom")) return "updatedAtFrom";
+                        if (key.equals("clientUpdatedAtTo")) return "updatedAtTo";
+                        return key;
+                    },
+                    Map.Entry::getValue
+                )) : Collections.emptyMap();
 
-        ClientSearchRequest clientRequest = new ClientSearchRequest(query, filteredParams);
+        ClientSearchRequest clientRequest = new ClientSearchRequest(query, filteredParams, clientTypeId);
         List<ClientDTO> clients = clientApiClient.searchClients(clientRequest);
         List<Long> clientIds = clients.stream()
                 .map(ClientDTO::getId)
@@ -78,7 +103,19 @@ public class ClientContainerSearchService {
 
     private Page<ClientContainer> fetchClientContainer(String query, Map<String, List<String>> filterParams,
                                                        List<Long> clientIds, Pageable pageable) {
-        Specification<ClientContainer> spec = new ClientContainerSpecification(query, filterParams, clientIds);
+        Map<String, List<String>> containerFilterParams = filterParams != null ? filterParams.entrySet().stream()
+                .filter(entry -> {
+                    String key = entry.getKey();
+                    return !key.equals("clientTypeId") && 
+                           !key.equals("source") &&
+                           !key.equals("clientSource") &&
+                           !key.equals("clientCreatedAtFrom") && !key.equals("clientCreatedAtTo") &&
+                           !key.equals("clientUpdatedAtFrom") && !key.equals("clientUpdatedAtTo") &&
+                           !key.startsWith("field");
+                })
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)) : Collections.emptyMap();
+        
+        Specification<ClientContainer> spec = new ClientContainerSpecification(query, containerFilterParams, clientIds);
         return clientContainerRepository.findAll(spec, pageable);
     }
 }

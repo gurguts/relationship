@@ -20,41 +20,21 @@ let clientTypeFields = [];
 let visibleFields = [];
 window.visibleFields = visibleFields;
 let filterableFields = [];
-let visibleInCreateFields = [];
 
-let availableStatuses = [];
-let availableRegions = [];
 let availableSources = [];
-let availableRoutes = [];
-let availableBusiness = [];
 let availableUsers = [];
 let availableProducts = [];
-let availableClientProducts = [];
-let availableContainers = [];
 
-let statusMap;
-let regionMap;
-let routeMap;
-let businessMap;
-let clientProductMap;
 let sourceMap;
 let userMap;
 let productMap;
-let containerMap;
-const paymentMethodMap = [
-    {id: "1", name: "1"},
-    {id: "2", name: "2"}
-];
 const currencyTypes = [
     {id: "UAH", name: "UAH"},
     {id: "USD", name: "USD"},
     {id: "EUR", name: "EUR"}
 ];
 
-let availablePaymentMethods = paymentMethodMap;
 let availableCurrencies = currencyTypes;
-new Map(paymentMethodMap.map(item => [item.id, item.name]));
-new Map(currencyTypes.map(item => [item.id, item.name]));
 const findNameByIdFromMap = (map, id) => {
     const numericId = Number(id); // Convert to number
 
@@ -89,7 +69,6 @@ function updatePagination(totalData, dataOnPage, totalPages, currentPageIndex) {
     nextPageButton.disabled = currentPageIndex >= totalPages - 1;
 }
 
-const userRole = localStorage.getItem('userRole');
 
 function renderPurchase(purchases) {
     const tbodyData = document.getElementById('client-table-body');
@@ -334,6 +313,43 @@ function deletePurchase(id, isReceived) {
 }
 
 
+function convertFieldNamesToFieldIds(filters) {
+    const converted = { ...filters };
+    const allFields = filterableFields && filterableFields.length > 0 ? filterableFields : 
+                     (clientTypeFields && clientTypeFields.length > 0 ? clientTypeFields : []);
+    
+    if (allFields.length === 0) {
+        return converted;
+    }
+    
+    const fieldNameToIdMap = {};
+    allFields.forEach(field => {
+        if (field.fieldName && field.id) {
+            fieldNameToIdMap[field.fieldName] = field.id;
+        }
+    });
+    
+    Object.keys(converted).forEach(key => {
+        if (fieldNameToIdMap[key]) {
+            const fieldId = fieldNameToIdMap[key];
+            const newKey = `field_${fieldId}`;
+            converted[newKey] = converted[key];
+            delete converted[key];
+        } else if (key.endsWith('From') || key.endsWith('To')) {
+            const baseName = key.endsWith('From') ? key.slice(0, -4) : key.slice(0, -2);
+            if (fieldNameToIdMap[baseName]) {
+                const fieldId = fieldNameToIdMap[baseName];
+                const suffix = key.endsWith('From') ? 'From' : 'To';
+                const newKey = `field_${fieldId}${suffix}`;
+                converted[newKey] = converted[key];
+                delete converted[key];
+            }
+        }
+    });
+    
+    return converted;
+}
+
 async function loadDataWithSort(page, size, sort, direction) {
     if (!currentClientTypeId) {
         return;
@@ -353,8 +369,9 @@ async function loadDataWithSort(page, size, sort, direction) {
         filters.clientTypeId = [currentClientTypeId.toString()];
     }
 
-    if (Object.keys(filters).length > 0) {
-        queryParams += `&filters=${encodeURIComponent(JSON.stringify(filters))}`;
+    const convertedFilters = convertFieldNamesToFieldIds(filters);
+    if (Object.keys(convertedFilters).length > 0) {
+        queryParams += `&filters=${encodeURIComponent(JSON.stringify(convertedFilters))}`;
     }
 
     try {
@@ -368,6 +385,8 @@ async function loadDataWithSort(page, size, sort, direction) {
 
         const data = await response.json();
         renderPurchase(data.content);
+        
+        setupSortHandlers();
 
         updatePagination(data.totalElements, data.content.length, data.totalPages, currentPage);
     } catch (error) {
@@ -378,6 +397,57 @@ async function loadDataWithSort(page, size, sort, direction) {
     }
 }
 
+function updateSortIndicators() {
+    document.querySelectorAll('th[data-sort]').forEach(th => {
+        const sortField = th.getAttribute('data-sort');
+        th.classList.remove('sort-asc', 'sort-desc');
+        
+        if (currentSort === sortField) {
+            if (currentDirection === 'ASC') {
+                th.classList.add('sort-asc');
+            } else {
+                th.classList.add('sort-desc');
+            }
+        }
+    });
+}
+
+function getDefaultSortDirection(sortField) {
+    if (sortField === 'updatedAt' || sortField === 'createdAt') {
+        return 'DESC';
+    }
+    return 'ASC';
+}
+
+function setupSortHandlers() {
+    document.querySelectorAll('th[data-sort]').forEach(th => {
+        th.removeEventListener('click', handleSortClick);
+        th.addEventListener('click', handleSortClick);
+    });
+    updateSortIndicators();
+}
+
+function handleSortClick(event) {
+    const th = event.currentTarget;
+    const sortField = th.getAttribute('data-sort');
+    
+    const staticFields = ['quantity', 'unitPrice', 'totalPrice', 'currency', 'totalPriceEur', 'exchangeRate', 'paymentMethod', 'createdAt', 'updatedAt'];
+    
+    if (!sortField || !staticFields.includes(sortField)) {
+        return;
+    }
+    
+    if (currentSort === sortField) {
+        currentDirection = currentDirection === 'ASC' ? 'DESC' : 'ASC';
+    } else {
+        currentSort = sortField;
+        currentDirection = getDefaultSortDirection(sortField);
+    }
+    
+    currentPage = 0;
+    loadDataWithSort(currentPage, pageSize, currentSort, currentDirection);
+}
+
 function buildPurchaseTable() {
     const thead = document.querySelector('#client-list table thead tr');
     if (!thead) return;
@@ -385,10 +455,10 @@ function buildPurchaseTable() {
     thead.innerHTML = '';
     
     const headers = [
-        { text: 'Назва клієнта', sort: 'company' },
-        { text: 'Водій', sort: 'userId' },
-        { text: 'Товар', sort: 'productId' },
-        { text: 'Залучення', sort: 'sourceId' },
+        { text: 'Назва клієнта', sort: null },
+        { text: 'Водій', sort: null },
+        { text: 'Товар', sort: null },
+        { text: 'Залучення', sort: null },
         { text: 'Кількість', sort: 'quantity' },
         { text: 'Ціна за одиницю', sort: 'unitPrice' },
         { text: 'Всього сплачено', sort: 'totalPrice' },
@@ -406,19 +476,11 @@ function buildPurchaseTable() {
         if (header.sort) {
             th.setAttribute('data-sort', header.sort);
             th.style.cursor = 'pointer';
-            th.addEventListener('click', () => {
-                const sortField = header.sort;
-                if (currentSort === sortField) {
-                    currentDirection = currentDirection === 'ASC' ? 'DESC' : 'ASC';
-                } else {
-                    currentSort = sortField;
-                    currentDirection = 'ASC';
-                }
-                loadDataWithSort(0, pageSize, currentSort, currentDirection);
-            });
         }
         thead.appendChild(th);
     });
+    
+    setupSortHandlers();
 }
 
 function buildDynamicFilters() {
@@ -536,8 +598,8 @@ function buildDynamicFilters() {
             <label class="select-label-style" for="filter-paymentMethod">Метод оплати:</label>
             <select id="filter-paymentMethod" name="paymentMethod">
                 <option value="">Всі</option>
-                <option value="CASH">2</option>
-                <option value="BANKTRANSFER">1</option>
+                <option value="2">2</option>
+                <option value="1">1</option>
             </select>
         `;
         filterForm.appendChild(paymentMethodSelectItem);
@@ -967,12 +1029,11 @@ async function loadClientType(typeId) {
 
 async function loadClientTypeFields(typeId) {
     try {
-        const [fieldsRes, visibleRes, searchableRes, filterableRes, visibleInCreateRes] = await Promise.all([
+        const [fieldsRes, visibleRes, searchableRes, filterableRes] = await Promise.all([
             fetch(`/api/v1/client-type/${typeId}/field`),
             fetch(`/api/v1/client-type/${typeId}/field/visible`),
             fetch(`/api/v1/client-type/${typeId}/field/searchable`),
-            fetch(`/api/v1/client-type/${typeId}/field/filterable`),
-            fetch(`/api/v1/client-type/${typeId}/field/visible-in-create`)
+            fetch(`/api/v1/client-type/${typeId}/field/filterable`)
         ]);
         
         clientTypeFields = await fieldsRes.json();
@@ -980,7 +1041,6 @@ async function loadClientTypeFields(typeId) {
         visibleFields = await visibleRes.json();
         window.visibleFields = visibleFields;
         filterableFields = await filterableRes.json();
-        visibleInCreateFields = await visibleInCreateRes.json();
     } catch (error) {
         console.error('Error loading fields:', error);
     }
@@ -1475,15 +1535,23 @@ async function showClientModal(client) {
     }, 10);
 
     document.getElementById('close-modal-client').addEventListener('click', () => {
-        modal.classList.remove('open');
-        setTimeout(() => {
-            closeModal();
-        });
+        if (!editing) {
+            modal.classList.remove('open');
+            setTimeout(() => {
+                closeModal();
+            });
+        } else {
+            showMessage('Збережіть або відмініть зміни', 'error');
+        }
     });
 
     window.onclick = function (event) {
         if (event.target === modal) {
-            closeModal();
+            if (!editing) {
+                closeModal();
+            } else {
+                showMessage('Збережіть або відмініть зміни', 'error');
+            }
         }
     }
 
@@ -1712,151 +1780,8 @@ document.getElementById('closeContainerModal')?.addEventListener('click', functi
     document.getElementById('containerClientModal').style.display = 'none';
 });
 
-async function toggleUrgently(clientId) {
-    loaderBackdrop.style.display = 'flex';
-
-    try {
-        const response = await fetch(`${API_URL}/urgently/${clientId}`, {method: 'PATCH'});
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            handleError(new ErrorResponse(errorData.error, errorData.message, errorData.details));
-            return;
-        }
-
-        showMessage('Статус терміновості успішно оновлено', 'info');
-
-        loadDataWithSort(currentPage, pageSize, currentSort, currentDirection);
-    } catch (error) {
-        console.error('Ошибка обновления статуса терміновості:', error);
-        handleError(error);
-    } finally {
-        loaderBackdrop.style.display = 'none';
-    }
-}
 
 
-/*--report--*/
-
-const fetchReportBtn = document.getElementById('fetch-report-btn');
-if (fetchReportBtn) {
-    fetchReportBtn.addEventListener('click', async () => {
-        const reportContainer = document.getElementById('report-container');
-        const reportContent = document.getElementById('report-content');
-
-        const searchInput = document.getElementById('inputSearch');
-        const searchTerm = searchInput ? searchInput.value : '';
-        let queryParams = '';
-
-        if (searchTerm) {
-            queryParams += `&q=${encodeURIComponent(searchTerm)}`;
-        }
-
-        if (Object.keys(selectedFilters).length > 0) {
-            queryParams += `&filters=${encodeURIComponent(JSON.stringify(selectedFilters))}`;
-        }
-
-        try {
-            const url = `api/v1/purchase/report?${queryParams}`;
-
-            const response = await fetch(url);
-            if (!response.ok) {
-                const errorData = await response.json();
-                handleError(new ErrorResponse(errorData.error, errorData.message, errorData.details));
-                return;
-            }
-
-            const data = await response.json();
-            reportContent.innerHTML = generateReportHTML(data);
-            reportContainer.style.display = 'block';
-
-            showMessage('Звіт успішно завантажено', 'info');
-        } catch (error) {
-            handleError(error);
-        }
-    });
-}
-
-
-function generateReportHTML(data) {
-    let html = `<h4>Всього закуплено та доставлено:</h4>`;
-    for (const [productId, collected] of Object.entries(data.totalCollectedByProduct)) {
-        const productName = findNameByIdFromMap(productMap, productId);
-        const delivered = data.totalDeliveredByProduct[productId] || 0;
-        html += `<div class="report-item">${productName}: Закуплено ${collected} кг, Фактично ${delivered} кг</div>`;
-    }
-
-    if (data.byAttractors && Object.keys(data.byAttractors).length > 0) {
-        html += `<h4>Закупівлі по залученням:</h4>`;
-        for (const [attractor, products] of Object.entries(data.byAttractors)) {
-            html += `<div class="report-item"><strong>${attractor}:</strong></div>`;
-            for (const [productId, amount] of Object.entries(products)) {
-                const productName = findNameByIdFromMap(productMap, productId);
-                html += `<div class="report-item sub-item">${productName}: ${amount} кг</div>`;
-            }
-        }
-    }
-
-    if (data.byDrivers && Object.keys(data.byDrivers).length > 0) {
-        html += `<h4>Закуплено водіями:</h4>`;
-        for (const [driver, products] of Object.entries(data.byDrivers)) {
-            html += `<div class="report-item"><strong>${driver}:</strong></div>`;
-            for (const [productId, amount] of Object.entries(products)) {
-                const productName = findNameByIdFromMap(productMap, productId);
-                html += `<div class="report-item sub-item">${productName}: ${amount} кг</div>`;
-            }
-        }
-    }
-
-    html += `<h4>Витрати:</h4>`;
-    for (const [currency, amount] of Object.entries(data.totalSpentByCurrency)) {
-        html += `<div class="report-item">Всього затрачено (${currency}): ${amount}</div>`;
-    }
-
-    html += `<h4>Середня ціна:</h4>`;
-    for (const [currency, price] of Object.entries(data.averagePriceByCurrency)) {
-        html += `<div class="report-item">Середня ціна за одиницю (${currency}): ${price}</div>`;
-    }
-
-    html += `<h4>Середній обсяг закупівлі за раз:</h4>`;
-    for (const [productId, amount] of Object.entries(data.averageCollectedPerTimeByProduct)) {
-        const productName = findNameByIdFromMap(productMap, productId);
-        html += `<div class="report-item">${productName}: ${amount} кг</div>`;
-    }
-
-    return html;
-}
-
-function closeReport() {
-    const reportContainer = document.getElementById('report-container');
-    reportContainer.style.display = 'none';
-}
-
-function printReport() {
-    const reportContent = document.getElementById('report-content').innerHTML;
-    const printWindow = window.open('', '', 'height=600,width=800');
-
-    printWindow.document.write('<html lang="ua"><head><title>Звіт</title>');
-
-    printWindow.document.write(`
-        <style>
-            body {
-                font-size: 14px;
-                margin: 20px;
-            }
-            h1, h2, h3 {
-                font-size: 18px;
-            }
-        </style>
-    `);
-
-    printWindow.document.write('</head><body>');
-    printWindow.document.write(reportContent);
-    printWindow.document.write('</body></html>');
-    printWindow.document.close();
-
-    printWindow.print();
-}
 
 
 /*--search--*/
@@ -2154,6 +2079,19 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     await loadEntitiesAndApplyFilters();
     loadDataWithSort(currentPage, pageSize, currentSort, currentDirection);
+    
+    // Инициализация экспорта в Excel
+    if (typeof initExcelExportPurchase === 'function') {
+        initExcelExportPurchase({
+            triggerId: 'exportToExcelData',
+            modalId: 'exportModalData',
+            cancelId: 'exportCancel',
+            confirmId: 'exportConfirm',
+            formId: 'exportFieldsForm',
+            searchInputId: 'inputSearch',
+            apiPath: API_URL_PURCHASE
+        });
+    }
 });
 
 

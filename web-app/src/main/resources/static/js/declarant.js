@@ -1,6 +1,5 @@
 let productMap = new Map();
 let warehouseMap = new Map();
-let userMap = new Map();
 let carrierMap = new Map();
 
 function formatNumber(value, maxDecimals = 6) {
@@ -47,29 +46,6 @@ async function fetchWarehouses() {
     }
 }
 
-function populateProducts(selectId) {
-    const select = document.getElementById(selectId);
-    if (!select) return;
-    select.innerHTML = '<option value="">Оберіть продукт</option>';
-    for (const [id, name] of productMap.entries()) {
-        const option = document.createElement('option');
-        option.value = id;
-        option.textContent = name;
-        select.appendChild(option);
-    }
-}
-
-function populateWarehouses(selectId) {
-    const select = document.getElementById(selectId);
-    if (!select) return;
-    select.innerHTML = '<option value="">Оберіть склад</option>';
-    for (const [id, name] of warehouseMap.entries()) {
-        const option = document.createElement('option');
-        option.value = id;
-        option.textContent = name;
-        select.appendChild(option);
-    }
-}
 
 async function fetchCarriers() {
     try {
@@ -298,7 +274,7 @@ if (createVehicleForm) {
                 throw new Error(errorData.message || 'Failed to create vehicle');
             }
             
-            const result = await response.json();
+            await response.json();
             showMessage('Машину успішно створено', 'success');
             
             closeModal('create-vehicle-modal');
@@ -1152,22 +1128,22 @@ function initializeColumnResize() {
     });
     
     if (!window.columnResizeInitialized) {
-    document.addEventListener('mousemove', (e) => {
-        if (!currentResizeHeader) return;
-        
-        const diff = e.pageX - startX;
-        const newWidth = Math.max(50, startWidth + diff);
-        const column = currentResizeHeader.dataset.column;
-        
-        currentResizeHeader.style.minWidth = newWidth + 'px';
-        currentResizeHeader.style.width = newWidth + 'px';
-        const index = Array.from(currentResizeHeader.parentElement.children).indexOf(currentResizeHeader);
-        const cells = table.querySelectorAll(`tbody tr td:nth-child(${index + 1})`);
-        cells.forEach(cell => {
-            cell.style.minWidth = newWidth + 'px';
-            cell.style.width = newWidth + 'px';
+        document.addEventListener('mousemove', (e) => {
+            if (!currentResizeHeader) return;
+            
+            const diff = e.pageX - startX;
+            const newWidth = Math.max(50, startWidth + diff);
+            const column = currentResizeHeader.dataset.column;
+            
+            currentResizeHeader.style.minWidth = newWidth + 'px';
+            currentResizeHeader.style.width = newWidth + 'px';
+            const index = Array.from(currentResizeHeader.parentElement.children).indexOf(currentResizeHeader);
+            const cells = table.querySelectorAll(`tbody tr td:nth-child(${index + 1})`);
+            cells.forEach(cell => {
+                cell.style.minWidth = newWidth + 'px';
+                cell.style.width = newWidth + 'px';
+            });
         });
-    });
         
         document.addEventListener('mouseup', () => {
             if (currentResizeHeader) {

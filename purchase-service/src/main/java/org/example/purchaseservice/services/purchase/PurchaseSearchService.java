@@ -52,8 +52,7 @@ public class PurchaseSearchService implements IPurchaseSearchService {
         Map<String, List<String>> clientFilterParams = filterParams != null ? filterParams.entrySet().stream()
                 .filter(entry -> {
                     String key = entry.getKey();
-                    return key.equals("status") || key.equals("business") ||
-                            key.equals("route") || key.equals("region") || key.equals("clientProduct") ||
+                    return key.equals("clientProduct") ||
                             key.equals("clientSource") ||
                             key.equals("clientCreatedAtFrom") || key.equals("clientCreatedAtTo") ||
                             key.equals("clientUpdatedAtFrom") || key.equals("clientUpdatedAtTo") ||
@@ -72,7 +71,7 @@ public class PurchaseSearchService implements IPurchaseSearchService {
                     Map.Entry::getValue
                 )) : Collections.emptyMap();
 
-        ClientData clientData = fetchClientData(query, filterParams);
+        ClientData clientData = fetchClientData(query, clientFilterParams, clientTypeId);
         List<Long> clientIds = clientData.clientIds();
         Map<Long, ClientDTO> clientMap = clientData.clientMap();
 
@@ -80,9 +79,10 @@ public class PurchaseSearchService implements IPurchaseSearchService {
                 .filter(entry -> {
                     String key = entry.getKey();
                     return !key.equals("clientTypeId") && 
-                           !key.equals("status") && !key.equals("business") &&
-                           !key.equals("route") && !key.equals("region") && 
                            !key.equals("clientProduct") &&
+                           !key.equals("clientSource") &&
+                           !key.equals("clientCreatedAtFrom") && !key.equals("clientCreatedAtTo") &&
+                           !key.equals("clientUpdatedAtFrom") && !key.equals("clientUpdatedAtTo") &&
                            !key.startsWith("field");
                 })
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)) : Collections.emptyMap();
@@ -106,48 +106,25 @@ public class PurchaseSearchService implements IPurchaseSearchService {
                 purchasePage.getTotalPages(), purchaseDTOs);
     }
 
-    private ClientData fetchClientData(String query, Map<String, List<String>> filterParams) {
-        Long clientTypeId = null;
-        if (filterParams.containsKey("clientTypeId") && filterParams.get("clientTypeId") != null 
-                && !filterParams.get("clientTypeId").isEmpty()) {
-            try {
-                clientTypeId = Long.parseLong(filterParams.get("clientTypeId").get(0));
-            } catch (NumberFormatException e) {
-                log.warn("Invalid clientTypeId in filterParams: {}", filterParams.get("clientTypeId"));
-            }
-        }
-
-        Map<String, List<String>> clientFilterParams = filterParams.entrySet().stream()
-                .filter(entry -> {
-                    String key = entry.getKey();
-                    return key.equals("status") || key.equals("business") ||
-                            key.equals("route") || key.equals("region") || key.equals("clientProduct") ||
-                            key.endsWith("From") || key.endsWith("To") ||
-                            (key.startsWith("field") && !key.equals("clientTypeId"));
-                })
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-
+    private ClientData fetchClientData(String query, Map<String, List<String>> clientFilterParams, Long clientTypeId) {
         ClientSearchRequest clientRequest = new ClientSearchRequest(query, clientFilterParams, clientTypeId);
         List<ClientDTO> foundClients = clientApiClient.searchClients(clientRequest);
 
-        ClientSearchRequest allClientsRequest = new ClientSearchRequest(null, Collections.emptyMap(), clientTypeId);
-        List<ClientDTO> allClients = clientApiClient.searchClients(allClientsRequest);
-        Map<Long, ClientDTO> clientMap = allClients.stream()
-                .collect(Collectors.toMap(ClientDTO::getId, client -> client));
-
-        if (!clientFilterParams.isEmpty() || clientTypeId != null) {
-            List<Long> clientIds = foundClients.stream()
-                    .map(ClientDTO::getId)
-                    .collect(Collectors.toList());
+        if (!clientFilterParams.isEmpty() || clientTypeId != null || (query != null && !query.trim().isEmpty())) {
+            Map<Long, ClientDTO> clientMap = foundClients.stream()
+                    .collect(Collectors.toMap(ClientDTO::getId, client -> client));
             
-            return new ClientData(clientIds, clientMap);
-        } else if (query != null && !query.trim().isEmpty()) {
             List<Long> clientIds = foundClients.stream()
                     .map(ClientDTO::getId)
                     .collect(Collectors.toList());
             
             return new ClientData(clientIds, clientMap);
         } else {
+            ClientSearchRequest allClientsRequest = new ClientSearchRequest(null, Collections.emptyMap(), clientTypeId);
+            List<ClientDTO> allClients = clientApiClient.searchClients(allClientsRequest);
+            Map<Long, ClientDTO> clientMap = allClients.stream()
+                    .collect(Collectors.toMap(ClientDTO::getId, client -> client));
+            
             return new ClientData(null, clientMap);
         }
     }

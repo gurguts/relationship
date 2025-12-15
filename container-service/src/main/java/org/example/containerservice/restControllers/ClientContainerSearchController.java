@@ -32,15 +32,31 @@ public class ClientContainerSearchController {
     @PreAuthorize("hasAuthority('container:view')")
     @GetMapping("/search-containers")
     public ResponseEntity<PageResponse<ClientContainerResponseDTO>> searchClientContainers(
+            @RequestParam(name = "q", required = false) String query,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "100") int size,
             @RequestParam(defaultValue = "updatedAt") String sort,
-            @RequestParam(defaultValue = "ASC") String direction,
-            @RequestParam(required = false) String query,
+            @RequestParam(defaultValue = "DESC") String direction,
             @RequestParam(required = false) String filters) {
 
-        Sort.Direction sortDirection = Sort.Direction.fromString(direction);
-        Sort sortBy = Sort.by(sortDirection, sort);
+        String actualSortProperty = sort;
+        Sort.Direction actualSortDirection = Sort.Direction.fromString(direction);
+        
+        String[] validSortFields = {"quantity", "updatedAt"};
+        boolean isValidSort = false;
+        for (String validField : validSortFields) {
+            if (validField.equals(sort)) {
+                isValidSort = true;
+                break;
+            }
+        }
+        
+        if (!isValidSort) {
+            actualSortProperty = "updatedAt";
+            actualSortDirection = Sort.Direction.DESC;
+        }
+        
+        Sort sortBy = Sort.by(actualSortDirection, actualSortProperty);
         Pageable pageable = PageRequest.of(page, size, sortBy);
 
         Map<String, List<String>> filterParams;

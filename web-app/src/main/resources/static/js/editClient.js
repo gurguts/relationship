@@ -59,7 +59,17 @@ function normalizePhoneNumber(phone) {
 function enableEdit(fieldId) {
     showSaveCancelButtons();
     const field = document.getElementById(`modal-client-${fieldId}`);
+    if (!field) return;
     const currentValue = field.innerText;
+    
+    // Убираем карандашик при начале редактирования
+    const fieldP = field.closest('p');
+    if (fieldP) {
+        const editIcon = fieldP.querySelector('.edit-icon');
+        if (editIcon) {
+            editIcon.style.display = 'none';
+        }
+    }
 
     field.innerHTML = `<textarea id="edit-${fieldId}" class="edit-textarea">${currentValue}</textarea>`;
 
@@ -69,7 +79,18 @@ function enableEdit(fieldId) {
 function enableSelect(fieldId, options) {
     showSaveCancelButtons();
     const field = document.getElementById(`modal-client-${fieldId}`);
+    if (!field) return;
     const currentValue = field.innerText;
+    
+    // Убираем карандашик при начале редактирования
+    const fieldP = field.closest('p');
+    if (fieldP) {
+        const editIcon = fieldP.querySelector('.edit-icon');
+        if (editIcon) {
+            editIcon.style.display = 'none';
+        }
+    }
+    
     field.innerHTML = `<select id="edit-${fieldId}"></select>`;
     const select = document.getElementById(`edit-${fieldId}`);
     options.forEach(option => {
@@ -85,11 +106,31 @@ function enableSelect(fieldId, options) {
 function showSaveCancelButtons() {
     document.getElementById('save-client').style.display = 'inline';
     document.getElementById('cancel-client').style.display = 'inline';
+    // Скрываем кнопки удаления при редактировании
+    const deleteButton = document.getElementById('delete-client');
+    const restoreButton = document.getElementById('restore-client');
+    const fullDeleteButton = document.getElementById('full-delete-client');
+    if (deleteButton) deleteButton.style.display = 'none';
+    if (restoreButton) restoreButton.style.display = 'none';
+    if (fullDeleteButton) fullDeleteButton.style.display = 'none';
 }
 
 function hideSaveCancelButtons() {
     document.getElementById('save-client').style.display = 'none';
     document.getElementById('cancel-client').style.display = 'none';
+    // Показываем кнопки удаления после завершения редактирования
+    const deleteButton = document.getElementById('delete-client');
+    const restoreButton = document.getElementById('restore-client');
+    const fullDeleteButton = document.getElementById('full-delete-client');
+    if (deleteButton && deleteButton.dataset.originalDisplay !== undefined) {
+        deleteButton.style.display = deleteButton.dataset.originalDisplay;
+    }
+    if (restoreButton && restoreButton.dataset.originalDisplay !== undefined) {
+        restoreButton.style.display = restoreButton.dataset.originalDisplay;
+    }
+    if (fullDeleteButton && fullDeleteButton.dataset.originalDisplay !== undefined) {
+        fullDeleteButton.style.display = fullDeleteButton.dataset.originalDisplay;
+    }
 }
 
 function closeModal() {
@@ -136,6 +177,12 @@ function cancelClientChanges() {
                 span.textContent = input.dataset.originalValue || '';
                 input.replaceWith(span);
             });
+        }
+        
+        // Восстанавливаем карандашик
+        const editIcon = fieldP.querySelector('.edit-icon');
+        if (editIcon) {
+            editIcon.style.display = '';
         }
     });
     
@@ -326,8 +373,21 @@ function getSelectedId(selectedText, availableOptions) {
 async function enableEditField(fieldId, fieldType, allowMultiple) {
     showSaveCancelButtons();
     const fieldSpan = document.getElementById(`modal-field-${fieldId}`);
+    if (!fieldSpan) {
+        console.warn(`Field span not found for fieldId: ${fieldId}`);
+        return;
+    }
     const fieldP = fieldSpan.closest('p');
-    if (!fieldP) return;
+    if (!fieldP) {
+        console.warn(`Field paragraph not found for fieldId: ${fieldId}`);
+        return;
+    }
+    
+    // Убираем карандашик при начале редактирования
+    const editIcon = fieldP.querySelector('.edit-icon');
+    if (editIcon) {
+        editIcon.style.display = 'none';
+    }
     
     fieldP.classList.add('editing');
     let currentValue = fieldSpan.innerText.trim();
