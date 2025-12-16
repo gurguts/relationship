@@ -1,4 +1,3 @@
-document.cookie = "authToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
 document.getElementById('loginForm').addEventListener('submit',
     async function (event) {
     event.preventDefault();
@@ -19,22 +18,11 @@ document.getElementById('loginForm').addEventListener('submit',
     })
         .then(response => {
             if (!response.ok) {
-                return response.text().then(text => {
-                    if (!text) {
-                        throw new Error(`Empty response with status ${response.status}`);
-                    }
-                    let errors;
-                    try {
-                        errors = JSON.parse(text);
-                    } catch (e) {
-                        throw new Error(`Invalid JSON response: ${text}`);
-                    }
-
-                    const errorMessages = Object.entries(errors)
-                        .map(([field, message]) => `${field}: ${message}`)
-                        .join(', ');
-
-                    throw new Error(errorMessages);
+                return response.json().then(errorResponse => {
+                    const message = errorResponse.message || 'Помилка авторизації';
+                    throw new Error(message);
+                }).catch(() => {
+                    throw new Error('Помилка авторизації');
                 });
             }
             return response.json();
@@ -42,7 +30,7 @@ document.getElementById('loginForm').addEventListener('submit',
         .then(data => {
             if (data.token) {
 
-                document.cookie = `authToken=${data.token};max-age=${data.expiration}path=/;`;
+                document.cookie = `authToken=${data.token}; max-age=${data.expiration}; path=/; SameSite=Lax`;
                 localStorage.setItem('userId', data.userId);
                 localStorage.setItem('userRole', data.role);
                 localStorage.setItem('fullName', data.fullName);
@@ -64,6 +52,9 @@ document.getElementById('loginForm').addEventListener('submit',
                         break;
                     case 'Адміністратор':
                         window.location.href = '/administration';
+                        break;
+                    case 'Декларант':
+                        window.location.href = '/declarant';
                         break;
                     default:
                         console.error("Unknown user role:", data.role);

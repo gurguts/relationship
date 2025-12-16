@@ -69,6 +69,7 @@ function renderContainers(containers) {
 
     containers.forEach(container => {
         const row = document.createElement('tr');
+        row.classList.add('container-row');
         row.dataset.id = container.containerId;
 
         row.innerHTML = getRowHtml(container);
@@ -100,11 +101,11 @@ function getRowHtml(container) {
     const updatedAt = container.updatedAt ? new Date(container.updatedAt).toLocaleDateString('ua-UA') : '';
     
     return `
-        <td class="company-cell">${clientName}</td>
-        <td>${containerName}</td>
-        <td>${quantity}</td>
-        <td>${userName}</td>
-        <td>${updatedAt}</td>
+        <td class="company-cell" data-label="Назва клієнта">${clientName}</td>
+        <td data-label="Тип тари">${containerName}</td>
+        <td data-label="Кількість">${quantity}</td>
+        <td data-label="Власник">${userName}</td>
+        <td data-label="Оновлено">${updatedAt}</td>
     `;
 }
 
@@ -457,7 +458,7 @@ async function showClientModal(client) {
             if (values.length > 0) {
                 if (field.allowMultiple) {
                     fieldValue = values.map(v => formatFieldValueForModal(v, field)).join('<br>');
-                } else {
+    } else {
                     fieldValue = formatFieldValueForModal(values[0], field);
                 }
             }
@@ -555,10 +556,10 @@ async function showClientModal(client) {
 
     document.getElementById('close-modal-client').addEventListener('click', () => {
         if (!editing) {
-            modal.classList.remove('open');
-            setTimeout(() => {
-                closeModal();
-            });
+        modal.classList.remove('open');
+        setTimeout(() => {
+            closeModal();
+        });
         } else {
             showMessage('Збережіть або відмініть зміни', 'error');
         }
@@ -567,7 +568,7 @@ async function showClientModal(client) {
     window.onclick = function (event) {
         if (event.target === modal) {
             if (!editing) {
-                closeModal();
+            closeModal();
             } else {
                 showMessage('Збережіть або відмініть зміни', 'error');
             }
@@ -656,25 +657,25 @@ async function showClientModal(client) {
         restoreButton.onclick = async () => {
             if (!confirm('Ви впевнені, що хочете відновити цього клієнта? Клієнт знову стане активним.')) {
                 return;
-            }
-            
-            loaderBackdrop.style.display = 'flex';
-            try {
+}
+
+    loaderBackdrop.style.display = 'flex';
+    try {
                 const response = await fetch(`${API_URL}/active/${client.id}`, {method: 'PATCH'});
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    handleError(new ErrorResponse(errorData.error, errorData.message, errorData.details));
-                    return;
-                }
+        if (!response.ok) {
+            const errorData = await response.json();
+            handleError(new ErrorResponse(errorData.error, errorData.message, errorData.details));
+            return;
+        }
                 showMessage('Клієнт відновлено (isActive = true)', 'info');
                 modal.style.display = 'none';
 
-                loadDataWithSort(currentPage, pageSize, currentSort, currentDirection);
-            } catch (error) {
+        loadDataWithSort(currentPage, pageSize, currentSort, currentDirection);
+    } catch (error) {
                 console.error('Помилка відновлення клієнта:', error);
-                handleError(error);
-            } finally {
-                loaderBackdrop.style.display = 'none';
+        handleError(error);
+    } finally {
+        loaderBackdrop.style.display = 'none';
             }
         };
     }
@@ -885,9 +886,9 @@ function buildDynamicFilters() {
         quantityBlock.className = 'filter-block';
         quantityBlock.innerHTML = `
             <label class="from-to-style" for="filter-quantity-from">Від:</label>
-            <input type="number" id="filter-quantity-from" name="quantityFrom" step="0.01" placeholder="Мінімум"><br><br>
+            <input type="number" id="filter-quantity-from" name="quantityFrom" step="0.01" placeholder="Мінімум">
             <label class="from-to-style" for="filter-quantity-to">До:</label>
-            <input type="number" id="filter-quantity-to" name="quantityTo" step="0.01" placeholder="Максимум"><br><br>
+            <input type="number" id="filter-quantity-to" name="quantityTo" step="0.01" placeholder="Максимум">
         `;
         filterForm.appendChild(quantityBlock);
 
@@ -899,9 +900,9 @@ function buildDynamicFilters() {
         updatedAtBlock.className = 'filter-block';
         updatedAtBlock.innerHTML = `
             <label class="from-to-style" for="filter-updatedAt-from">Від:</label>
-            <input type="date" id="filter-updatedAt-from" name="updatedAtFrom"><br><br>
+            <input type="date" id="filter-updatedAt-from" name="updatedAtFrom">
             <label class="from-to-style" for="filter-updatedAt-to">До:</label>
-            <input type="date" id="filter-updatedAt-to" name="updatedAtTo"><br><br>
+            <input type="date" id="filter-updatedAt-to" name="updatedAtTo">
         `;
         filterForm.appendChild(updatedAtBlock);
 
@@ -917,9 +918,9 @@ function buildDynamicFilters() {
         clientCreatedAtBlock.className = 'filter-block';
         clientCreatedAtBlock.innerHTML = `
             <label class="from-to-style" for="filter-clientCreatedAt-from">Від:</label>
-            <input type="date" id="filter-clientCreatedAt-from" name="clientCreatedAtFrom"><br><br>
+            <input type="date" id="filter-clientCreatedAt-from" name="clientCreatedAtFrom">
             <label class="from-to-style" for="filter-clientCreatedAt-to">До:</label>
-            <input type="date" id="filter-clientCreatedAt-to" name="clientCreatedAtTo"><br><br>
+            <input type="date" id="filter-clientCreatedAt-to" name="clientCreatedAtTo">
         `;
         filterForm.appendChild(clientCreatedAtBlock);
 
@@ -931,9 +932,9 @@ function buildDynamicFilters() {
         clientUpdatedAtBlock.className = 'filter-block';
         clientUpdatedAtBlock.innerHTML = `
             <label class="from-to-style" for="filter-clientUpdatedAt-from">Від:</label>
-            <input type="date" id="filter-clientUpdatedAt-from" name="clientUpdatedAtFrom"><br><br>
+            <input type="date" id="filter-clientUpdatedAt-from" name="clientUpdatedAtFrom">
             <label class="from-to-style" for="filter-clientUpdatedAt-to">До:</label>
-            <input type="date" id="filter-clientUpdatedAt-to" name="clientUpdatedAtTo"><br><br>
+            <input type="date" id="filter-clientUpdatedAt-to" name="clientUpdatedAtTo">
         `;
         filterForm.appendChild(clientUpdatedAtBlock);
 
@@ -1012,9 +1013,9 @@ function buildDynamicFilters() {
                     filterBlock.className = 'filter-block';
                     filterBlock.innerHTML = `
                         <label class="from-to-style" for="filter-${field.fieldName}-from">Від:</label>
-                        <input type="date" id="filter-${field.fieldName}-from" name="${field.fieldName}From"><br><br>
+                        <input type="date" id="filter-${field.fieldName}-from" name="${field.fieldName}From">
                         <label class="from-to-style" for="filter-${field.fieldName}-to">До:</label>
-                        <input type="date" id="filter-${field.fieldName}-to" name="${field.fieldName}To"><br><br>
+                        <input type="date" id="filter-${field.fieldName}-to" name="${field.fieldName}To">
                     `;
                     filterForm.appendChild(filterBlock);
                 } else if (field.fieldType === 'NUMBER') {
@@ -1026,9 +1027,9 @@ function buildDynamicFilters() {
                     filterBlock.className = 'filter-block';
                     filterBlock.innerHTML = `
                         <label class="from-to-style" for="filter-${field.fieldName}-from">Від:</label>
-                        <input type="number" id="filter-${field.fieldName}-from" name="${field.fieldName}From" step="any" placeholder="Мінімум"><br><br>
+                        <input type="number" id="filter-${field.fieldName}-from" name="${field.fieldName}From" step="any" placeholder="Мінімум">
                         <label class="from-to-style" for="filter-${field.fieldName}-to">До:</label>
-                        <input type="number" id="filter-${field.fieldName}-to" name="${field.fieldName}To" step="any" placeholder="Максимум"><br><br>
+                        <input type="number" id="filter-${field.fieldName}-to" name="${field.fieldName}To" step="any" placeholder="Максимум">
                     `;
                     filterForm.appendChild(filterBlock);
                 } else if (field.fieldType === 'LIST') {
@@ -1278,8 +1279,8 @@ function updateFilterCounter() {
 const filterCounter = document.getElementById('filter-counter');
 if (filterCounter) {
     filterCounter.addEventListener('click', () => {
-        clearFilters();
-    });
+    clearFilters();
+});
 }
 
 function clearFilters() {
@@ -1291,7 +1292,7 @@ function clearFilters() {
         Object.keys(customSelects).forEach(selectId => {
             if (selectId.startsWith('filter-')) {
                 if (customSelects[selectId] && typeof customSelects[selectId].reset === 'function') {
-                    customSelects[selectId].reset();
+                customSelects[selectId].reset();
                 }
             }
         });
@@ -1299,7 +1300,7 @@ function clearFilters() {
 
     const searchInput = document.getElementById('inputSearch');
     if (searchInput) {
-        searchInput.value = '';
+    searchInput.value = '';
     }
 
     localStorage.removeItem('selectedFilters');
@@ -1352,14 +1353,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (savedSearchTerm) {
         const searchInput = document.getElementById('inputSearch');
         if (searchInput) {
-            searchInput.value = savedSearchTerm;
+        searchInput.value = savedSearchTerm;
         }
     }
 
     try {
         const [containersRes, entitiesRes] = await Promise.all([
             fetch('/api/v1/container'),
-            fetch('/api/v1/entities')
+    fetch('/api/v1/entities')
         ]);
 
         if (containersRes.ok) {
@@ -1398,6 +1399,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     } catch (error) {
         console.error('Error loading initial data:', error);
-        handleError(error);
+            handleError(error);
     }
 });

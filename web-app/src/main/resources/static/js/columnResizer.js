@@ -317,6 +317,10 @@ function applyColumnWidths(clientTypeId) {
     const table = document.querySelector('#client-list table');
     if (!table) return;
     
+    if (window.innerWidth <= 1024) {
+        return;
+    }
+    
     const thead = table.querySelector('thead tr');
     if (!thead) return;
     

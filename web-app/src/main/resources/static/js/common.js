@@ -49,10 +49,12 @@ function showHideElements(authorities) {
         'nav-containers': ['container:view'],
         'nav-inventory': ['inventory:view'],
         'nav-finance': ['finance:view'],
-        'nav-warehouse': ['warehouse:view'],
+        'nav-stock': ['warehouse:view'],
+        'nav-declarant': ['declarant:view'],
         'actions-container-transfer': ['container:transfer'],
         'nav-analytics': ['analytics:view'],
         'nav-settings': ['settings:view'],
+        'nav-administration': ['system:admin'],
 
         'full-delete-client': ['client:full_delete'],
         'export-excel-warehouse': ['warehouse:excel'],
@@ -93,9 +95,12 @@ document.addEventListener('DOMContentLoaded', function () {
     const navLinks = document.querySelectorAll('nav a:not(#logout)');
 
     navLinks.forEach(link => {
-        link.addEventListener('click', function () {
+        link.addEventListener('click', function (e) {
+            const parentLi = this.closest('li');
+            const isDropdown = parentLi && parentLi.classList.contains('dropdown');
+            const isDropdownLink = this.getAttribute('href') === '#' && isDropdown;
 
-            if (!this.classList.contains('selected-nav')) {
+            if (!isDropdownLink && !this.classList.contains('selected-nav')) {
                 resetFiltersOnPageChange();
             }
         });
@@ -455,7 +460,12 @@ async function loadContainerTypesDropdown() {
 }
 
 function resetFiltersOnPageChange() {
-    Object.keys(selectedFilters).forEach(key => delete selectedFilters[key]);
+    if (typeof selectedFilters !== 'undefined' && selectedFilters !== null) {
+        Object.keys(selectedFilters).forEach(key => delete selectedFilters[key]);
+    }
+    if (typeof window.selectedFilters !== 'undefined' && window.selectedFilters !== null) {
+        Object.keys(window.selectedFilters).forEach(key => delete window.selectedFilters[key]);
+    }
 
     const filterForm = document.getElementById('filterForm');
     if (filterForm) {

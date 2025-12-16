@@ -1649,6 +1649,19 @@ input.custom-select-placeholder {
 }
 
 @media (max-width: 1024px) {
+    #client-list table th,
+    #client-list table td {
+        width: auto !important;
+        min-width: auto !important;
+        max-width: none !important;
+    }
+
+    #purchase-list table th,
+    #purchase-list table td {
+        width: auto !important;
+        min-width: auto !important;
+        max-width: none !important;
+    }
 
     #all-purchase-info {
         font-size: 0.6em;
@@ -1661,67 +1674,462 @@ input.custom-select-placeholder {
         width: 10em;
     }
 
-    .modal-export-data-content {
+    .filter-button-block svg {
+        width: 1.5em;
+        height: 1.5em;
+        padding: 0.2em;
+    }
+
+    #open-modal {
+        border-radius: 50%;
+        padding: 0 0.3em;
+        border: none;
+        cursor: pointer;
+        transition: background-color 0.3s;
+        font-size: 1.8em;
+    }
+
+    .modal-content-filter {
+        width: 90%;
+        max-width: 100%;
         padding: 1em;
-        width: 85%;
+        border-radius: 12px;
+        max-height: 95vh;
+        margin: 0 auto;
+    }
+
+    .modal-content-filter h1 {
+        font-size: 1.2em;
+        margin: 0.5em 0;
+    }
+
+    .modal-content-filter h2 {
+        font-size: 1em;
+        margin: 0.8em 0 0.5em 0;
+    }
+
+    .close-filter {
+        top: 0.5em;
+        right: 0.5em;
+        width: 36px;
+        height: 36px;
+        font-size: 1.8em;
+    }
+
+    #filterForm {
+        height: auto;
+        max-height: calc(95vh - 150px);
+        overflow-y: auto;
+        margin-bottom: 0.8em;
+    }
+
+    .filter-block {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.8em;
+        margin-bottom: 0.8em;
+    }
+
+    #filterForm input[type="number"],
+    #filterForm input[type="date"] {
+        width: 100%;
+        font-size: 16px;
+        padding: 0.8em;
+        box-sizing: border-box;
+    }
+
+    .from-to-style {
+        gap: 0.2em;
+        margin: 0 0.5em;
+    }
+
+    .select-container {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.5em;
+    }
+
+    .select-label-style {
+        margin: 0.3em 0;
+    }
+
+    .select-section-items {
+        margin-bottom: 1em;
+        gap: 0.8em;
+    }
+
+    .select-section-item {
+        width: 100%;
+    }
+
+    .modal-content-filter button[type="submit"] {
+        width: 100%;
+        padding: 0.9em;
+        font-size: 1em;
+        min-height: 48px;
+        margin-top: 0.5em;
+    }
+
+    .modal-export-data-content {
+        padding: 1.2em;
+        width: 90%;
+        max-width: 100%;
+        border-radius: 12px;
+        max-height: 95vh;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
     }
 
     .modal-export-data-content h3 {
-        margin-bottom: 1em;
+        font-size: 1.2em;
+        margin-bottom: 0.8em;
         margin-top: 0;
+        text-align: center;
     }
 
     .modal-export-data-content form {
-        max-height: 18em;
+        flex: 1;
+        max-height: calc(95vh - 180px);
         overflow-y: auto;
+        margin-bottom: 1em;
+        padding-right: 0.3em;
     }
 
+    .export-fields-section {
+        margin-bottom: 1em;
+    }
+
+    .export-fields-section h4 {
+        font-size: 1em;
+        margin-bottom: 0.5em;
+        padding-bottom: 0.3em;
+    }
+
+    .export-fields-section label {
+        font-size: 0.95em;
+        margin-bottom: 0.5em;
+        padding: 0.4em 0;
+    }
+
+    .modal-export-data-content label {
+        font-size: 1em;
+        padding: 0 0.5em;
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        border-radius: 4px;
+        transition: background-color 0.2s ease;
+    }
+
+    .modal-export-data-content label:hover {
+        background-color: #f5f5f5;
+    }
+
+    .modal-export-data-content label input {
+        width: 1.3em;
+        height: 1.3em;
+        margin-right: 0.8em;
+        flex-shrink: 0;
+        cursor: pointer;
+    }
+
+    .modal-export-data-content .btn {
+        width: 100%;
+        padding: 0.9em;
+        font-size: 1em;
+        min-height: 48px;
+        margin-bottom: 0.6em;
+        border-radius: 8px;
+        font-weight: 600;
+    }
+
+    .modal-export-data-content .btn:last-child {
+        margin-bottom: 0;
+    }
+
+    .modal-export-data-content .btn-primary {
+        margin-right: 0;
+    }
+
+    #client-list table,
     #purchase-list table {
         display: block;
     }
 
+    #client-list thead,
     #purchase-list thead {
         display: none;
     }
 
+    #client-list tbody,
     #purchase-list tbody {
         display: flex;
-        align-items: center;
+        align-items: stretch;
         flex-direction: column;
-        gap: 1em;
-    }
-
-    .purchase-row {
-        width: 95vw;
-        display: flex;
-        flex-direction: column;
-        border: 1px solid #ddd;
+        gap: 1.5em;
         padding: 0.5em;
-        background-color: #fff;
-        border-radius: 0.5em;
     }
 
-    .purchase-row td {
+    .client-row,
+    .purchase-row,
+    .container-row {
+        width: calc(100% - 2em);
+        max-width: 600px;
+        margin: 0 auto 1em auto;
         display: flex;
-        justify-content: space-between;
-        padding: 0.5em 0;
-        border-bottom: 1px solid #eee;
+        flex-direction: column;
+        padding: 0.8em;
+        border-radius: 12px;
+        background: #fff;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        border: 1px solid #e0e0e0;
+        transition: all 0.3s ease;
+        overflow: visible;
+        box-sizing: border-box;
     }
 
-    .purchase-row td:last-child {
+    .client-row:hover,
+    .purchase-row:hover,
+    .container-row:hover {
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+        transform: translateY(-2px);
+    }
+
+    .client-row td,
+    .purchase-row td,
+    .container-row td {
+        display: flex;
+        flex-direction: row;
+        align-items: flex-start;
+        padding: 0.9em 0;
+        border-bottom: 1px solid #f0f0f0;
+        gap: 0.8em;
+        position: relative;
+        min-height: auto;
+        overflow: visible;
+        box-sizing: border-box;
+    }
+
+    .client-row td:last-child,
+    .purchase-row td:last-child,
+    .container-row td:last-child {
         border-bottom: none;
+        padding-bottom: 0;
     }
 
-    .purchase-row td::before {
+    .client-row td:first-child,
+    .purchase-row td:first-child,
+    .container-row td:first-child {
+        padding-top: 0.9em;
+    }
+
+    .client-row td::before,
+    .purchase-row td::before,
+    .container-row td::before {
         content: attr(data-label);
-        font-weight: bold;
-        color: var(--dark-green);
+        font-weight: 600;
+        color: var(--dark-blue);
+        font-size: 0.7em;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
         flex-shrink: 0;
-        margin-right: 1em;
+        width: 90px;
+        min-width: 90px;
+        max-width: 90px;
+        padding: 0.35em 0.5em;
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-radius: 6px;
+        border-left: 3px solid var(--dark-green);
+        text-align: left;
+        line-height: 1.3;
+        box-sizing: border-box;
+        overflow: visible;
+        white-space: normal;
+        word-break: break-word;
+        display: block;
     }
 
+    .client-row td .company-cell,
+    .client-row td > *,
+    .purchase-row td > *,
+    .container-row td > * {
+        color: #333;
+        font-size: 1em;
+        word-break: break-word;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        line-height: 1.5;
+        white-space: normal;
+        flex: 1;
+        text-align: left;
+        padding-left: 0.5em;
+        min-width: 0;
+        box-sizing: border-box;
+    }
+
+    .client-row td .company-cell,
+    .container-row td .company-cell {
+        color: var(--dark-green);
+        font-weight: 600;
+        text-decoration: underline;
+        cursor: pointer;
+        padding-left: 0;
+    }
+
+    .client-row td .company-cell:hover,
+    .container-row td .company-cell:hover {
+        color: var(--bright-blue);
+    }
+
+    .purchase-row td[data-label="Дії"] {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 0.5em;
+        flex-wrap: wrap;
+    }
+
+    .purchase-row td[data-label="Дії"] .edit-button,
+    .purchase-row td[data-label="Дії"] .delete-button {
+        flex: 1;
+        padding: 0.6em 0.8em;
+        font-size: 0.9em;
+        color: #fff !important;
+    }
+
+    #client-list,
     #purchase-list {
         height: 88vh;
+        padding: 1em 0;
+    }
+
+    #client-list tbody,
+    #purchase-list tbody {
+        padding-bottom: 2em;
+    }
+
+    #client-modal {
+        padding: 1em;
+    }
+
+    .modal-content-client {
+        width: 100%;
+        max-width: 100%;
+        max-height: 95vh;
+        padding: 1.2em;
+        border-radius: 12px;
+    }
+
+    .modal-content-client h1 {
+        font-size: 1.2em;
+        padding-bottom: 0.2em;
+        margin-bottom: 0.2em;
+    }
+
+    .modal-content-client .client-fields-container {
+        padding-right: 0;
+        margin-bottom: 0.8em;
+    }
+
+    .modal-content-client p {
+        padding: 0.7em 0.8em;
+        margin-bottom: 0.6em;
+        flex-direction: row;
+        align-items: center;
+        gap: 0.5em;
+    }
+
+    .modal-content-client strong {
+        font-size: 0.85em;
+        min-width: 6em;
+        flex-shrink: 0;
+    }
+
+    .modal-content-client span {
+        font-size: 0.95em;
+        flex: 1;
+        min-width: 0;
+    }
+
+    .edit-icon {
+        min-width: 32px;
+        min-height: 32px;
+        width: 32px;
+        height: 32px;
+    }
+
+    .modal-content-client input,
+    .modal-content-client textarea {
+        width: 100%;
+        min-width: 100%;
+        font-size: 16px;
+        padding: 0.6em;
+        margin-top: 0.4em;
+    }
+
+    .modal-content-client select {
+        width: 100%;
+        font-size: 16px;
+        padding: 0.6em;
+        margin-top: 0.4em;
+    }
+
+    .section-client-buttons {
+        flex-direction: column;
+        margin-top: 0.2em;
+        padding-top: 0.2em;
+        border-top: 1px solid #e0e0e0;
+    }
+
+    .section-client-buttons-block {
+        width: 100%;
+        flex-direction: row;
+        gap: 0.5em;
+        flex-wrap: wrap;
+    }
+
+    .client-action-info-button {
+        flex: 1;
+        min-width: calc(33.333% - 0.4em);
+        padding: 0.6em 0.8em;
+        font-size: 0.9em;
+        height: 2.5em;
+        border-radius: 6px;
+    }
+
+    .client-action-info-button:before {
+        display: none;
+    }
+
+    .client-action-info-button:hover {
+        background-color: var(--dark-blue);
+        color: #fff;
+        transform: none;
+    }
+
+    .client-action-info-button:active {
+        background-color: var(--bright-blue);
+        color: #fff;
+    }
+
+    #close-modal-client {
+        top: 0.2em;
+        right: 0.6em;
+        width: 36px;
+        height: 36px;
+        font-size: 1.8em;
+    }
+
+    .edit-textarea {
+        width: 100%;
+        min-width: 100%;
+        max-height: 15em;
+        resize: vertical;
+    }
+
+    .modal-content-p-source {
+        flex-direction: row;
     }
 
     #filter-clear {
@@ -1732,28 +2140,70 @@ input.custom-select-placeholder {
         width: 80%;
     }
 
-    .modal-content-client {
-        padding: 1em;
-        width: 85%;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        overflow-y: auto;
-        font-family: sans-serif;
-        position: relative;
-        max-height: 93%;
-    }
-
-    .modal-content-client strong {
-        display: inline;
-    }
-
-    .modal-content-client span {
-        display: block;
-        margin-top: 0.3em;
-    }
-
     .modal-pickup-client-content {
         font-size: 0.7em;
         width: 90%;
+    }
+
+    .edit-modal-content {
+        width: 90%;
+        max-width: 100%;
+        max-height: 95vh;
+        padding: 1.2em;
+        border-radius: 12px;
+        box-sizing: border-box;
+    }
+
+    .edit-modal-content h3 {
+        font-size: 1.2em;
+        margin-bottom: 1em;
+        padding-bottom: 0.5em;
+        border-bottom: 2px solid var(--dark-green);
+    }
+
+    .edit-modal-content form {
+        max-height: calc(95vh - 120px);
+        overflow-y: auto;
+        padding-right: 0.3em;
+    }
+
+    .edit-modal-content label {
+        font-size: 0.95em;
+        margin-bottom: 1em;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5em;
+    }
+
+    .edit-modal-content input,
+    .edit-modal-content select,
+    .edit-modal-content textarea {
+        width: 100%;
+        font-size: 16px;
+        padding: 0.8em;
+        margin-top: 0;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        box-sizing: border-box;
+    }
+
+    .edit-modal-content textarea {
+        min-height: 80px;
+        resize: vertical;
+    }
+
+    .edit-modal-content button {
+        width: 100%;
+        padding: 0.9em;
+        font-size: 1em;
+        min-height: 48px;
+        margin: 0.5em 0 0 0;
+        border-radius: 8px;
+        font-weight: 600;
+    }
+
+    .edit-modal-content button[type="submit"] {
+        margin-top: 1em;
     }
 }
 

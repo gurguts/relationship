@@ -628,17 +628,17 @@ function renderTransactions(transactions) {
         }
 
         row.innerHTML = `
-            <td>${date}</td>
-            <td>${type}</td>
-            <td>${vehicle}</td>
-            <td>${category}</td>
-            <td>${fromAccount}</td>
-            <td>${toAccount}</td>
-            <td>${amountDisplay}</td>
-            <td>${currency}</td>
-            <td>${client}</td>
-            <td>${description}</td>
-            <td>
+            <td data-label="Дата">${date}</td>
+            <td data-label="Тип">${type}</td>
+            <td data-label="Машина">${vehicle}</td>
+            <td data-label="Категорія">${category}</td>
+            <td data-label="З рахунку">${fromAccount}</td>
+            <td data-label="На рахунок">${toAccount}</td>
+            <td data-label="Сума">${amountDisplay}</td>
+            <td data-label="Валюта">${currency}</td>
+            <td data-label="Клієнт">${client}</td>
+            <td data-label="Опис">${description}</td>
+            <td data-label="Дії">
                 <div class="action-buttons-table">
                     <button class="action-btn btn-edit" onclick="openEditTransactionModal(${transaction.id})">Редагувати</button>
                 </div>
@@ -1455,10 +1455,10 @@ function renderExchangeRates(rates) {
             : 'Не встановлено';
         
         row.innerHTML = `
-            <td>${currency}</td>
-            <td>${rate ? rate.rate.toFixed(6) : 'Не встановлено'}</td>
-            <td>${updatedAt}</td>
-            <td>
+            <td data-label="Валюта">${currency}</td>
+            <td data-label="Курс до EUR">${rate ? rate.rate.toFixed(6) : 'Не встановлено'}</td>
+            <td data-label="Оновлено">${updatedAt}</td>
+            <td data-label="Дії">
                 <button class="action-btn btn-edit" onclick="openEditExchangeRateModal('${currency}', ${rate ? rate.rate : 'null'})">
                     ${rate ? 'Оновити' : 'Встановити'}
                 </button>

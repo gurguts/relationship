@@ -1,7 +1,6 @@
 :root {
-    --bright-blue: #42A5F5;
-    --dark-blue: #1976D2;
-    --primary: #42A5F5;
+    --bright-blue: #0554F2;
+    --primary: #0554F2;
     --primary-dark: #1976D2;
     --primary-light: #64B5F6;
     --secondary: #1976D2;
@@ -241,6 +240,12 @@ body {
 #manage-carriers-modal .modern-table tbody tr:hover {
     background: var(--bg-primary);
     transform: none;
+}
+
+#tab-products .modern-table tbody tr.vehicle-item-row:hover {
+    background: var(--bg-primary);
+    transform: none;
+    cursor: default;
 }
 
 .modern-table tbody tr.loading-row {

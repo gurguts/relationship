@@ -78,6 +78,7 @@ function renderPurchase(purchases) {
 
     purchases.forEach(purchase => {
         const row = document.createElement('tr');
+        row.classList.add('purchase-row');
         row.dataset.id = purchase.id;
 
         row.innerHTML = getRowHtml(purchase);
@@ -149,19 +150,19 @@ function getRowHtml(purchase) {
     const deleteDisabled = isReceived ? 'disabled' : '';
     
     return `
-        <td class="company-cell">${clientName}</td>
-        <td>${userName}</td>
-        <td>${productName}</td>
-        <td>${sourceName}</td>
-        <td>${quantity}</td>
-        <td>${unitPrice}</td>
-        <td>${totalPrice}</td>
-        <td>${currency}</td>
-        <td>${totalPriceEur}</td>
-        <td>${exchangeRate}</td>
-        <td>${paymentMethod}</td>
-        <td>${createdAt}</td>
-        <td>
+        <td class="company-cell" data-label="Назва клієнта">${clientName}</td>
+        <td data-label="Водій">${userName}</td>
+        <td data-label="Товар">${productName}</td>
+        <td data-label="Залучення">${sourceName}</td>
+        <td data-label="Кількість">${quantity}</td>
+        <td data-label="Ціна за одиницю">${unitPrice}</td>
+        <td data-label="Всього сплачено">${totalPrice}</td>
+        <td data-label="Валюта">${currency}</td>
+        <td data-label="Всього сплачено (EUR)">${totalPriceEur}</td>
+        <td data-label="Курс">${exchangeRate}</td>
+        <td data-label="Метод оплати">${paymentMethod}</td>
+        <td data-label="Дата створення">${createdAt}</td>
+        <td data-label="Дії">
             <button class="edit-button" data-purchase-id="${purchase.id}" ${editDisabled}>Редагувати</button>
             <button class="delete-button" data-purchase-id="${purchase.id}" ${deleteDisabled}>Видалити</button>
         </td>
@@ -557,9 +558,9 @@ function buildDynamicFilters() {
         quantityBlock.className = 'filter-block';
         quantityBlock.innerHTML = `
             <label class="from-to-style" for="filter-quantity-from">Від:</label>
-            <input type="number" id="filter-quantity-from" name="quantityFrom" step="0.01" placeholder="Мінімум"><br><br>
+            <input type="number" id="filter-quantity-from" name="quantityFrom" step="0.01" placeholder="Мінімум">
             <label class="from-to-style" for="filter-quantity-to">До:</label>
-            <input type="number" id="filter-quantity-to" name="quantityTo" step="0.01" placeholder="Максимум"><br><br>
+            <input type="number" id="filter-quantity-to" name="quantityTo" step="0.01" placeholder="Максимум">
         `;
         filterForm.appendChild(quantityBlock);
 
@@ -571,9 +572,9 @@ function buildDynamicFilters() {
         unitPriceBlock.className = 'filter-block';
         unitPriceBlock.innerHTML = `
             <label class="from-to-style" for="filter-unitPrice-from">Від:</label>
-            <input type="number" id="filter-unitPrice-from" name="unitPriceFrom" step="0.01" placeholder="Мінімум"><br><br>
+            <input type="number" id="filter-unitPrice-from" name="unitPriceFrom" step="0.01" placeholder="Мінімум">
             <label class="from-to-style" for="filter-unitPrice-to">До:</label>
-            <input type="number" id="filter-unitPrice-to" name="unitPriceTo" step="0.01" placeholder="Максимум"><br><br>
+            <input type="number" id="filter-unitPrice-to" name="unitPriceTo" step="0.01" placeholder="Максимум">
         `;
         filterForm.appendChild(unitPriceBlock);
 
@@ -585,9 +586,9 @@ function buildDynamicFilters() {
         totalPriceBlock.className = 'filter-block';
         totalPriceBlock.innerHTML = `
             <label class="from-to-style" for="filter-totalPrice-from">Від:</label>
-            <input type="number" id="filter-totalPrice-from" name="totalPriceFrom" step="0.01" placeholder="Мінімум"><br><br>
+            <input type="number" id="filter-totalPrice-from" name="totalPriceFrom" step="0.01" placeholder="Мінімум">
             <label class="from-to-style" for="filter-totalPrice-to">До:</label>
-            <input type="number" id="filter-totalPrice-to" name="totalPriceTo" step="0.01" placeholder="Максимум"><br><br>
+            <input type="number" id="filter-totalPrice-to" name="totalPriceTo" step="0.01" placeholder="Максимум">
         `;
         filterForm.appendChild(totalPriceBlock);
 
@@ -612,9 +613,9 @@ function buildDynamicFilters() {
         createdAtBlock.className = 'filter-block';
         createdAtBlock.innerHTML = `
             <label class="from-to-style" for="filter-createdAt-from">Від:</label>
-            <input type="date" id="filter-createdAt-from" name="createdAtFrom"><br><br>
+            <input type="date" id="filter-createdAt-from" name="createdAtFrom">
             <label class="from-to-style" for="filter-createdAt-to">До:</label>
-            <input type="date" id="filter-createdAt-to" name="createdAtTo"><br><br>
+            <input type="date" id="filter-createdAt-to" name="createdAtTo">
         `;
         filterForm.appendChild(createdAtBlock);
 
@@ -640,9 +641,9 @@ function buildDynamicFilters() {
         clientCreatedAtBlock.className = 'filter-block';
         clientCreatedAtBlock.innerHTML = `
             <label class="from-to-style" for="filter-clientCreatedAt-from">Від:</label>
-            <input type="date" id="filter-clientCreatedAt-from" name="clientCreatedAtFrom"><br><br>
+            <input type="date" id="filter-clientCreatedAt-from" name="clientCreatedAtFrom">
             <label class="from-to-style" for="filter-clientCreatedAt-to">До:</label>
-            <input type="date" id="filter-clientCreatedAt-to" name="clientCreatedAtTo"><br><br>
+            <input type="date" id="filter-clientCreatedAt-to" name="clientCreatedAtTo">
         `;
         filterForm.appendChild(clientCreatedAtBlock);
 
@@ -654,9 +655,9 @@ function buildDynamicFilters() {
         clientUpdatedAtBlock.className = 'filter-block';
         clientUpdatedAtBlock.innerHTML = `
             <label class="from-to-style" for="filter-clientUpdatedAt-from">Від:</label>
-            <input type="date" id="filter-clientUpdatedAt-from" name="clientUpdatedAtFrom"><br><br>
+            <input type="date" id="filter-clientUpdatedAt-from" name="clientUpdatedAtFrom">
             <label class="from-to-style" for="filter-clientUpdatedAt-to">До:</label>
-            <input type="date" id="filter-clientUpdatedAt-to" name="clientUpdatedAtTo"><br><br>
+            <input type="date" id="filter-clientUpdatedAt-to" name="clientUpdatedAtTo">
         `;
         filterForm.appendChild(clientUpdatedAtBlock);
 
@@ -700,9 +701,9 @@ function buildDynamicFilters() {
                     filterBlock.className = 'filter-block';
                     filterBlock.innerHTML = `
                         <label class="from-to-style" for="filter-${field.fieldName}-from">Від:</label>
-                        <input type="date" id="filter-${field.fieldName}-from" name="${field.fieldName}From"><br><br>
+                        <input type="date" id="filter-${field.fieldName}-from" name="${field.fieldName}From">
                         <label class="from-to-style" for="filter-${field.fieldName}-to">До:</label>
-                        <input type="date" id="filter-${field.fieldName}-to" name="${field.fieldName}To"><br><br>
+                        <input type="date" id="filter-${field.fieldName}-to" name="${field.fieldName}To">
                     `;
                     filterForm.appendChild(filterBlock);
                 } else if (field.fieldType === 'NUMBER') {
@@ -714,9 +715,9 @@ function buildDynamicFilters() {
                     filterBlock.className = 'filter-block';
                     filterBlock.innerHTML = `
                         <label class="from-to-style" for="filter-${field.fieldName}-from">Від:</label>
-                        <input type="number" id="filter-${field.fieldName}-from" name="${field.fieldName}From" step="any" placeholder="Мінімум"><br><br>
+                        <input type="number" id="filter-${field.fieldName}-from" name="${field.fieldName}From" step="any" placeholder="Мінімум">
                         <label class="from-to-style" for="filter-${field.fieldName}-to">До:</label>
-                        <input type="number" id="filter-${field.fieldName}-to" name="${field.fieldName}To" step="any" placeholder="Максимум"><br><br>
+                        <input type="number" id="filter-${field.fieldName}-to" name="${field.fieldName}To" step="any" placeholder="Максимум">
                     `;
                     filterForm.appendChild(filterBlock);
                 } else if (field.fieldType === 'LIST') {

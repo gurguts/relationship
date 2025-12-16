@@ -14,5 +14,7 @@ public enum Role {
 
     ACCOUNTANT(),
 
-    DRIVER()
+    DRIVER(),
+
+    DECLARANT()
 }

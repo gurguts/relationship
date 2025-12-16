@@ -504,9 +504,9 @@ function buildDynamicFilters() {
         createdAtBlock.className = 'filter-block';
         createdAtBlock.innerHTML = `
             <label class="from-to-style" for="filter-createdAt-from">Від:</label>
-            <input type="date" id="filter-createdAt-from" name="createdAtFrom"><br><br>
+            <input type="date" id="filter-createdAt-from" name="createdAtFrom">
             <label class="from-to-style" for="filter-createdAt-to">До:</label>
-            <input type="date" id="filter-createdAt-to" name="createdAtTo"><br><br>
+            <input type="date" id="filter-createdAt-to" name="createdAtTo">
         `;
         filterForm.appendChild(createdAtBlock);
         
@@ -518,9 +518,9 @@ function buildDynamicFilters() {
         updatedAtBlock.className = 'filter-block';
         updatedAtBlock.innerHTML = `
             <label class="from-to-style" for="filter-updatedAt-from">Від:</label>
-            <input type="date" id="filter-updatedAt-from" name="updatedAtFrom"><br><br>
+            <input type="date" id="filter-updatedAt-from" name="updatedAtFrom">
             <label class="from-to-style" for="filter-updatedAt-to">До:</label>
-            <input type="date" id="filter-updatedAt-to" name="updatedAtTo"><br><br>
+            <input type="date" id="filter-updatedAt-to" name="updatedAtTo">
         `;
         filterForm.appendChild(updatedAtBlock);
 
@@ -547,9 +547,9 @@ function buildDynamicFilters() {
                     filterBlock.className = 'filter-block';
                     filterBlock.innerHTML = `
                         <label class="from-to-style" for="filter-${field.fieldName}-from">Від:</label>
-                        <input type="date" id="filter-${field.fieldName}-from" name="${field.fieldName}From"><br><br>
+                        <input type="date" id="filter-${field.fieldName}-from" name="${field.fieldName}From">
                         <label class="from-to-style" for="filter-${field.fieldName}-to">До:</label>
-                        <input type="date" id="filter-${field.fieldName}-to" name="${field.fieldName}To"><br><br>
+                        <input type="date" id="filter-${field.fieldName}-to" name="${field.fieldName}To">
                     `;
                     filterForm.appendChild(filterBlock);
                 } else if (field.fieldType === 'NUMBER') {
@@ -561,9 +561,9 @@ function buildDynamicFilters() {
                     filterBlock.className = 'filter-block';
                     filterBlock.innerHTML = `
                         <label class="from-to-style" for="filter-${field.fieldName}-from">Від:</label>
-                        <input type="number" id="filter-${field.fieldName}-from" name="${field.fieldName}From" step="any" placeholder="Мінімум"><br><br>
+                        <input type="number" id="filter-${field.fieldName}-from" name="${field.fieldName}From" step="any" placeholder="Мінімум">
                         <label class="from-to-style" for="filter-${field.fieldName}-to">До:</label>
-                        <input type="number" id="filter-${field.fieldName}-to" name="${field.fieldName}To" step="any" placeholder="Максимум"><br><br>
+                        <input type="number" id="filter-${field.fieldName}-to" name="${field.fieldName}To" step="any" placeholder="Максимум">
                     `;
                     filterForm.appendChild(filterBlock);
                 } else if (field.fieldType === 'LIST') {
@@ -745,7 +745,7 @@ async function renderClientsWithDynamicFields(clients) {
         const row = document.createElement('tr');
         row.classList.add('client-row');
         
-        let html = '<td class="button-td" data-label="">';
+        let html = '<td class="button-td" data-label="Дії">';
         html += `<button class="purchase-button" data-client-id="${client.id}">Закупка</button>`;
         html += `<button class="container-button" data-client-id="${client.id}">Тара</button>`;
         html += '</td>';
@@ -845,7 +845,7 @@ function renderClientsWithDefaultFields(clients) {
         row.classList.add('client-row');
 
         row.innerHTML = `
-            <td class="button-td" data-label="">
+            <td class="button-td" data-label="Дії">
                 <button class="purchase-button" data-client-id="${client.id}">Закупка</button>
                 <button class="container-button" data-client-id="${client.id}">Тара</button>
             </td>

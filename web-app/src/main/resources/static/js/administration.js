@@ -1,4 +1,12 @@
 const loaderBackdrop = document.getElementById('loader-backdrop');
+const roles = {
+    'manager': 'Менеджер',
+    'driver': 'Водій',
+    'storekeeper': 'Комірник',
+    'leader': 'Керівник',
+    'accountant': 'Бухгалтер',
+    'declarant': 'Декларант'
+};
 const allPermissions = [
     'system:admin',
 
@@ -302,12 +310,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Create select for role change
         const roleSelect = document.createElement('select');
-        const roles = {
-            'manager': 'Менеджер',
-            'driver': 'Водій',
-            'storekeeper': 'Комірник',
-            'leader': 'Керівник'
-        };
 
         for (const [roleValue, roleLabel] of Object.entries(roles)) {
             const option = document.createElement('option');
@@ -455,7 +457,8 @@ document.addEventListener('DOMContentLoaded', function () {
             users.forEach(user => {
                 const listItem = document.createElement('li');
                 const statusText = user.status === 'BANNED' ? '❌ Заблокований' : '✅ Активний';
-                listItem.textContent = `${user.fullName} - ${user.id} - ${user.login} - ${user.role} - ${statusText} `;
+                const roleText = roles[user.role?.toLowerCase()] || user.role;
+                listItem.textContent = `${user.fullName} - ${user.id} - ${user.login} - ${roleText} - ${statusText} `;
 
                 const editBtn = document.createElement('button');
                 editBtn.textContent = 'Змінити';

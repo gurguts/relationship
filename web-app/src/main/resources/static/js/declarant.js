@@ -780,19 +780,6 @@ function openEditVehicleItemModal(itemId) {
     openModal('edit-vehicle-item-modal');
 }
 
-const vehicleItemsTbody = document.getElementById('vehicle-items-tbody');
-if (vehicleItemsTbody) {
-    vehicleItemsTbody.addEventListener('click', (event) => {
-        const row = event.target.closest('tr[data-item-id]');
-        if (!row) {
-            return;
-        }
-        const itemId = row.dataset.itemId;
-        if (itemId) {
-            openEditVehicleItemModal(itemId);
-        }
-    });
-}
 
 if (editVehicleItemModeRadios.length > 0) {
     editVehicleItemModeRadios.forEach(radio => {

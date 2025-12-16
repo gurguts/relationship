@@ -140,10 +140,11 @@ public class GlobalExceptionAdvice {
 
     @ExceptionHandler(BadCredentialsException.class)
     @ResponseStatus(HttpStatus.UNAUTHORIZED)
-    public ErrorResponse handleBadCredentials(BadCredentialsException ex) {
+    public ErrorResponse handleBadCredentials(BadCredentialsException ex, Locale locale) {
+        log.warn("Authentication failed: {}", ex.getMessage());
         return new ErrorResponse(
                 "auth.error",
-                ex.getMessage(),
+                messageSource.getMessage("auth.error", null, "Невірні данні для входу", locale),
                 null);
     }
 

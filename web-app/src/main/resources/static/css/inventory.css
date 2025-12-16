@@ -166,3 +166,123 @@ body {
 #balanceOperationForm button[type="submit"]:active {
     transform: scale(0.95);
 }
+
+@media (max-width: 1024px) {
+    .user-container-balance-page {
+        padding: 1em;
+        max-width: 100%;
+    }
+
+    .user-container-balance-page h1 {
+        font-size: 1.3em;
+        margin-bottom: 1em;
+    }
+
+    .user-container-balance-item {
+        padding: 0.8em;
+        margin-bottom: 1.5em;
+        border-radius: 12px;
+        background: #fff;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        border: 1px solid #e0e0e0;
+    }
+
+    .user-container-balance-item-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1em;
+        margin-bottom: 0.8em;
+    }
+
+    .user-container-balance-item-header .user-name {
+        font-size: 1.2em;
+        width: 100%;
+    }
+
+    .user-container-balance-button {
+        width: 100%;
+        padding: 0.9em;
+        font-size: 1em;
+        text-align: center;
+    }
+
+    .user-container-balance-item ul {
+        padding: 0;
+        margin: 0.5em 0 0;
+    }
+
+    .user-container-balance-item li {
+        font-size: 1.3em;
+        padding: 0.3em 0;
+        border-bottom: 1px solid #f0f0f0;
+        word-break: break-word;
+        font-weight: bold;
+    }
+
+    .user-container-balance-item li:last-child {
+        border-bottom: none;
+    }
+
+    .modal-content-balance-operation {
+        width: 90%;
+        max-width: 100%;
+        max-height: 95vh;
+        padding: 1.2em;
+        border-radius: 12px;
+        box-sizing: border-box;
+        overflow-y: auto;
+    }
+
+    .modal-content-balance-operation h2 {
+        font-size: 1.2em;
+        margin-bottom: 1em;
+        padding-bottom: 0.5em;
+        border-bottom: 2px solid var(--dark-green);
+    }
+
+    .close-balance-operation {
+        top: 0.5em;
+        right: 0.5em;
+        width: 36px;
+        height: 36px;
+        font-size: 1.8em;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    #balanceOperationForm {
+        display: flex;
+        flex-direction: column;
+        gap: 1em;
+    }
+
+    #balanceOperationForm label {
+        font-size: 0.95em;
+        margin-bottom: 0.5em;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5em;
+    }
+
+    #balanceOperationForm select,
+    #balanceOperationForm input[type="number"] {
+        width: 100%;
+        font-size: 16px;
+        padding: 0.8em;
+        margin: 0;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        box-sizing: border-box;
+    }
+
+    #balanceOperationForm button[type="submit"] {
+        width: 100%;
+        padding: 0.9em;
+        font-size: 1em;
+        min-height: 48px;
+        margin-top: 0.5em;
+        border-radius: 8px;
+        font-weight: 600;
+    }
+}

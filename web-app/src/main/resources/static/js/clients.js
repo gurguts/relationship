@@ -416,7 +416,7 @@ function buildDynamicTable() {
             th.style.cursor = 'pointer';
         }
         
-        if (field.columnWidth) {
+        if (field.columnWidth && window.innerWidth > 1024) {
             th.style.width = field.columnWidth + 'px';
             th.style.minWidth = field.columnWidth + 'px';
             th.style.maxWidth = field.columnWidth + 'px';
@@ -487,9 +487,9 @@ function buildDynamicFilters() {
         createdAtBlock.className = 'filter-block';
         createdAtBlock.innerHTML = `
             <label class="from-to-style" for="filter-createdAt-from">Від:</label>
-            <input type="date" id="filter-createdAt-from" name="createdAtFrom"><br><br>
+            <input type="date" id="filter-createdAt-from" name="createdAtFrom">
             <label class="from-to-style" for="filter-createdAt-to">До:</label>
-            <input type="date" id="filter-createdAt-to" name="createdAtTo"><br><br>
+            <input type="date" id="filter-createdAt-to" name="createdAtTo">
         `;
         filterForm.appendChild(createdAtBlock);
         
@@ -501,9 +501,9 @@ function buildDynamicFilters() {
         updatedAtBlock.className = 'filter-block';
         updatedAtBlock.innerHTML = `
             <label class="from-to-style" for="filter-updatedAt-from">Від:</label>
-            <input type="date" id="filter-updatedAt-from" name="updatedAtFrom"><br><br>
+            <input type="date" id="filter-updatedAt-from" name="updatedAtFrom">
             <label class="from-to-style" for="filter-updatedAt-to">До:</label>
-            <input type="date" id="filter-updatedAt-to" name="updatedAtTo"><br><br>
+            <input type="date" id="filter-updatedAt-to" name="updatedAtTo">
         `;
         filterForm.appendChild(updatedAtBlock);
 
@@ -530,9 +530,9 @@ function buildDynamicFilters() {
                     filterBlock.className = 'filter-block';
                     filterBlock.innerHTML = `
                         <label class="from-to-style" for="filter-${field.fieldName}-from">Від:</label>
-                        <input type="date" id="filter-${field.fieldName}-from" name="${field.fieldName}From"><br><br>
+                        <input type="date" id="filter-${field.fieldName}-from" name="${field.fieldName}From">
                         <label class="from-to-style" for="filter-${field.fieldName}-to">До:</label>
-                        <input type="date" id="filter-${field.fieldName}-to" name="${field.fieldName}To"><br><br>
+                        <input type="date" id="filter-${field.fieldName}-to" name="${field.fieldName}To">
                     `;
                     filterForm.appendChild(filterBlock);
                 } else if (field.fieldType === 'NUMBER') {
@@ -544,9 +544,9 @@ function buildDynamicFilters() {
                     filterBlock.className = 'filter-block';
                     filterBlock.innerHTML = `
                         <label class="from-to-style" for="filter-${field.fieldName}-from">Від:</label>
-                        <input type="number" id="filter-${field.fieldName}-from" name="${field.fieldName}From" step="any" placeholder="Мінімум"><br><br>
+                        <input type="number" id="filter-${field.fieldName}-from" name="${field.fieldName}From" step="any" placeholder="Мінімум">
                         <label class="from-to-style" for="filter-${field.fieldName}-to">До:</label>
-                        <input type="number" id="filter-${field.fieldName}-to" name="${field.fieldName}To" step="any" placeholder="Максимум"><br><br>
+                        <input type="number" id="filter-${field.fieldName}-to" name="${field.fieldName}To" step="any" placeholder="Максимум">
                     `;
                     filterForm.appendChild(filterBlock);
                 } else if (field.fieldType === 'LIST') {
@@ -732,7 +732,7 @@ async function renderClientsWithDynamicFields(clients) {
 
         if (!hasCompanyStatic) {
             const nameFieldLabel = currentClientType ? currentClientType.nameFieldLabel : 'Компанія';
-            html += `<td data-label="${nameFieldLabel}" class="company-cell" style="cursor: pointer;">${client.company || ''}</td>`;
+            html += `<td data-label="${nameFieldLabel}" class="company-cell" style="cursor: pointer;">${client.company || '<span style="color: #999; font-style: italic;">—</span>'}</td>`;
         }
         
         const fieldValues = allFieldValues[index];
@@ -753,20 +753,20 @@ async function renderClientsWithDynamicFields(clients) {
                 switch (field.staticFieldName) {
                     case 'company':
                         cellValue = client.company || '';
-                        html += `<td data-label="${field.fieldLabel}" class="company-cell" style="cursor: pointer;">${cellValue}</td>`;
+                        html += `<td data-label="${field.fieldLabel}" class="company-cell" style="cursor: pointer;">${cellValue || '<span style="color: #999; font-style: italic;">—</span>'}</td>`;
                         break;
                     case 'source':
                         const sourceId = client.sourceId ? (typeof client.sourceId === 'string' ? parseInt(client.sourceId) : client.sourceId) : null;
                         cellValue = sourceId ? findNameByIdFromMap(sourceMap, sourceId) : '';
-                        html += `<td data-label="${field.fieldLabel}">${cellValue}</td>`;
+                        html += `<td data-label="${field.fieldLabel}">${cellValue || '<span style="color: #999; font-style: italic;">—</span>'}</td>`;
                         break;
                     case 'createdAt':
                         cellValue = client.createdAt || '';
-                        html += `<td data-label="${field.fieldLabel}" data-sort="createdAt" style="cursor: pointer;">${cellValue}</td>`;
+                        html += `<td data-label="${field.fieldLabel}" data-sort="createdAt" style="cursor: pointer;">${cellValue || '<span style="color: #999; font-style: italic;">—</span>'}</td>`;
                         break;
                     case 'updatedAt':
                         cellValue = client.updatedAt || '';
-                        html += `<td data-label="${field.fieldLabel}" data-sort="updatedAt" style="cursor: pointer;">${cellValue}</td>`;
+                        html += `<td data-label="${field.fieldLabel}" data-sort="updatedAt" style="cursor: pointer;">${cellValue || '<span style="color: #999; font-style: italic;">—</span>'}</td>`;
                         break;
                 }
             } else {
@@ -780,13 +780,14 @@ async function renderClientsWithDynamicFields(clients) {
                     }
                 }
                 
-                html += `<td data-label="${field.fieldLabel}">${cellValue}</td>`;
+                html += `<td data-label="${field.fieldLabel}">${cellValue || '<span style="color: #999; font-style: italic;">—</span>'}</td>`;
             }
         });
 
         if (!hasSourceStatic) {
             const sourceId = client.sourceId ? (typeof client.sourceId === 'string' ? parseInt(client.sourceId) : client.sourceId) : null;
-            html += `<td data-label="Залучення">${sourceId ? findNameByIdFromMap(sourceMap, sourceId) : ''}</td>`;
+            const sourceName = sourceId ? findNameByIdFromMap(sourceMap, sourceId) : '';
+            html += `<td data-label="Залучення">${sourceName || '<span style="color: #999; font-style: italic;">—</span>'}</td>`;
         }
         
         row.innerHTML = html;
@@ -806,9 +807,10 @@ function renderClientsWithDefaultFields(clients) {
         const row = document.createElement('tr');
         row.classList.add('client-row');
 
+        const sourceName = findNameByIdFromMap(sourceMap, client.sourceId) || '';
         row.innerHTML = `
-            <td data-label="Компанія" data-sort="company" class="company-cell" style="cursor: pointer;">${client.company || ''}</td>
-            <td data-label="Залучення">${findNameByIdFromMap(sourceMap, client.sourceId)}</td>
+            <td data-label="Компанія" data-sort="company" class="company-cell" style="cursor: pointer;">${client.company || '<span style="color: #999; font-style: italic;">—</span>'}</td>
+            <td data-label="Залучення">${sourceName || '<span style="color: #999; font-style: italic;">—</span>'}</td>
         `;
         tableBody.appendChild(row);
         const companyCell = row.querySelector('.company-cell');

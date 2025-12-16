@@ -25,7 +25,6 @@ public class CustomUserDetailsService implements UserDetailsService {
         User user = userRepository.findByLogin(login).orElseThrow(() -> new UsernameNotFoundException(login));
         Set<GrantedAuthority> authorities = user.getPermissions().stream()
                 .map(Permission::getPermission)
-                .toList().stream()
                 .map(SimpleGrantedAuthority::new)
                 .collect(Collectors.toSet());
 

@@ -2,7 +2,6 @@ package org.example.userservice.services.auth;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.example.userservice.exceptions.user.UserNotFoundException;
 import org.example.userservice.models.user.Permission;
 import org.example.userservice.models.user.User;
 import org.example.userservice.repositories.UserRepository;
@@ -33,7 +32,7 @@ public class AuthService implements IAuthService {
         log.info("User {} authenticated", login);
 
         User user = userRepository.findByLogin(login)
-                .orElseThrow(() -> new UserNotFoundException(String.format("User with login %s not found", login)));
+                .orElseThrow(() -> new IllegalStateException("User not found after successful authentication"));
 
         String token = jwtTokenProvider.createToken(user.getId(), user.getLogin(),
                 user.getPermissions().stream()

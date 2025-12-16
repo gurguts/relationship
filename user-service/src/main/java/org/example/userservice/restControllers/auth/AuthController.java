@@ -2,6 +2,7 @@ package org.example.userservice.restControllers.auth;
 
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.userservice.models.dto.user.LoginDTO;
@@ -19,7 +20,7 @@ public class AuthController {
     private final IAuthService authService;
 
     @PostMapping("/login")
-    public ResponseEntity<?> authenticate(@RequestBody LoginDTO loginDto) {
+    public ResponseEntity<?> authenticate(@RequestBody @Valid LoginDTO loginDto) {
         Map<String, Object> response = authService.authenticate(loginDto.getLogin(), loginDto.getPassword());
         return ResponseEntity.ok(response);
     }
