@@ -384,16 +384,18 @@ async function loadBalance() {
                             data-quantity="${balance.quantity}"
                             data-total-cost="${balance.totalCostEur}"
                             data-average-price="${balance.averagePriceEur}">
-                            <td>${productName}</td>
-                            <td>${quantity}</td>
-                            <td>${avgPrice}</td>
-                            <td>${totalCost}</td>
+                            <td data-label="Товар">${productName}</td>
+                            <td data-label="Кількість (кг)">${quantity}</td>
+                            <td data-label="Середня ціна (EUR/кг)">${avgPrice}</td>
+                            <td data-label="Загальна вартість (EUR)">${totalCost}</td>
                         </tr>`;
             }
             
-            html += '</tbody><tfoot><tr>';
-            html += '<td colspan="3"><strong>Загальна вартість складу:</strong></td>';
-            html += `<td><strong>${formatNumber(warehouseTotal, 6)} EUR</strong></td>`;
+            html += '</tbody><tfoot><tr class="balance-tfoot-row">';
+            html += '<td data-label="Загальна вартість складу"><strong>Загальна вартість складу:</strong></td>';
+            html += '<td data-label=""></td>';
+            html += '<td data-label=""></td>';
+            html += `<td data-label="Сума"><strong>${formatNumber(warehouseTotal, 6)} EUR</strong></td>`;
             html += '</tr></tfoot></table>';
         }
         
@@ -480,15 +482,15 @@ async function loadWithdrawalHistory(page) {
             const totalCost = withdrawal.totalCostEur ? formatNumber(withdrawal.totalCostEur, 6) + ' EUR' : '-';
             html += `
                         <tr data-id="${withdrawal.id}">
-                            <td>${warehouseName}</td>
-                            <td>${productName}</td>
-                            <td>${reason}</td>
-                            <td>${withdrawal.quantity} кг</td>
-                            <td style="text-align: right;">${unitPrice}</td>
-                            <td style="text-align: right; font-weight: bold;">${totalCost}</td>
-                            <td>${withdrawal.withdrawalDate}</td>
-                            <td>${withdrawal.description || ''}</td>
-                            <td>${new Date(withdrawal.createdAt).toLocaleString()}</td>
+                            <td data-label="Склад">${warehouseName}</td>
+                            <td data-label="Товар">${productName}</td>
+                            <td data-label="Причина">${reason}</td>
+                            <td data-label="Кількість">${withdrawal.quantity} кг</td>
+                            <td data-label="Ціна за кг" style="text-align: right;">${unitPrice}</td>
+                            <td data-label="Загальна вартість" style="text-align: right; font-weight: bold;">${totalCost}</td>
+                            <td data-label="Дата списання">${withdrawal.withdrawalDate}</td>
+                            <td data-label="Опис">${withdrawal.description || ''}</td>
+                            <td data-label="Створено">${new Date(withdrawal.createdAt).toLocaleString()}</td>
                         </tr>`;
         }
         container.innerHTML = html;
@@ -540,15 +542,15 @@ async function loadWarehouseEntries(page) {
             const totalCost = formatNumber(entry.totalCostEur, 6);
             html += `
                 <tr data-id="${entry.id}">
-                    <td>${warehouseName}</td>
-                    <td>${entry.entryDate}</td>
-                    <td>${userName}</td>
-                    <td>${productName}</td>
-                    <td>${typeName}</td>
-                    <td>${receivedQuantity} кг</td>
-                    <td>${driverBalance} кг</td>
-                    <td>${difference} кг</td>
-                    <td>${totalCost} EUR</td>
+                    <td data-label="Склад">${warehouseName}</td>
+                    <td data-label="Дата">${entry.entryDate}</td>
+                    <td data-label="Водій">${userName}</td>
+                    <td data-label="Товар">${productName}</td>
+                    <td data-label="Тип">${typeName}</td>
+                    <td data-label="Привезено">${receivedQuantity} кг</td>
+                    <td data-label="Закуплено">${driverBalance} кг</td>
+                    <td data-label="Різниця">${difference} кг</td>
+                    <td data-label="Вартість">${totalCost} EUR</td>
                 </tr>`;
         }
         container.innerHTML = html;
@@ -1661,6 +1663,7 @@ async function loadDriverBalances() {
             
             let driverTotal = 0;
             for (const balance of driverBalances) {
+                // Note: driver balances table is rendered dynamically, data-label will be added via CSS
                 const productName = findNameByIdFromMap(productMap, balance.productId);
                 const quantity = formatNumber(balance.quantity, 2);
                 const avgPrice = formatNumber(balance.averagePriceEur, 6);
@@ -1668,16 +1671,18 @@ async function loadDriverBalances() {
                 driverTotal += parseFloat(totalCost);
                 
                 html += '<tr>';
-                html += `<td>${productName}</td>`;
-                html += `<td>${quantity}</td>`;
-                html += `<td>${avgPrice}</td>`;
-                html += `<td>${totalCost}</td>`;
+                html += `<td data-label="Товар">${productName}</td>`;
+                html += `<td data-label="Кількість (кг)">${quantity}</td>`;
+                html += `<td data-label="Середня ціна (EUR/кг)">${avgPrice}</td>`;
+                html += `<td data-label="Загальна вартість (EUR)">${totalCost}</td>`;
                 html += '</tr>';
             }
             
-            html += '</tbody><tfoot><tr>';
-            html += '<td colspan="3"><strong>Загальна вартість товару водія:</strong></td>';
-            html += `<td><strong>${formatNumber(driverTotal, 6)} EUR</strong></td>`;
+            html += '</tbody><tfoot><tr class="balance-tfoot-row">';
+            html += '<td data-label="Загальна вартість товару водія"><strong>Загальна вартість товару водія:</strong></td>';
+            html += '<td data-label=""></td>';
+            html += '<td data-label=""></td>';
+            html += `<td data-label="Сума"><strong>${formatNumber(driverTotal, 6)} EUR</strong></td>`;
             html += '</tr></tfoot></table>';
         }
         
@@ -1766,7 +1771,7 @@ function setVehicleFormEditable(isEditable) {
         saveVehicleBtn.style.display = isEditable ? 'inline-flex' : 'none';
     }
     if (editVehicleBtn) {
-        editVehicleBtn.style.display = isEditable ? 'none' : 'inline-flex';
+        editVehicleBtn.style.display = isEditable ? 'none' : 'block';
     }
 }
 
@@ -1905,10 +1910,10 @@ function renderVehicles(vehicles) {
     
     tbody.innerHTML = vehicles.map(vehicle => `
         <tr onclick="viewVehicleDetails(${vehicle.id})" style="cursor: pointer;">
-            <td>${vehicle.shipmentDate}</td>
-            <td>${vehicle.vehicleNumber || '-'}</td>
-            <td style="font-weight: bold; color: #FF6F00;">${formatNumber(vehicle.totalCostEur, 2)} EUR</td>
-            <td>${vehicle.description || '-'}</td>
+            <td data-label="Дата відвантаження">${vehicle.shipmentDate}</td>
+            <td data-label="Номер машини">${vehicle.vehicleNumber || '-'}</td>
+            <td data-label="Загальна вартість" style="font-weight: bold; color: #FF6F00;">${formatNumber(vehicle.totalCostEur, 2)} EUR</td>
+            <td data-label="Коментар">${vehicle.description || '-'}</td>
         </tr>
     `).join('');
 }
@@ -1959,12 +1964,12 @@ function renderVehicleDetails(vehicle) {
 
             return `
                 <tr class="vehicle-item-row" data-item-id="${item.withdrawalId}" style="cursor: pointer;">
-                    <td>${productName}</td>
-                    <td>${warehouseName}</td>
-                    <td>${formatNumber(item.quantity, 2)} кг</td>
-                    <td style="text-align: right;">${formatNumber(item.unitPriceEur, 6)} EUR</td>
-                    <td style="text-align: right; font-weight: bold;">${formatNumber(item.totalCostEur, 6)} EUR</td>
-                    <td>${item.withdrawalDate || vehicle.shipmentDate}</td>
+                    <td data-label="Товар">${productName}</td>
+                    <td data-label="Склад">${warehouseName}</td>
+                    <td data-label="Кількість">${formatNumber(item.quantity, 2)} кг</td>
+                    <td data-label="Ціна за кг" style="text-align: right;">${formatNumber(item.unitPriceEur, 6)} EUR</td>
+                    <td data-label="Загальна вартість" style="text-align: right; font-weight: bold;">${formatNumber(item.totalCostEur, 6)} EUR</td>
+                    <td data-label="Дата списання">${item.withdrawalDate || vehicle.shipmentDate}</td>
                 </tr>
             `;
         }).join('');
@@ -2172,20 +2177,20 @@ async function loadDiscrepancies() {
                 const typeColor = item.type === 'LOSS' ? '#d32f2f' : '#388e3c';
                 
                 row.innerHTML = `
-                    <td>${formatDate(item.receiptDate)}</td>
-                    <td>${driverName}</td>
-                    <td>${productName}</td>
-                    <td>${warehouseName}</td>
-                    <td style="text-align: center;">${item.purchasedQuantity} кг</td>
-                    <td style="text-align: center;">${item.receivedQuantity} кг</td>
-                    <td style="text-align: center; font-weight: bold; color: ${typeColor};">
+                    <td data-label="Дата">${formatDate(item.receiptDate)}</td>
+                    <td data-label="Водій">${driverName}</td>
+                    <td data-label="Товар">${productName}</td>
+                    <td data-label="Склад">${warehouseName}</td>
+                    <td data-label="Закуплено" style="text-align: center;">${item.purchasedQuantity} кг</td>
+                    <td data-label="Прийнято" style="text-align: center;">${item.receivedQuantity} кг</td>
+                    <td data-label="Різниця" style="text-align: center; font-weight: bold; color: ${typeColor};">
                         ${item.discrepancyQuantity > 0 ? '+' : ''}${item.discrepancyQuantity} кг
                     </td>
-                    <td style="text-align: right;">${formatNumber(item.unitPriceEur, 6)} EUR</td>
-                    <td style="text-align: right; font-weight: bold;">
+                    <td data-label="Ціна/кг" style="text-align: right;">${formatNumber(item.unitPriceEur, 6)} EUR</td>
+                    <td data-label="Вартість" style="text-align: right; font-weight: bold;">
                         ${formatNumber(Math.abs(item.discrepancyValueEur), 6)} EUR
                     </td>
-                    <td style="text-align: center;">
+                    <td data-label="Тип" style="text-align: center;">
                         <span class="discrepancy-type-badge ${typeClass}">
                             ${typeLabel}
                         </span>
@@ -2444,16 +2449,16 @@ function renderTransfers(transfers) {
         
         return `
             <tr data-id="${item.id}">
-                <td style="text-align: center;">${item.transferDate || ''}</td>
-                <td>${warehouseName}</td>
-                <td>${fromProductName}</td>
-                <td>${toProductName}</td>
-                <td style="text-align: center;">${formatNumber(item.quantity, 2)} кг</td>
-                <td style="text-align: right;">${formatNumber(item.unitPriceEur, 6)} EUR</td>
-                <td style="text-align: right; font-weight: bold;">${formatNumber(item.totalCostEur, 6)} EUR</td>
-                <td>${userName}</td>
-                <td>${reasonName}</td>
-                <td>${item.description || ''}</td>
+                <td data-label="Дата" style="text-align: center;">${item.transferDate || ''}</td>
+                <td data-label="Склад">${warehouseName}</td>
+                <td data-label="З товару">${fromProductName}</td>
+                <td data-label="До товару">${toProductName}</td>
+                <td data-label="Кількість" style="text-align: center;">${formatNumber(item.quantity, 2)} кг</td>
+                <td data-label="Ціна за кг" style="text-align: right;">${formatNumber(item.unitPriceEur, 6)} EUR</td>
+                <td data-label="Загальна вартість" style="text-align: right; font-weight: bold;">${formatNumber(item.totalCostEur, 6)} EUR</td>
+                <td data-label="Виконавець">${userName}</td>
+                <td data-label="Причина">${reasonName}</td>
+                <td data-label="Опис">${item.description || ''}</td>
             </tr>
         `;
     }).join('');
@@ -3220,13 +3225,13 @@ async function loadBalanceHistory(warehouseId, productId) {
 
             return `
                 <tr>
-                    <td>${createdAt}</td>
-                    <td>${userName}</td>
-                    <td>${typeLabel}</td>
-                    <td>${quantityChange}</td>
-                    <td>${totalChange}</td>
-                    <td>${averageChange}</td>
-                    <td>${description}</td>
+                    <td data-label="Дата">${createdAt}</td>
+                    <td data-label="Користувач">${userName}</td>
+                    <td data-label="Тип">${typeLabel}</td>
+                    <td data-label="Кількість">${quantityChange}</td>
+                    <td data-label="Загальна вартість">${totalChange}</td>
+                    <td data-label="Середня ціна">${averageChange}</td>
+                    <td data-label="Коментар">${description}</td>
                 </tr>
             `;
         }).join('');

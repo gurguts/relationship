@@ -1,6 +1,7 @@
 package org.example.apigateway.security;
 
 import lombok.extern.slf4j.Slf4j;
+import org.example.apigateway.config.SecurityConstants;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
 import org.springframework.http.HttpCookie;
@@ -22,11 +23,18 @@ public class CustomTokenRelayFilterFactory extends AbstractGatewayFilterFactory<
     public GatewayFilter apply(Object config) {
         return (exchange, chain) -> {
             ServerHttpRequest request = exchange.getRequest();
-            String token = extractTokenFromRequest(request);
+            String token = exchange.getAttribute(SecurityConstants.TOKEN_ATTRIBUTE);
+
+            if (token == null) {
+                token = extractTokenFromRequest(request);
+                if (token != null && !token.isEmpty()) {
+                    exchange.getAttributes().put(SecurityConstants.TOKEN_ATTRIBUTE, token);
+                }
+            }
 
             if (token != null && !token.isEmpty()) {
                 ServerHttpRequest modifiedRequest = request.mutate()
-                        .header("Authorization", String.format("Bearer %s", token))
+                        .header("Authorization", SecurityConstants.BEARER_PREFIX + token)
                         .build();
 
                 return chain.filter(exchange.mutate().request(modifiedRequest).build());
@@ -38,9 +46,9 @@ public class CustomTokenRelayFilterFactory extends AbstractGatewayFilterFactory<
 
     private String extractTokenFromRequest(ServerHttpRequest request) {
         return Optional.ofNullable(request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION))
-                .filter(auth -> auth.startsWith("Bearer "))
-                .map(auth -> auth.substring(7))
-                .or(() -> Optional.ofNullable(request.getCookies().getFirst("authToken"))
+                .filter(auth -> auth.startsWith(SecurityConstants.BEARER_PREFIX))
+                .map(auth -> auth.substring(SecurityConstants.BEARER_PREFIX.length()))
+                .or(() -> Optional.ofNullable(request.getCookies().getFirst(SecurityConstants.AUTH_TOKEN_COOKIE))
                         .map(HttpCookie::getValue))
                 .orElse(null);
     }

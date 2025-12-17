@@ -3,8 +3,11 @@ server:
   http2:
     enabled: false
 
-
 spring:
+  security:
+    user:
+      name: disabled
+      password: disabled
   cloud:
     gateway:
       routes:

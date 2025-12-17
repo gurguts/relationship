@@ -95,7 +95,7 @@ public class ClientTypeService implements IClientTypeService {
     public void deleteClientType(Long id) {
         ClientType clientType = getClientTypeById(id);
         
-        long clientCount = clientRepository.count();
+        long clientCount = clientRepository.countByClientTypeId(id);
         if (clientCount > 0) {
             throw new ClientException("Cannot delete client type. There are clients associated with this type.");
         }

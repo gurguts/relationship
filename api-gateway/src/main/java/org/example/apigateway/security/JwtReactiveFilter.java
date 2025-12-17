@@ -3,6 +3,7 @@ package org.example.apigateway.security;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.example.apigateway.config.SecurityConstants;
 import org.example.apigateway.models.dto.UserDTO;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -13,6 +14,7 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.ReactiveSecurityContextHolder;
 import org.springframework.stereotype.Component;
+import org.springframework.util.AntPathMatcher;
 import org.springframework.util.StringUtils;
 import org.springframework.web.reactive.resource.NoResourceFoundException;
 import org.springframework.web.server.ServerWebExchange;
@@ -33,69 +35,76 @@ import java.util.stream.Collectors;
 public class JwtReactiveFilter implements WebFilter {
 
     private final ReactiveJwtTokenProvider reactiveJwtTokenProvider;
-
-    private static final List<String> PUBLIC_PATHS = List.of(
-            "/login",
-            "/api/v1/auth/",
-            "/favicon.ico",
-            "/api/v1/user/auth/",
-            "/api/v1/user/details/",
-            "/favicon/",
-            "/favicon/site.webmanifest",
-            "/js/login.js",
-            "/css/"
-    );
+    private static final AntPathMatcher pathMatcher = new AntPathMatcher();
 
     @NonNull
     @Override
     public Mono<Void> filter(@NonNull ServerWebExchange exchange, @NonNull WebFilterChain chain) {
-        if (exchange.getAttribute("JWT_FILTER_APPLIED") != null) {
-            return chain.filter(exchange);
-        }
-        exchange.getAttributes().put("JWT_FILTER_APPLIED", true);
-
         String path = exchange.getRequest().getURI().getPath();
 
         if (isPublicPath(path)) {
             return chain.filter(exchange);
         }
 
-        return extractToken(exchange)
-                .switchIfEmpty(Mono.defer(() -> redirectToLogin(exchange).then(Mono.empty())))
-                .flatMap(this::validateAndAuthenticateToken)
+        String token = exchange.getAttribute(SecurityConstants.TOKEN_ATTRIBUTE);
+        if (token == null) {
+            token = extractTokenFromExchange(exchange);
+            if (token != null) {
+                exchange.getAttributes().put(SecurityConstants.TOKEN_ATTRIBUTE, token);
+            }
+        }
+
+        if (token == null || token.isEmpty()) {
+            return redirectToLogin(exchange);
+        }
+
+        return validateAndAuthenticateToken(token)
                 .flatMap(authentication -> chain.filter(exchange)
                         .contextWrite(ReactiveSecurityContextHolder.withAuthentication(authentication)))
-                .onErrorResume(AuthenticationException.class, _ -> handleAuthenticationException(exchange))
-                .onErrorResume(NoResourceFoundException.class, _ -> handleResourceNotFound(exchange))
-                .onErrorResume(AccessDeniedException.class, _ -> handleAccessDenied(exchange));
+                .onErrorResume(AuthenticationException.class, ex -> {
+                    log.debug("Authentication failed: {}", ex.getMessage());
+                    return handleAuthenticationException(exchange);
+                })
+                .onErrorResume(NoResourceFoundException.class, ex -> {
+                    log.debug("Resource not found: {}", ex.getMessage());
+                    return handleResourceNotFound(exchange);
+                })
+                .onErrorResume(AccessDeniedException.class, ex -> {
+                    log.debug("Access denied: {}", ex.getMessage());
+                    return handleAccessDenied(exchange);
+                });
     }
 
     private boolean isPublicPath(String path) {
-        return PUBLIC_PATHS.stream().anyMatch(path::startsWith);
+        for (String pattern : SecurityConstants.PUBLIC_PATH_PATTERNS) {
+            if (pathMatcher.match(pattern, path)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private Mono<Void> redirectToLogin(ServerWebExchange exchange) {
         ServerHttpResponse response = exchange.getResponse();
-
         if (!response.isCommitted()) {
             response.setStatusCode(HttpStatus.FOUND);
             response.getHeaders().setLocation(URI.create("/login"));
         }
-
         return response.setComplete();
     }
 
-    private Mono<String> extractToken(ServerWebExchange exchange) {
-        return Mono.justOrEmpty(exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION))
-                .filter(auth -> auth.startsWith("Bearer "))
-                .map(auth -> auth.substring(7))
-                .switchIfEmpty(extractTokenFromCookie(exchange))
-                .filter(StringUtils::hasText);
-    }
+    private String extractTokenFromExchange(ServerWebExchange exchange) {
+        String authHeader = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
+        if (authHeader != null && authHeader.startsWith(SecurityConstants.BEARER_PREFIX)) {
+            return authHeader.substring(SecurityConstants.BEARER_PREFIX.length());
+        }
 
-    private Mono<String> extractTokenFromCookie(ServerWebExchange exchange) {
-        return Mono.justOrEmpty(exchange.getRequest().getCookies().getFirst("authToken"))
-                .map(HttpCookie::getValue);
+        HttpCookie cookie = exchange.getRequest().getCookies().getFirst(SecurityConstants.AUTH_TOKEN_COOKIE);
+        if (cookie != null && StringUtils.hasText(cookie.getValue())) {
+            return cookie.getValue();
+        }
+
+        return null;
     }
 
     private Mono<Authentication> validateAndAuthenticateToken(String token) {
@@ -104,17 +113,16 @@ public class JwtReactiveFilter implements WebFilter {
     }
 
     private Mono<Authentication> createAuthentication(UserDTO userDto) {
-        List<GrantedAuthority> authorities = userDto.getAuthorities().stream()
+        List<GrantedAuthority> authorities = userDto.authorities().stream()
                 .map(SimpleGrantedAuthority::new)
                 .collect(Collectors.toList());
 
         Authentication authentication = new UsernamePasswordAuthenticationToken(
-                userDto.getLogin(), null, authorities
+                userDto.login(), null, authorities
         );
 
         return Mono.just(authentication);
     }
-
 
     private Mono<Void> handleAuthenticationException(ServerWebExchange exchange) {
         exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
@@ -130,5 +138,4 @@ public class JwtReactiveFilter implements WebFilter {
         exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
         return exchange.getResponse().setComplete();
     }
-
 }

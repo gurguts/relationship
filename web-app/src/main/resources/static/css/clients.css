@@ -2561,9 +2561,11 @@ input.custom-select-placeholder {
         font-size: 1.3em;
     }
 
-    .modal-purchase-client-content {
-        font-size: 0.7em;
+    .modal-purchase-client-content,
+    .modal-container-client-content {
+        font-size: 1em;
         width: 90%;
+        max-height: 90vh;
     }
 
     .map-modal-content {
@@ -2575,6 +2577,180 @@ input.custom-select-placeholder {
         top: 0;
         right: 0.5em;
         font-size: 2.5em;
+    }
+}
+
+@media (max-width: 1024px) {
+    .modal-purchase-client-content,
+    .modal-container-client-content {
+        width: 90% !important;
+        max-width: 90% !important;
+        max-height: 95vh;
+        padding: 1em;
+        border-radius: 12px;
+    }
+
+    .modal-purchase-client-content h3,
+    .modal-container-client-content h3 {
+        font-size: 1.2em;
+        margin-bottom: 1em;
+    }
+
+    .modal-purchase-client-content .close,
+    .modal-container-client-content .close {
+        width: 36px;
+        height: 36px;
+        font-size: 1.8rem;
+        top: 10px;
+        right: 10px;
+    }
+
+    /* Purchase Table Mobile Styles */
+    #purchaseTable thead {
+        display: none;
+    }
+
+    #purchaseTable tbody {
+        display: flex;
+        flex-direction: column;
+        gap: 1em;
+        padding: 0.5em;
+    }
+
+    #purchaseTable tbody tr {
+        display: flex;
+        flex-direction: column;
+        padding: 1em;
+        border-radius: 12px;
+        background: #fff;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        border: 1px solid #e0e0e0;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    #purchaseTable tbody tr td {
+        display: flex;
+        flex-direction: row;
+        align-items: flex-start;
+        padding: 0.8em 0;
+        border-bottom: 1px solid #f0f0f0;
+        gap: 0.8em;
+        width: 100%;
+        box-sizing: border-box;
+        text-align: left !important;
+        border: none;
+    }
+
+    #purchaseTable tbody tr td:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
+    }
+
+    #purchaseTable tbody tr td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: #1976D2;
+        font-size: 0.85em;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        flex-shrink: 0;
+        width: 120px;
+        min-width: 120px;
+        max-width: 120px;
+        padding: 0.35em 0.5em;
+        background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+        border-left: 3px solid #1976D2;
+        border-radius: 4px;
+        margin-right: 0.5em;
+        line-height: 1.3;
+        box-sizing: border-box;
+    }
+
+    #purchaseTable tbody tr td > * {
+        color: #333;
+        font-size: 0.95em;
+        word-break: break-word;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        line-height: 1.5;
+        white-space: normal;
+        flex: 1;
+        text-align: left;
+    }
+
+    /* Container Table Mobile Styles */
+    #containerTable thead {
+        display: none;
+    }
+
+    #containerTable tbody {
+        display: flex;
+        flex-direction: column;
+        gap: 1em;
+        padding: 0.5em;
+    }
+
+    #containerTable tbody tr {
+        display: flex;
+        flex-direction: column;
+        padding: 1em;
+        border-radius: 12px;
+        background: #fff;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        border: 1px solid #e0e0e0;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    #containerTable tbody tr td {
+        display: flex;
+        flex-direction: row;
+        align-items: flex-start;
+        padding: 0.8em 0;
+        border-bottom: 1px solid #f0f0f0;
+        gap: 0.8em;
+        width: 100%;
+        box-sizing: border-box;
+        text-align: left !important;
+        border: none;
+    }
+
+    #containerTable tbody tr td:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
+    }
+
+    #containerTable tbody tr td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: #1976D2;
+        font-size: 0.85em;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        flex-shrink: 0;
+        width: 120px;
+        min-width: 120px;
+        max-width: 120px;
+        padding: 0.35em 0.5em;
+        background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+        border-left: 3px solid #1976D2;
+        border-radius: 4px;
+        margin-right: 0.5em;
+        line-height: 1.3;
+        box-sizing: border-box;
+    }
+
+    #containerTable tbody tr td > * {
+        color: #333;
+        font-size: 0.95em;
+        word-break: break-word;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        line-height: 1.5;
+        white-space: normal;
+        flex: 1;
+        text-align: left;
     }
 }
 

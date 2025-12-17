@@ -88,23 +88,24 @@ public class ClientTypePermissionService implements IClientTypePermissionService
 
     @Override
     public boolean canUserCreate(Long userId, Long clientTypeId) {
-        return permissionRepository.findByUserIdAndClientTypeId(userId, clientTypeId)
-                .map(ClientTypePermission::getCanCreate)
-                .orElse(false);
+        ClientTypePermission permission = permissionRepository.findByUserIdAndClientTypeId(userId, clientTypeId).orElse(null);
+        return permission != null && Boolean.TRUE.equals(permission.getCanCreate());
     }
 
     @Override
     public boolean canUserEdit(Long userId, Long clientTypeId) {
-        return permissionRepository.findByUserIdAndClientTypeId(userId, clientTypeId)
-                .map(ClientTypePermission::getCanEdit)
-                .orElse(false);
+        ClientTypePermission permission = permissionRepository.findByUserIdAndClientTypeId(userId, clientTypeId).orElse(null);
+        return permission != null && Boolean.TRUE.equals(permission.getCanEdit());
     }
 
     @Override
     public boolean canUserDelete(Long userId, Long clientTypeId) {
-        return permissionRepository.findByUserIdAndClientTypeId(userId, clientTypeId)
-                .map(ClientTypePermission::getCanDelete)
-                .orElse(false);
+        ClientTypePermission permission = permissionRepository.findByUserIdAndClientTypeId(userId, clientTypeId).orElse(null);
+        return permission != null && Boolean.TRUE.equals(permission.getCanDelete());
+    }
+
+    public ClientTypePermission getUserPermissions(Long userId, Long clientTypeId) {
+        return permissionRepository.findByUserIdAndClientTypeId(userId, clientTypeId).orElse(null);
     }
 
     @Override

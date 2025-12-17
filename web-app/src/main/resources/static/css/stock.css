@@ -213,7 +213,6 @@ body.modal-open {
     text-align: center;
     text-transform: uppercase;
     letter-spacing: 1px;
-    border-radius: 20px 20px 0 0;
 }
 
 .modal-content form {
@@ -1587,10 +1586,6 @@ tr:hover {
         margin: 20px 0 20px 0;
     }
 
-    #balance-container {
-        padding: 10px;
-    }
-
     .modal-buttons {
         margin: 10px 0;
     }
@@ -1682,6 +1677,1188 @@ tr:hover {
         background: rgba(76, 175, 80, 0.1);
         border-radius: 4px;
     }
+
+    .modal, .filter-modal {
+        font-size: 12px;
+    }
+
+    /* Table to card conversion for mobile */
+    .history-table thead,
+    #entries-table thead,
+    .transfers-table thead,
+    .balance-table thead,
+    .vehicles-table thead,
+    .vehicle-items-table thead,
+    .balance-history-table thead,
+    #driver-balances-modal .balance-table thead {
+        display: none;
+    }
+
+    .history-table tbody,
+    #entries-table tbody,
+    .transfers-table tbody,
+    .balance-table tbody,
+    .vehicles-table tbody,
+    .vehicle-items-table tbody,
+    .balance-history-table tbody,
+    #driver-balances-modal .balance-table tbody {
+        display: flex;
+        flex-direction: column;
+        gap: 1em;
+    }
+
+    .history-table tbody tr,
+    #entries-table tbody tr,
+    .transfers-table tbody tr,
+    .vehicles-table tbody tr,
+    .vehicle-items-table tbody tr,
+    .balance-history-table tbody tr,
+    #driver-balances-modal .balance-table tbody tr {
+        font-size:1em;
+        display: flex;
+        flex-direction: column;
+        padding: 0.5em;
+        border-radius: 12px;
+        background: #fff;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        border: 1px solid #e0e0e0;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    /* Special styling for balance-table cards - better spacing and appearance */
+    .balance-table tbody tr {
+        display: flex;
+        flex-direction: column;
+        padding: 1.2em 1em;
+        border-radius: 12px;
+        background: #fff;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+        border: 1px solid #e0e0e0;
+        width: 100%;
+        box-sizing: border-box;
+        margin-bottom: 0.8em;
+        transition: all 0.2s ease;
+    }
+
+    .balance-table tbody tr:hover {
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+        transform: translateY(-1px);
+        border-color: #1976D2;
+    }
+
+    .history-table tbody tr td,
+    #entries-table tbody tr td,
+    .transfers-table tbody tr td,
+    .balance-table tbody tr td,
+    .vehicles-table tbody tr td,
+    .vehicle-items-table tbody tr td,
+    .balance-history-table tbody tr td,
+    #driver-balances-modal .balance-table tbody tr td {
+        display: flex;
+        flex-direction: row;
+        align-items: flex-start;
+        padding: 0.8em 0;
+        border-bottom: 1px solid #f0f0f0;
+        gap: 0.8em;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .history-table tbody tr td:last-child,
+    #entries-table tbody tr td:last-child,
+    .transfers-table tbody tr td:last-child,
+    .balance-table tbody tr td:last-child,
+    .vehicles-table tbody tr td:last-child,
+    .vehicle-items-table tbody tr td:last-child,
+    .balance-history-table tbody tr td:last-child,
+    #driver-balances-modal .balance-table tbody tr td:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
+    }
+
+    .history-table tbody tr td::before,
+    #entries-table tbody tr td::before,
+    .transfers-table tbody tr td::before,
+    .vehicles-table tbody tr td::before,
+    .vehicle-items-table tbody tr td::before,
+    .balance-history-table tbody tr td::before,
+    #driver-balances-modal .balance-table tbody tr td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: #1976D2;
+        font-size: 1em;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        flex-shrink: 0;
+        width: 120px;
+        padding: 0.35em 0.5em;
+        background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+        border-left: 3px solid #1976D2;
+        border-radius: 4px;
+        margin-right: 0.5em;
+        line-height: 1.3;
+        box-sizing: border-box;
+    }
+
+    /* Special styling for balance-table labels - wider and better formatted */
+    .balance-table tbody tr td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: #1976D2;
+        font-size: 0.7em;
+        text-transform: uppercase;
+        letter-spacing: 0.2px;
+        flex-shrink: 0;
+        width: 150px;
+        min-width: 150px;
+        max-width: 150px;
+        padding: 0.6em 0.7em;
+        background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+        border-left: 3px solid #1976D2;
+        border-radius: 4px;
+        margin-right: 1em;
+        line-height: 1.3;
+        box-sizing: border-box;
+        display: flex;
+        align-items: center;
+        word-break: break-word;
+        white-space: normal;
+        text-align: left;
+    }
+
+    .history-table tbody tr td > *,
+    #entries-table tbody tr td > *,
+    .transfers-table tbody tr td > *,
+    .vehicles-table tbody tr td > *,
+    .vehicle-items-table tbody tr td > *,
+    .balance-history-table tbody tr td > *,
+    #driver-balances-modal .balance-table tbody tr td > * {
+        color: #333;
+        font-size: 0.8em;
+        word-break: break-word;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        line-height: 1.5;
+        white-space: normal;
+        flex: 1;
+        text-align: left;
+    }
+
+    /* Special styling for balance-table values - better alignment and font size */
+    .balance-table tbody tr td {
+        align-items: center;
+        padding: 0.8em;
+    }
+
+    .balance-table tbody tr td:last-child {
+        padding-bottom: 0.5em;
+    }
+
+    .balance-table tbody tr td > * {
+        color: #333;
+        font-size: 1.05em;
+        font-weight: 500;
+        word-break: break-word;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        line-height: 1.5;
+        white-space: normal;
+        flex: 1;
+        text-align: right;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        padding-left: 0.5em;
+    }
+
+    /* Modal adaptations */
+    .modal[style*="display: flex"],
+    .filter-modal[style*="display: flex"],
+    .modal.open,
+    .filter-modal.open {
+        display: flex !important;
+        justify-content: center;
+        align-items: flex-start;
+        padding: 0.5em;
+    }
+
+    /* Ensure modals are centered horizontally on mobile */
+    .modal[style*="display: flex"] .modal-content,
+    .modal.open .modal-content,
+    .filter-modal[style*="display: flex"] .modal-content,
+    .filter-modal.open .modal-content {
+        margin: 0 auto;
+    }
+
+    .modal-content,
+    .filter-modal .modal-content {
+        width: 90% !important;
+        max-width: 90% !important;
+        max-height: 95vh;
+        margin: 0 auto;
+        border-radius: 12px;
+    }
+
+    .modal-content form {
+        font-size: 16px;
+    }
+
+    .modal-content input,
+    .modal-content select,
+    .modal-content textarea {
+        font-size: 16px;
+        padding: 0.8em;
+    }
+
+    .modal-content label {
+        font-size: 0.95em;
+        margin-bottom: 0.5em;
+    }
+
+    .modal-content button[type="submit"],
+    .modal-content .button {
+        width: 100%;
+        padding: 1em;
+        font-size: 1em;
+        margin-top: 0.5em;
+    }
+
+    /* Filter adaptations */
+    .filters-container {
+        padding: 1em;
+    }
+
+    .filter-group {
+        flex-direction: column;
+        gap: 1em;
+    }
+
+    .filter-block {
+        width: 100%;
+        min-width: 100%;
+    }
+
+    .select-section-items {
+        flex-direction: column;
+    }
+
+    .select-section-item {
+        width: 100%;
+        min-width: 100%;
+    }
+
+    .filter-actions {
+        flex-direction: column;
+        gap: 0.8em;
+    }
+
+    .filter-actions button {
+        width: 100%;
+        padding: 0.9em;
+        font-size: 1em;
+    }
+
+    /* Button row adaptations */
+    .button-row {
+        grid-template-columns: 1fr;
+        gap: 0.8em;
+    }
+
+    .button {
+        width: 100%;
+        padding: 1em;
+        font-size: 1em;
+    }
+
+    /* Container adaptations */
+    .container {
+        padding: 0.5em;
+        margin: 0;
+        font-size: 1.5em;
+    }
+
+    #balance-container {
+        padding: 0.5em;
+        margin-bottom: 1em;
+    }
+
+    #balance-container h3 {
+        font-size: 1.1em;
+        margin: 1em 0 0.8em 0;
+        padding-bottom: 0.5em;
+        border-bottom: 2px solid #dee2e6;
+        color: #495057;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    #balance-container h3:first-child {
+        margin-top: 0;
+    }
+
+    .balance-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5em;
+        padding: 1em;
+        font-size: 1.2em;
+    }
+
+    /* Balance table tfoot styling for mobile */
+    .balance-table tfoot {
+        display: block;
+        margin-top: 1em;
+    }
+
+    .balance-table tfoot tr {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.5em;
+        border-radius: 12px;
+        background: #fff;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        border: 1px solid #e0e0e0;
+        margin-bottom: 1em;
+        gap: 0.5em;
+    }
+
+    .balance-table tfoot tr td {
+        display: flex;
+        align-items: center;
+        padding: 0;
+        border: none;
+        gap: 0;
+        width: auto;
+        box-sizing: border-box;
+    }
+
+    .balance-table tfoot tr td[data-label=""] {
+        display: none;
+    }
+
+    .balance-table tfoot tr td:first-child {
+        flex: 1;
+        font-weight: 600;
+        color: #495057;
+        font-size: 0.95em;
+    }
+
+    .balance-table tfoot tr td:last-child {
+        flex-shrink: 0;
+        font-weight: 700;
+        color: #1976D2;
+        font-size: 1.1em;
+    }
+
+    .balance-table tfoot tr td::before {
+        display: none;
+    }
+
+    .balance-table tfoot tr td > * {
+        margin: 0;
+        padding: 0;
+        color: inherit;
+        font-size: inherit;
+        font-weight: inherit;
+    }
+
+    .modal-buttons {
+        padding: 1em;
+        gap: 1em;
+    }
+
+    /* Header adaptations */
+    .history-header,
+    .entries-header,
+    .transfers-header,
+    .vehicles-header,
+    .discrepancies-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1em;
+    }
+
+    .history-filter-controls,
+    .entries-filter-controls,
+    .transfers-filter-controls,
+    .vehicles-controls {
+        width: 100%;
+        flex-direction: column;
+        gap: 0.8em;
+    }
+
+    .history-filter-controls button,
+    .entries-filter-controls button,
+    .transfers-filter-controls button,
+    .vehicles-controls button {
+        width: 100%;
+        padding: 0.9em;
+        font-size: 1em;
+    }
+
+    /* Container adaptations */
+    .transfers-container,
+    .discrepancies-container,
+    .vehicles-container {
+        padding: 1em;
+        margin: 1em 0;
+    }
+
+    .transfers-container .transfers-header,
+    .discrepancies-container .discrepancies-header,
+    .vehicles-container .vehicles-header {
+        padding: 0;
+        margin-bottom: 1em;
+    }
+
+    .vehicles-container {
+        padding: 2em;
+    }
+
+    /* Pagination adaptations */
+    .pagination {
+        flex-direction: column;
+        gap: 0.8em;
+        padding: 1em;
+    }
+
+    .pagination button {
+        width: 100%;
+        padding: 0.9em;
+    }
+
+    /* Discrepancies adaptations */
+    #discrepancies-stats {
+        flex-direction: column;
+        gap: 1em;
+    }
+
+    .discrepancy-stat-card {
+        width: 100%;
+        min-width: 100%;
+    }
+
+    #discrepancies-filters .filters-row {
+        flex-direction: column;
+        gap: 1em;
+    }
+
+    .discrepancy-filter-group {
+        width: 100%;
+        min-width: 100%;
+    }
+
+    #discrepancies-pagination {
+        flex-direction: column;
+        gap: 1em;
+    }
+
+    /* Large modal adaptations */
+    .large-modal {
+        max-width: 90% !important;
+        max-height: 95vh;
+    }
+
+    .balance-history-wrapper {
+        max-height: 50vh;
+        overflow-y: auto;
+    }
+
+    /* Filter modal specific adaptations */
+    .filter-modal .modal-content {
+        width: 90% !important;
+        max-width: 90% !important;
+    }
+
+    .filter-modal .modal-content h3 {
+        font-size: 1.1em;
+        padding: 1.4em 1.2em;
+    }
+
+    #entries-filter-counter{
+        padding:0;
+    }
+
+    /* Vehicles filters adaptations */
+    .vehicles-filters {
+        flex-direction: column;
+        gap: 0.8em;
+        width: 100%;
+    }
+
+    .vehicles-filters label {
+        font-size: 0.9em;
+    }
+
+    .vehicles-filters input {
+        width: 80%;
+        padding: 0.8em;
+        font-size: 16px;
+    }
+
+    .vehicles-filters button {
+        width: 100%;
+        padding: 0.9em;
+    }
+
+    /* Entry, Move, Withdraw Modals Mobile Styles */
+    #entry-modal,
+    #move-modal,
+    #withdraw-modal {
+        padding: 0.5em;
+    }
+
+    #entry-modal .modal-content,
+    #move-modal .modal-content,
+    #withdraw-modal .modal-content {
+        width: 90% !important;
+        max-width: 90% !important;
+        max-height: 95vh;
+        margin: 0 auto;
+        border-radius: 12px;
+    }
+
+    #entry-modal .modal-content h3,
+    #move-modal .modal-content h3,
+    #withdraw-modal .modal-content h3 {
+        font-size: 1.1em;
+        padding: 1em 1.2em;
+    }
+
+    #entry-modal .modal-content form,
+    #move-modal .modal-content form,
+    #withdraw-modal .modal-content form {
+        padding: 1.2em;
+        font-size: 16px;
+    }
+
+    #entry-modal .modal-content input,
+    #entry-modal .modal-content select,
+    #entry-modal .modal-content textarea,
+    #move-modal .modal-content input,
+    #move-modal .modal-content select,
+    #move-modal .modal-content textarea,
+    #withdraw-modal .modal-content input,
+    #withdraw-modal .modal-content select,
+    #withdraw-modal .modal-content textarea {
+        font-size: 16px;
+        padding: 0.9em;
+        border-radius: 8px;
+        margin-bottom: 0.5em;
+    }
+
+    #entry-modal .modal-content label,
+    #move-modal .modal-content label,
+    #withdraw-modal .modal-content label {
+        font-size: 0.95em;
+        margin-bottom: 0.5em;
+        margin-top: 0.5em;
+    }
+
+    #entry-modal .modal-content label:first-child,
+    #move-modal .modal-content label:first-child,
+    #withdraw-modal .modal-content label:first-child {
+        margin-top: 0;
+    }
+
+    #entry-modal .modal-content textarea,
+    #move-modal .modal-content textarea,
+    #withdraw-modal .modal-content textarea {
+        min-height: 100px;
+        resize: vertical;
+    }
+
+    #entry-modal .modal-content form .button,
+    #move-modal .modal-content form .button,
+    #withdraw-modal .modal-content form .button {
+        width: 100%;
+        padding: 1em;
+        font-size: 1em;
+        margin-top: 1em;
+        min-height: 48px;
+        border-radius: 8px;
+    }
+
+    #entry-modal .close,
+    #move-modal .close,
+    #withdraw-modal .close {
+        top: 10px;
+        right: 15px;
+        width: 36px;
+        height: 36px;
+        font-size: 1.8rem;
+    }
+
+    /* Edit Modal and Edit Transfer Modal Mobile Styles */
+    #edit-modal,
+    #edit-transfer-modal {
+        padding: 0.5em;
+    }
+
+    #edit-modal .modal-content,
+    #edit-transfer-modal .modal-content {
+        width: 90% !important;
+        max-width: 90% !important;
+        max-height: 95vh;
+        margin: 0 auto;
+        border-radius: 12px;
+    }
+
+    #edit-modal .modal-content h3,
+    #edit-transfer-modal .modal-content h3 {
+        font-size: 1.1em;
+        padding: 1em 1.2em;
+    }
+
+    #edit-modal .modal-content form,
+    #edit-transfer-modal .modal-content form {
+        padding: 1.2em;
+        font-size: 16px;
+        gap: 1em;
+    }
+
+    #edit-modal .modal-content input,
+    #edit-modal .modal-content select,
+    #edit-modal .modal-content textarea,
+    #edit-transfer-modal .modal-content input,
+    #edit-transfer-modal .modal-content select,
+    #edit-transfer-modal .modal-content textarea {
+        font-size: 16px;
+        padding: 0.9em;
+        border-radius: 8px;
+        margin-bottom: 0.5em;
+    }
+
+    #edit-modal .modal-content label,
+    #edit-transfer-modal .modal-content label {
+        font-size: 0.95em;
+        margin-bottom: 0.5em;
+        margin-top: 0.5em;
+    }
+
+    #edit-modal .modal-content label:first-of-type,
+    #edit-transfer-modal .modal-content label:first-of-type {
+        margin-top: 0;
+    }
+
+    #edit-modal .modal-content textarea,
+    #edit-transfer-modal .modal-content textarea {
+        min-height: 100px;
+        resize: vertical;
+    }
+
+    #edit-modal .modal-content form .button,
+    #edit-transfer-modal .modal-content form .button {
+        width: 100%;
+        padding: 1em;
+        font-size: 1em;
+        margin-top: 1em;
+        min-height: 48px;
+        border-radius: 8px;
+    }
+
+    #edit-modal .close,
+    #edit-transfer-modal .close {
+        top: 10px;
+        right: 15px;
+        width: 36px;
+        height: 36px;
+        font-size: 1.8rem;
+    }
+
+    /* Driver balance info adaptations */
+    #driver-balance-info,
+    #driver-no-balance-warning {
+        font-size: 0.9em;
+        padding: 0.8em;
+        margin: 0.8em 0;
+        border-radius: 8px;
+    }
+
+    #driver-balance-info div,
+    #driver-no-balance-warning div {
+        margin-top: 0.5em;
+        line-height: 1.5;
+    }
+
+    #driver-balance-info strong,
+    #driver-no-balance-warning strong {
+        font-size: 1em;
+        display: block;
+        margin-bottom: 0.5em;
+    }
+
+    #driver-balance-info span {
+        display: block;
+        margin-bottom: 0.3em;
+        font-size: 0.95em;
+    }
+
+    /* Readonly field adaptations */
+    .readonly-field {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5em;
+        padding: 0.8em;
+    }
+
+    .readonly-label {
+        font-size: 0.85em;
+        color: #666;
+    }
+
+    .readonly-value {
+        font-size: 1em;
+        font-weight: 600;
+        color: #333;
+    }
+
+    /* Vehicle items adaptations */
+    .vehicle-items-body {
+        padding: 0.5em;
+    }
+
+    .vehicle-actions-bottom {
+        flex-direction: column;
+        gap: 0.8em;
+    }
+
+    .vehicle-actions-bottom button {
+        width: 100%;
+    }
+
+    .form-actions {
+        flex-direction: column;
+        gap: 0.8em;
+    }
+
+    .form-actions button {
+        width: 100%;
+    }
+
+    /* Balance Edit Modal Mobile Styles */
+    #balance-edit-modal .modal-content {
+        width: 90% !important;
+        max-width: 90% !important;
+        max-height: 95vh;
+        margin: 0 auto;
+    }
+
+    #balance-edit-modal .balance-edit-form {
+        padding: 1em;
+        gap: 1.2em;
+    }
+
+    #balance-edit-modal .edit-mode-switch {
+        flex-direction: column;
+        gap: 0.8em;
+        padding: 0.8em;
+        margin-bottom: 0;
+    }
+
+    #balance-edit-modal .edit-mode-switch label {
+        padding: 1em;
+        font-size: 0.95em;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .balance-edit-form .form-row {
+        margin-bottom: 0;
+        gap: 0.6em;
+    }
+
+    .balance-edit-form .form-row label {
+        font-size: 0.95em;
+        margin-bottom: 0.4em;
+    }
+
+    .balance-edit-form input[type="number"],
+    .balance-edit-form textarea {
+        width: 100%;
+        font-size: 16px;
+        padding: 0.9em;
+        box-sizing: border-box;
+        border-radius: 8px;
+    }
+
+    .balance-edit-form textarea {
+        min-height: 100px;
+        resize: vertical;
+    }
+
+    .balance-edit-form .form-actions {
+        flex-direction: column;
+        gap: 0.8em;
+        margin-top: 0.5em;
+        padding-top: 1em;
+    }
+
+    .balance-edit-form .form-actions .button {
+        width: 100%;
+        padding: 1em;
+        font-size: 1em;
+        min-height: 48px;
+        border-radius: 8px;
+        min-width: auto;
+    }
+
+    .balance-edit-actions {
+        margin-top: 0;
+        padding-top: 0;
+        border-top: none;
+        flex-direction: column;
+        gap: 0.8em;
+    }
+
+    .balance-edit-actions .button {
+        width: 100%;
+        padding: 1em;
+        font-size: 1em;
+        min-height: 48px;
+        border-radius: 8px;
+        min-width: auto;
+    }
+
+    /* Additional mobile adaptations */
+    .balance-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5em;
+    }
+
+    .balance-item > * {
+        width: 100%;
+    }
+
+    /* Ensure tables don't have fixed widths on mobile */
+    .history-table,
+    #entries-table,
+    .transfers-table,
+    .balance-table,
+    .vehicles-table,
+    .vehicle-items-table,
+    .balance-history-table {
+        width: 100% !important;
+        min-width: auto !important;
+        margin-bottom: 1.5em;
+    }
+
+    /* Balance table specific mobile styles */
+    #balance-container .balance-table {
+        margin-bottom: 2em;
+    }
+
+    #balance-container .balance-table:last-child {
+        margin-bottom: 0;
+    }
+
+    .history-table th,
+    .history-table td,
+    #entries-table th,
+    #entries-table td,
+    .transfers-table th,
+    .transfers-table td,
+    .balance-table th,
+    .balance-table td,
+    .vehicles-table th,
+    .vehicles-table td,
+    .vehicle-items-table th,
+    .vehicle-items-table td,
+    .balance-history-table th,
+    .balance-history-table td {
+        width: auto !important;
+        min-width: auto !important;
+        max-width: none !important;
+    }
+
+    /* Pagination improvements */
+    .pagination {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .pagination button {
+        min-width: 44px;
+        min-height: 44px;
+    }
+
+    /* Header improvements */
+    h1 {
+        font-size: 1.8rem;
+        padding: 0 0.5em;
+    }
+
+    /* Container improvements */
+    .container {
+        margin: 0;
+        padding: 0.5em;
+    }
+
+    /* Button improvements */
+    .button-row {
+        gap: 0.8em;
+    }
+
+    .button {
+        min-height: 48px;
+        font-size: 1em;
+    }
+
+    /* Filter counter improvements */
+    #filter-counter,
+    #history-filter-counter,
+    #entries-filter-counter,
+    #transfers-filter-counter {
+        min-width: 44px;
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Excel export button improvements */
+    .excel-export {
+        min-height: 44px;
+        font-size: 1em;
+        padding: 0.9em;
+    }
+
+    /* Statistics cards improvements */
+    .discrepancy-stat-card {
+        padding: 1em;
+    }
+
+    .discrepancy-stat-value {
+        font-size: 1.5rem;
+    }
+
+    /* Form improvements */
+    .form-group {
+        margin-bottom: 1em;
+    }
+
+    .form-group label {
+        font-size: 0.95em;
+        margin-bottom: 0.5em;
+    }
+
+    /* Vehicle total improvements */
+    .vehicle-total {
+        font-size: 1.1rem;
+        padding: 1em;
+        text-align: center;
+    }
+
+    /* Balance history improvements */
+    .balance-history-wrapper {
+        max-height: 60vh;
+    }
+
+    /* Driver balances modal improvements */
+    #driver-balances-modal {
+        padding: 0.5em;
+    }
+
+    #driver-balances-modal .modal-content {
+        width: 90% !important;
+        max-width: 90% !important;
+        max-height: 95vh;
+        margin: 0 auto;
+        border-radius: 12px;
+        padding: 0;
+    }
+
+    #driver-balances-modal .modal-content h3 {
+        font-size: 1.2em;
+        padding: 1em 1.2em;
+        margin-bottom: 1em;
+        border-bottom: 2px solid #1976D2;
+        padding-bottom: 0.8em;
+    }
+
+    #driver-balances-modal .close {
+        top: 10px;
+        right: 15px;
+        width: 36px;
+        height: 36px;
+        font-size: 1.8rem;
+    }
+
+    #driver-balances-container {
+        padding: 0.5em;
+        max-height: calc(95vh - 100px);
+        overflow-y: auto;
+    }
+
+    #driver-balances-modal h4 {
+        font-size: 1em;
+        margin-top: 1.5em;
+        padding: 0.8em 1em;
+        border-left: 3px solid #1976D2;
+    }
+
+    #driver-balances-modal h4:first-of-type {
+        margin-top: 0;
+    }
+
+    #driver-balances-modal .balance-table {
+        margin-bottom: 1.5em;
+        font-size: 0.9em;
+    }
+
+    #driver-balances-modal .balance-table th {
+        font-size: 0.75em;
+        padding: 10px 8px;
+    }
+
+    #driver-balances-modal .balance-table td {
+        padding: 8px;
+        font-size: 0.9em;
+    }
+
+    #driver-balances-modal .balance-table tfoot td {
+        font-size: 0.95em;
+        padding: 12px 8px;
+    }
+
+    #driver-balances-modal .balance-table tfoot td:last-child {
+        font-size: 1em;
+    }
+
+    /* Balance table tfoot styling for mobile in driver balances modal */
+    #driver-balances-modal .balance-table tfoot {
+        display: block;
+        margin-top: 1em;
+    }
+
+    #driver-balances-modal .balance-table tfoot tr {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.5em;
+        border-radius: 12px;
+        background: #fff;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        border: 1px solid #e0e0e0;
+        margin-bottom: 1em;
+        gap: 0.5em;
+    }
+
+    #driver-balances-modal .balance-table tfoot tr td {
+        display: flex;
+        align-items: center;
+        padding: 0;
+        border: none;
+        gap: 0;
+        width: auto;
+        box-sizing: border-box;
+    }
+
+    #driver-balances-modal .balance-table tfoot tr td[data-label=""] {
+        display: none;
+    }
+
+    #driver-balances-modal .balance-table tfoot tr td:first-child {
+        flex: 1;
+        font-weight: 600;
+        color: #495057;
+        font-size: 0.9em;
+    }
+
+    #driver-balances-modal .balance-table tfoot tr td:last-child {
+        flex-shrink: 0;
+        font-weight: 700;
+        color: #1976D2;
+        font-size: 1em;
+    }
+
+    #driver-balances-modal .balance-table tfoot tr td::before {
+        display: none;
+    }
+
+    #driver-balances-modal .balance-table tfoot tr td > * {
+        margin: 0;
+        padding: 0;
+        color: inherit;
+        font-size: inherit;
+        font-weight: inherit;
+    }
+
+    #driver-balances-container > p {
+        padding: 1.5em;
+        font-size: 0.95em;
+        margin: 1em 0;
+    }
+
+    #driver-balances-container::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    #driver-balances-container::-webkit-scrollbar-thumb {
+        background: #1976D2;
+    }
+
+    /* Transfers container improvements */
+    .transfers-container {
+        padding: 1em;
+    }
+
+    .transfers-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1em;
+    }
+
+    .vehicles-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1em;
+    }
+
+    .vehicles-controls {
+        width: 100%;
+        flex-direction: column;
+        gap: 0.8em;
+    }
+
+    /* Discrepancies container improvements */
+    .discrepancies-container {
+        padding: 1em;
+    }
+
+    .discrepancies-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1em;
+    }
+
+    /* History container improvements */
+    .history-container {
+        padding: 1em;
+    }
+
+    .history-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1em;
+    }
+
+    /* Entries container improvements */
+    .entries-container {
+        padding: 1em;
+    }
+
+    .entries-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1em;
+    }
 }
 
 /* ========================================
@@ -1728,7 +2905,7 @@ tr:hover {
 .vehicles-container {
     background: linear-gradient(135deg, #f8f9fa, #e9ecef);
     border-radius: 15px;
-    padding: 25px;
+    padding: 2em;
     margin: 30px 0;
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
 }
@@ -1856,7 +3033,6 @@ tr:hover {
 
 .vehicle-info-form {
     display: grid;
-    gap: 12px;
 }
 
 .vehicle-info-form .form-row {
@@ -1898,6 +3074,7 @@ tr:hover {
     gap: 10px;
 }
 
+/* General edit-mode-switch styles (for vehicle modals) */
 .edit-mode-switch {
     display: flex;
     gap: 12px;
@@ -1931,7 +3108,6 @@ tr:hover {
 
 .edit-mode-switch label.active input[type="radio"] {
     background-color: currentColor;
-    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.35);
 }
 
 .edit-info-list {
@@ -2005,67 +3181,160 @@ tr:hover {
     margin-bottom: 10px;
 }
 
+/* Balance Edit Modal Styles */
+#balance-edit-modal .modal-content {
+    max-width: 600px;
+    padding: 0;
+}
+
+#balance-edit-modal .balance-edit-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+#balance-edit-modal .edit-mode-switch {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 10px;
+    padding: 8px;
+    background: #f8f9fa;
+    border-radius: 12px;
+    border: 1px solid #e9ecef;
+}
+
+#balance-edit-modal .edit-mode-switch label {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: #495057;
+    background: #fff;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex: 1;
+    gap: 8px;
+}
+
+#balance-edit-modal .edit-mode-switch label:hover {
+    background: #f1f3f5;
+    border-color: #dee2e6;
+}
+
+#balance-edit-modal .edit-mode-switch label.active {
+    background: linear-gradient(135deg, #4CAF50, #2E7D32);
+    color: #fff;
+    border-color: #2E7D32;
+    box-shadow: 0 2px 8px rgba(46, 125, 50, 0.2);
+}
+
+#balance-edit-modal .edit-mode-switch label input[type="radio"] {
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    cursor: pointer;
+    accent-color: #4CAF50;
+}
+
+#balance-edit-modal .edit-mode-switch label.active input[type="radio"] {
+    accent-color: #fff;
+}
+
 .balance-edit-form .form-row {
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    margin-bottom: 15px;
+    gap: 8px;
 }
 
-.balance-edit-form label {
+.balance-edit-form .form-row label {
     font-weight: 600;
     color: #374151;
+    font-size: 0.95rem;
+    margin-bottom: 4px;
 }
 
 .balance-edit-form input[type="number"],
 .balance-edit-form textarea {
-    padding: 12px 14px;
-    border: 1px solid #e0e0e0;
+    width: 100%;
+    padding: 14px 16px;
+    border: 2px solid #e5e7eb;
     border-radius: 10px;
     font-size: 1rem;
-    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    transition: all 0.2s ease;
     font-family: inherit;
-    background: #f9fafb;
+    background: #fff;
+    box-sizing: border-box;
 }
 
 .balance-edit-form input[type="number"]:focus,
 .balance-edit-form textarea:focus {
     outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+    border-color: #4CAF50;
+    box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
     background: #fff;
+}
+
+.balance-edit-form input[type="number"]:disabled,
+.balance-edit-form textarea:disabled {
+    background: #f3f4f6;
+    color: #9ca3af;
+    cursor: not-allowed;
+    border-color: #e5e7eb;
 }
 
 .balance-edit-form textarea {
     resize: vertical;
+    min-height: 100px;
+    font-family: inherit;
 }
 
 .balance-edit-form .form-actions {
     display: flex;
     justify-content: flex-end;
+    gap: 12px;
     margin-top: 10px;
+    padding-top: 20px;
+    border-top: 1px solid #e9ecef;
 }
 
-#balance-edit-modal .modal-content {
-    font-size: 1.05rem;
-}
-
-#balance-edit-modal .balance-edit-form label {
+.balance-edit-form .form-actions .button {
+    padding: 12px 24px;
     font-size: 1rem;
+    font-weight: 600;
+    border-radius: 8px;
+    min-width: 120px;
 }
 
-#balance-edit-modal .balance-edit-form input[type="number"],
-#balance-edit-modal .balance-edit-form textarea {
-    font-size: 1.1rem;
+.balance-edit-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
 }
 
-#balance-edit-modal .edit-mode-switch label {
+.balance-edit-actions .button {
+    padding: 12px 24px;
     font-size: 1rem;
+    font-weight: 600;
+    border-radius: 8px;
+    min-width: 120px;
 }
 
-#balance-edit-modal .balance-edit-actions .button,
-#balance-edit-modal .balance-edit-form .form-actions .button {
-    font-size: 1.05rem;
+.balance-edit-actions .button-secondary {
+    background: linear-gradient(135deg, #6c757d, #5a6268);
+    color: white;
+}
+
+.balance-edit-actions .button-secondary:hover {
+    background: linear-gradient(135deg, #5a6268, #495057);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
 }
 
 .balance-history-wrapper {
@@ -2130,7 +3399,6 @@ tr:hover {
     opacity: 0;
     font-size: 16px;
     transition: all 0.3s ease;
-    padding: 20px;
     box-sizing: border-box;
     overflow: hidden;
 }
@@ -2181,7 +3449,6 @@ tr:hover {
     text-align: center;
     text-transform: uppercase;
     letter-spacing: 1px;
-    border-radius: 20px 20px 0 0;
     flex-shrink: 0;
 }
 
@@ -2190,7 +3457,6 @@ tr:hover {
 #withdraw-modal .modal-content form {
     display: flex;
     flex-direction: column;
-    padding: 20px;
     padding-bottom: 30px;
     width: 100%;
     box-sizing: border-box;

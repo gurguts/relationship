@@ -301,9 +301,253 @@
     color: #333;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
+    .profile-container {
+        margin: 1em auto;
+        padding: 0 0.5em;
+    }
+
+    .profile-header {
+        margin-bottom: 1em;
+    }
+
+    .profile-container h1 {
+        font-size: 1.8rem;
+    }
+
+    .user-selector {
+        width: 100%;
+        min-width: auto;
+        font-size: 16px;
+        padding: 0.8em;
+    }
+
     .profile-sections {
         grid-template-columns: 1fr;
+        gap: 1.5em;
+        margin-top: 1.5em;
+    }
+
+    .profile-section {
+        padding: 1.2em;
+        border-radius: 12px;
+    }
+
+    .profile-section h2 {
+        font-size: 1.2em;
+        margin-bottom: 0.8em;
+        padding-bottom: 0.4em;
+    }
+
+    /* Product Balance Table Mobile Styles */
+    .product-balance-table thead {
+        display: none;
+    }
+
+    .product-balance-table tbody {
+        display: flex;
+        flex-direction: column;
+        gap: 1em;
+        padding: 0.5em;
+    }
+
+    .product-balance-table tbody tr {
+        display: flex;
+        flex-direction: column;
+        padding: 1em;
+        border-radius: 12px;
+        background: #fff;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        border: 1px solid #e0e0e0;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .product-balance-table tbody tr:hover {
+        background: #fff;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .product-balance-table tbody tr td {
+        display: flex;
+        flex-direction: row;
+        align-items: flex-start;
+        padding: 0.8em 0;
+        border-bottom: 1px solid #f0f0f0;
+        gap: 0.8em;
+        width: 100%;
+        box-sizing: border-box;
+        text-align: left !important;
+    }
+
+    .product-balance-table tbody tr td:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
+    }
+
+    .product-balance-table tbody tr td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: #1976D2;
+        font-size: 0.85em;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        flex-shrink: 0;
+        width: 120px;
+        min-width: 120px;
+        max-width: 120px;
+        padding: 0.35em 0.5em;
+        background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+        border-left: 3px solid #1976D2;
+        border-radius: 4px;
+        margin-right: 0.5em;
+        line-height: 1.3;
+        box-sizing: border-box;
+    }
+
+    .product-balance-table tbody tr td > * {
+        color: #333;
+        font-size: 0.95em;
+        word-break: break-word;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        line-height: 1.5;
+        white-space: normal;
+        flex: 1;
+        text-align: left;
+    }
+
+    /* Account Cards Mobile Styles */
+    .account-card {
+        padding: 1em;
+        margin-bottom: 1em;
+        border-radius: 12px;
+    }
+
+    .account-card-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5em;
+        margin-bottom: 0.8em;
+    }
+
+    .account-name {
+        font-size: 1em;
+        width: 100%;
+    }
+
+    .account-description {
+        font-size: 0.9em;
+        margin-bottom: 0.8em;
+    }
+
+    .account-balances {
+        margin-top: 0.8em;
+    }
+
+    .balance-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.3em;
+        padding: 0.6em 0;
+    }
+
+    .balance-currency {
+        font-size: 0.9em;
+    }
+
+    .balance-amount {
+        font-size: 1.1em;
+    }
+
+    /* Modal Mobile Styles */
+    .modal {
+        padding: 0.5em;
+    }
+
+    .modal-content {
+        width: 90% !important;
+        max-width: 90% !important;
+        max-height: 95vh;
+        padding: 1.5em;
+        border-radius: 12px;
+        overflow-y: auto;
+    }
+
+    .modal-content h2 {
+        font-size: 1.2em;
+        margin-bottom: 0.8em;
+        padding-bottom: 0.4em;
+    }
+
+    .modal-content label {
+        font-size: 0.95em;
+        margin-bottom: 0.4em;
+    }
+
+    .modal-content input {
+        font-size: 16px;
+        padding: 0.8em;
+        margin-bottom: 1em;
+    }
+
+    .modal-buttons {
+        flex-direction: column-reverse;
+        gap: 0.8em;
+        margin-top: 1em;
+    }
+
+    .modal-buttons button {
+        width: 100%;
+        padding: 1em;
+        font-size: 1em;
+        min-height: 48px;
+    }
+
+    .modal .close {
+        top: 0.8em;
+        right: 0.8em;
+        font-size: 1.8rem;
+        width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Edit Balance Button */
+    .edit-balance-btn {
+        width: 100%;
+        padding: 0.8em;
+        font-size: 1em;
+        margin-top: 0.5em;
+    }
+
+    /* Loading, Error, Empty States */
+    .loading,
+    .error,
+    .empty,
+    .no-accounts,
+    .no-products {
+        padding: 1.5em;
+        font-size: 0.95em;
+    }
+
+    /* Account balances empty state */
+    .account-balances-empty {
+        text-align: center;
+        padding: 1em;
+        color: #999;
+        font-style: italic;
+        font-size: 0.9em;
+    }
+
+    /* Ensure table cells don't have fixed widths on mobile */
+    .product-balance-table th,
+    .product-balance-table td {
+        width: auto !important;
+        min-width: auto !important;
+        max-width: none !important;
     }
 }
 

@@ -64,7 +64,7 @@ public class SourceService implements ISourceService {
     @Override
     @Cacheable(value = "sourceNames", key = "'sourceNames'")
     public Map<Long, String> getSourceNames() {
-        List<Source> sources = (List<Source>) sourceRepository.findAll();
+        List<Source> sources = getAllSources();
         return sources.stream()
                 .collect(Collectors.toMap(Source::getId, Source::getName));
     }

@@ -14,12 +14,7 @@ public class CacheConfig {
     @Bean
     public CacheManager cacheManager() {
         CaffeineCacheManager cacheManager = new CaffeineCacheManager(
-                "regions", "regionNames", "regionSearch",
-                "businesses", "businessNames", "businessSearch",
-                "routes", "routeNames", "routeSearch",
-                "sources", "sourceNames", "sourceSearch",
-                "statusClients", "statusClientNames", "statusClientSearch",
-                "clientProducts", "clientProductNames", "clientProductSearch"
+                "sources", "sourceNames", "sourceSearch"
         );
         cacheManager.setCaffeine(caffeineCacheBuilder());
         return cacheManager;

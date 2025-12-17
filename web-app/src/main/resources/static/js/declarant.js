@@ -466,28 +466,28 @@ function renderVehicles(vehicles) {
     
     tbody.innerHTML = vehicles.map(vehicle => `
         <tr onclick="viewVehicleDetails(${vehicle.id})">
-            <td style="font-weight: 600; color: var(--primary);">${formatNumber(vehicle.totalCostEur, 2)} EUR</td>
-            <td>${formatDate(vehicle.shipmentDate)}</td>
-            <td>${vehicle.vehicleNumber || '-'}</td>
-            <td>${vehicle.invoiceUa || '-'}</td>
-            <td>${vehicle.invoiceEu || '-'}</td>
-            <td>${formatBoolean(vehicle.isOurVehicle)}</td>
-            <td>${vehicle.sender || '-'}</td>
-            <td>${vehicle.receiver || '-'}</td>
-            <td>${vehicle.destinationCountry || '-'}</td>
-            <td>${vehicle.destinationPlace || '-'}</td>
-            <td>${vehicle.product || '-'}</td>
-            <td>${vehicle.productQuantity || '-'}</td>
-            <td>${vehicle.declarationNumber || '-'}</td>
-            <td>${vehicle.terminal || '-'}</td>
-            <td>${vehicle.driverFullName || '-'}</td>
-            <td>${formatBoolean(vehicle.eur1)}</td>
-            <td>${formatBoolean(vehicle.fito)}</td>
-            <td>${formatDate(vehicle.customsDate)}</td>
-            <td>${formatDate(vehicle.customsClearanceDate)}</td>
-            <td>${formatDate(vehicle.unloadingDate)}</td>
-            <td>${formatCarrier(vehicle.carrier)}</td>
-            <td>${vehicle.description || '-'}</td>
+            <td data-label="Загальна вартість" style="font-weight: 600; color: var(--primary);">${formatNumber(vehicle.totalCostEur, 2)} EUR</td>
+            <td data-label="Дата відвантаження">${formatDate(vehicle.shipmentDate)}</td>
+            <td data-label="Номер машини">${vehicle.vehicleNumber || '-'}</td>
+            <td data-label="Інвойс УА">${vehicle.invoiceUa || '-'}</td>
+            <td data-label="Інвойс ЄС">${vehicle.invoiceEu || '-'}</td>
+            <td data-label="Наше завантаження">${formatBoolean(vehicle.isOurVehicle)}</td>
+            <td data-label="Відправник">${vehicle.sender || '-'}</td>
+            <td data-label="Отримувач">${vehicle.receiver || '-'}</td>
+            <td data-label="Країна призначення">${vehicle.destinationCountry || '-'}</td>
+            <td data-label="Місце призначення">${vehicle.destinationPlace || '-'}</td>
+            <td data-label="Товар">${vehicle.product || '-'}</td>
+            <td data-label="Кількість товару">${vehicle.productQuantity || '-'}</td>
+            <td data-label="Номер декларації">${vehicle.declarationNumber || '-'}</td>
+            <td data-label="Термінал">${vehicle.terminal || '-'}</td>
+            <td data-label="Водій (ПІБ)">${vehicle.driverFullName || '-'}</td>
+            <td data-label="EUR1">${formatBoolean(vehicle.eur1)}</td>
+            <td data-label="FITO">${formatBoolean(vehicle.fito)}</td>
+            <td data-label="Дата митниці">${formatDate(vehicle.customsDate)}</td>
+            <td data-label="Дата розмитнення">${formatDate(vehicle.customsClearanceDate)}</td>
+            <td data-label="Дата вивантаження">${formatDate(vehicle.unloadingDate)}</td>
+            <td data-label="Перевізник">${formatCarrier(vehicle.carrier)}</td>
+            <td data-label="Коментар">${vehicle.description || '-'}</td>
         </tr>
     `).join('');
     
@@ -498,6 +498,11 @@ function renderVehicles(vehicles) {
 function applySavedColumnWidths() {
     const table = document.getElementById('vehicles-table');
     if (!table) return;
+    
+    // Don't apply column widths on mobile devices
+    if (window.innerWidth <= 1024) {
+        return;
+    }
     
     const headers = table.querySelectorAll('.resizable-header');
     headers.forEach(header => {
@@ -570,12 +575,12 @@ function renderVehicleDetails(vehicle) {
 
             return `
                 <tr class="vehicle-item-row" data-item-id="${item.withdrawalId}">
-                    <td>${productName}</td>
-                    <td>${warehouseName}</td>
-                    <td>${formatNumber(item.quantity, 2)} кг</td>
-                    <td style="text-align: right;">${formatNumber(item.unitPriceEur, 6)} EUR</td>
-                    <td style="text-align: right; font-weight: 600; color: var(--primary);">${formatNumber(item.totalCostEur, 6)} EUR</td>
-                    <td>${item.withdrawalDate || vehicle.shipmentDate}</td>
+                    <td data-label="Товар">${productName}</td>
+                    <td data-label="Склад">${warehouseName}</td>
+                    <td data-label="Кількість">${formatNumber(item.quantity, 2)} кг</td>
+                    <td data-label="Ціна за кг" style="text-align: right;">${formatNumber(item.unitPriceEur, 6)} EUR</td>
+                    <td data-label="Загальна вартість" style="text-align: right; font-weight: 600; color: var(--primary);">${formatNumber(item.totalCostEur, 6)} EUR</td>
+                    <td data-label="Дата списання">${item.withdrawalDate || vehicle.shipmentDate}</td>
                 </tr>
             `;
         }).join('');
@@ -966,12 +971,12 @@ async function loadCarriers() {
     
     tbody.innerHTML = carriers.map(carrier => `
         <tr>
-            <td>${carrier.companyName || '-'}</td>
-            <td>${carrier.registrationAddress || '-'}</td>
-            <td>${carrier.phoneNumber || '-'}</td>
-            <td>${carrier.code || '-'}</td>
-            <td>${carrier.account || '-'}</td>
-            <td>
+            <td data-label="Назва компанії">${carrier.companyName || '-'}</td>
+            <td data-label="Адреса реєстрації">${carrier.registrationAddress || '-'}</td>
+            <td data-label="Телефон">${carrier.phoneNumber || '-'}</td>
+            <td data-label="Код">${carrier.code || '-'}</td>
+            <td data-label="Рахунок">${carrier.account || '-'}</td>
+            <td data-label="Дії">
                 <div class="action-buttons">
                     <button class="btn btn-secondary btn-sm" onclick="editCarrier(${carrier.id})">✏️ Редагувати</button>
                     <button class="btn btn-danger btn-sm" onclick="deleteCarrier(${carrier.id})">🗑️ Видалити</button>
@@ -1089,6 +1094,11 @@ let startWidth = 0;
 function initializeColumnResize() {
     const table = document.getElementById('vehicles-table');
     if (!table) return;
+    
+    // Don't initialize column resize on mobile devices
+    if (window.innerWidth <= 1024) {
+        return;
+    }
     
     const headers = table.querySelectorAll('.resizable-header');
     
@@ -1275,14 +1285,14 @@ async function loadVehicleExpenses(vehicleId) {
             
             return `
                 <tr>
-                    <td>${date}</td>
-                    <td>${formatNumber(transaction.amount, 2)}</td>
-                    <td>${transaction.currency || '-'}</td>
-                    <td>${exchangeRate}</td>
-                    <td>${convertedAmount}</td>
-                    <td>${categoryName}</td>
-                    <td>${accountName}</td>
-                    <td>${transaction.description || '-'}</td>
+                    <td data-label="Дата">${date}</td>
+                    <td data-label="Сума">${formatNumber(transaction.amount, 2)}</td>
+                    <td data-label="Валюта">${transaction.currency || '-'}</td>
+                    <td data-label="Курс">${exchangeRate}</td>
+                    <td data-label="Сума в EUR">${convertedAmount}</td>
+                    <td data-label="Категорія">${categoryName}</td>
+                    <td data-label="Рахунок">${accountName}</td>
+                    <td data-label="Опис">${transaction.description || '-'}</td>
                 </tr>
             `;
         }).join('');

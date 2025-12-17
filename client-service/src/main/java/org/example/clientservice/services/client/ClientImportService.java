@@ -134,8 +134,17 @@ public class ClientImportService implements IClientImportService {
             Row headerRow = sheet.getRow(0);
             Map<String, Integer> columnIndexMap = parseHeaders(headerRow, fields, clientType);
 
+            List<org.example.clientservice.models.field.Source> allSources = sourceService.getAllSources();
+            Map<String, org.example.clientservice.models.field.Source> sourceNameMap = allSources.stream()
+                    .filter(s -> s.getName() != null)
+                    .collect(Collectors.toMap(
+                            s -> s.getName().trim().toLowerCase(),
+                            s -> s,
+                            (s1, s2) -> s1
+                    ));
+
             List<Client> clientsToCreate = new ArrayList<>();
-            StringBuilder errors = new StringBuilder();
+            List<String> rowErrors = new ArrayList<>();
             
             for (int rowIndex = 1; rowIndex <= sheet.getLastRowNum(); rowIndex++) {
                 Row row = sheet.getRow(rowIndex);
@@ -160,17 +169,20 @@ public class ClientImportService implements IClientImportService {
                 }
                 
                 try {
-                    Client client = parseClientRow(row, clientType, fields, columnIndexMap, rowIndex + 1);
+                    Client client = parseClientRow(row, clientType, fields, columnIndexMap, rowIndex + 1, sourceNameMap);
                     clientsToCreate.add(client);
                 } catch (Exception e) {
-                    errors.append("Рядок ").append(rowIndex + 1).append(": ").append(e.getMessage()).append("\n");
+                    String errorMessage = "Рядок " + (rowIndex + 1) + ": " + e.getMessage();
+                    rowErrors.add(errorMessage);
+                    log.warn("Error parsing row {}: {}", rowIndex + 1, e.getMessage());
                 }
             }
             
-            if (!errors.isEmpty()) {
-                throw new ClientException("Помилки при імпорті:\n" + errors.toString());
+            if (!rowErrors.isEmpty()) {
+                String errorDetails = String.join("\n", rowErrors);
+                throw new ClientException("Помилки при імпорті (" + rowErrors.size() + " рядків):\n" + errorDetails);
             }
-
+            
             Long maxSpecifiedId = null;
             for (Client client : clientsToCreate) {
                 if (client.getId() != null) {
@@ -312,7 +324,8 @@ public class ClientImportService implements IClientImportService {
     }
     
     private Client parseClientRow(Row row, ClientType clientType, List<ClientTypeField> fields, 
-                                  Map<String, Integer> columnIndexMap, int rowNumber) {
+                                  Map<String, Integer> columnIndexMap, int rowNumber,
+                                  Map<String, org.example.clientservice.models.field.Source> sourceNameMap) {
         Client client = new Client();
         client.setClientType(clientType);
         client.setFieldValues(new ArrayList<>());
@@ -348,12 +361,7 @@ public class ClientImportService implements IClientImportService {
             String sourceValue = getCellValueAsString(sourceCell);
             if (sourceValue != null && !sourceValue.trim().isEmpty()) {
                 String trimmedSource = sourceValue.trim();
-
-                List<org.example.clientservice.models.field.Source> sources = sourceService.getAllSources();
-                org.example.clientservice.models.field.Source foundSource = sources.stream()
-                        .filter(s -> s.getName() != null && s.getName().trim().equalsIgnoreCase(trimmedSource))
-                        .findFirst()
-                        .orElse(null);
+                org.example.clientservice.models.field.Source foundSource = sourceNameMap.get(trimmedSource.toLowerCase());
                 
                 if (foundSource == null) {
                     throw new ClientException("Залучення з назвою '" + trimmedSource + "' не знайдено");

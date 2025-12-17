@@ -836,9 +836,8 @@
     #transaction-form button[type="submit"],
     #edit-transaction-form button[type="submit"] {
         width: 100%;
-        padding: 0.9em;
+        padding: 1.2em;
         font-size: 1em;
-        min-height: 48px;
         margin-top: 0.5em;
         border-radius: 8px;
         font-weight: 600;

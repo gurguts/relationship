@@ -8,12 +8,7 @@ import java.util.List;
 
 @Data
 public class EntitiesDTO {
-    private List<StatusClientDTO> statuses;
-    private List<RegionDTO> regions;
     private List<SourceDTO> sources;
-    private List<RouteDTO> routes;
-    private List<BusinessDTO> businesses;
     private List<UserDTO> users;
     private List<ProductDTO> products;
-    private List<ClientProductDTO> clientProducts;
 }

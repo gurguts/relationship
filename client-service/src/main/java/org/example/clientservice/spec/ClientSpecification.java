@@ -273,86 +273,7 @@ public class ClientSpecification implements Specification<Client> {
             basePredicates.add(criteriaBuilder.equal(clientTypeJoin.get("id"), clientTypeId));
         }
 
-        boolean isBooleanField = false;
-        List<Boolean> booleanValues = new java.util.ArrayList<>();
-        for (String value : values) {
-            if (value != null && !value.trim().isEmpty()) {
-                String trimmedValue = value.trim().toLowerCase();
-                if ("true".equals(trimmedValue) || "false".equals(trimmedValue)) {
-                    isBooleanField = true;
-                    booleanValues.add("true".equals(trimmedValue));
-                } else {
-                    isBooleanField = false;
-                    break;
-                }
-            }
-        }
-        
-        if (isBooleanField && !booleanValues.isEmpty()) {
-            Predicate booleanPredicate = fieldValueRoot.get("valueBoolean").in(booleanValues);
-            
-            List<Predicate> wherePredicates = new java.util.ArrayList<>(basePredicates);
-            wherePredicates.add(criteriaBuilder.equal(fieldValueRoot.get("client"), root));
-            wherePredicates.add(booleanPredicate);
-            
-            fieldValueSubquery.where(criteriaBuilder.and(wherePredicates.toArray(new Predicate[0])));
-            
-            predicate = criteriaBuilder.and(predicate, criteriaBuilder.exists(fieldValueSubquery));
-        } else {
-            boolean isListField = true;
-            List<Long> listValueIds = new java.util.ArrayList<>();
-            try {
-                for (String value : values) {
-                    if (value != null && !value.trim().isEmpty()) {
-                        listValueIds.add(Long.parseLong(value.trim()));
-                    }
-                }
-                if (listValueIds.isEmpty()) {
-                    isListField = false;
-                }
-            } catch (NumberFormatException e) {
-                isListField = false;
-            }
-            
-            if (isListField && !listValueIds.isEmpty()) {
-                Join<ClientFieldValue, ?> valueListJoin = fieldValueRoot.join("valueList", jakarta.persistence.criteria.JoinType.LEFT);
-                Predicate valuePredicate = valueListJoin.get("id").in(listValueIds);
-                
-                List<Predicate> wherePredicates = new java.util.ArrayList<>(basePredicates);
-                wherePredicates.add(criteriaBuilder.equal(fieldValueRoot.get("client"), root));
-                wherePredicates.add(valuePredicate);
-                
-                fieldValueSubquery.where(criteriaBuilder.and(wherePredicates.toArray(new Predicate[0])));
-                
-                predicate = criteriaBuilder.and(predicate, criteriaBuilder.exists(fieldValueSubquery));
-            } else {
-                List<Predicate> textPredicates = new java.util.ArrayList<>();
-                for (String value : values) {
-                    if (value != null && !value.trim().isEmpty()) {
-                        textPredicates.add(
-                                criteriaBuilder.like(
-                                        criteriaBuilder.lower(fieldValueRoot.get("valueText")),
-                                        String.format("%%%s%%", value.trim().toLowerCase().replace("%", "\\%").replace("_", "\\_"))
-                                )
-                        );
-                    }
-                }
-                
-                if (!textPredicates.isEmpty()) {
-                    Predicate textPredicate = criteriaBuilder.or(textPredicates.toArray(new Predicate[0]));
-                    
-                    List<Predicate> wherePredicates = new java.util.ArrayList<>(basePredicates);
-                    wherePredicates.add(criteriaBuilder.equal(fieldValueRoot.get("client"), root));
-                    wherePredicates.add(textPredicate);
-                    
-                    fieldValueSubquery.where(criteriaBuilder.and(wherePredicates.toArray(new Predicate[0])));
-                    
-                    predicate = criteriaBuilder.and(predicate, criteriaBuilder.exists(fieldValueSubquery));
-                }
-            }
-        }
-        
-        return predicate;
+        return applyValueFilterPredicate(predicate, root, criteriaBuilder, fieldValueSubquery, fieldValueRoot, basePredicates, values);
     }
 
     private Predicate addDynamicFieldFilterById(Predicate predicate, Root<Client> root, CriteriaQuery<?> query,
@@ -376,6 +297,12 @@ public class ClientSpecification implements Specification<Client> {
             basePredicates.add(criteriaBuilder.equal(clientTypeJoin.get("id"), clientTypeId));
         }
 
+        return applyValueFilterPredicate(predicate, root, criteriaBuilder, fieldValueSubquery, fieldValueRoot, basePredicates, values);
+    }
+
+    private Predicate applyValueFilterPredicate(Predicate predicate, Root<Client> root, CriteriaBuilder criteriaBuilder,
+                                                Subquery<Long> fieldValueSubquery, Root<ClientFieldValue> fieldValueRoot,
+                                                List<Predicate> basePredicates, List<String> values) {
         boolean isBooleanField = false;
         List<Boolean> booleanValues = new java.util.ArrayList<>();
         for (String value : values) {
@@ -400,59 +327,59 @@ public class ClientSpecification implements Specification<Client> {
             
             fieldValueSubquery.where(criteriaBuilder.and(wherePredicates.toArray(new Predicate[0])));
             
-            predicate = criteriaBuilder.and(predicate, criteriaBuilder.exists(fieldValueSubquery));
-        } else {
-            boolean isListField = true;
-            List<Long> listValueIds = new java.util.ArrayList<>();
-            try {
-                for (String value : values) {
-                    if (value != null && !value.trim().isEmpty()) {
-                        listValueIds.add(Long.parseLong(value.trim()));
-                    }
+            return criteriaBuilder.and(predicate, criteriaBuilder.exists(fieldValueSubquery));
+        }
+        
+        boolean isListField = true;
+        List<Long> listValueIds = new java.util.ArrayList<>();
+        try {
+            for (String value : values) {
+                if (value != null && !value.trim().isEmpty()) {
+                    listValueIds.add(Long.parseLong(value.trim()));
                 }
-                if (listValueIds.isEmpty()) {
-                    isListField = false;
-                }
-            } catch (NumberFormatException e) {
+            }
+            if (listValueIds.isEmpty()) {
                 isListField = false;
             }
+        } catch (NumberFormatException e) {
+            isListField = false;
+        }
+        
+        if (isListField && !listValueIds.isEmpty()) {
+            Join<ClientFieldValue, ?> valueListJoin = fieldValueRoot.join("valueList", jakarta.persistence.criteria.JoinType.LEFT);
+            Predicate valuePredicate = valueListJoin.get("id").in(listValueIds);
             
-            if (isListField && !listValueIds.isEmpty()) {
-                Join<ClientFieldValue, ?> valueListJoin = fieldValueRoot.join("valueList", jakarta.persistence.criteria.JoinType.LEFT);
-                Predicate valuePredicate = valueListJoin.get("id").in(listValueIds);
-                
-                List<Predicate> wherePredicates = new java.util.ArrayList<>(basePredicates);
-                wherePredicates.add(criteriaBuilder.equal(fieldValueRoot.get("client"), root));
-                wherePredicates.add(valuePredicate);
-                
-                fieldValueSubquery.where(criteriaBuilder.and(wherePredicates.toArray(new Predicate[0])));
-                
-                predicate = criteriaBuilder.and(predicate, criteriaBuilder.exists(fieldValueSubquery));
-            } else {
-                List<Predicate> textPredicates = new java.util.ArrayList<>();
-                for (String value : values) {
-                    if (value != null && !value.trim().isEmpty()) {
-                        textPredicates.add(
-                                criteriaBuilder.like(
-                                        criteriaBuilder.lower(fieldValueRoot.get("valueText")),
-                                        String.format("%%%s%%", value.trim().toLowerCase().replace("%", "\\%").replace("_", "\\_"))
-                                )
-                        );
-                    }
-                }
-                
-                if (!textPredicates.isEmpty()) {
-                    Predicate textPredicate = criteriaBuilder.or(textPredicates.toArray(new Predicate[0]));
-                    
-                    List<Predicate> wherePredicates = new java.util.ArrayList<>(basePredicates);
-                    wherePredicates.add(criteriaBuilder.equal(fieldValueRoot.get("client"), root));
-                    wherePredicates.add(textPredicate);
-                    
-                    fieldValueSubquery.where(criteriaBuilder.and(wherePredicates.toArray(new Predicate[0])));
-                    
-                    predicate = criteriaBuilder.and(predicate, criteriaBuilder.exists(fieldValueSubquery));
-                }
+            List<Predicate> wherePredicates = new java.util.ArrayList<>(basePredicates);
+            wherePredicates.add(criteriaBuilder.equal(fieldValueRoot.get("client"), root));
+            wherePredicates.add(valuePredicate);
+            
+            fieldValueSubquery.where(criteriaBuilder.and(wherePredicates.toArray(new Predicate[0])));
+            
+            return criteriaBuilder.and(predicate, criteriaBuilder.exists(fieldValueSubquery));
+        }
+        
+        List<Predicate> textPredicates = new java.util.ArrayList<>();
+        for (String value : values) {
+            if (value != null && !value.trim().isEmpty()) {
+                textPredicates.add(
+                        criteriaBuilder.like(
+                                criteriaBuilder.lower(fieldValueRoot.get("valueText")),
+                                String.format("%%%s%%", value.trim().toLowerCase().replace("%", "\\%").replace("_", "\\_"))
+                        )
+                );
             }
+        }
+        
+        if (!textPredicates.isEmpty()) {
+            Predicate textPredicate = criteriaBuilder.or(textPredicates.toArray(new Predicate[0]));
+            
+            List<Predicate> wherePredicates = new java.util.ArrayList<>(basePredicates);
+            wherePredicates.add(criteriaBuilder.equal(fieldValueRoot.get("client"), root));
+            wherePredicates.add(textPredicate);
+            
+            fieldValueSubquery.where(criteriaBuilder.and(wherePredicates.toArray(new Predicate[0])));
+            
+            return criteriaBuilder.and(predicate, criteriaBuilder.exists(fieldValueSubquery));
         }
         
         return predicate;

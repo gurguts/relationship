@@ -1,5 +1,6 @@
 package org.example.apigateway.security;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
@@ -9,6 +10,7 @@ import reactor.core.publisher.Mono;
 
 import java.net.URI;
 
+@Slf4j
 @Component
 public class InvalidRequestFilter implements WebFilter {
 
@@ -17,6 +19,8 @@ public class InvalidRequestFilter implements WebFilter {
         try {
             URI uri = exchange.getRequest().getURI();
             if (containsInvalidCharacters(uri.getPath()) || containsInvalidCharacters(uri.getQuery())) {
+                log.warn("Request blocked due to invalid characters. Path: {}, Query: {}, Remote: {}", 
+                        uri.getPath(), uri.getQuery(), exchange.getRequest().getRemoteAddress());
                 exchange.getResponse().setStatusCode(HttpStatus.BAD_REQUEST);
                 return exchange.getResponse().writeWith(
                         Mono.just(exchange.getResponse().bufferFactory().wrap(
@@ -26,6 +30,7 @@ public class InvalidRequestFilter implements WebFilter {
             }
             return chain.filter(exchange);
         } catch (Exception e) {
+            log.error("Error in InvalidRequestFilter", e);
             exchange.getResponse().setStatusCode(HttpStatus.BAD_REQUEST);
             return exchange.getResponse().setComplete();
         }

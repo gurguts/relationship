@@ -115,66 +115,6 @@ public class GlobalExceptionAdvice {
     }
 
     @ResponseStatus(HttpStatus.BAD_REQUEST)
-    @ExceptionHandler(BusinessException.class)
-    public ErrorResponse handleBusinessException(BusinessException ex, Locale locale) {
-        log.warn("Business error: code={}, message={}", ex.getErrorCode(), ex.getMessage());
-        String message = messageSource.getMessage(
-                String.format("business.error.%s", ex.getErrorCode().toUpperCase()), null, ex.getMessage(), locale);
-        return new ErrorResponse(ex.getErrorCode(), message, null);
-    }
-
-    @ResponseStatus(HttpStatus.NOT_FOUND)
-    @ExceptionHandler(BusinessNotFoundException.class)
-    public ErrorResponse handleBusinessNotFoundException(BusinessNotFoundException ex, Locale locale) {
-        log.warn("Business not found: {}", ex.getMessage());
-        return new ErrorResponse(
-                "BUSINESS_NOT_FOUND",
-                messageSource.getMessage("business.notfound", null, ex.getMessage(), locale),
-                null
-        );
-    }
-
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    @ExceptionHandler(RegionException.class)
-    public ErrorResponse handleRegionException(RegionException ex, Locale locale) {
-        log.warn("Region error: code={}, message={}", ex.getErrorCode(), ex.getMessage());
-        String message = messageSource.getMessage(
-                String.format("region.error.%s", ex.getErrorCode().toUpperCase()), null, ex.getMessage(), locale);
-        return new ErrorResponse(ex.getErrorCode(), message, null);
-    }
-
-    @ResponseStatus(HttpStatus.NOT_FOUND)
-    @ExceptionHandler(RegionNotFoundException.class)
-    public ErrorResponse handleRegionNotFoundException(RegionNotFoundException ex, Locale locale) {
-        log.warn("Region not found: {}", ex.getMessage());
-        return new ErrorResponse(
-                "REGION_NOT_FOUND",
-                messageSource.getMessage("region.notfound", null, ex.getMessage(), locale),
-                null
-        );
-    }
-
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    @ExceptionHandler(RouteException.class)
-    public ErrorResponse handleRouteException(RouteException ex, Locale locale) {
-        log.warn("Route error: code={}, message={}", ex.getErrorCode(), ex.getMessage());
-        String message = messageSource.getMessage(
-                String.format("route.error.%s", ex.getErrorCode().toUpperCase()), null, ex.getMessage(), locale);
-        return new ErrorResponse(ex.getErrorCode(), message, null);
-    }
-
-    @ResponseStatus(HttpStatus.NOT_FOUND)
-    @ExceptionHandler(RouteNotFoundException.class)
-    public ErrorResponse handleRouteNotFoundException(RouteNotFoundException ex, Locale locale) {
-        log.warn("Route not found: {}", ex.getMessage());
-        return new ErrorResponse(
-                "ROUTE_NOT_FOUND",
-                messageSource.getMessage("route.notfound", null, ex.getMessage(), locale),
-                null
-        );
-    }
-
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ExceptionHandler(SourceException.class)
     public ErrorResponse handleSourceException(SourceException ex, Locale locale) {
         log.warn("Source error: code={}, message={}", ex.getErrorCode(), ex.getMessage());
@@ -190,27 +130,6 @@ public class GlobalExceptionAdvice {
         return new ErrorResponse(
                 "SOURCE_NOT_FOUND",
                 messageSource.getMessage("source.notfound", null, ex.getMessage(), locale),
-                null
-        );
-    }
-
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    @ExceptionHandler(StatusClientException.class)
-    public ErrorResponse handleStatusClientException(StatusClientException ex, Locale locale) {
-        log.warn("Status Client error: code={}, message={}", ex.getErrorCode(), ex.getMessage());
-        String message = messageSource.getMessage(
-                String.format("statusClient.error.%s", ex.getErrorCode().toUpperCase()), null, ex.getMessage(),
-                locale);
-        return new ErrorResponse(ex.getErrorCode(), message, null);
-    }
-
-    @ResponseStatus(HttpStatus.NOT_FOUND)
-    @ExceptionHandler(StatusClientNotFoundException.class)
-    public ErrorResponse handleStatusClientNotFoundException(StatusClientNotFoundException ex, Locale locale) {
-        log.warn("Status client not found: {}", ex.getMessage());
-        return new ErrorResponse(
-                "STATUSCLIENT_NOT_FOUND",
-                messageSource.getMessage("client.notfound", null, ex.getMessage(), locale),
                 null
         );
     }

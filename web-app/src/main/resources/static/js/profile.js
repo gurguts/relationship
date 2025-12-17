@@ -161,14 +161,15 @@ function renderProductBalances(balances) {
         
         const row = document.createElement('tr');
         row.innerHTML = `
-            <td>${productName}</td>
-            <td>${formatNumber(balance.quantity, 2)}</td>
-            <td>${formatNumber(balance.averagePriceEur, 6)}</td>
-            <td>${formatNumber(balance.totalCostEur, 2)}</td>
+            <td data-label="Товар">${productName}</td>
+            <td data-label="Кількість (кг)">${formatNumber(balance.quantity, 2)}</td>
+            <td data-label="Середня ціна (EUR/кг)">${formatNumber(balance.averagePriceEur, 6)}</td>
+            <td data-label="Загальна вартість (EUR)">${formatNumber(balance.totalCostEur, 2)}</td>
         `;
         
         if (canEditProfile) {
             const actionsCell = document.createElement('td');
+            actionsCell.setAttribute('data-label', 'Дії');
             const editButton = document.createElement('button');
             editButton.className = 'edit-balance-btn';
             editButton.setAttribute('data-balance-id', balance.id);

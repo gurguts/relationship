@@ -21,11 +21,11 @@ import java.util.List;
 @Slf4j
 @Component
 public class JwtTokenProvider {
-    private final SecretKeyConfig secretKeyConfig;
+    private final String secretKey;
     private final JwtParser jwtParser;
 
-    public JwtTokenProvider(SecretKeyConfig secretKeyConfig) {
-        this.secretKeyConfig = secretKeyConfig;
+    public JwtTokenProvider(String secretKey) {
+        this.secretKey = secretKey;
         this.jwtParser = Jwts.parser()
                 .verifyWith(getSigningKey())
                 .build();
@@ -33,7 +33,7 @@ public class JwtTokenProvider {
 
 
     private SecretKey getSigningKey() {
-        byte[] decodedKey = Base64.getDecoder().decode(secretKeyConfig.getSecretKey());
+        byte[] decodedKey = Base64.getDecoder().decode(secretKey);
         return Keys.hmacShaKeyFor(decodedKey);
     }
 
@@ -42,6 +42,7 @@ public class JwtTokenProvider {
             jwtParser.parseSignedClaims(token);
             return true;
         } catch (JwtException | IllegalArgumentException e) {
+            log.debug("Token validation failed: {}", e.getMessage());
             return false;
         }
     }

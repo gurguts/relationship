@@ -11,16 +11,13 @@ import org.example.clientservice.models.client.Client;
 import org.example.clientservice.models.clienttype.ClientFieldValue;
 import org.example.clientservice.models.clienttype.ClientTypeField;
 import org.example.clientservice.models.field.Source;
-import org.example.clientservice.repositories.ClientRepository;
 import org.example.clientservice.services.impl.*;
 import org.example.clientservice.services.clienttype.ClientTypeFieldService;
 import org.example.clientservice.spec.ClientSpecification;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.TypedQuery;
@@ -41,12 +38,11 @@ public class ClientSpecialOperationsService implements IClientSpecialOperationsS
     private static final Set<String> VALID_STATIC_FIELDS = Set.of(
             "id", "company", "createdAt", "updatedAt", "source");
 
-
-    private final ClientRepository clientRepository;
     private final ISourceService sourceService;
     private final ClientTypeFieldService clientTypeFieldService;
 
     @Override
+    @Transactional(readOnly = true)
     public byte[] generateExcelFile(
             Sort.Direction sortDirection,
             String sortProperty,
@@ -150,18 +146,6 @@ public class ClientSpecialOperationsService implements IClientSpecialOperationsS
                 clientTypeId
         );
 
-        Pageable pageable = PageRequest.of(0, Integer.MAX_VALUE, sort != null ? sort : Sort.unsorted());
-        Page<Client> clientPage = clientRepository.findAll(spec, pageable);
-        List<Client> clientsWithoutFieldValues = clientPage.getContent();
-        
-        if (clientsWithoutFieldValues.isEmpty()) {
-            return new ArrayList<>();
-        }
-
-        List<Long> clientIds = clientsWithoutFieldValues.stream()
-                .map(Client::getId)
-                .collect(Collectors.toList());
-
         CriteriaBuilder cb = entityManager.getCriteriaBuilder();
         CriteriaQuery<Client> cq = cb.createQuery(Client.class);
         Root<Client> root = cq.from(Client.class);
@@ -169,12 +153,16 @@ public class ClientSpecialOperationsService implements IClientSpecialOperationsS
         root.fetch("clientType", JoinType.LEFT);
 
         Fetch<Object, Object> fieldValuesFetch = root.fetch("fieldValues", JoinType.LEFT);
-        fieldValuesFetch.fetch("field", JoinType.LEFT);
+        Fetch<Object, Object> fieldFetch = fieldValuesFetch.fetch("field", JoinType.LEFT);
+        fieldFetch.fetch("listValues", JoinType.LEFT);
         fieldValuesFetch.fetch("valueList", JoinType.LEFT);
 
         cq.distinct(true);
 
-        cq.where(root.get("id").in(clientIds));
+        Predicate specPredicate = spec.toPredicate(root, cq, cb);
+        if (specPredicate != null) {
+            cq.where(specPredicate);
+        }
 
         if (sort != null) {
             List<Order> orders = new ArrayList<>();
@@ -186,21 +174,7 @@ public class ClientSpecialOperationsService implements IClientSpecialOperationsS
         }
         
         TypedQuery<Client> typedQuery = entityManager.createQuery(cq);
-        List<Client> clients = typedQuery.getResultList();
-
-        clients.forEach(client -> {
-            if (client.getFieldValues() != null) {
-                client.getFieldValues().forEach(fv -> {
-                    if (fv.getField() != null) {
-                        if (fv.getField().getListValues() != null) {
-                            fv.getField().getListValues().size();
-                        }
-                    }
-                });
-            }
-        });
-        
-        return clients;
+        return typedQuery.getResultList();
     }
     
 
