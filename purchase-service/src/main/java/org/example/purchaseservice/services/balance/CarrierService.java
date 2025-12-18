@@ -57,16 +57,19 @@ public class CarrierService {
         return saved;
     }
     
+    @Transactional(readOnly = true)
     public Carrier getCarrier(Long carrierId) {
         return carrierRepository.findById(carrierId)
                 .orElseThrow(() -> new PurchaseException("CARRIER_NOT_FOUND",
                         String.format("Carrier not found: id=%d", carrierId)));
     }
     
+    @Transactional(readOnly = true)
     public List<Carrier> getAllCarriers() {
         return carrierRepository.findAll();
     }
     
+    @Transactional(readOnly = true)
     public List<Carrier> searchCarriersByCompanyName(String companyName) {
         return carrierRepository.findByCompanyNameContainingIgnoreCase(companyName);
     }

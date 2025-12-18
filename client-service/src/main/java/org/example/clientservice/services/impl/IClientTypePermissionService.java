@@ -25,6 +25,8 @@ public interface IClientTypePermissionService {
     
     boolean canUserDelete(Long userId, Long clientTypeId);
     
+    ClientTypePermission getUserPermissions(Long userId, Long clientTypeId);
+    
     void deletePermission(Long clientTypeId, Long userId);
 }
 

@@ -26,6 +26,7 @@ import jakarta.persistence.criteria.*;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.*;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -82,6 +83,26 @@ public class ClientSpecialOperationsService implements IClientSpecialOperationsS
         if (selectedFields == null || selectedFields.isEmpty()) {
             throw new ClientException("INVALID_FIELDS", "The list of fields for export cannot be empty");
         }
+        
+        List<Long> fieldIds = selectedFields.stream()
+                .filter(field -> field.startsWith("field_"))
+                .map(field -> {
+                    try {
+                        return Long.parseLong(field.substring(6));
+                    } catch (NumberFormatException e) {
+                        return null;
+                    }
+                })
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+        
+        Map<Long, ClientTypeField> fieldMap = new HashMap<>();
+        if (!fieldIds.isEmpty()) {
+            fieldMap = clientTypeFieldService.getFieldsByIds(fieldIds).stream()
+                    .collect(Collectors.toMap(ClientTypeField::getId, field -> field));
+        }
+        
         for (String field : selectedFields) {
             if (!VALID_STATIC_FIELDS.contains(field) && !field.startsWith("field_")) {
                 throw new ClientException("INVALID_FIELDS", String.format("Invalid field specified for export: %s", field));
@@ -89,9 +110,11 @@ public class ClientSpecialOperationsService implements IClientSpecialOperationsS
             if (field.startsWith("field_")) {
                 try {
                     Long fieldId = Long.parseLong(field.substring(6));
-                    clientTypeFieldService.getFieldById(fieldId);
-                } catch (Exception e) {
-                    throw new ClientException("INVALID_FIELDS", String.format("Dynamic field not found: %s", field));
+                    if (!fieldMap.containsKey(fieldId)) {
+                        throw new ClientException("INVALID_FIELDS", String.format("Dynamic field not found: %s", field));
+                    }
+                } catch (NumberFormatException e) {
+                    throw new ClientException("INVALID_FIELDS", String.format("Invalid field ID format: %s", field));
                 }
             }
         }
@@ -198,15 +221,38 @@ public class ClientSpecialOperationsService implements IClientSpecialOperationsS
         headerMap.put("updatedAt", "Дата оновлення");
         headerMap.put("source", "Залучення");
 
-        for (String field : selectedFields) {
-            if (field.startsWith("field_")) {
-                try {
-                    Long fieldId = Long.parseLong(field.substring(6));
-                    ClientTypeField clientTypeField = clientTypeFieldService.getFieldById(fieldId);
-                    headerMap.put(field, clientTypeField.getFieldLabel());
-                } catch (Exception e) {
-                    log.warn("Failed to get field label for field {}: {}", field, e.getMessage());
-                    headerMap.put(field, field);
+        List<Long> fieldIds = selectedFields.stream()
+                .filter(field -> field.startsWith("field_"))
+                .map(field -> {
+                    try {
+                        return Long.parseLong(field.substring(6));
+                    } catch (NumberFormatException e) {
+                        return null;
+                    }
+                })
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+
+        if (!fieldIds.isEmpty()) {
+            Map<Long, ClientTypeField> fieldMap = clientTypeFieldService.getFieldsByIds(fieldIds).stream()
+                    .collect(Collectors.toMap(ClientTypeField::getId, field -> field));
+
+            for (String field : selectedFields) {
+                if (field.startsWith("field_")) {
+                    try {
+                        Long fieldId = Long.parseLong(field.substring(6));
+                        ClientTypeField clientTypeField = fieldMap.get(fieldId);
+                        if (clientTypeField != null) {
+                            headerMap.put(field, clientTypeField.getFieldLabel());
+                        } else {
+                            log.warn("Field not found for field ID: {}", fieldId);
+                            headerMap.put(field, field);
+                        }
+                    } catch (NumberFormatException e) {
+                        log.warn("Invalid field ID in field name {}: {}", field, e.getMessage());
+                        headerMap.put(field, field);
+                    }
                 }
             }
         }

@@ -24,6 +24,8 @@ public interface IClientTypeFieldService {
     
     List<ClientTypeField> getVisibleInCreateFieldsByClientTypeId(Long clientTypeId);
     
+    List<ClientTypeField> getFieldsByIds(List<Long> fieldIds);
+    
     void deleteField(Long fieldId);
     
     void reorderFields(Long clientTypeId, FieldReorderDTO dto);

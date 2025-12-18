@@ -15,14 +15,17 @@ import java.util.List;
 public class TransactionCategoryService {
     private final TransactionCategoryRepository categoryRepository;
 
+    @Transactional(readOnly = true)
     public List<TransactionCategory> getCategoriesByType(TransactionType type) {
         return categoryRepository.findByTypeAndIsActiveTrueOrderByNameAsc(type);
     }
 
+    @Transactional(readOnly = true)
     public List<TransactionCategory> getAllCategoriesByType(TransactionType type) {
         return categoryRepository.findByTypeOrderByNameAsc(type);
     }
 
+    @Transactional(readOnly = true)
     public TransactionCategory getCategoryById(Long id) {
         return categoryRepository.findById(id)
                 .orElseThrow(() -> new TransactionCategoryNotFoundException(

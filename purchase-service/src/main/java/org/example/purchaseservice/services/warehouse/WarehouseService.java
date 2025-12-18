@@ -19,6 +19,7 @@ public class WarehouseService implements IWarehouseService {
     private final WarehouseRepository warehouseRepository;
 
     @Override
+    @Transactional(readOnly = true)
     @Cacheable(value = "warehouses", key = "#id")
     public Warehouse getWarehouse(Long id) {
         return warehouseRepository.findById(id)
@@ -26,6 +27,7 @@ public class WarehouseService implements IWarehouseService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     @Cacheable(value = "warehouses", key = "'allWarehousess'")
     public List<Warehouse> getAllWarehouses() {
         return warehouseRepository.findAll();

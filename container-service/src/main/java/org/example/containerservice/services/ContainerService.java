@@ -46,6 +46,7 @@ public class ContainerService implements IContainerService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     @Cacheable(value = "containers", key = "'allContainers'")
     public List<Container> getAllContainers() {
         return containerRepository.findAll();
@@ -54,7 +55,7 @@ public class ContainerService implements IContainerService {
     @Override
     @Cacheable(value = "containers", key = "#id")
     public Container getContainerById(Long id) {
-        log.info("Retrieving Container with id: {}", id);
+        log.debug("Retrieving Container with id: {}", id);
         return containerRepository.findById(id)
                 .orElseThrow(() -> new ContainerNotFoundException(String.format("Container with id %d not found", id)));
     }

@@ -11,8 +11,8 @@ import org.example.clientservice.repositories.ClientRepository;
 import org.example.clientservice.services.impl.IClientCrudService;
 import org.example.clientservice.services.impl.ISourceService;
 import org.example.clientservice.services.impl.IClientTypePermissionService;
+import org.example.clientservice.utils.SecurityUtils;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,8 +35,8 @@ public class ClientCrudService implements IClientCrudService {
         log.info("Creating client: {}", client.getCompany());
 
         if (client.getClientType() != null && client.getClientType().getId() != null) {
-            Long userId = getCurrentUserId();
-            if (userId != null && !isAdmin()) {
+            Long userId = SecurityUtils.getCurrentUserId();
+            if (userId != null && !SecurityUtils.isAdmin()) {
                 if (!clientTypePermissionService.canUserCreate(userId, client.getClientType().getId())) {
                     throw new ClientException("ACCESS_DENIED", 
                         "У вас немає прав на створення клієнтів цього типу");
@@ -53,8 +53,8 @@ public class ClientCrudService implements IClientCrudService {
         Client existingClient = getClient(id);
 
         if (existingClient.getClientType() != null && existingClient.getClientType().getId() != null) {
-            Long userId = getCurrentUserId();
-            if (userId != null && !isAdmin()) {
+            Long userId = SecurityUtils.getCurrentUserId();
+            if (userId != null && !SecurityUtils.isAdmin()) {
                 if (!clientTypePermissionService.canUserEdit(userId, existingClient.getClientType().getId())) {
                     throw new ClientException("ACCESS_DENIED", 
                         "У вас немає прав на редагування клієнтів цього типу");
@@ -64,12 +64,13 @@ public class ClientCrudService implements IClientCrudService {
 
         String fullName = getFullName();
 
-        String sourceName = null;
+        Source clientSource = null;
         if (existingClient.getSource() != null) {
-            sourceName = sourceService.getSource(existingClient.getSource()).getName();
+            clientSource = sourceService.getSource(existingClient.getSource());
         }
 
-        updateExistingClient(existingClient, client, fullName, sourceName);
+        checkSourceBasedPermission(existingClient, clientSource, "edit");
+        updateExistingClient(existingClient, client, fullName, clientSource);
 
         log.info("Updating client with ID: {}", id);
 
@@ -89,8 +90,8 @@ public class ClientCrudService implements IClientCrudService {
                 .orElseThrow(() -> new ClientNotFoundException("Client not found"));
 
         if (client.getClientType() != null && client.getClientType().getId() != null) {
-            Long userId = getCurrentUserId();
-            if (userId != null && !isAdmin()) {
+            Long userId = SecurityUtils.getCurrentUserId();
+            if (userId != null && !SecurityUtils.isAdmin()) {
                 if (!clientTypePermissionService.canUserView(userId, client.getClientType().getId())) {
                     throw new ClientException("ACCESS_DENIED", 
                         "У вас немає прав на перегляд клієнтів цього типу");
@@ -104,19 +105,30 @@ public class ClientCrudService implements IClientCrudService {
     @Override
     @Transactional
     public void fullDeleteClient(Long clientId) {
-        Client client = getClient(clientId);
+        Client client = clientRepository.findById(clientId)
+                .orElseThrow(() -> new ClientNotFoundException("Client not found"));
 
         if (client.getClientType() != null && client.getClientType().getId() != null) {
-            Long userId = getCurrentUserId();
-            if (userId != null && !isAdmin()) {
-                if (!clientTypePermissionService.canUserDelete(userId, client.getClientType().getId())) {
+            Long userId = SecurityUtils.getCurrentUserId();
+            if (userId != null && !SecurityUtils.isAdmin()) {
+                org.example.clientservice.models.clienttype.ClientTypePermission permission = 
+                    clientTypePermissionService.getUserPermissions(userId, client.getClientType().getId());
+                if (permission == null || !Boolean.TRUE.equals(permission.getCanView())) {
+                    throw new ClientException("ACCESS_DENIED", 
+                        "У вас немає прав на перегляд клієнтів цього типу");
+                }
+                if (!Boolean.TRUE.equals(permission.getCanDelete())) {
                     throw new ClientException("ACCESS_DENIED", 
                         "У вас немає прав на видалення клієнтів цього типу");
                 }
             }
         }
 
-        checkSourceBasedPermission(client, "delete");
+        Source clientSource = null;
+        if (client.getSource() != null) {
+            clientSource = sourceService.getSource(client.getSource());
+        }
+        checkSourceBasedPermission(client, clientSource, "delete");
         
         clientRepository.deleteById(clientId);
     }
@@ -124,20 +136,30 @@ public class ClientCrudService implements IClientCrudService {
     @Override
     @Transactional
     public void deleteClient(Long clientId) {
-        Client client = getClient(clientId);
+        Client client = clientRepository.findById(clientId)
+                .orElseThrow(() -> new ClientNotFoundException("Client not found"));
         
-        // Проверяем права доступа к типу клиента для удаления
         if (client.getClientType() != null && client.getClientType().getId() != null) {
-            Long userId = getCurrentUserId();
-            if (userId != null && !isAdmin()) {
-                if (!clientTypePermissionService.canUserDelete(userId, client.getClientType().getId())) {
+            Long userId = SecurityUtils.getCurrentUserId();
+            if (userId != null && !SecurityUtils.isAdmin()) {
+                org.example.clientservice.models.clienttype.ClientTypePermission permission = 
+                    clientTypePermissionService.getUserPermissions(userId, client.getClientType().getId());
+                if (permission == null || !Boolean.TRUE.equals(permission.getCanView())) {
+                    throw new ClientException("ACCESS_DENIED", 
+                        "У вас немає прав на перегляд клієнтів цього типу");
+                }
+                if (!Boolean.TRUE.equals(permission.getCanDelete())) {
                     throw new ClientException("ACCESS_DENIED", 
                         "У вас немає прав на видалення клієнтів цього типу");
                 }
             }
         }
 
-        checkSourceBasedPermission(client, "delete");
+        Source clientSource = null;
+        if (client.getSource() != null) {
+            clientSource = sourceService.getSource(client.getSource());
+        }
+        checkSourceBasedPermission(client, clientSource, "delete");
         
         clientRepository.deactivateClientById(clientId);
     }
@@ -149,17 +171,14 @@ public class ClientCrudService implements IClientCrudService {
         clientRepository.activateClientById(clientId);
     }
 
-    private void updateExistingClient(Client existingClient, Client updatedClient, String fullName, String sourceName) {
+    private void updateExistingClient(Client existingClient, Client updatedClient, String fullName, Source clientSource) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null) {
             throw new ClientException("Authentication required");
         }
         
-        Long currentUserId = authentication.getDetails() instanceof Long ? 
-                (Long) authentication.getDetails() : null;
-        
-        boolean canEditStrangers = authentication.getAuthorities().stream()
-                .anyMatch(auth -> "client_stranger:edit".equals(auth.getAuthority()));
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        boolean canEditStrangers = SecurityUtils.hasAuthority("client_stranger:edit");
 
         // Логика проверки прав доступа:
         // 1. Если у клиента нет source - можно редактировать
@@ -169,13 +188,12 @@ public class ClientCrudService implements IClientCrudService {
         boolean canEditData;
         boolean isOwnClient = false; // Является ли клиент "своим" (source закреплен за пользователем или нет source)
         
-        if (existingClient.getSource() == null) {
+        if (clientSource == null) {
             // У клиента нет source - можно редактировать
             canEditData = true;
             isOwnClient = true;
         } else {
             // У клиента есть source
-            Source clientSource = sourceService.getSource(existingClient.getSource());
             if (clientSource.getUserId() != null && currentUserId != null && 
                 currentUserId.equals(clientSource.getUserId())) {
                 // Source закреплен за текущим пользователем - можно редактировать
@@ -229,25 +247,6 @@ public class ClientCrudService implements IClientCrudService {
         existingClient.setUpdatedAt(LocalDateTime.now());
     }
     
-    private Long getCurrentUserId() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || authentication.getDetails() == null) {
-            return null;
-        }
-        return authentication.getDetails() instanceof Long ? 
-                (Long) authentication.getDetails() : null;
-    }
-    
-    private boolean isAdmin() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null) {
-            return false;
-        }
-        return authentication.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
-                .anyMatch(auth -> "system:admin".equals(auth) || "administration:view".equals(auth));
-    }
-    
     /**
      * Проверяет права доступа на основе source клиента.
      * Логика:
@@ -259,16 +258,29 @@ public class ClientCrudService implements IClientCrudService {
      * @param action действие для сообщения об ошибке ("edit" или "delete")
      */
     private void checkSourceBasedPermission(Client client, String action) {
+        Source clientSource = null;
+        if (client.getSource() != null) {
+            clientSource = sourceService.getSource(client.getSource());
+        }
+        checkSourceBasedPermission(client, clientSource, action);
+    }
+    
+    /**
+     * Проверяет права доступа на основе source клиента.
+     * Перегрузка метода для случаев, когда Source уже загружен.
+     * 
+     * @param client клиент для проверки
+     * @param clientSource загруженный Source (может быть null)
+     * @param action действие для сообщения об ошибке ("edit" или "delete")
+     */
+    private void checkSourceBasedPermission(Client client, Source clientSource, String action) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null) {
             throw new ClientException("Authentication required");
         }
         
-        Long currentUserId = authentication.getDetails() instanceof Long ? 
-                (Long) authentication.getDetails() : null;
-        
-        boolean canEditStrangers = authentication.getAuthorities().stream()
-                .anyMatch(auth -> "client_stranger:edit".equals(auth.getAuthority()));
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        boolean canEditStrangers = SecurityUtils.hasAuthority("client_stranger:edit");
         
         // Если у пользователя есть право редактировать чужих клиентов - разрешаем
         if (canEditStrangers) {
@@ -276,12 +288,11 @@ public class ClientCrudService implements IClientCrudService {
         }
         
         // Если у клиента нет source - можно выполнять действие
-        if (client.getSource() == null) {
+        if (clientSource == null) {
             return;
         }
         
         // У клиента есть source - проверяем, закреплен ли он за текущим пользователем
-        Source clientSource = sourceService.getSource(client.getSource());
         if (clientSource.getUserId() != null && currentUserId != null && 
             currentUserId.equals(clientSource.getUserId())) {
             // Source закреплен за текущим пользователем - можно выполнять действие

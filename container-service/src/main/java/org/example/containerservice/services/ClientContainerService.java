@@ -10,8 +10,7 @@ import org.example.containerservice.models.ContainerTransactionType;
 import org.example.containerservice.repositories.ClientContainerRepository;
 import org.example.containerservice.repositories.ContainerBalanceRepository;
 import org.example.containerservice.services.impl.IContainerService;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.example.containerservice.utils.SecurityUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,15 +31,19 @@ public class ClientContainerService {
     public void transferContainerToClient(Long clientId, Long containerId, BigDecimal quantity) {
         ContainerBalance balance = validateAndGetBalance(clientId, containerId, quantity);
         Long userId = balance.getUserId();
+        org.example.containerservice.models.Container container = balance.getContainer();
+        if (container == null) {
+            throw new ContainerException("INVALID_BALANCE", "Container is null in balance");
+        }
 
-        ClientContainer clientContainer = getOrCreateClientContainer(clientId, userId, containerId);
+        ClientContainer clientContainer = getOrCreateClientContainer(clientId, userId, containerId, container);
         clientContainer.setQuantity(clientContainer.getQuantity().add(quantity));
         clientContainerRepository.save(clientContainer);
 
         balance.setClientQuantity(balance.getClientQuantity().add(quantity));
         containerBalanceRepository.save(balance);
 
-        containerTransactionService.logTransaction(userId, null, clientId, containerId, quantity,
+        containerTransactionService.logTransaction(userId, null, clientId, container, quantity,
                 ContainerTransactionType.TRANSFER_TO_CLIENT);
 
         log.info("Transferred {} units of container {} from user {} to client {}", quantity, containerId, userId, clientId);
@@ -50,10 +53,26 @@ public class ClientContainerService {
     public void collectContainerFromClient(Long clientId, Long containerId, BigDecimal quantity) {
         ContainerBalance collectorBalance = validateAndGetBalance(clientId, containerId, quantity);
         Long collectingUserId = collectorBalance.getUserId();
+        org.example.containerservice.models.Container container = collectorBalance.getContainer();
+        if (container == null) {
+            throw new ContainerException("INVALID_BALANCE", "Container is null in balance");
+        }
 
         List<ClientContainer> clientContainers =
                 clientContainerRepository.findByClientAndContainerIdOrderByUpdatedAtAsc(clientId, containerId);
         BigDecimal remainingQuantity = quantity;
+
+        java.util.Set<Long> ownerUserIds = clientContainers.stream()
+                .map(ClientContainer::getUser)
+                .filter(userId -> userId != null)
+                .collect(java.util.stream.Collectors.toSet());
+
+        java.util.Map<Long, ContainerBalance> balanceMap = new java.util.HashMap<>();
+        if (!ownerUserIds.isEmpty()) {
+            List<ContainerBalance> balances = containerBalanceRepository.findByUserIdInAndContainerId(ownerUserIds, containerId);
+            balanceMap = balances.stream()
+                    .collect(java.util.stream.Collectors.toMap(ContainerBalance::getUserId, b -> b));
+        }
 
         for (ClientContainer clientContainer : clientContainers) {
             if (remainingQuantity.compareTo(BigDecimal.ZERO) <= 0) break;
@@ -71,10 +90,11 @@ public class ClientContainerService {
                     clientContainerRepository.save(clientContainer);
                 }
 
-                ContainerBalance ownerBalance =
-                        containerBalanceRepository.findByUserIdAndContainerId(ownerUserId, containerId)
-                                .orElseThrow(() -> new ContainerNotFoundException(
-                                        String.format("No balance found for user %d", ownerUserId)));
+                ContainerBalance ownerBalance = balanceMap.get(ownerUserId);
+                if (ownerBalance == null) {
+                    throw new ContainerNotFoundException(
+                            String.format("No balance found for user %d", ownerUserId));
+                }
                 BigDecimal newOwnerTotal =
                         ownerBalance.getTotalQuantity().subtract(collectedQuantity).max(BigDecimal.ZERO);
                 ownerBalance.setTotalQuantity(newOwnerTotal);
@@ -83,7 +103,7 @@ public class ClientContainerService {
 
                 collectorBalance.setTotalQuantity(collectorBalance.getTotalQuantity().add(collectedQuantity));
 
-                containerTransactionService.logTransaction(ownerUserId, collectingUserId, clientId, containerId,
+                containerTransactionService.logTransaction(ownerUserId, collectingUserId, clientId, container,
                         collectedQuantity, ContainerTransactionType.COLLECT_FROM_CLIENT);
                 log.info("Collected {} units of container {} from client {} (owner {}) by user {}",
                         collectedQuantity, containerId, clientId, ownerUserId, collectingUserId);
@@ -94,9 +114,7 @@ public class ClientContainerService {
 
         if (remainingQuantity.compareTo(BigDecimal.ZERO) > 0) {
             collectorBalance.setTotalQuantity(collectorBalance.getTotalQuantity().add(remainingQuantity));
-            containerBalanceRepository.save(collectorBalance);
-
-            containerTransactionService.logTransaction(null, collectingUserId, clientId, containerId,
+            containerTransactionService.logTransaction(null, collectingUserId, clientId, container,
                     remainingQuantity, ContainerTransactionType.COLLECT_FROM_CLIENT);
             log.info("Added {} units of container {} to user {} from client {} (no owner)",
                     remainingQuantity, containerId, collectingUserId, clientId);
@@ -110,23 +128,27 @@ public class ClientContainerService {
             throw new ContainerException("NOT_ENOUGH_DATA", "Client ID, container ID, and quantity must be valid");
         }
 
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        Long userId = (Long) authentication.getDetails();
+        Long userId = SecurityUtils.getCurrentUserId();
+        if (userId == null) {
+            throw new ContainerException("AUTHENTICATION_REQUIRED", "User authentication required");
+        }
 
         return getOrCreateBalance(userId, containerId);
     }
 
+    @Transactional(readOnly = true)
     public List<ClientContainer> getClientContainers(Long clientId) {
         return clientContainerRepository.findByClient(clientId);
     }
 
-    private ClientContainer getOrCreateClientContainer(Long clientId, Long userId, Long containerId) {
+    private ClientContainer getOrCreateClientContainer(Long clientId, Long userId, Long containerId,
+                                                       org.example.containerservice.models.Container container) {
         return clientContainerRepository.findByClientAndUserAndContainerId(clientId, userId, containerId)
                 .orElseGet(() -> {
                     ClientContainer newContainer = new ClientContainer();
                     newContainer.setClient(clientId);
                     newContainer.setUser(userId);
-                    newContainer.setContainer(containerService.getContainerById(containerId));
+                    newContainer.setContainer(container);
                     newContainer.setQuantity(BigDecimal.ZERO);
                     return newContainer;
                 });

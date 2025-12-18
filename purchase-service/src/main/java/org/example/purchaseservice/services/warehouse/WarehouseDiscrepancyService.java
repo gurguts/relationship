@@ -19,7 +19,11 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -115,6 +119,7 @@ public class WarehouseDiscrepancyService {
     /**
      * Get all discrepancies for specific warehouse receipt
      */
+    @Transactional(readOnly = true)
     public List<WarehouseDiscrepancy> getByWarehouseReceiptId(Long warehouseReceiptId) {
         return discrepancyRepository.findByWarehouseReceiptId(warehouseReceiptId);
     }
@@ -122,6 +127,7 @@ public class WarehouseDiscrepancyService {
     /**
      * Get all discrepancies by driver
      */
+    @Transactional(readOnly = true)
     public List<WarehouseDiscrepancy> getByDriverId(Long driverId) {
         return discrepancyRepository.findByDriverId(driverId);
     }
@@ -129,6 +135,7 @@ public class WarehouseDiscrepancyService {
     /**
      * Get all discrepancies by product
      */
+    @Transactional(readOnly = true)
     public List<WarehouseDiscrepancy> getByProductId(Long productId) {
         return discrepancyRepository.findByProductId(productId);
     }
@@ -136,6 +143,7 @@ public class WarehouseDiscrepancyService {
     /**
      * Get all discrepancies by warehouse
      */
+    @Transactional(readOnly = true)
     public List<WarehouseDiscrepancy> getByWarehouseId(Long warehouseId) {
         return discrepancyRepository.findByWarehouseId(warehouseId);
     }
@@ -143,6 +151,7 @@ public class WarehouseDiscrepancyService {
     /**
      * Get all discrepancies by type
      */
+    @Transactional(readOnly = true)
     public List<WarehouseDiscrepancy> getByType(WarehouseDiscrepancy.DiscrepancyType type) {
         return discrepancyRepository.findByType(type);
     }
@@ -150,6 +159,7 @@ public class WarehouseDiscrepancyService {
     /**
      * Get discrepancies within date range
      */
+    @Transactional(readOnly = true)
     public List<WarehouseDiscrepancy> getByDateRange(LocalDate startDate, LocalDate endDate) {
         return discrepancyRepository.findByReceiptDateBetween(startDate, endDate);
     }
@@ -157,6 +167,7 @@ public class WarehouseDiscrepancyService {
     /**
      * Get total losses value
      */
+    @Transactional(readOnly = true)
     public BigDecimal getTotalLossesValue() {
         return discrepancyRepository.getTotalLossesValue();
     }
@@ -164,6 +175,7 @@ public class WarehouseDiscrepancyService {
     /**
      * Get total gains value
      */
+    @Transactional(readOnly = true)
     public BigDecimal getTotalGainsValue() {
         return discrepancyRepository.getTotalGainsValue();
     }
@@ -171,6 +183,7 @@ public class WarehouseDiscrepancyService {
     /**
      * Export discrepancies to Excel with filters
      */
+    @Transactional(readOnly = true)
     public byte[] exportToExcel(
             Long driverId,
             Long productId,
@@ -269,19 +282,37 @@ public class WarehouseDiscrepancyService {
             DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy");
             int rowNum = 1;
             
+            List<Long> productIds = discrepancies.stream()
+                    .map(WarehouseDiscrepancy::getProductId)
+                    .filter(Objects::nonNull)
+                    .distinct()
+                    .collect(Collectors.toList());
+            
+            List<Long> warehouseIds = discrepancies.stream()
+                    .map(WarehouseDiscrepancy::getWarehouseId)
+                    .filter(Objects::nonNull)
+                    .distinct()
+                    .collect(Collectors.toList());
+            
+            Map<Long, String> productNames = productIds.isEmpty() ? 
+                    Collections.emptyMap() : 
+                    ((List<org.example.purchaseservice.models.Product>) productRepository.findAllById(productIds)).stream()
+                            .collect(Collectors.toMap(org.example.purchaseservice.models.Product::getId, org.example.purchaseservice.models.Product::getName));
+            
+            Map<Long, String> warehouseNames = warehouseIds.isEmpty() ? 
+                    Collections.emptyMap() : 
+                    warehouseRepository.findAllById(warehouseIds).stream()
+                            .collect(Collectors.toMap(org.example.purchaseservice.models.warehouse.Warehouse::getId, org.example.purchaseservice.models.warehouse.Warehouse::getName));
+            
             for (WarehouseDiscrepancy discrepancy : discrepancies) {
                 Row row = sheet.createRow(rowNum);
                 
                 boolean isLoss = discrepancy.getType() == WarehouseDiscrepancy.DiscrepancyType.LOSS;
                 CellStyle typeStyle = isLoss ? lossStyle : gainStyle;
                 
-                // Get entity names
-                String productName = productRepository.findById(discrepancy.getProductId())
-                        .map(p -> p.getName())
-                        .orElse("Невідомо");
-                String warehouseName = warehouseRepository.findById(discrepancy.getWarehouseId())
-                        .map(w -> w.getName())
-                        .orElse("Невідомо");
+                // Get entity names from maps
+                String productName = productNames.getOrDefault(discrepancy.getProductId(), "Невідомо");
+                String warehouseName = warehouseNames.getOrDefault(discrepancy.getWarehouseId(), "Невідомо");
                 
                 // Column 0: Row number
                 Cell cell0 = row.createCell(0);

@@ -10,6 +10,7 @@ import org.example.purchaseservice.models.Product;
 import org.example.purchaseservice.models.balance.Vehicle;
 import org.example.purchaseservice.models.dto.balance.VehicleDetailsDTO;
 import org.example.purchaseservice.repositories.ProductRepository;
+import org.example.purchaseservice.repositories.VehicleProductRepository;
 import org.example.purchaseservice.repositories.VehicleRepository;
 import org.example.purchaseservice.spec.VehicleSpecification;
 import org.springframework.data.domain.Sort;
@@ -22,6 +23,8 @@ import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -32,9 +35,11 @@ public class VehicleExportService {
     private final TransactionApiClient transactionApiClient;
     private final ObjectMapper objectMapper;
     private final ProductRepository productRepository;
+    private final VehicleProductRepository vehicleProductRepository;
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy");
 
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public byte[] exportToExcel(String query, Map<String, List<String>> filterParams) throws IOException {
         VehicleSpecification spec = new VehicleSpecification(query, filterParams);
         Sort sortBy = Sort.by(Sort.Direction.DESC, "createdAt");
@@ -98,10 +103,30 @@ public class VehicleExportService {
                 cell.setCellStyle(headerStyle);
             }
 
+            List<Long> vehicleIds = vehicles.stream()
+                    .map(Vehicle::getId)
+                    .collect(Collectors.toList());
+            
+            List<org.example.purchaseservice.models.balance.VehicleProduct> allVehicleProducts = 
+                    vehicleProductRepository.findByVehicleIdIn(vehicleIds);
+            
+            List<Long> productIds = allVehicleProducts.stream()
+                    .map(org.example.purchaseservice.models.balance.VehicleProduct::getProductId)
+                    .filter(Objects::nonNull)
+                    .distinct()
+                    .collect(Collectors.toList());
+            
+            Map<Long, Product> productMap = productIds.isEmpty() ? 
+                    Collections.emptyMap() : 
+                    ((List<Product>) productRepository.findAllById(productIds)).stream()
+                            .collect(Collectors.toMap(Product::getId, product -> product));
+            
+            Map<Long, List<Map<String, Object>>> transactionsMap = getVehicleTransactionsBatch(vehicleIds);
+            
             int rowNum = 1;
             for (Vehicle vehicle : vehicles) {
                 VehicleDetailsDTO vehicleDTO = vehicleService.mapToDetailsDTO(vehicle);
-                List<Map<String, Object>> transactions = getVehicleTransactions(vehicle.getId());
+                List<Map<String, Object>> transactions = transactionsMap.getOrDefault(vehicle.getId(), Collections.emptyList());
 
                 Row mainRow = sheet.createRow(rowNum++);
 
@@ -129,7 +154,7 @@ public class VehicleExportService {
                 if (vehicleDTO.getItems() != null && !vehicleDTO.getItems().isEmpty()) {
                     for (VehicleDetailsDTO.VehicleItemDTO item : vehicleDTO.getItems()) {
                         if (productsText.length() > 0) productsText.append("\n");
-                        String productName = getProductName(item.getProductId());
+                        String productName = getProductName(item.getProductId(), productMap);
                         productsText.append(String.format("%s, Кількість: %s кг, Ціна: %s EUR, Сума: %s EUR",
                                 productName,
                                 formatNumber(item.getQuantity()),
@@ -175,16 +200,23 @@ public class VehicleExportService {
     }
 
     @SuppressWarnings("unchecked")
-    private List<Map<String, Object>> getVehicleTransactions(Long vehicleId) {
+    private Map<Long, List<Map<String, Object>>> getVehicleTransactionsBatch(List<Long> vehicleIds) {
+        if (vehicleIds == null || vehicleIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
         try {
-            List<?> transactions = transactionApiClient.getTransactionsByVehicleId(vehicleId);
-            return transactions.stream()
-                    .map(t -> objectMapper.convertValue(t, Map.class))
-                    .map(m -> (Map<String, Object>) m)
-                    .toList();
+            Map<Long, List<?>> transactionsMap = transactionApiClient.getTransactionsByVehicleIds(vehicleIds);
+            return transactionsMap.entrySet().stream()
+                    .collect(Collectors.toMap(
+                            Map.Entry::getKey,
+                            e -> e.getValue().stream()
+                                    .map(t -> objectMapper.convertValue(t, Map.class))
+                                    .map(m -> (Map<String, Object>) m)
+                                    .toList()
+                    ));
         } catch (Exception e) {
-            log.warn("Failed to get transactions for vehicle {}: {}", vehicleId, e.getMessage());
-            return Collections.emptyList();
+            log.warn("Failed to get transactions batch for vehicles: {}", e.getMessage());
+            return Collections.emptyMap();
         }
     }
 
@@ -220,17 +252,12 @@ public class VehicleExportService {
         }
     }
 
-    private String getProductName(Long productId) {
+    private String getProductName(Long productId, Map<Long, Product> productMap) {
         if (productId == null) {
             return "Невідомий товар";
         }
-        try {
-            Product product = productRepository.findById(productId).orElse(null);
-            return product != null ? product.getName() : "Товар #" + productId;
-        } catch (Exception e) {
-            log.warn("Failed to get product name for productId {}: {}", productId, e.getMessage());
-            return "Товар #" + productId;
-        }
+        Product product = productMap.get(productId);
+        return product != null ? product.getName() : "Товар #" + productId;
     }
 }
 

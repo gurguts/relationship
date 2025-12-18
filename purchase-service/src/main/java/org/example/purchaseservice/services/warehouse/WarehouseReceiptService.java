@@ -15,8 +15,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.example.purchaseservice.utils.SecurityUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,6 +36,7 @@ public class WarehouseReceiptService implements IWarehouseReceiptService {
     private final WarehouseDiscrepancyService warehouseDiscrepancyService;
 
     @Override
+    @Transactional(readOnly = true)
     public PageResponse<WarehouseReceiptDTO> getWarehouseReceipts(int page, int size, String sort,
                                                                String direction, Map<String, List<String>> filters) {
 
@@ -96,8 +96,7 @@ public class WarehouseReceiptService implements IWarehouseReceiptService {
         }
         
         // Get current executor user ID
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        Long executorUserId = (Long) authentication.getDetails();
+        Long executorUserId = SecurityUtils.getCurrentUserId();
         
         // Store driver's full balance details (before removing)
         BigDecimal purchasedQuantity = driverBalance.getQuantity();        // What driver bought
@@ -173,6 +172,7 @@ public class WarehouseReceiptService implements IWarehouseReceiptService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<WarehouseReceipt> findWarehouseReceiptsByFilters(Map<String, List<String>> filters) {
         Specification<WarehouseReceipt> spec = new WarehouseReceiptSpecification(filters);
         return warehouseReceiptRepository.findAll(spec);
@@ -180,6 +180,7 @@ public class WarehouseReceiptService implements IWarehouseReceiptService {
 
 
     @Override
+    @Transactional(readOnly = true)
     public Map<Long, Map<Long, Double>> getWarehouseBalance(LocalDate balanceDate) {
         try {
 

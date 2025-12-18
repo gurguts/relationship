@@ -16,8 +16,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.example.purchaseservice.utils.SecurityUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,8 +39,7 @@ public class WarehouseWithdrawService implements IWarehouseWithdrawService {
     @Override
     @Transactional
     public WarehouseWithdrawal createWithdrawal(WarehouseWithdrawal warehouseWithdrawal) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        Long userId = (Long) authentication.getDetails();
+        Long userId = SecurityUtils.getCurrentUserId();
 
         warehouseWithdrawal.setUserId(userId);
         BigDecimal quantity = warehouseWithdrawal.getQuantity().setScale(2, RoundingMode.HALF_UP);
@@ -257,6 +255,7 @@ public class WarehouseWithdrawService implements IWarehouseWithdrawService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public PageResponse<WithdrawalDTO> getWithdrawals(int page, int size, String sort, String direction,
                                                       Map<String, List<String>> filters) {
         Sort sortOrder = Sort.by(Sort.Direction.fromString(direction), sort);
@@ -290,11 +289,13 @@ public class WarehouseWithdrawService implements IWarehouseWithdrawService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<WithdrawalReason> getAllWithdrawalReasons() {
         return withdrawalReasonRepository.findAll();
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<WithdrawalReason> getWithdrawalReasonsByPurpose(WithdrawalReason.Purpose purpose) {
         return withdrawalReasonRepository.findByPurpose(purpose);
     }

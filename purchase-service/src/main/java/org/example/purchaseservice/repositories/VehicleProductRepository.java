@@ -13,6 +13,9 @@ public interface VehicleProductRepository extends JpaRepository<VehicleProduct, 
     
     List<VehicleProduct> findByVehicleId(Long vehicleId);
     
+    @Query("SELECT vp FROM VehicleProduct vp WHERE vp.vehicleId IN :vehicleIds")
+    List<VehicleProduct> findByVehicleIdIn(@Param("vehicleIds") List<Long> vehicleIds);
+    
     void deleteByVehicleId(Long vehicleId);
     
     @Query("SELECT vp FROM VehicleProduct vp WHERE vp.vehicleId = :vehicleId AND vp.productId = :productId")

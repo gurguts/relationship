@@ -88,22 +88,23 @@ public class ClientTypePermissionService implements IClientTypePermissionService
 
     @Override
     public boolean canUserCreate(Long userId, Long clientTypeId) {
-        ClientTypePermission permission = permissionRepository.findByUserIdAndClientTypeId(userId, clientTypeId).orElse(null);
+        ClientTypePermission permission = getUserPermissions(userId, clientTypeId);
         return permission != null && Boolean.TRUE.equals(permission.getCanCreate());
     }
 
     @Override
     public boolean canUserEdit(Long userId, Long clientTypeId) {
-        ClientTypePermission permission = permissionRepository.findByUserIdAndClientTypeId(userId, clientTypeId).orElse(null);
+        ClientTypePermission permission = getUserPermissions(userId, clientTypeId);
         return permission != null && Boolean.TRUE.equals(permission.getCanEdit());
     }
 
     @Override
     public boolean canUserDelete(Long userId, Long clientTypeId) {
-        ClientTypePermission permission = permissionRepository.findByUserIdAndClientTypeId(userId, clientTypeId).orElse(null);
+        ClientTypePermission permission = getUserPermissions(userId, clientTypeId);
         return permission != null && Boolean.TRUE.equals(permission.getCanDelete());
     }
 
+    @Override
     public ClientTypePermission getUserPermissions(Long userId, Long clientTypeId) {
         return permissionRepository.findByUserIdAndClientTypeId(userId, clientTypeId).orElse(null);
     }

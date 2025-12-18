@@ -22,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -119,14 +120,17 @@ public class VehicleService {
         return saved;
     }
 
+    @Transactional(readOnly = true)
     public Vehicle getVehicle(Long vehicleId) {
         return vehicleRepository.findById(vehicleId).orElse(null);
     }
     
+    @Transactional(readOnly = true)
     public List<Vehicle> getVehiclesByIds(List<Long> ids) {
         return vehicleRepository.findAllById(ids);
     }
 
+    @Transactional(readOnly = true)
     public List<Vehicle> getVehiclesByDate(LocalDate date) {
         return vehicleRepository.findByShipmentDate(date);
     }
@@ -402,6 +406,7 @@ public class VehicleService {
         return saved;
     }
 
+    @Transactional(readOnly = true)
     public List<VehicleProduct> getVehicleProducts(Long vehicleId) {
         return vehicleProductRepository.findByVehicleId(vehicleId);
     }
@@ -425,15 +430,32 @@ public class VehicleService {
 
         List<VehicleProduct> products = vehicleProductRepository.findByVehicleId(vehicleId);
 
-        for (VehicleProduct product : products) {
-            warehouseProductBalanceService.addProduct(
-                    product.getWarehouseId(),
-                    product.getProductId(),
-                    product.getQuantity(),
-                    product.getTotalCostEur()
-            );
-
-            vehicle.subtractWithdrawalCost(product.getTotalCostEur());
+        if (!products.isEmpty()) {
+            BigDecimal totalCostToSubtract = BigDecimal.ZERO;
+            
+            Map<String, AggregatedProduct> groupedProducts = products.stream()
+                    .collect(Collectors.toMap(
+                            p -> p.getWarehouseId() + "_" + p.getProductId(),
+                            p -> new AggregatedProduct(p.getWarehouseId(), p.getProductId(), p.getQuantity(), p.getTotalCostEur()),
+                            (existing, replacement) -> {
+                                existing.quantity = existing.quantity.add(replacement.quantity);
+                                existing.totalCostEur = existing.totalCostEur.add(replacement.totalCostEur);
+                                return existing;
+                            }
+                    ));
+            
+            for (AggregatedProduct product : groupedProducts.values()) {
+                warehouseProductBalanceService.addProduct(
+                        product.warehouseId,
+                        product.productId,
+                        product.quantity,
+                        product.totalCostEur
+                );
+                
+                totalCostToSubtract = totalCostToSubtract.add(product.totalCostEur);
+            }
+            
+            vehicle.subtractWithdrawalCost(totalCostToSubtract);
         }
 
         vehicleProductRepository.deleteAll(products);
@@ -448,8 +470,18 @@ public class VehicleService {
         VehicleSpecification spec = new VehicleSpecification(query, filterParams);
         Page<Vehicle> vehiclePage = vehicleRepository.findAll(spec, pageable);
         
-        List<VehicleDetailsDTO> dtos = vehiclePage.getContent().stream()
-                .map(this::mapToDetailsDTO)
+        List<Vehicle> vehicles = vehiclePage.getContent();
+        List<Long> vehicleIds = vehicles.stream()
+                .map(Vehicle::getId)
+                .collect(Collectors.toList());
+        
+        Map<Long, List<VehicleProduct>> vehicleProductsMap = vehicleIds.isEmpty() ? 
+                Collections.emptyMap() : 
+                vehicleProductRepository.findByVehicleIdIn(vehicleIds).stream()
+                        .collect(Collectors.groupingBy(VehicleProduct::getVehicleId));
+        
+        List<VehicleDetailsDTO> dtos = vehicles.stream()
+                .map(vehicle -> mapToDetailsDTO(vehicle, vehicleProductsMap.getOrDefault(vehicle.getId(), Collections.emptyList())))
                 .collect(Collectors.toList());
         
         return new PageResponse<>(
@@ -461,8 +493,13 @@ public class VehicleService {
         );
     }
 
+    @Transactional(readOnly = true)
     public VehicleDetailsDTO mapToDetailsDTO(Vehicle vehicle) {
         List<VehicleProduct> products = vehicleProductRepository.findByVehicleId(vehicle.getId());
+        return mapToDetailsDTO(vehicle, products);
+    }
+    
+    private VehicleDetailsDTO mapToDetailsDTO(Vehicle vehicle, List<VehicleProduct> products) {
         
         List<VehicleDetailsDTO.VehicleItemDTO> items = products.stream()
                 .map(p -> VehicleDetailsDTO.VehicleItemDTO.builder()
@@ -520,6 +557,20 @@ public class VehicleService {
                 .carrier(carrierDTO)
                 .items(items)
                 .build();
+    }
+    
+    private static class AggregatedProduct {
+        final Long warehouseId;
+        final Long productId;
+        BigDecimal quantity;
+        BigDecimal totalCostEur;
+        
+        AggregatedProduct(Long warehouseId, Long productId, BigDecimal quantity, BigDecimal totalCostEur) {
+            this.warehouseId = warehouseId;
+            this.productId = productId;
+            this.quantity = quantity;
+            this.totalCostEur = totalCostEur;
+        }
     }
 }
 

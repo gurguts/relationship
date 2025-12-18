@@ -16,24 +16,44 @@ public class BranchService {
     private final BranchRepository branchRepository;
     private final BranchPermissionService branchPermissionService;
 
+    @Transactional(readOnly = true)
     public List<Branch> getAllBranches() {
         return branchRepository.findAllByOrderByNameAsc();
     }
 
+    @Transactional(readOnly = true)
     public List<Branch> getBranchesAccessibleToUser(Long userId) {
         List<Branch> allBranches = branchRepository.findAllByOrderByNameAsc();
+        
+        List<org.example.userservice.models.branch.BranchPermission> userPermissions = 
+                branchPermissionService.getPermissionsByUserId(userId);
+        java.util.Set<Long> accessibleBranchIds = userPermissions.stream()
+                .filter(org.example.userservice.models.branch.BranchPermission::getCanView)
+                .map(org.example.userservice.models.branch.BranchPermission::getBranchId)
+                .collect(Collectors.toSet());
+        
         return allBranches.stream()
-                .filter(branch -> branchPermissionService.canView(userId, branch.getId()))
+                .filter(branch -> accessibleBranchIds.contains(branch.getId()))
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public List<Branch> getBranchesOperableByUser(Long userId) {
         List<Branch> allBranches = branchRepository.findAllByOrderByNameAsc();
+        
+        List<org.example.userservice.models.branch.BranchPermission> userPermissions = 
+                branchPermissionService.getPermissionsByUserId(userId);
+        java.util.Set<Long> operableBranchIds = userPermissions.stream()
+                .filter(org.example.userservice.models.branch.BranchPermission::getCanOperate)
+                .map(org.example.userservice.models.branch.BranchPermission::getBranchId)
+                .collect(Collectors.toSet());
+        
         return allBranches.stream()
-                .filter(branch -> branchPermissionService.canOperate(userId, branch.getId()))
+                .filter(branch -> operableBranchIds.contains(branch.getId()))
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public Branch getBranchById(Long id) {
         return branchRepository.findById(id)
                 .orElseThrow(() -> new BranchNotFoundException(

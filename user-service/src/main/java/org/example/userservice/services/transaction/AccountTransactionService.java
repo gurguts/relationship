@@ -23,7 +23,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -37,14 +40,26 @@ public class AccountTransactionService {
     private final ExchangeRateApiClient exchangeRateApiClient;
     private final VehicleCostApiClient vehicleCostApiClient;
 
+    @Transactional(readOnly = true)
     public Transaction getTransactionById(Long transactionId) {
         return transactionRepository.findById(transactionId)
                 .orElseThrow(() -> new TransactionException(
                         String.format("Transaction with ID %d not found", transactionId)));
     }
 
+    @Transactional(readOnly = true)
     public List<Transaction> getTransactionsByVehicleId(Long vehicleId) {
         return transactionRepository.findByVehicleIdOrderByCreatedAtDesc(vehicleId);
+    }
+
+    @Transactional(readOnly = true)
+    public Map<Long, List<Transaction>> getTransactionsByVehicleIds(List<Long> vehicleIds) {
+        if (vehicleIds == null || vehicleIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        List<Transaction> transactions = transactionRepository.findByVehicleIdInOrderByCreatedAtDesc(vehicleIds);
+        return transactions.stream()
+                .collect(Collectors.groupingBy(Transaction::getVehicleId));
     }
 
     @Transactional
@@ -52,9 +67,85 @@ public class AccountTransactionService {
         List<Transaction> transactions = transactionRepository.findByVehicleIdOrderByCreatedAtDesc(vehicleId);
         log.info("Deleting {} transactions for vehicleId: {}", transactions.size(), vehicleId);
         
-        for (Transaction transaction : transactions) {
-            deleteTransaction(transaction.getId());
+        if (transactions.isEmpty()) {
+            return;
         }
+        
+        java.util.Map<String, java.math.BigDecimal> balanceAdjustments = new java.util.HashMap<>();
+        java.util.Map<Long, java.math.BigDecimal> vehicleCostAdjustments = new java.util.HashMap<>();
+        
+        for (Transaction transaction : transactions) {
+            TransactionType type = transaction.getType();
+            BigDecimal amount = transaction.getAmount();
+            BigDecimal convertedAmount = transaction.getConvertedAmount();
+            
+            switch (type) {
+                case INTERNAL_TRANSFER:
+                    BigDecimal commission = transaction.getCommission();
+                    BigDecimal transferAmount = commission != null ? amount.subtract(commission) : amount;
+                    String fromKey = transaction.getFromAccountId() + "_" + transaction.getCurrency();
+                    String toKey = transaction.getToAccountId() + "_" + transaction.getCurrency();
+                    balanceAdjustments.merge(fromKey, amount, BigDecimal::add);
+                    balanceAdjustments.merge(toKey, transferAmount.negate(), BigDecimal::add);
+                    break;
+                case EXTERNAL_INCOME:
+                    String toAccountKey = transaction.getToAccountId() + "_" + transaction.getCurrency();
+                    balanceAdjustments.merge(toAccountKey, amount.negate(), BigDecimal::add);
+                    break;
+                case EXTERNAL_EXPENSE:
+                    String fromAccountKey = transaction.getFromAccountId() + "_" + transaction.getCurrency();
+                    balanceAdjustments.merge(fromAccountKey, amount, BigDecimal::add);
+                    break;
+                case CLIENT_PAYMENT:
+                    String clientPaymentKey = transaction.getFromAccountId() + "_" + transaction.getCurrency();
+                    balanceAdjustments.merge(clientPaymentKey, amount, BigDecimal::add);
+                    break;
+                case CURRENCY_CONVERSION:
+                    String currencyFromKey = transaction.getFromAccountId() + "_" + transaction.getCurrency();
+                    balanceAdjustments.merge(currencyFromKey, amount, BigDecimal::add);
+                    if (convertedAmount != null && transaction.getConvertedCurrency() != null) {
+                        String currencyToKey = transaction.getFromAccountId() + "_" + transaction.getConvertedCurrency();
+                        balanceAdjustments.merge(currencyToKey, convertedAmount.negate(), BigDecimal::add);
+                    }
+                    break;
+                case VEHICLE_EXPENSE:
+                    String vehicleExpenseKey = transaction.getFromAccountId() + "_" + transaction.getCurrency();
+                    balanceAdjustments.merge(vehicleExpenseKey, amount, BigDecimal::add);
+                    if (convertedAmount != null && convertedAmount.compareTo(BigDecimal.ZERO) > 0 && transaction.getVehicleId() != null) {
+                        vehicleCostAdjustments.merge(transaction.getVehicleId(), convertedAmount.negate(), BigDecimal::add);
+                    }
+                    break;
+                case DEPOSIT:
+                case WITHDRAWAL:
+                case PURCHASE:
+                    log.warn("Unsupported transaction type {} for vehicle deletion, skipping balance adjustment", type);
+                    break;
+            }
+        }
+        
+        for (java.util.Map.Entry<String, java.math.BigDecimal> entry : balanceAdjustments.entrySet()) {
+            String[] parts = entry.getKey().split("_");
+            Long accountId = Long.parseLong(parts[0]);
+            String currency = parts[1];
+            BigDecimal adjustment = entry.getValue();
+            
+            if (adjustment.compareTo(BigDecimal.ZERO) > 0) {
+                accountBalanceService.addAmount(accountId, currency, adjustment);
+            } else if (adjustment.compareTo(BigDecimal.ZERO) < 0) {
+                accountBalanceService.subtractAmount(accountId, currency, adjustment.abs());
+            }
+        }
+        
+        for (java.util.Map.Entry<Long, java.math.BigDecimal> entry : vehicleCostAdjustments.entrySet()) {
+            try {
+                vehicleCostApiClient.updateVehicleCost(entry.getKey(), entry.getValue().abs(), "subtract");
+            } catch (Exception e) {
+                log.error("Failed to revert vehicle cost for vehicleId {}: {}", entry.getKey(), e.getMessage());
+                throw new TransactionException("Failed to revert vehicle cost: " + e.getMessage());
+            }
+        }
+        
+        transactionRepository.deleteAll(transactions);
         
         log.info("Successfully deleted all transactions for vehicleId: {}", vehicleId);
     }

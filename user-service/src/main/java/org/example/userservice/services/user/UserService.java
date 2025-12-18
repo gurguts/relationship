@@ -25,6 +25,7 @@ public class UserService implements IUserService {
     private final PasswordEncoder passwordEncoder;
 
     @Override
+    @Transactional(readOnly = true)
     @Cacheable(value = "users", key = "#login")
     public User getUserByLogin(String login) {
         return userRepository.findByLogin(login)
@@ -32,12 +33,14 @@ public class UserService implements IUserService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     @Cacheable(value = "users", key = "'allUsers'")
     public List<User> getUsers() {
         return userRepository.findAll();
     }
     
     @Override
+    @Transactional(readOnly = true)
     @Cacheable(value = "users", key = "'activeUsers'")
     public List<User> getActiveUsers() {
         return userRepository.findByStatus(org.example.userservice.models.user.Status.ACTIVE);
@@ -45,6 +48,7 @@ public class UserService implements IUserService {
 
 
     @Override
+    @Transactional(readOnly = true)
     @Cacheable(value = "users", key = "#id")
     public User getUserById(Long id) {
         return userRepository.findById(id)

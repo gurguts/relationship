@@ -12,9 +12,7 @@ import org.example.clientservice.models.client.FilterIds;
 import org.example.clientservice.spec.ClientSpecification;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.example.clientservice.utils.SecurityUtils;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -85,18 +83,16 @@ public class ClientSearchService implements IClientSearchService {
 
     private Page<Client> fetchClients(String query, Map<String, List<String>> filterParams, FilterIds filterIds,
                                       Pageable pageable, Long clientTypeId) {
-        Long userId = getCurrentUserId();
+        Long userId = SecurityUtils.getCurrentUserId();
         List<Long> allowedClientTypeIds = null;
         
-        if (userId != null && !isAdmin()) {
+        if (userId != null && !SecurityUtils.isAdmin()) {
             allowedClientTypeIds = getAccessibleClientTypeIds(userId);
             if (allowedClientTypeIds.isEmpty()) {
                 return Page.empty(pageable);
             }
-        }
-
-        if (clientTypeId != null && userId != null && !isAdmin()) {
-            if (!clientTypePermissionService.canUserView(userId, clientTypeId)) {
+            
+            if (clientTypeId != null && !allowedClientTypeIds.contains(clientTypeId)) {
                 return Page.empty(pageable);
             }
         }
@@ -113,8 +109,13 @@ public class ClientSearchService implements IClientSearchService {
     }
 
     private List<Client> fetchClients(String query, Map<String, List<String>> filterParams, FilterIds filterIds, Long clientTypeId) {
-        Map<String, List<String>> cleanedFilterParams = filterParams != null ? new java.util.HashMap<>(filterParams) : new java.util.HashMap<>();
-        cleanedFilterParams.remove("clientTypeId");
+        Map<String, List<String>> cleanedFilterParams;
+        if (filterParams != null && filterParams.containsKey("clientTypeId")) {
+            cleanedFilterParams = new java.util.HashMap<>(filterParams);
+            cleanedFilterParams.remove("clientTypeId");
+        } else {
+            cleanedFilterParams = filterParams != null ? filterParams : new java.util.HashMap<>();
+        }
 
         List<Client> clients = clientRepository.findAll(new ClientSpecification(
                 query,
@@ -125,25 +126,6 @@ public class ClientSearchService implements IClientSearchService {
         ));
 
         return clients;
-    }
-    
-    private Long getCurrentUserId() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || authentication.getDetails() == null) {
-            return null;
-        }
-        return authentication.getDetails() instanceof Long ? 
-                (Long) authentication.getDetails() : null;
-    }
-    
-    private boolean isAdmin() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null) {
-            return false;
-        }
-        return authentication.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
-                .anyMatch(auth -> "system:admin".equals(auth) || "administration:view".equals(auth));
     }
     
     private List<Long> getAccessibleClientTypeIds(Long userId) {

@@ -117,6 +117,16 @@ public class ClientTypeFieldController {
         return ResponseEntity.ok(response);
     }
 
+    @PreAuthorize("hasAuthority('client:view')")
+    @PostMapping("/field/ids")
+    public ResponseEntity<List<ClientTypeFieldDTO>> getFieldsByIds(@RequestBody List<Long> fieldIds) {
+        List<ClientTypeField> fields = fieldService.getFieldsByIds(fieldIds);
+        List<ClientTypeFieldDTO> response = fields.stream()
+                .map(ClientTypeFieldMapper::toDTO)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(response);
+    }
+
     @PreAuthorize("hasAuthority('administration:edit')")
     @PutMapping("/field/{fieldId}")
     public ResponseEntity<ClientTypeFieldDTO> updateField(

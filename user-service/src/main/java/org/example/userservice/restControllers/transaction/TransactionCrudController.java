@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
@@ -85,6 +86,20 @@ public class TransactionCrudController {
         List<TransactionDTO> response = transactions.stream()
                 .map(transactionMapper::transactionToTransactionDTO)
                 .collect(Collectors.toList());
+        return ResponseEntity.ok(response);
+    }
+
+    @PreAuthorize("hasAuthority('finance:view') or hasAuthority('declarant:view')")
+    @PostMapping("/vehicle/ids")
+    public ResponseEntity<Map<Long, List<TransactionDTO>>> getTransactionsByVehicleIds(@RequestBody List<Long> vehicleIds) {
+        Map<Long, List<Transaction>> transactionsMap = accountTransactionService.getTransactionsByVehicleIds(vehicleIds);
+        Map<Long, List<TransactionDTO>> response = transactionsMap.entrySet().stream()
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        e -> e.getValue().stream()
+                                .map(transactionMapper::transactionToTransactionDTO)
+                                .collect(Collectors.toList())
+                ));
         return ResponseEntity.ok(response);
     }
 

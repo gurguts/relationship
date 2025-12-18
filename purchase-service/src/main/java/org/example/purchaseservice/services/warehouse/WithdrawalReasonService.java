@@ -19,6 +19,7 @@ public class WithdrawalReasonService implements IWithdrawalReasonService {
     private final WithdrawalReasonRepository withdrawalReasonRepository;
 
     @Override
+    @Transactional(readOnly = true)
     @Cacheable(value = "withdrawalReasons", key = "#id")
     public WithdrawalReason getWithdrawalReason(Long id) {
         return withdrawalReasonRepository.findById(id)
@@ -26,6 +27,7 @@ public class WithdrawalReasonService implements IWithdrawalReasonService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     @Cacheable(value = "withdrawalReasons", key = "'allWithdrawalReasons'")
     public List<WithdrawalReason> getAllWithdrawalReasons() {
         return withdrawalReasonRepository.findAll();

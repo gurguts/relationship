@@ -1,6 +1,7 @@
 package org.example.clientservice.repositories.clienttype;
 
 import org.example.clientservice.models.clienttype.ClientTypePermission;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -13,6 +14,7 @@ import java.util.Optional;
 public interface ClientTypePermissionRepository extends JpaRepository<ClientTypePermission, Long> {
     Optional<ClientTypePermission> findByUserIdAndClientTypeId(Long userId, Long clientTypeId);
     
+    @EntityGraph(attributePaths = {"clientType"})
     List<ClientTypePermission> findByUserId(Long userId);
     
     List<ClientTypePermission> findByClientTypeId(Long clientTypeId);

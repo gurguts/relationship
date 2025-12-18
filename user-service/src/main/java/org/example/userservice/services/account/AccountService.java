@@ -23,36 +23,48 @@ public class AccountService {
     private final AccountBalanceRepository accountBalanceRepository;
     private final BranchPermissionService branchPermissionService;
 
+    @Transactional(readOnly = true)
     public List<Account> getAllAccounts() {
         return accountRepository.findAllByOrderByNameAsc();
     }
 
+    @Transactional(readOnly = true)
     public List<Account> getAccountsAccessibleToUser(Long userId) {
         List<Account> allAccounts = accountRepository.findAllByOrderByNameAsc();
+        
+        List<org.example.userservice.models.branch.BranchPermission> userPermissions = 
+                branchPermissionService.getPermissionsByUserId(userId);
+        java.util.Set<Long> accessibleBranchIds = userPermissions.stream()
+                .filter(org.example.userservice.models.branch.BranchPermission::getCanView)
+                .map(org.example.userservice.models.branch.BranchPermission::getBranchId)
+                .collect(Collectors.toSet());
+        
         return allAccounts.stream()
                 .filter(account -> {
-
                     if (account.getBranchId() == null) {
                         return true;
                     }
-
-                    return branchPermissionService.canView(userId, account.getBranchId());
+                    return accessibleBranchIds.contains(account.getBranchId());
                 })
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public List<Account> getAccountsByUserId(Long userId) {
         return accountRepository.findByUserId(userId);
     }
 
+    @Transactional(readOnly = true)
     public List<Account> getAccountsByBranchId(Long branchId) {
         return accountRepository.findByBranchId(branchId);
     }
 
+    @Transactional(readOnly = true)
     public List<Account> getStandaloneAccounts() {
         return accountRepository.findByUserIdIsNull();
     }
 
+    @Transactional(readOnly = true)
     public Account getAccountById(Long id) {
         return accountRepository.findById(id)
                 .orElseThrow(() -> new AccountNotFoundException(
@@ -136,10 +148,12 @@ public class AccountService {
         accountRepository.delete(account);
     }
 
+    @Transactional(readOnly = true)
     public List<AccountBalance> getAccountBalances(Long accountId) {
         return accountBalanceRepository.findByAccountId(accountId);
     }
 
+    @Transactional(readOnly = true)
     public AccountBalance getAccountBalance(Long accountId, String currency) {
         return accountBalanceRepository.findByAccountIdAndCurrency(accountId, currency.toUpperCase())
                 .orElseThrow(() -> new AccountNotFoundException(

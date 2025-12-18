@@ -27,24 +27,25 @@ public class ContainerBalanceService {
 
     @Transactional
     public void depositContainer(Long userId, Long containerId, BigDecimal quantity) {
-        if (userId == null || containerId == null || quantity == null || quantity.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new ContainerException("NOT_ENOUGH_DATA", "User ID, container ID, and quantity must be valid");
-        }
+        validateParameters(userId, containerId, quantity);
 
         ContainerBalance balance = getOrCreateBalance(userId, containerId);
         balance.setTotalQuantity(balance.getTotalQuantity().add(quantity));
         containerBalanceRepository.save(balance);
 
-        containerTransactionService.logTransaction(userId, null, null, containerId, quantity,
+        org.example.containerservice.models.Container container = balance.getContainer();
+        if (container == null) {
+            throw new ContainerException("INVALID_BALANCE", "Container is null in balance");
+        }
+
+        containerTransactionService.logTransaction(userId, null, null, container, quantity,
                 ContainerTransactionType.DEPOSIT);
         log.info("Deposited {} units of container {} for user {}", quantity, containerId, userId);
     }
 
     @Transactional
     public void withdrawContainer(Long userId, Long containerId, BigDecimal quantity) {
-        if (userId == null || containerId == null || quantity == null || quantity.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new ContainerException("NOT_ENOUGH_DATA", "User ID, container ID, and quantity must be valid");
-        }
+        validateParameters(userId, containerId, quantity);
 
         ContainerBalance balance = containerBalanceRepository.findByUserIdAndContainerId(userId, containerId)
                 .orElseThrow(() -> new ContainerNotFoundException(
@@ -59,11 +60,23 @@ public class ContainerBalanceService {
         balance.setTotalQuantity(newTotal);
         containerBalanceRepository.save(balance);
 
-        containerTransactionService.logTransaction(userId, null, null, containerId, quantity,
+        org.example.containerservice.models.Container container = balance.getContainer();
+        if (container == null) {
+            throw new ContainerException("INVALID_BALANCE", "Container is null in balance");
+        }
+
+        containerTransactionService.logTransaction(userId, null, null, container, quantity,
                 ContainerTransactionType.WITHDRAW);
         log.info("Withdrew {} units of container {} from user {}", quantity, containerId, userId);
     }
 
+    private void validateParameters(Long userId, Long containerId, BigDecimal quantity) {
+        if (userId == null || containerId == null || quantity == null || quantity.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new ContainerException("NOT_ENOUGH_DATA", "User ID, container ID, and quantity must be valid");
+        }
+    }
+
+    @Transactional(readOnly = true)
     public List<ContainerBalance> getUserContainerBalances(Long userId) {
         return containerBalanceRepository.findByUserId(userId);
     }
@@ -80,8 +93,9 @@ public class ContainerBalanceService {
                 });
     }
 
+    @Transactional(readOnly = true)
     public Map<Long, List<ContainerBalance>> getAllUserContainerBalances() {
-        List<ContainerBalance> balances = containerBalanceRepository.findAll();
+        List<ContainerBalance> balances = containerBalanceRepository.findAllOrderedByUserId();
         return balances.stream()
                 .collect(Collectors.groupingBy(ContainerBalance::getUserId));
     }

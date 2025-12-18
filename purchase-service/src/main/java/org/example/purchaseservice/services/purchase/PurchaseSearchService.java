@@ -16,14 +16,18 @@ import org.example.purchaseservice.repositories.WarehouseReceiptRepository;
 import org.example.purchaseservice.models.warehouse.WarehouseReceipt;
 import org.example.purchaseservice.services.impl.IPurchaseSearchService;
 import org.example.purchaseservice.spec.PurchaseSpecification;
+import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -36,40 +40,13 @@ public class PurchaseSearchService implements IPurchaseSearchService {
     private final WarehouseReceiptRepository warehouseReceiptRepository;
 
     @Override
+    @Transactional(readOnly = true)
     public PageResponse<PurchasePageDTO> searchPurchase(String query, Pageable pageable,
                                                         Map<String, List<String>> filterParams) {
 
-        Long clientTypeId = null;
-        if (filterParams != null && filterParams.containsKey("clientTypeId") && filterParams.get("clientTypeId") != null 
-                && !filterParams.get("clientTypeId").isEmpty()) {
-            try {
-                clientTypeId = Long.parseLong(filterParams.get("clientTypeId").get(0));
-            } catch (NumberFormatException e) {
-                log.warn("Invalid clientTypeId in filterParams: {}", filterParams.get("clientTypeId"));
-            }
-        }
+        Long clientTypeId = org.example.purchaseservice.utils.FilterUtils.extractClientTypeId(filterParams);
 
-        Map<String, List<String>> clientFilterParams = filterParams != null ? filterParams.entrySet().stream()
-                .filter(entry -> {
-                    String key = entry.getKey();
-                    return key.equals("clientProduct") ||
-                            key.equals("clientSource") ||
-                            key.equals("clientCreatedAtFrom") || key.equals("clientCreatedAtTo") ||
-                            key.equals("clientUpdatedAtFrom") || key.equals("clientUpdatedAtTo") ||
-                            key.startsWith("field");
-                })
-                .collect(Collectors.toMap(
-                    entry -> {
-                        String key = entry.getKey();
-                        if (key.equals("clientSource")) return "source";
-                        if (key.equals("clientCreatedAtFrom")) return "createdAtFrom";
-                        if (key.equals("clientCreatedAtTo")) return "createdAtTo";
-                        if (key.equals("clientUpdatedAtFrom")) return "updatedAtFrom";
-                        if (key.equals("clientUpdatedAtTo")) return "updatedAtTo";
-                        return key;
-                    },
-                    Map.Entry::getValue
-                )) : Collections.emptyMap();
+        Map<String, List<String>> clientFilterParams = org.example.purchaseservice.utils.FilterUtils.filterClientParams(filterParams, false);
 
         ClientData clientData = fetchClientData(query, clientFilterParams, clientTypeId);
         List<Long> clientIds = clientData.clientIds();
@@ -94,10 +71,15 @@ public class PurchaseSearchService implements IPurchaseSearchService {
 
         Page<Purchase> purchasePage = fetchPurchases(query, purchaseFilterParams, clientIds, sourceIds, pageable);
 
-        List<PurchasePageDTO> purchaseDTOs = purchasePage.getContent().stream()
+        List<Purchase> purchases = purchasePage.getContent();
+        Map<String, Boolean> receivedStatusMap = buildReceivedStatusMap(purchases);
+
+        List<PurchasePageDTO> purchaseDTOs = purchases.stream()
                 .map(purchase -> {
                     PurchasePageDTO dto = mapToPurchasePageDTO(purchase, clientMap);
-                    dto.setIsReceived(isPurchaseReceived(purchase));
+                    String key = purchase.getUser() + "_" + purchase.getProduct() + "_" + 
+                            (purchase.getCreatedAt() != null ? purchase.getCreatedAt().toString() : "");
+                    dto.setIsReceived(receivedStatusMap.getOrDefault(key, false));
                     return dto;
                 })
                 .collect(Collectors.toList());
@@ -165,32 +147,67 @@ public class PurchaseSearchService implements IPurchaseSearchService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<Purchase> getPurchasesByClientId(Long clientId) {
         return purchaseRepository.findByClient(clientId);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<Purchase> searchForWarehouse(Map<String, List<String>> filters) {
         Specification<Purchase> spec = new PurchaseSpecification(null, filters, null, null);
 
         return purchaseRepository.findAll(spec);
     }
 
-    private boolean isPurchaseReceived(org.example.purchaseservice.models.Purchase purchase) {
-        if (purchase == null || purchase.getUser() == null || purchase.getProduct() == null 
-                || purchase.getCreatedAt() == null) {
-            return false;
+    private Map<String, Boolean> buildReceivedStatusMap(List<Purchase> purchases) {
+        if (purchases == null || purchases.isEmpty()) {
+            return Collections.emptyMap();
         }
-
-        Specification<WarehouseReceipt> spec = (root, query, cb) -> cb.and(
-                cb.equal(root.get("userId"), purchase.getUser()),
-                cb.equal(root.get("productId"), purchase.getProduct()),
-                cb.greaterThanOrEqualTo(root.get("createdAt"), purchase.getCreatedAt())
-        );
+        
+        List<Long> userIds = purchases.stream()
+                .map(Purchase::getUser)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+        
+        List<Long> productIds = purchases.stream()
+                .map(Purchase::getProduct)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+        
+        if (userIds.isEmpty() || productIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        
+        Specification<WarehouseReceipt> spec = (root, query, cb) -> {
+            Predicate userIdPredicate = root.get("userId").in(userIds);
+            Predicate productIdPredicate = root.get("productId").in(productIds);
+            return cb.and(userIdPredicate, productIdPredicate);
+        };
         
         List<WarehouseReceipt> receipts = warehouseReceiptRepository.findAll(spec);
         
-        return !receipts.isEmpty();
+        Map<String, Boolean> statusMap = new HashMap<>();
+        for (Purchase purchase : purchases) {
+            if (purchase.getUser() == null || purchase.getProduct() == null || purchase.getCreatedAt() == null) {
+                statusMap.put(purchase.getUser() + "_" + purchase.getProduct() + "_" + 
+                        (purchase.getCreatedAt() != null ? purchase.getCreatedAt().toString() : ""), false);
+                continue;
+            }
+            
+            boolean isReceived = receipts.stream()
+                    .anyMatch(receipt -> receipt.getUserId().equals(purchase.getUser()) &&
+                            receipt.getProductId().equals(purchase.getProduct()) &&
+                            receipt.getCreatedAt() != null &&
+                            !receipt.getCreatedAt().isBefore(purchase.getCreatedAt()));
+            
+            String key = purchase.getUser() + "_" + purchase.getProduct() + "_" + purchase.getCreatedAt().toString();
+            statusMap.put(key, isReceived);
+        }
+        
+        return statusMap;
     }
 
 }

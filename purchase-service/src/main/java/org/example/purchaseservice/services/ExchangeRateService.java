@@ -5,8 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.purchaseservice.exceptions.PurchaseException;
 import org.example.purchaseservice.models.ExchangeRate;
 import org.example.purchaseservice.repositories.ExchangeRateRepository;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.example.purchaseservice.utils.SecurityUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +24,7 @@ public class ExchangeRateService {
      * @param fromCurrency UAH or USD
      * @return exchange rate
      */
+    @Transactional(readOnly = true)
     public BigDecimal getExchangeRateToEur(String fromCurrency) {
         if (fromCurrency == null || "EUR".equalsIgnoreCase(fromCurrency)) {
             return BigDecimal.ONE;
@@ -40,6 +40,7 @@ public class ExchangeRateService {
     /**
      * Get all exchange rates
      */
+    @Transactional(readOnly = true)
     public List<ExchangeRate> getAllExchangeRates() {
         return exchangeRateRepository.findAll();
     }
@@ -53,8 +54,7 @@ public class ExchangeRateService {
             throw new PurchaseException("INVALID_RATE", "Курс валют повинен бути більше нуля");
         }
         
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        Long userId = (Long) authentication.getDetails();
+        Long userId = SecurityUtils.getCurrentUserId();
         
         ExchangeRate exchangeRate = exchangeRateRepository.findByFromCurrency(fromCurrency.toUpperCase())
                 .orElseGet(() -> {
@@ -73,6 +73,7 @@ public class ExchangeRateService {
     /**
      * Get exchange rate entity
      */
+    @Transactional(readOnly = true)
     public ExchangeRate getExchangeRate(String fromCurrency) {
         return exchangeRateRepository.findByFromCurrency(fromCurrency.toUpperCase())
                 .orElse(null);

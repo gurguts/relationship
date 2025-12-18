@@ -19,6 +19,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collections;
 import java.util.List;
@@ -39,6 +40,7 @@ public class TransactionSearchService implements ITransactionSearchService {
     private final AccountRepository accountRepository;
     private final TransactionCategoryRepository transactionCategoryRepository;
 
+    @Transactional(readOnly = true)
     public PageResponse<TransactionPageDTO> getTransactionsWithPagination(int page, int size, String sort,
                                                                           String direction, Map<String,
             List<String>> filters) {

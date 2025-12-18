@@ -82,6 +82,14 @@ public class ClientTypeFieldService implements IClientTypeFieldService {
     }
 
     @Override
+    public List<ClientTypeField> getFieldsByIds(List<Long> fieldIds) {
+        if (fieldIds == null || fieldIds.isEmpty()) {
+            return List.of();
+        }
+        return fieldRepository.findAllById(fieldIds);
+    }
+
+    @Override
     @Transactional
     public void deleteField(Long fieldId) {
         ClientTypeField field = getFieldById(fieldId);

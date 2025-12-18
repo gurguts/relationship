@@ -14,24 +14,29 @@ import java.util.Optional;
 public class BranchPermissionService {
     private final BranchPermissionRepository branchPermissionRepository;
 
+    @Transactional(readOnly = true)
     public Optional<BranchPermission> getPermission(Long userId, Long branchId) {
         return branchPermissionRepository.findByUserIdAndBranchId(userId, branchId);
     }
 
+    @Transactional(readOnly = true)
     public List<BranchPermission> getPermissionsByUserId(Long userId) {
         return branchPermissionRepository.findByUserId(userId);
     }
 
+    @Transactional(readOnly = true)
     public List<BranchPermission> getPermissionsByBranchId(Long branchId) {
         return branchPermissionRepository.findByBranchId(branchId);
     }
 
+    @Transactional(readOnly = true)
     public boolean canView(Long userId, Long branchId) {
         return getPermission(userId, branchId)
                 .map(BranchPermission::getCanView)
                 .orElse(false);
     }
 
+    @Transactional(readOnly = true)
     public boolean canOperate(Long userId, Long branchId) {
         return getPermission(userId, branchId)
                 .map(BranchPermission::getCanOperate)

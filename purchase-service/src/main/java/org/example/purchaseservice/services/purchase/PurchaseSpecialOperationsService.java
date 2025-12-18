@@ -32,6 +32,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -56,6 +57,7 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
     private final IWarehouseReceiptService warehouseReceiptService;
 
     @Override
+    @Transactional(readOnly = true)
     public void generateExcelFile(
             Sort.Direction sortDirection,
             String sortProperty,
@@ -79,15 +81,7 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
                 query, filterParams, clients.stream().map(ClientDTO::getId).toList(), filterIds.sourceIds(), sort);
         Map<Long, ClientDTO> clientMap = fetchClientMap(clients);
         
-        Long clientTypeId = null;
-        if (filterParams != null && filterParams.containsKey("clientTypeId") && filterParams.get("clientTypeId") != null 
-                && !filterParams.get("clientTypeId").isEmpty()) {
-            try {
-                clientTypeId = Long.parseLong(filterParams.get("clientTypeId").get(0));
-            } catch (NumberFormatException e) {
-                log.warn("Invalid clientTypeId in filterParams: {}", filterParams.get("clientTypeId"));
-            }
-        }
+        Long clientTypeId = org.example.purchaseservice.utils.FilterUtils.extractClientTypeId(filterParams);
         
         Map<Long, List<ClientFieldValueDTO>> clientFieldValuesMap = fetchClientFieldValues(clients.stream().map(ClientDTO::getId).toList());
 
@@ -173,38 +167,9 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
     }
 
     private List<ClientDTO> fetchClientIds(String query, Map<String, List<String>> filterParams) {
-        Long clientTypeId = null;
-        if (filterParams != null && filterParams.containsKey("clientTypeId") && filterParams.get("clientTypeId") != null 
-                && !filterParams.get("clientTypeId").isEmpty()) {
-            try {
-                clientTypeId = Long.parseLong(filterParams.get("clientTypeId").get(0));
-            } catch (NumberFormatException e) {
-                log.warn("Invalid clientTypeId in filterParams: {}", filterParams.get("clientTypeId"));
-            }
-        }
+        Long clientTypeId = org.example.purchaseservice.utils.FilterUtils.extractClientTypeId(filterParams);
         
-        Map<String, List<String>> filteredParams = filterParams != null ? filterParams.entrySet().stream()
-                .filter(entry -> {
-                    String key = entry.getKey();
-                    return key.equals("status") || key.equals("business") ||
-                            key.equals("route") || key.equals("region") || key.equals("clientProduct") ||
-                            key.equals("clientSource") ||
-                            key.equals("clientCreatedAtFrom") || key.equals("clientCreatedAtTo") ||
-                            key.equals("clientUpdatedAtFrom") || key.equals("clientUpdatedAtTo") ||
-                            key.startsWith("field");
-                })
-                .collect(Collectors.toMap(
-                    entry -> {
-                        String key = entry.getKey();
-                        if (key.equals("clientSource")) return "source";
-                        if (key.equals("clientCreatedAtFrom")) return "createdAtFrom";
-                        if (key.equals("clientCreatedAtTo")) return "createdAtTo";
-                        if (key.equals("clientUpdatedAtFrom")) return "updatedAtFrom";
-                        if (key.equals("clientUpdatedAtTo")) return "updatedAtTo";
-                        return key;
-                    },
-                    Map.Entry::getValue
-                )) : Collections.emptyMap();
+        Map<String, List<String>> filteredParams = org.example.purchaseservice.utils.FilterUtils.filterClientParams(filterParams, true);
         ClientSearchRequest clientRequest = new ClientSearchRequest(query, filteredParams, clientTypeId);
         return clientApiClient.searchClients(clientRequest);
     }
@@ -303,19 +268,40 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
         headerMap.put("updatedAt", "Дата оновлення");
         headerMap.put("comment", "Коментар");
         
+        List<Long> fieldIds = selectedFields.stream()
+                .filter(field -> field.startsWith("field_"))
+                .map(field -> {
+                    try {
+                        return Long.parseLong(field.substring(6));
+                    } catch (NumberFormatException e) {
+                        log.warn("Invalid field ID in field name {}: {}", field, e.getMessage());
+                        return null;
+                    }
+                })
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+        
+        Map<Long, ClientTypeFieldDTO> fieldMap = new HashMap<>();
+        if (!fieldIds.isEmpty()) {
+            try {
+                List<ClientTypeFieldDTO> fields = clientTypeFieldApiClient.getFieldsByIds(fieldIds);
+                fieldMap = fields.stream()
+                        .filter(Objects::nonNull)
+                        .collect(Collectors.toMap(ClientTypeFieldDTO::getId, field -> field));
+            } catch (Exception e) {
+                log.warn("Failed to get fields by IDs: {}", e.getMessage());
+            }
+        }
+        
         for (String field : selectedFields) {
             if (field.startsWith("field_")) {
                 try {
                     Long fieldId = Long.parseLong(field.substring(6));
-                    try {
-                        ClientTypeFieldDTO fieldDTO = clientTypeFieldApiClient.getFieldById(fieldId);
-                        if (fieldDTO != null && fieldDTO.getFieldLabel() != null) {
-                            headerMap.put(field, fieldDTO.getFieldLabel() + " (клієнта)");
-                        } else {
-                            headerMap.put(field, field + " (клієнта)");
-                        }
-                    } catch (Exception e) {
-                        log.warn("Failed to get field label for field {}: {}", field, e.getMessage());
+                    ClientTypeFieldDTO fieldDTO = fieldMap.get(fieldId);
+                    if (fieldDTO != null && fieldDTO.getFieldLabel() != null) {
+                        headerMap.put(field, fieldDTO.getFieldLabel() + " (клієнта)");
+                    } else {
                         headerMap.put(field, field + " (клієнта)");
                     }
                 } catch (NumberFormatException e) {
@@ -492,6 +478,7 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
     }
 
     @Override
+    @Transactional(readOnly = true)
     public PurchaseReportDTO generateReport(String query, Map<String, List<String>> filterParams) {
 
         List<ClientDTO> clients = fetchClientIds(query, filterParams);
@@ -726,25 +713,37 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
             Map<Long, String> productNames = productService.getAllProducts("all").stream()
                     .collect(Collectors.toMap(Product::getId, Product::getName));
 
+            List<Long> clientIds = clients.stream()
+                    .map(ClientDTO::getId)
+                    .collect(Collectors.toList());
+
+            Specification<Purchase> allPurchasesSpec = (root, query, cb) -> {
+                List<Predicate> predicates = new ArrayList<>();
+                if (!clientIds.isEmpty()) {
+                    predicates.add(root.get("client").in(clientIds));
+                }
+                predicates.add(cb.between(root.get("createdAt"), fromDateTime, toDateTime));
+                return cb.and(predicates.toArray(new Predicate[0]));
+            };
+
+            List<Purchase> allPurchases = purchaseRepository.findAll(allPurchasesSpec, Pageable.unpaged()).getContent();
+
+            Map<Long, Map<Long, BigDecimal>> clientProductSums = allPurchases.stream()
+                    .collect(Collectors.groupingBy(
+                            Purchase::getClient,
+                            Collectors.groupingBy(
+                                    Purchase::getProduct,
+                                    Collectors.reducing(
+                                            BigDecimal.ZERO,
+                                            Purchase::getQuantity,
+                                            BigDecimal::add
+                                    )
+                            )
+                    ));
+
             for (ClientDTO client : clients) {
-                Specification<Purchase> spec = (root, query, cb) -> {
-                    List<Predicate> predicates = new ArrayList<>();
-                    predicates.add(cb.equal(root.get("client"), client.getId()));
-                    predicates.add(cb.between(root.get("createdAt"), fromDateTime, toDateTime));
-                    return cb.and(predicates.toArray(new Predicate[0]));
-                };
-
-                List<Purchase> purchases = purchaseRepository.findAll(spec, Pageable.unpaged()).getContent();
-
-                Map<Long, BigDecimal> productSums = purchases.stream()
-                        .collect(Collectors.groupingBy(
-                                Purchase::getProduct,
-                                Collectors.reducing(
-                                        BigDecimal.ZERO,
-                                        Purchase::getQuantity,
-                                        BigDecimal::add
-                                )
-                        ));
+                Map<Long, BigDecimal> productSums = clientProductSums.getOrDefault(client.getId(), Collections.emptyMap());
+                
                 if (productSums.isEmpty()) {
                     Row row = sheet.createRow(rowNum++);
                     row.createCell(0).setCellValue(client.getId());

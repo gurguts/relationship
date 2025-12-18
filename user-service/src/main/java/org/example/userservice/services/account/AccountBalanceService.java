@@ -17,6 +17,7 @@ public class AccountBalanceService {
     private final AccountBalanceRepository accountBalanceRepository;
     private final AccountRepository accountRepository;
 
+    @Transactional(readOnly = true)
     public AccountBalance getBalance(Long accountId, String currency) {
         return accountBalanceRepository.findByAccountIdAndCurrency(accountId, currency.toUpperCase())
                 .orElseThrow(() -> new AccountNotFoundException(

@@ -112,6 +112,7 @@ public class DriverProductBalanceService {
     /**
      * Get driver balance for specific product
      */
+    @Transactional(readOnly = true)
     public DriverProductBalance getBalance(Long driverId, Long productId) {
         return driverProductBalanceRepository.findByDriverIdAndProductId(driverId, productId).orElse(null);
     }
@@ -119,6 +120,7 @@ public class DriverProductBalanceService {
     /**
      * Get all balances for specific driver
      */
+    @Transactional(readOnly = true)
     public List<DriverProductBalance> getDriverBalances(Long driverId) {
         return driverProductBalanceRepository.findByDriverId(driverId);
     }
@@ -126,6 +128,7 @@ public class DriverProductBalanceService {
     /**
      * Get all balances for specific product (across all drivers)
      */
+    @Transactional(readOnly = true)
     public List<DriverProductBalance> getProductBalances(Long productId) {
         return driverProductBalanceRepository.findByProductId(productId);
     }
@@ -133,6 +136,7 @@ public class DriverProductBalanceService {
     /**
      * Check if driver has enough product
      */
+    @Transactional(readOnly = true)
     public boolean hasEnoughProduct(Long driverId, Long productId, BigDecimal requiredQuantity) {
         DriverProductBalance balance = getBalance(driverId, productId);
         if (balance == null) {
@@ -144,6 +148,7 @@ public class DriverProductBalanceService {
     /**
      * Get all balances with quantity > 0
      */
+    @Transactional(readOnly = true)
     public List<DriverProductBalance> getAllActiveBalances() {
         return driverProductBalanceRepository.findAllWithPositiveQuantity();
     }

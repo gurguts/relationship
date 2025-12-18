@@ -51,6 +51,7 @@ public class ProductService implements IProductService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     @Cacheable(value = "products", key = "#id")
     public Product getProductById(Long id) {
         return productRepository.findById(id)
@@ -58,14 +59,14 @@ public class ProductService implements IProductService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     @Cacheable(value = "products", key = "#name")
     public List<Product> findProductsByName(String name) {
-        return StreamSupport.stream(productRepository.findAll().spliterator(), false)
-                .filter(product -> product.getName().toLowerCase().contains(name.toLowerCase()))
-                .collect(Collectors.toList());
+        return productRepository.findByNameContainingIgnoreCase(name);
     }
 
     @Override
+    @Transactional(readOnly = true)
     @Cacheable(value = "products", key = "#usage")
     public List<Product> getAllProducts(String usage) {
 
@@ -81,25 +82,14 @@ public class ProductService implements IProductService {
             throw new ProductException("ILLEGAL_USAGE", String.format("Invalid product usage filter: %s", usage));
         }
 
-        return StreamSupport.stream(productRepository.findAll().spliterator(), false)
-                .filter(product -> matchesUsage(product.getUsage(), usageFilter))
-                .collect(Collectors.toList());
-    }
-
-    private boolean matchesUsage(ProductUsage productUsage, ProductUsage filter) {
-        return switch (filter) {
-            case SALE_ONLY -> productUsage == ProductUsage.SALE_ONLY || productUsage == ProductUsage.BOTH;
-            case PURCHASE_ONLY -> productUsage == ProductUsage.PURCHASE_ONLY || productUsage == ProductUsage.BOTH;
-            case BOTH -> productUsage == ProductUsage.BOTH;
-        };
+        return productRepository.findByUsage(usageFilter);
     }
 
     @Override
+    @Transactional(readOnly = true)
     @Cacheable(value = "products", key = "#usage")
     public List<Product> findProductsByUsage(ProductUsage usage) {
-        return StreamSupport.stream(productRepository.findAll().spliterator(), false)
-                .filter(product -> product.getUsage() == usage)
-                .collect(Collectors.toList());
+        return productRepository.findByUsage(usage);
     }
 
 }

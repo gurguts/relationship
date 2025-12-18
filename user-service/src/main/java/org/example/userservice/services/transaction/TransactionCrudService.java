@@ -19,6 +19,7 @@ public class TransactionCrudService implements ITransactionCrudService {
     private final TransactionRepository transactionRepository;
 
     @Override
+    @Transactional(readOnly = true)
     public Transaction getTransaction(Long id) {
         return transactionRepository.findById(id)
                 .orElseThrow(() -> new TransactionNotFoundException(

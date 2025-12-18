@@ -11,6 +11,7 @@ import org.example.containerservice.models.dto.client.ClientSearchRequest;
 import org.example.containerservice.models.dto.PageResponse;
 import org.example.containerservice.repositories.ClientContainerRepository;
 import org.example.containerservice.spec.ClientContainerSpecification;
+import org.example.containerservice.utils.FilterUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -29,6 +30,7 @@ public class ClientContainerSearchService {
     private final ClientContainerRepository clientContainerRepository;
     private final ClientApiClient clientApiClient;
 
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public PageResponse<ClientContainerResponseDTO> searchClientContainer(String query, Pageable pageable,
                                                                           Map<String, List<String>> filterParams) {
         ClientData clientData = fetchClientData(query, filterParams);
@@ -47,15 +49,7 @@ public class ClientContainerSearchService {
     }
 
     private ClientData fetchClientData(String query, Map<String, List<String>> filterParams) {
-        Long clientTypeId = null;
-        if (filterParams != null && filterParams.containsKey("clientTypeId") && filterParams.get("clientTypeId") != null 
-                && !filterParams.get("clientTypeId").isEmpty()) {
-            try {
-                clientTypeId = Long.parseLong(filterParams.get("clientTypeId").get(0));
-            } catch (NumberFormatException e) {
-                log.warn("Invalid clientTypeId in filterParams: {}", filterParams.get("clientTypeId"));
-            }
-        }
+        Long clientTypeId = FilterUtils.extractClientTypeId(filterParams);
         
         Map<String, List<String>> filteredParams = filterParams != null ? filterParams.entrySet().stream()
                 .filter(entry -> {

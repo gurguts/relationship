@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 
 @FeignClient(name = "transaction-service", url = "http://localhost:8082/api/v1/transaction",
         configuration = FeignConfig.class)
@@ -26,4 +27,7 @@ public interface TransactionApiClient {
 
     @GetMapping("/vehicle/{vehicleId}")
     List<?> getTransactionsByVehicleId(@PathVariable Long vehicleId);
+
+    @PostMapping("/vehicle/ids")
+    Map<Long, List<?>> getTransactionsByVehicleIds(@RequestBody List<Long> vehicleIds);
 }

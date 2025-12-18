@@ -139,6 +139,7 @@ public class WarehouseProductBalanceService {
     /**
      * Get balance for specific product on warehouse
      */
+    @Transactional(readOnly = true)
     public WarehouseProductBalance getBalance(Long warehouseId, Long productId) {
         return warehouseProductBalanceRepository.findByWarehouseIdAndProductId(warehouseId, productId).orElse(null);
     }
@@ -146,6 +147,7 @@ public class WarehouseProductBalanceService {
     /**
      * Get all balances for specific warehouse
      */
+    @Transactional(readOnly = true)
     public List<WarehouseProductBalance> getWarehouseBalances(Long warehouseId) {
         return warehouseProductBalanceRepository.findByWarehouseId(warehouseId);
     }
@@ -153,6 +155,7 @@ public class WarehouseProductBalanceService {
     /**
      * Get all balances for specific product (across all warehouses)
      */
+    @Transactional(readOnly = true)
     public List<WarehouseProductBalance> getProductBalances(Long productId) {
         return warehouseProductBalanceRepository.findByProductId(productId);
     }
@@ -188,6 +191,7 @@ public class WarehouseProductBalanceService {
     /**
      * Check if warehouse has enough product
      */
+    @Transactional(readOnly = true)
     public boolean hasEnoughProduct(Long warehouseId, Long productId, BigDecimal requiredQuantity) {
         WarehouseProductBalance balance = getBalance(warehouseId, productId);
         if (balance == null) {
@@ -199,6 +203,7 @@ public class WarehouseProductBalanceService {
     /**
      * Get average price of product on warehouse
      */
+    @Transactional(readOnly = true)
     public BigDecimal getAveragePrice(Long warehouseId, Long productId) {
         WarehouseProductBalance balance = getBalance(warehouseId, productId);
         return balance != null ? balance.getAveragePriceEur() : BigDecimal.ZERO;
@@ -242,6 +247,7 @@ public class WarehouseProductBalanceService {
     /**
      * Get all balances with quantity > 0
      */
+    @Transactional(readOnly = true)
     public List<WarehouseProductBalance> getAllActiveBalances() {
         return warehouseProductBalanceRepository.findAllWithPositiveQuantity();
     }

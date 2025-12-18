@@ -15,6 +15,7 @@ import org.example.userservice.repositories.TransactionRepository;
 import org.example.userservice.spec.TransactionSpecification;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -39,6 +40,7 @@ public class TransactionExportService {
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
 
+    @Transactional(readOnly = true)
     public byte[] exportToExcel(Map<String, List<String>> filters) throws IOException {
         // Get all transactions with filters (no pagination)
         TransactionSpecification spec = new TransactionSpecification(filters);

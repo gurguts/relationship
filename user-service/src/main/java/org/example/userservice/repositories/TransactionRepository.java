@@ -7,6 +7,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 
@@ -15,4 +17,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long>,
     Page<Transaction> findAll(Specification<Transaction> specification, @NotNull Pageable pageable);
     
     List<Transaction> findByVehicleIdOrderByCreatedAtDesc(Long vehicleId);
+    
+    @Query("SELECT t FROM Transaction t WHERE t.vehicleId IN :vehicleIds ORDER BY t.createdAt DESC")
+    List<Transaction> findByVehicleIdInOrderByCreatedAtDesc(@Param("vehicleIds") List<Long> vehicleIds);
 }

@@ -20,6 +20,7 @@ import org.example.containerservice.models.dto.impl.IdNameDTO;
 import org.example.containerservice.repositories.ClientContainerRepository;
 import org.example.containerservice.services.impl.IClientContainerSpecialOperationsService;
 import org.example.containerservice.spec.ClientContainerSpecification;
+import org.example.containerservice.utils.FilterUtils;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -48,6 +49,7 @@ public class ClientContainerSpecialOperationsService implements IClientContainer
     private final ClientProductClient clientProductClient;
 
     @Override
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public void generateExcelFile(
             Sort.Direction sortDirection,
             String sortProperty,
@@ -71,15 +73,7 @@ public class ClientContainerSpecialOperationsService implements IClientContainer
                 filterParams, clients.stream().map(ClientDTO::getId).toList(), sort);
         Map<Long, ClientDTO> clientMap = fetchClientMap(clients);
         
-        Long clientTypeId = null;
-        if (filterParams != null && filterParams.containsKey("clientTypeId") && filterParams.get("clientTypeId") != null 
-                && !filterParams.get("clientTypeId").isEmpty()) {
-            try {
-                clientTypeId = Long.parseLong(filterParams.get("clientTypeId").get(0));
-            } catch (NumberFormatException e) {
-                log.warn("Invalid clientTypeId in filterParams: {}", filterParams.get("clientTypeId"));
-            }
-        }
+        Long clientTypeId = FilterUtils.extractClientTypeId(filterParams);
         
         Map<Long, List<ClientFieldValueDTO>> clientFieldValuesMap = fetchClientFieldValues(clients.stream().map(ClientDTO::getId).toList());
 
@@ -140,15 +134,7 @@ public class ClientContainerSpecialOperationsService implements IClientContainer
     }
 
     private List<ClientDTO> fetchClientIds(String query, Map<String, List<String>> filterParams) {
-        Long clientTypeId = null;
-        if (filterParams != null && filterParams.containsKey("clientTypeId") && filterParams.get("clientTypeId") != null 
-                && !filterParams.get("clientTypeId").isEmpty()) {
-            try {
-                clientTypeId = Long.parseLong(filterParams.get("clientTypeId").get(0));
-            } catch (NumberFormatException e) {
-                log.warn("Invalid clientTypeId in filterParams: {}", filterParams.get("clientTypeId"));
-            }
-        }
+        Long clientTypeId = FilterUtils.extractClientTypeId(filterParams);
         
         Map<String, List<String>> filteredParams = filterParams != null ? filterParams.entrySet().stream()
                 .filter(entry -> {
@@ -248,19 +234,40 @@ public class ClientContainerSpecialOperationsService implements IClientContainer
         headerMap.put("quantity", "Кількість");
         headerMap.put("updatedAt", "Дата оновлення");
         
+        List<Long> fieldIds = selectedFields.stream()
+                .filter(field -> field.startsWith("field_"))
+                .map(field -> {
+                    try {
+                        return Long.parseLong(field.substring(6));
+                    } catch (NumberFormatException e) {
+                        log.warn("Invalid field ID in field name {}: {}", field, e.getMessage());
+                        return null;
+                    }
+                })
+                .filter(java.util.Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+
+        Map<Long, ClientTypeFieldDTO> fieldMap = new HashMap<>();
+        for (Long fieldId : fieldIds) {
+            try {
+                ClientTypeFieldDTO fieldDTO = clientTypeFieldApiClient.getFieldById(fieldId);
+                if (fieldDTO != null) {
+                    fieldMap.put(fieldId, fieldDTO);
+                }
+            } catch (Exception e) {
+                log.warn("Failed to get field label for field {}: {}", fieldId, e.getMessage());
+            }
+        }
+        
         for (String field : selectedFields) {
             if (field.startsWith("field_")) {
                 try {
                     Long fieldId = Long.parseLong(field.substring(6));
-                    try {
-                        ClientTypeFieldDTO fieldDTO = clientTypeFieldApiClient.getFieldById(fieldId);
-                        if (fieldDTO != null && fieldDTO.getFieldLabel() != null) {
-                            headerMap.put(field, fieldDTO.getFieldLabel() + " (клієнта)");
-                        } else {
-                            headerMap.put(field, field + " (клієнта)");
-                        }
-                    } catch (Exception e) {
-                        log.warn("Failed to get field label for field {}: {}", field, e.getMessage());
+                    ClientTypeFieldDTO fieldDTO = fieldMap.get(fieldId);
+                    if (fieldDTO != null && fieldDTO.getFieldLabel() != null) {
+                        headerMap.put(field, fieldDTO.getFieldLabel() + " (клієнта)");
+                    } else {
                         headerMap.put(field, field + " (клієнта)");
                     }
                 } catch (NumberFormatException e) {

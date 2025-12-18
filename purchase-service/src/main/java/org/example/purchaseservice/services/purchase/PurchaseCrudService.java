@@ -19,8 +19,7 @@ import org.example.purchaseservice.repositories.PurchaseRepository;
 import org.example.purchaseservice.repositories.WarehouseReceiptRepository;
 import org.example.purchaseservice.services.impl.IPurchaseCrudService;
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.example.purchaseservice.utils.SecurityUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.example.purchaseservice.services.ExchangeRateService;
@@ -46,8 +45,7 @@ public class PurchaseCrudService implements IPurchaseCrudService {
     @Override
     @Transactional
     public Purchase createPurchase(Purchase purchase) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        Long executedUserId = (Long) authentication.getDetails();
+        Long executedUserId = SecurityUtils.getCurrentUserId();
         purchase.setExecutedUser(executedUserId);
 
         purchase.calculateAndSetUnitPrice();
@@ -93,8 +91,7 @@ public class PurchaseCrudService implements IPurchaseCrudService {
 
         String fullName = getFullName();
 
-        boolean canEditData = SecurityContextHolder.getContext().getAuthentication().getAuthorities().stream()
-                .anyMatch(auth -> "purchase:edit_strangers".equals(auth.getAuthority()));
+        boolean canEditData = SecurityUtils.hasAuthority("purchase:edit_strangers");
 
         // Check source ownership only if source is set
         if (existingPurchase.getSource() != null) {
@@ -147,8 +144,7 @@ public class PurchaseCrudService implements IPurchaseCrudService {
 
         if (updatedPurchase.getSource() != null && !Objects.equals(updatedPurchase.getSource(),
                 existingPurchase.getSource())) {
-            boolean canEditSource = SecurityContextHolder.getContext().getAuthentication().getAuthorities().stream()
-                    .anyMatch(auth -> "purchase:edit_source".equals(auth.getAuthority()));
+            boolean canEditSource = SecurityUtils.hasAuthority("purchase:edit_source");
 
             if (!canEditSource) {
                 throw new PurchaseException("ONLY_ADMIN", "Only users with ADMIN role can update sourceId");
@@ -186,9 +182,10 @@ public class PurchaseCrudService implements IPurchaseCrudService {
     }
 
     private String getFullName() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String login = authentication.getName();
-
+        String login = SecurityUtils.getCurrentUserLogin();
+        if (login == null) {
+            return null;
+        }
         return userCLient.getUserFullNameFromLogin(login);
     }
 
@@ -258,6 +255,7 @@ public class PurchaseCrudService implements IPurchaseCrudService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Purchase findPurchaseById(Long id) {
         if (id == null) {
             throw new PurchaseException("ID cannot be null");
@@ -266,6 +264,7 @@ public class PurchaseCrudService implements IPurchaseCrudService {
                 .orElseThrow(() -> new PurchaseNotFoundException(String.format("Purchase with ID %d not found", id)));
     }
 
+    @Transactional(readOnly = true)
     public void enrichPurchaseDTOWithReceivedStatus(org.example.purchaseservice.models.dto.purchase.PurchaseDTO dto, Purchase purchase) {
         if (dto != null && purchase != null) {
             dto.setIsReceived(isPurchaseReceived(purchase));
@@ -295,7 +294,17 @@ public class PurchaseCrudService implements IPurchaseCrudService {
             }
         }
         
-        transactionApiClient.deleteTransaction(purchase.getTransaction());
+        // Delete transaction only if it exists (only for CASH payments)
+        if (purchase.getTransaction() != null) {
+            try {
+                transactionApiClient.deleteTransaction(purchase.getTransaction());
+            } catch (Exception e) {
+                log.warn("Could not delete transaction {} during purchase deletion: {}", 
+                        purchase.getTransaction(), e.getMessage());
+                // Continue with purchase deletion even if transaction deletion fails
+            }
+        }
+        
         purchaseRepository.deleteById(id);
     }
 }
