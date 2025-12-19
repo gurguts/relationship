@@ -17,6 +17,7 @@ import java.math.BigDecimal;
 @RequiredArgsConstructor
 public class TransactionCrudService implements ITransactionCrudService {
     private final TransactionRepository transactionRepository;
+    private final AccountTransactionService accountTransactionService;
 
     @Override
     @Transactional(readOnly = true)
@@ -40,8 +41,6 @@ public class TransactionCrudService implements ITransactionCrudService {
         // Note: Balance updates are now handled by AccountTransactionService
         // This method only updates the transaction amount in the database
     }
-
-    private final AccountTransactionService accountTransactionService;
 
     @Override
     public void delete(Long transactionId) {

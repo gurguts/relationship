@@ -50,23 +50,28 @@ public class JwtTokenProvider {
     }
 
     public Authentication getAuthentication(String token) {
-        Claims claims = jwtParser.parseSignedClaims(token).getPayload();
-        String username = claims.getSubject();
+        try {
+            Claims claims = jwtParser.parseSignedClaims(token).getPayload();
+            String username = claims.getSubject();
 
-        List<GrantedAuthority> authorities = new ArrayList<>();
-        Object authoritiesClaim = claims.get("authorities");
+            List<GrantedAuthority> authorities = new ArrayList<>();
+            Object authoritiesClaim = claims.get("authorities");
 
-        if (authoritiesClaim instanceof List<?>) {
-            for (Object authority : (List<?>) authoritiesClaim) {
-                if (authority instanceof String) {
-                    authorities.add(new SimpleGrantedAuthority((String) authority));
+            if (authoritiesClaim instanceof List<?>) {
+                for (Object authority : (List<?>) authoritiesClaim) {
+                    if (authority instanceof String) {
+                        authorities.add(new SimpleGrantedAuthority((String) authority));
+                    }
                 }
+            } else {
+                throw new IllegalArgumentException("Authorities claim is not a list of strings");
             }
-        } else {
-            throw new IllegalArgumentException("Authorities claim is not a list of strings");
-        }
 
-        return new UsernamePasswordAuthenticationToken(username, "", authorities);
+            return new UsernamePasswordAuthenticationToken(username, "", authorities);
+        } catch (JwtException | IllegalArgumentException e) {
+            log.error("Failed to get authentication from token: {}", e.getMessage());
+            throw new IllegalArgumentException("Invalid token: " + e.getMessage(), e);
+        }
     }
 
 }

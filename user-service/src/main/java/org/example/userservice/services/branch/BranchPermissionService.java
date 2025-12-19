@@ -69,14 +69,14 @@ public class BranchPermissionService {
 
     @Transactional
     public void deleteAllPermissionsByBranchId(Long branchId) {
-        branchPermissionRepository.findByBranchId(branchId)
-                .forEach(permission -> branchPermissionRepository.delete(permission));
+        List<BranchPermission> permissions = branchPermissionRepository.findByBranchId(branchId);
+        branchPermissionRepository.deleteAll(permissions);
     }
 
     @Transactional
     public void deleteAllPermissionsByUserId(Long userId) {
-        branchPermissionRepository.findByUserId(userId)
-                .forEach(permission -> branchPermissionRepository.delete(permission));
+        List<BranchPermission> permissions = branchPermissionRepository.findByUserId(userId);
+        branchPermissionRepository.deleteAll(permissions);
     }
 }
 

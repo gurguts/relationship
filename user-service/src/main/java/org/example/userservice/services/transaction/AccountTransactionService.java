@@ -16,8 +16,7 @@ import org.example.userservice.services.account.AccountBalanceService;
 import org.example.userservice.services.branch.BranchPermissionService;
 import org.example.userservice.clients.ExchangeRateApiClient;
 import org.example.userservice.clients.VehicleCostApiClient;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.example.userservice.utils.SecurityUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -152,9 +151,7 @@ public class AccountTransactionService {
 
     @Transactional
     public Transaction createTransaction(Transaction transaction) {
-
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        Long executorUserId = (Long) authentication.getDetails();
+        Long executorUserId = SecurityUtils.getCurrentUserId();
         transaction.setExecutorUserId(executorUserId);
 
         if (transaction.getCategoryId() != null) {

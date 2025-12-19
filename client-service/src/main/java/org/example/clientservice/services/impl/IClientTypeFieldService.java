@@ -29,5 +29,7 @@ public interface IClientTypeFieldService {
     void deleteField(Long fieldId);
     
     void reorderFields(Long clientTypeId, FieldReorderDTO dto);
+    
+    org.example.clientservice.models.dto.clienttype.ClientTypeFieldsAllDTO getAllFieldsByClientTypeId(Long clientTypeId);
 }
 

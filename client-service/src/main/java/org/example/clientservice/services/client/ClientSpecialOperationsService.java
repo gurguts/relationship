@@ -176,8 +176,7 @@ public class ClientSpecialOperationsService implements IClientSpecialOperationsS
         root.fetch("clientType", JoinType.LEFT);
 
         Fetch<Object, Object> fieldValuesFetch = root.fetch("fieldValues", JoinType.LEFT);
-        Fetch<Object, Object> fieldFetch = fieldValuesFetch.fetch("field", JoinType.LEFT);
-        fieldFetch.fetch("listValues", JoinType.LEFT);
+        fieldValuesFetch.fetch("field", JoinType.LEFT);
         fieldValuesFetch.fetch("valueList", JoinType.LEFT);
 
         cq.distinct(true);

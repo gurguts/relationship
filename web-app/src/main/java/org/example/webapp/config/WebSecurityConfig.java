@@ -32,10 +32,9 @@ public class WebSecurityConfig {
                         .requestMatchers(
                                 "/login",
                                 "/api/v1/auth/**",
-                                "/favicon.ico",
                                 "/api/v1/user/login",
+                                "/favicon.ico",
                                 "/favicon/**",
-                                "/favicon/site.webmanifest",
                                 "/js/login.js",
                                 "/css/**"
                         ).permitAll()

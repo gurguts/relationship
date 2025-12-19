@@ -4,9 +4,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.clientservice.exceptions.client.ClientException;
 import org.example.clientservice.models.client.Client;
+import org.example.clientservice.models.clienttype.ClientFieldValue;
 import org.example.clientservice.models.clienttype.ClientTypePermission;
 import org.example.clientservice.models.field.*;
 import org.example.clientservice.repositories.ClientRepository;
+import org.example.clientservice.repositories.clienttype.ClientFieldValueRepository;
 import org.example.clientservice.services.impl.*;
 import org.example.clientservice.models.client.FilterIds;
 import org.example.clientservice.spec.ClientSpecification;
@@ -23,6 +25,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ClientSearchService implements IClientSearchService {
     private final ClientRepository clientRepository;
+    private final ClientFieldValueRepository fieldValueRepository;
     private final ISourceService sourceService;
     private final IClientTypePermissionService clientTypePermissionService;
 
@@ -104,6 +107,22 @@ public class ClientSearchService implements IClientSearchService {
                 clientTypeId,
                 allowedClientTypeIds
         ), pageable);
+
+        if (!clientPage.getContent().isEmpty()) {
+            List<Long> clientIds = clientPage.getContent().stream()
+                    .map(Client::getId)
+                    .collect(Collectors.toList());
+            
+            List<ClientFieldValue> fieldValues = fieldValueRepository.findByClientIdInWithFieldAndValueList(clientIds);
+            
+            Map<Long, List<ClientFieldValue>> fieldValuesMap = fieldValues.stream()
+                    .collect(Collectors.groupingBy(fv -> fv.getClient().getId()));
+            
+            clientPage.getContent().forEach(client -> {
+                List<ClientFieldValue> clientFieldValues = fieldValuesMap.getOrDefault(client.getId(), Collections.emptyList());
+                client.setFieldValues(clientFieldValues);
+            });
+        }
 
         return clientPage;
     }

@@ -5,7 +5,7 @@ import org.example.clientservice.models.client.Client;
 import org.example.clientservice.models.clienttype.ClientFieldValue;
 import org.example.clientservice.models.clienttype.ClientType;
 import org.example.clientservice.models.dto.client.*;
-import org.example.clientservice.models.dto.clienttype.ClientFieldValueCreateDTO;
+import org.example.clientservice.models.dto.clienttype.ClientFieldValueDTO;
 import org.example.clientservice.models.dto.fields.SourceDTO;
 import org.example.clientservice.models.field.Source;
 import org.example.clientservice.services.clienttype.ClientTypeService;
@@ -23,6 +23,7 @@ import java.util.stream.Collectors;
 public class ClientMapper {
     private final ClientTypeService clientTypeService;
     private final ClientTypeFieldService clientTypeFieldService;
+    private final org.example.clientservice.mappers.clienttype.ClientFieldValueMapper fieldValueMapper;
 
 
     public ClientDTO clientToClientDTO(Client client) {
@@ -38,6 +39,15 @@ public class ClientMapper {
         clientDTO.setUpdatedAt(processTime(client.getUpdatedAt()));
         if (client.getSource() != null) {
             clientDTO.setSourceId(String.valueOf(client.getSource()));
+        }
+        
+        if (client.getFieldValues() != null && !client.getFieldValues().isEmpty()) {
+            List<ClientFieldValueDTO> fieldValueDTOs = client.getFieldValues().stream()
+                    .map(fieldValueMapper::toDTO)
+                    .collect(Collectors.toList());
+            clientDTO.setFieldValues(fieldValueDTOs);
+        } else {
+            clientDTO.setFieldValues(new ArrayList<>());
         }
 
         return clientDTO;

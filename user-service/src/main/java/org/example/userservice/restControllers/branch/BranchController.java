@@ -29,8 +29,19 @@ public class BranchController {
     public ResponseEntity<List<BranchDTO>> getAllBranches() {
         Long currentUserId = SecurityUtils.getCurrentUserId();
         List<Branch> branches = branchService.getBranchesAccessibleToUser(currentUserId);
+        
+        List<org.example.userservice.models.branch.BranchPermission> userPermissions = 
+                branchPermissionService.getPermissionsByUserId(currentUserId);
+        java.util.Map<Long, org.example.userservice.models.branch.BranchPermission> permissionMap = 
+                userPermissions.stream()
+                        .collect(Collectors.toMap(
+                                org.example.userservice.models.branch.BranchPermission::getBranchId,
+                                p -> p,
+                                (existing, replacement) -> existing
+                        ));
+        
         List<BranchDTO> dtos = branches.stream()
-                .map(branch -> mapToDTO(branch, currentUserId))
+                .map(branch -> mapToDTO(branch, permissionMap))
                 .collect(Collectors.toList());
         return ResponseEntity.ok(dtos);
     }
@@ -40,8 +51,19 @@ public class BranchController {
     public ResponseEntity<List<BranchDTO>> getAllBranchesForAdmin() {
         Long currentUserId = SecurityUtils.getCurrentUserId();
         List<Branch> branches = branchService.getAllBranches();
+        
+        List<org.example.userservice.models.branch.BranchPermission> userPermissions = 
+                branchPermissionService.getPermissionsByUserId(currentUserId);
+        java.util.Map<Long, org.example.userservice.models.branch.BranchPermission> permissionMap = 
+                userPermissions.stream()
+                        .collect(Collectors.toMap(
+                                org.example.userservice.models.branch.BranchPermission::getBranchId,
+                                p -> p,
+                                (existing, replacement) -> existing
+                        ));
+        
         List<BranchDTO> dtos = branches.stream()
-                .map(branch -> mapToDTO(branch, currentUserId))
+                .map(branch -> mapToDTO(branch, permissionMap))
                 .collect(Collectors.toList());
         return ResponseEntity.ok(dtos);
     }
@@ -56,18 +78,27 @@ public class BranchController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
         
-        return ResponseEntity.ok(mapToDTO(branch, currentUserId));
+        java.util.Optional<org.example.userservice.models.branch.BranchPermission> permission = 
+                branchPermissionService.getPermission(currentUserId, id);
+        java.util.Map<Long, org.example.userservice.models.branch.BranchPermission> permissionMap = 
+                permission.map(p -> java.util.Map.of(id, p))
+                        .orElse(java.util.Collections.emptyMap());
+        
+        return ResponseEntity.ok(mapToDTO(branch, permissionMap));
     }
 
     @PostMapping
     @PreAuthorize("hasAuthority('settings_finance:create')")
     public ResponseEntity<BranchDTO> createBranch(@RequestBody BranchCreateDTO dto) {
-        Long currentUserId = SecurityUtils.getCurrentUserId();
         Branch branch = new Branch();
         branch.setName(dto.getName());
         branch.setDescription(dto.getDescription());
         Branch created = branchService.createBranch(branch);
-        return ResponseEntity.status(HttpStatus.CREATED).body(mapToDTO(created, currentUserId));
+        
+        java.util.Map<Long, org.example.userservice.models.branch.BranchPermission> permissionMap = 
+                java.util.Collections.emptyMap();
+        
+        return ResponseEntity.status(HttpStatus.CREATED).body(mapToDTO(created, permissionMap));
     }
 
     @PutMapping("/{id}")
@@ -78,7 +109,14 @@ public class BranchController {
         branch.setName(dto.getName());
         branch.setDescription(dto.getDescription());
         Branch updated = branchService.updateBranch(id, branch);
-        return ResponseEntity.ok(mapToDTO(updated, currentUserId));
+        
+        java.util.Optional<org.example.userservice.models.branch.BranchPermission> permission = 
+                branchPermissionService.getPermission(currentUserId, id);
+        java.util.Map<Long, org.example.userservice.models.branch.BranchPermission> permissionMap = 
+                permission.map(p -> java.util.Map.of(id, p))
+                        .orElse(java.util.Collections.emptyMap());
+        
+        return ResponseEntity.ok(mapToDTO(updated, permissionMap));
     }
 
     @DeleteMapping("/{id}")
@@ -90,9 +128,10 @@ public class BranchController {
         return ResponseEntity.noContent().build();
     }
 
-    private BranchDTO mapToDTO(Branch branch, Long userId) {
-        Boolean canView = branchPermissionService.canView(userId, branch.getId());
-        Boolean canOperate = branchPermissionService.canOperate(userId, branch.getId());
+    private BranchDTO mapToDTO(Branch branch, java.util.Map<Long, org.example.userservice.models.branch.BranchPermission> permissionMap) {
+        org.example.userservice.models.branch.BranchPermission permission = permissionMap.get(branch.getId());
+        Boolean canView = permission != null && permission.getCanView();
+        Boolean canOperate = permission != null && permission.getCanOperate();
         
         return new BranchDTO(
                 branch.getId(),

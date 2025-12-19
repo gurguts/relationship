@@ -120,5 +120,35 @@ public class ClientTypeFieldService implements IClientTypeFieldService {
         fieldRepository.saveAll(fields);
         log.info("Reordered fields for client type {}", clientTypeId);
     }
+
+    @Override
+    public org.example.clientservice.models.dto.clienttype.ClientTypeFieldsAllDTO getAllFieldsByClientTypeId(Long clientTypeId) {
+        List<ClientTypeField> allFields = getFieldsByClientTypeId(clientTypeId);
+        List<ClientTypeField> visibleFields = getVisibleFieldsByClientTypeId(clientTypeId);
+        List<ClientTypeField> searchableFields = getSearchableFieldsByClientTypeId(clientTypeId);
+        List<ClientTypeField> filterableFields = getFilterableFieldsByClientTypeId(clientTypeId);
+        List<ClientTypeField> visibleInCreateFields = getVisibleInCreateFieldsByClientTypeId(clientTypeId);
+        
+        org.example.clientservice.models.dto.clienttype.ClientTypeFieldsAllDTO dto = new org.example.clientservice.models.dto.clienttype.ClientTypeFieldsAllDTO();
+        dto.setAll(allFields.stream().map(ClientTypeFieldMapper::toDTO).collect(java.util.stream.Collectors.toList()));
+        dto.setVisible(visibleFields.stream().map(ClientTypeFieldMapper::toDTO).collect(java.util.stream.Collectors.toList()));
+        dto.setSearchable(searchableFields.stream().map(ClientTypeFieldMapper::toDTO).collect(java.util.stream.Collectors.toList()));
+        dto.setFilterable(filterableFields.stream().map(ClientTypeFieldMapper::toDTO).collect(java.util.stream.Collectors.toList()));
+        dto.setVisibleInCreate(visibleInCreateFields.stream().map(ClientTypeFieldMapper::toDTO).collect(java.util.stream.Collectors.toList()));
+        
+        try {
+            ClientType clientType = clientTypeService.getClientTypeById(clientTypeId);
+            org.example.clientservice.models.dto.clienttype.StaticFieldsConfig staticConfig = org.example.clientservice.services.clienttype.StaticFieldsHelper.parseStaticFieldsConfig(clientType);
+            if (staticConfig != null) {
+                List<org.example.clientservice.models.dto.clienttype.ClientTypeFieldDTO> staticFields = org.example.clientservice.services.clienttype.StaticFieldsHelper.createStaticFieldDTOs(staticConfig);
+                dto.getVisible().addAll(staticFields);
+                dto.getVisible().sort(java.util.Comparator.comparingInt(a -> a.getDisplayOrder() != null ? a.getDisplayOrder() : 999));
+            }
+        } catch (Exception e) {
+            log.warn("Failed to add static fields for client type {}: {}", clientTypeId, e.getMessage());
+        }
+        
+        return dto;
+    }
 }
 

@@ -152,5 +152,12 @@ public class ClientTypeFieldController {
         fieldService.reorderFields(clientTypeId, dto);
         return ResponseEntity.noContent().build();
     }
+
+    @PreAuthorize("hasAuthority('client:view')")
+    @GetMapping("/{clientTypeId}/fields/all")
+    public ResponseEntity<org.example.clientservice.models.dto.clienttype.ClientTypeFieldsAllDTO> getAllFields(@PathVariable Long clientTypeId) {
+        org.example.clientservice.models.dto.clienttype.ClientTypeFieldsAllDTO response = fieldService.getAllFieldsByClientTypeId(clientTypeId);
+        return ResponseEntity.ok(response);
+    }
 }
 

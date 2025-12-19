@@ -40,7 +40,7 @@ public class ClientFieldValueController {
             return ResponseEntity.ok(Collections.emptyMap());
         }
         
-        List<ClientFieldValue> allFieldValues = fieldValueRepository.findByClientIdInOrderByClientIdAscDisplayOrderAsc(clientIds);
+        List<ClientFieldValue> allFieldValues = fieldValueRepository.findByClientIdInWithFieldAndValueList(clientIds);
         
         Map<Long, List<ClientFieldValueDTO>> result = allFieldValues.stream()
                 .collect(Collectors.groupingBy(

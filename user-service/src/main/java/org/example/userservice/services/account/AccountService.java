@@ -79,14 +79,16 @@ public class AccountService {
 
         Account savedAccount = accountRepository.save(account);
 
-        // Create AccountBalance entries for each currency
-        for (String currency : savedAccount.getCurrencies()) {
-            AccountBalance balance = new AccountBalance();
-            balance.setAccountId(savedAccount.getId());
-            balance.setCurrency(currency.toUpperCase());
-            balance.setAmount(BigDecimal.ZERO);
-            accountBalanceRepository.save(balance);
-        }
+        List<AccountBalance> balances = savedAccount.getCurrencies().stream()
+                .map(currency -> {
+                    AccountBalance balance = new AccountBalance();
+                    balance.setAccountId(savedAccount.getId());
+                    balance.setCurrency(currency.toUpperCase());
+                    balance.setAmount(BigDecimal.ZERO);
+                    return balance;
+                })
+                .collect(Collectors.toList());
+        accountBalanceRepository.saveAll(balances);
 
         return savedAccount;
     }
@@ -99,35 +101,46 @@ public class AccountService {
         account.setUserId(updatedAccount.getUserId());
         account.setBranchId(updatedAccount.getBranchId());
 
-        // Handle currency changes
         Set<String> newCurrencies = updatedAccount.getCurrencies();
         Set<String> oldCurrencies = account.getCurrencies();
 
-        // Add new currencies
-        for (String currency : newCurrencies) {
-            if (!oldCurrencies.contains(currency)) {
-                AccountBalance balance = new AccountBalance();
-                balance.setAccountId(account.getId());
-                balance.setCurrency(currency.toUpperCase());
-                balance.setAmount(BigDecimal.ZERO);
-                accountBalanceRepository.save(balance);
-            }
+        List<AccountBalance> balancesToCreate = newCurrencies.stream()
+                .filter(currency -> !oldCurrencies.contains(currency))
+                .map(currency -> {
+                    AccountBalance balance = new AccountBalance();
+                    balance.setAccountId(account.getId());
+                    balance.setCurrency(currency.toUpperCase());
+                    balance.setAmount(BigDecimal.ZERO);
+                    return balance;
+                })
+                .collect(Collectors.toList());
+        
+        if (!balancesToCreate.isEmpty()) {
+            accountBalanceRepository.saveAll(balancesToCreate);
         }
 
-        // Remove old currencies (only if balance is zero)
-        for (String currency : oldCurrencies) {
-            if (!newCurrencies.contains(currency)) {
-                AccountBalance balance = accountBalanceRepository
-                        .findByAccountIdAndCurrency(account.getId(), currency)
-                        .orElse(null);
-                if (balance != null && balance.getAmount().compareTo(BigDecimal.ZERO) != 0) {
-                    throw new AccountException("CURRENCY", 
-                            String.format("Cannot remove currency %s: account has non-zero balance", currency));
-                }
-                if (balance != null) {
-                    accountBalanceRepository.delete(balance);
-                }
-            }
+        List<AccountBalance> allBalances = accountBalanceRepository.findByAccountId(account.getId());
+        java.util.Map<String, AccountBalance> balanceMap = allBalances.stream()
+                .collect(Collectors.toMap(
+                        AccountBalance::getCurrency,
+                        balance -> balance,
+                        (existing, replacement) -> existing
+                ));
+
+        List<AccountBalance> balancesToDelete = oldCurrencies.stream()
+                .filter(currency -> !newCurrencies.contains(currency))
+                .map(balanceMap::get)
+                .filter(balance -> {
+                    if (balance != null && balance.getAmount().compareTo(BigDecimal.ZERO) != 0) {
+                        throw new AccountException("CURRENCY", 
+                                String.format("Cannot remove currency %s: account has non-zero balance", balance.getCurrency()));
+                    }
+                    return balance != null;
+                })
+                .collect(Collectors.toList());
+        
+        if (!balancesToDelete.isEmpty()) {
+            accountBalanceRepository.deleteAll(balancesToDelete);
         }
 
         account.setCurrencies(newCurrencies);
@@ -137,14 +150,13 @@ public class AccountService {
     @Transactional
     public void deleteAccount(Long id) {
         Account account = getAccountById(id);
-        // Check if all balances are zero
-        List<AccountBalance> balances = accountBalanceRepository.findByAccountId(id);
-        for (AccountBalance balance : balances) {
-            if (balance.getAmount().compareTo(BigDecimal.ZERO) != 0) {
-                throw new AccountException("BALANCE", 
-                        String.format("Cannot delete account: has non-zero balance in %s", balance.getCurrency()));
-            }
+        
+        long nonZeroCount = accountBalanceRepository.countNonZeroBalances(id);
+        if (nonZeroCount > 0) {
+            throw new AccountException("BALANCE", 
+                    String.format("Cannot delete account: has %d non-zero balance(s)", nonZeroCount));
         }
+        
         accountRepository.delete(account);
     }
 

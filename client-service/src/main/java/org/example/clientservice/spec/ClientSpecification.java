@@ -64,25 +64,42 @@ public class ClientSpecification implements Specification<Client> {
             predicate = criteriaBuilder.and(predicate, criteriaBuilder.isTrue(root.get("isActive")));
         }
 
-        Join<?, ?> clientTypeJoin = null;
+        Path<?> clientTypePath = null;
+        Join<?, ?> existingJoin = null;
+        
         for (Join<?, ?> join : root.getJoins()) {
             if ("clientType".equals(join.getAttribute().getName())) {
-                clientTypeJoin = join;
+                existingJoin = join;
                 break;
             }
         }
-        if (clientTypeJoin == null) {
-            clientTypeJoin = root.join("clientType", JoinType.INNER);
+        
+        if (existingJoin != null) {
+            clientTypePath = existingJoin;
+        } else {
+            boolean hasFetch = false;
+            for (Fetch<?, ?> fetch : root.getFetches()) {
+                if ("clientType".equals(fetch.getAttribute().getName())) {
+                    hasFetch = true;
+                    break;
+                }
+            }
+            if (hasFetch) {
+                clientTypePath = root.get("clientType");
+            } else {
+                Join<?, ?> newJoin = root.join("clientType", JoinType.LEFT);
+                clientTypePath = newJoin;
+            }
         }
 
         if (allowedClientTypeIds != null && !allowedClientTypeIds.isEmpty()) {
             predicate = criteriaBuilder.and(predicate, 
-                clientTypeJoin.get("id").in(allowedClientTypeIds));
+                clientTypePath.get("id").in(allowedClientTypeIds));
         }
 
         if (clientTypeId != null) {
             predicate = criteriaBuilder.and(predicate, 
-                criteriaBuilder.equal(clientTypeJoin.get("id"), clientTypeId));
+                criteriaBuilder.equal(clientTypePath.get("id"), clientTypeId));
         }
 
         predicate = applyFilters(predicate, root, query, criteriaBuilder);

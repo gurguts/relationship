@@ -1,6 +1,7 @@
 package org.example.clientservice.repositories.clienttype;
 
 import org.example.clientservice.models.clienttype.ClientFieldValue;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -35,6 +36,8 @@ public interface ClientFieldValueRepository extends JpaRepository<ClientFieldVal
     @Query("SELECT cfv FROM ClientFieldValue cfv WHERE cfv.field.id = :fieldId AND cfv.valueList.id IN :listValueIds")
     List<ClientFieldValue> findByFieldIdAndValueListIdIn(@Param("fieldId") Long fieldId, @Param("listValueIds") List<Long> listValueIds);
     
-    List<ClientFieldValue> findByClientIdInOrderByClientIdAscDisplayOrderAsc(List<Long> clientIds);
+    @EntityGraph(attributePaths = {"field", "field.listValues", "valueList"})
+    @Query("SELECT cfv FROM ClientFieldValue cfv WHERE cfv.client.id IN :clientIds ORDER BY cfv.client.id ASC, cfv.displayOrder ASC")
+    List<ClientFieldValue> findByClientIdInWithFieldAndValueList(@Param("clientIds") List<Long> clientIds);
 }
 

@@ -11,23 +11,51 @@ const customSelects = {};
 let availableSources = [];
 let sourceMap;
 
-const userId = localStorage.getItem('userId');
+let cachedUserId = null;
+let cachedAuthorities = null;
+
+function getUserId() {
+    if (cachedUserId === null) {
+        cachedUserId = localStorage.getItem('userId');
+    }
+    return cachedUserId;
+}
+
+function getAuthorities() {
+    if (cachedAuthorities === null) {
+        const authorities = localStorage.getItem('authorities');
+        try {
+            if (authorities) {
+                cachedAuthorities = authorities.startsWith('[')
+                    ? JSON.parse(authorities)
+                    : authorities.split(',').map(auth => auth.trim());
+            } else {
+                cachedAuthorities = [];
+            }
+        } catch (error) {
+            console.error('Failed to parse authorities:', error);
+            cachedAuthorities = [];
+        }
+    }
+    return cachedAuthorities;
+}
+
+function clearCache() {
+    cachedUserId = null;
+    cachedAuthorities = null;
+}
+
+window.addEventListener('storage', (e) => {
+    if (e.key === 'userId' || e.key === 'authorities') {
+        clearCache();
+    }
+});
+
+const userId = getUserId();
 const selectedFilters = {};
 
 function getUserAuthorities() {
-    const authorities = localStorage.getItem('authorities');
-    let userAuthorities = [];
-    try {
-        if (authorities) {
-            userAuthorities = authorities.startsWith('[')
-                ? JSON.parse(authorities)
-                : authorities.split(',').map(auth => auth.trim());
-        }
-    } catch (error) {
-        console.error('Failed to parse authorities:', error);
-        return [];
-    }
-    return userAuthorities;
+    return getAuthorities();
 }
 
 function canEditStrangers() {
@@ -51,7 +79,7 @@ function isOwnClient(client) {
         return false;
     }
     
-    const currentUserId = userId ? Number(userId) : null;
+    const currentUserId = getUserId() ? Number(getUserId()) : null;
     const sourceUserId = (source.userId !== null && source.userId !== undefined) ? Number(source.userId) : null;
     
     return currentUserId != null && sourceUserId != null && Number(sourceUserId) === Number(currentUserId);
@@ -88,6 +116,35 @@ const API_URL = '/api/v1/client';
 let currentPage = 0;
 let pageSize = 50;
 const tableBody = document.getElementById('client-table-body');
+const searchInput = document.getElementById('inputSearch');
+const clientModal = document.getElementById('client-modal');
+const closeModalClientBtn = document.getElementById('close-modal-client');
+const modalClientId = document.getElementById('modal-client-id');
+const modalClientCompany = document.getElementById('modal-client-company');
+const modalClientSource = document.getElementById('modal-client-source');
+const modalClientCreated = document.getElementById('modal-client-created');
+const modalClientUpdated = document.getElementById('modal-client-updated');
+const fullDeleteButton = document.getElementById('full-delete-client');
+const deleteButton = document.getElementById('delete-client');
+const restoreButton = document.getElementById('restore-client');
+const filterCounter = document.getElementById('filter-counter');
+const filterCount = document.getElementById('filter-count');
+const modalFilterButtonSubmit = document.getElementById('modal-filter-button-submit');
+const createClientModal = document.getElementById('createClientModal');
+const openModalBtn = document.getElementById('open-modal');
+const createClientCloseBtn = document.getElementsByClassName('create-client-close')[0];
+const clientTypeSelectionModal = document.getElementById('clientTypeSelectionModal');
+const clientTypesSelectionList = document.getElementById('client-types-selection-list');
+
+let modalCloseHandler = null;
+let modalClickHandler = null;
+let modalTimeoutId = null;
+let filterModalTimeoutId = null;
+let columnResizerTimeoutId = null;
+let customSelectTimeoutIds = [];
+let editing = false;
+let createModalTimeoutIds = [];
+let createModalClickHandler = null;
 
 let currentClientTypeId = null;
 let currentClientType = null;
@@ -103,17 +160,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (savedFilters) {
         try {
             parsedFilters = JSON.parse(savedFilters);
-            const normalizedFilters = {};
-            Object.keys(parsedFilters).forEach(key => {
-                const normalizedKey = key.toLowerCase();
-                if (normalizedKey === 'source' ||
-                    normalizedKey.endsWith('from') || normalizedKey.endsWith('to') ||
-                    normalizedKey === 'createdatfrom' || normalizedKey === 'createdatto' ||
-                    normalizedKey === 'updatedatfrom' || normalizedKey === 'updatedatto') {
-                    normalizedFilters[normalizedKey] = parsedFilters[key];
-                }
-            });
-            parsedFilters = normalizedFilters;
+            parsedFilters = normalizeFilterKeys(parsedFilters);
         } catch (e) {
             console.error('Invalid selectedFilters in localStorage:', e);
             parsedFilters = {};
@@ -121,14 +168,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     } else {
         parsedFilters = {};
     }
-    window.selectedFilters = parsedFilters;
+    Object.keys(selectedFilters).forEach(key => delete selectedFilters[key]);
+    Object.assign(selectedFilters, parsedFilters);
 
     const savedSearchTerm = localStorage.getItem('searchTerm');
-    if (savedSearchTerm) {
-        const searchInput = document.getElementById('inputSearch');
-        if (searchInput) {
-            searchInput.value = savedSearchTerm;
-        }
+    if (savedSearchTerm && searchInput) {
+        searchInput.value = savedSearchTerm;
     }
 
     const urlParams = new URLSearchParams(window.location.search);
@@ -149,12 +194,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         if (savedClientTypeId && parseInt(savedClientTypeId) !== newClientTypeId) {
             const cleanedFilters = {};
-            Object.keys(window.selectedFilters).forEach(key => {
+            Object.keys(selectedFilters).forEach(key => {
                 if (staticFilterKeys.includes(key) || key.endsWith('From') || key.endsWith('To')) {
-                    cleanedFilters[key] = window.selectedFilters[key];
+                    cleanedFilters[key] = selectedFilters[key];
                 }
             });
-            window.selectedFilters = cleanedFilters;
+            Object.keys(selectedFilters).forEach(key => delete selectedFilters[key]);
+            Object.assign(selectedFilters, cleanedFilters);
             localStorage.setItem('selectedFilters', JSON.stringify(cleanedFilters));
         }
         
@@ -170,25 +216,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         const validFieldNames = new Set(filterableFields.map(f => f.fieldName));
         
-        const cleanedFilters = {};
-        Object.keys(window.selectedFilters).forEach(key => {
-            const normalizedKey = key.toLowerCase();
-            const normalizedStaticKeys = staticFilterKeys.map(k => k.toLowerCase());
-            if (normalizedStaticKeys.includes(normalizedKey) || normalizedKey.endsWith('from') || normalizedKey.endsWith('to')) {
-                const value = window.selectedFilters[key];
-                if (value !== null && value !== undefined && value !== '' && 
-                    !(Array.isArray(value) && value.length === 0)) {
-                    cleanedFilters[normalizedKey] = value;
-                }
-            } else if (validFieldNames.has(key)) {
-                const value = window.selectedFilters[key];
-                if (value !== null && value !== undefined && value !== '' && 
-                    !(Array.isArray(value) && (value.length === 0 || (value.length === 1 && (value[0] === '' || value[0] === 'null'))))) {
-                    cleanedFilters[key] = value;
-                }
-            }
-        });
-        window.selectedFilters = cleanedFilters;
+        const cleanedFilters = normalizeFilterKeys(selectedFilters, staticFilterKeys, validFieldNames);
+        Object.keys(selectedFilters).forEach(key => delete selectedFilters[key]);
+        Object.assign(selectedFilters, cleanedFilters);
         if (Object.keys(cleanedFilters).length === 0) {
             localStorage.removeItem('selectedFilters');
         } else {
@@ -201,24 +231,24 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (field.fieldType === 'DATE') {
                     const fromInput = document.getElementById(`${filterId}-from`);
                     const toInput = document.getElementById(`${filterId}-to`);
-                    if (fromInput && window.selectedFilters[`${field.fieldName}From`]) {
-                        fromInput.value = window.selectedFilters[`${field.fieldName}From`][0] || '';
+                    if (fromInput && selectedFilters[`${field.fieldName}From`]) {
+                        fromInput.value = selectedFilters[`${field.fieldName}From`][0] || '';
                     }
-                    if (toInput && window.selectedFilters[`${field.fieldName}To`]) {
-                        toInput.value = window.selectedFilters[`${field.fieldName}To`][0] || '';
+                    if (toInput && selectedFilters[`${field.fieldName}To`]) {
+                        toInput.value = selectedFilters[`${field.fieldName}To`][0] || '';
                     }
                 } else if (field.fieldType === 'NUMBER') {
                     const fromInput = document.getElementById(`${filterId}-from`);
                     const toInput = document.getElementById(`${filterId}-to`);
-                    if (fromInput && window.selectedFilters[`${field.fieldName}From`]) {
-                        fromInput.value = window.selectedFilters[`${field.fieldName}From`][0] || '';
+                    if (fromInput && selectedFilters[`${field.fieldName}From`]) {
+                        fromInput.value = selectedFilters[`${field.fieldName}From`][0] || '';
                     }
-                    if (toInput && window.selectedFilters[`${field.fieldName}To`]) {
-                        toInput.value = window.selectedFilters[`${field.fieldName}To`][0] || '';
+                    if (toInput && selectedFilters[`${field.fieldName}To`]) {
+                        toInput.value = selectedFilters[`${field.fieldName}To`][0] || '';
                     }
                 } else if (field.fieldType === 'LIST') {
-                    if (customSelects[filterId] && window.selectedFilters[field.fieldName]) {
-                        const savedValues = window.selectedFilters[field.fieldName];
+                    if (customSelects[filterId] && selectedFilters[field.fieldName]) {
+                        const savedValues = selectedFilters[field.fieldName];
                         if (Array.isArray(savedValues) && savedValues.length > 0) {
                             const validValues = savedValues.filter(v => v !== null && v !== undefined && v !== '' && v !== 'null');
                             if (validValues.length > 0) {
@@ -228,18 +258,18 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }
                 } else if (field.fieldType === 'BOOLEAN') {
                     const select = document.getElementById(filterId);
-                    if (select && window.selectedFilters[field.fieldName] && window.selectedFilters[field.fieldName].length > 0) {
-                        const savedValue = window.selectedFilters[field.fieldName][0];
+                    if (select && selectedFilters[field.fieldName] && selectedFilters[field.fieldName].length > 0) {
+                        const savedValue = selectedFilters[field.fieldName][0];
                         if (savedValue && savedValue !== '' && savedValue !== 'null') {
                             select.value = savedValue;
                         }
                     }
                 } else if (field.fieldType === 'TEXT' || field.fieldType === 'PHONE') {
                     const input = document.getElementById(filterId);
-                    if (input && window.selectedFilters[field.fieldName]) {
-                        input.value = Array.isArray(window.selectedFilters[field.fieldName]) 
-                            ? window.selectedFilters[field.fieldName][0] 
-                            : window.selectedFilters[field.fieldName];
+                    if (input && selectedFilters[field.fieldName]) {
+                        input.value = Array.isArray(selectedFilters[field.fieldName]) 
+                            ? selectedFilters[field.fieldName][0] 
+                            : selectedFilters[field.fieldName];
                     }
                 }
             });
@@ -264,21 +294,21 @@ async function loadEntitiesAndApplyFilters() {
         sourceMap = new Map(availableSources.map(item => [item.id, item.name]));
 
         if (filterForm) {
-            if (window.selectedFilters['createdAtFrom']) {
+            if (selectedFilters['createdAtFrom']) {
                 const fromInput = filterForm.querySelector('#createdAtFrom');
-                if (fromInput) fromInput.value = window.selectedFilters['createdAtFrom'][0];
+                if (fromInput) fromInput.value = selectedFilters['createdAtFrom'][0];
             }
-            if (window.selectedFilters['createdAtTo']) {
+            if (selectedFilters['createdAtTo']) {
                 const toInput = filterForm.querySelector('#createdAtTo');
-                if (toInput) toInput.value = window.selectedFilters['createdAtTo'][0];
+                if (toInput) toInput.value = selectedFilters['createdAtTo'][0];
             }
-            if (window.selectedFilters['updatedAtFrom']) {
+            if (selectedFilters['updatedAtFrom']) {
                 const fromInput = filterForm.querySelector('#updatedAtFrom');
-                if (fromInput) fromInput.value = window.selectedFilters['updatedAtFrom'][0];
+                if (fromInput) fromInput.value = selectedFilters['updatedAtFrom'][0];
             }
-            if (window.selectedFilters['updatedAtTo']) {
+            if (selectedFilters['updatedAtTo']) {
                 const toInput = filterForm.querySelector('#updatedAtTo');
-                if (toInput) toInput.value = window.selectedFilters['updatedAtTo'][0];
+                if (toInput) toInput.value = selectedFilters['updatedAtTo'][0];
             }
 
             const sourceSelect = filterForm.querySelector('#filter-source');
@@ -296,8 +326,8 @@ async function loadEntitiesAndApplyFilters() {
                 }
             }
 
-            if (window.selectedFilters['source'] && customSelects['filter-source']) {
-                const savedSources = window.selectedFilters['source'];
+            if (selectedFilters['source'] && customSelects['filter-source']) {
+                const savedSources = selectedFilters['source'];
                 if (Array.isArray(savedSources) && savedSources.length > 0) {
                     const validSources = savedSources.filter(v => v !== null && v !== undefined && v !== '' && v !== 'null');
                     if (validSources.length > 0) {
@@ -307,7 +337,7 @@ async function loadEntitiesAndApplyFilters() {
             }
 
             const showInactiveCheckbox = filterForm.querySelector('#filter-show-inactive');
-            if (showInactiveCheckbox && window.selectedFilters['showInactive'] && window.selectedFilters['showInactive'][0] === 'true') {
+            if (showInactiveCheckbox && selectedFilters['showInactive'] && selectedFilters['showInactive'][0] === 'true') {
                 showInactiveCheckbox.checked = true;
             }
         }
@@ -329,20 +359,17 @@ async function loadClientType(typeId) {
 
 async function loadClientTypeFields(typeId) {
     try {
-        const [fieldsRes, visibleRes, searchableRes, filterableRes, visibleInCreateRes] = await Promise.all([
-            fetch(`/api/v1/client-type/${typeId}/field`),
-            fetch(`/api/v1/client-type/${typeId}/field/visible`),
-            fetch(`/api/v1/client-type/${typeId}/field/searchable`),
-            fetch(`/api/v1/client-type/${typeId}/field/filterable`),
-            fetch(`/api/v1/client-type/${typeId}/field/visible-in-create`)
-        ]);
+        const response = await fetch(`/api/v1/client-type/${typeId}/fields/all`);
+        if (!response.ok) throw new Error('Failed to load fields');
         
-        clientTypeFields = await fieldsRes.json();
+        const data = await response.json();
+        
+        clientTypeFields = data.all || [];
         window.clientTypeFields = clientTypeFields;
-        visibleFields = await visibleRes.json();
+        visibleFields = data.visible || [];
         window.visibleFields = visibleFields;
-        filterableFields = await filterableRes.json();
-        visibleInCreateFields = await visibleInCreateRes.json();
+        filterableFields = data.filterable || [];
+        visibleInCreateFields = data.visibleInCreate || [];
     } catch (error) {
         console.error('Error loading fields:', error);
     }
@@ -351,10 +378,15 @@ async function loadClientTypeFields(typeId) {
 async function loadDefaultClientData() {
     try {
         const sourcesRes = await fetch('/api/v1/source');
+        if (!sourcesRes.ok) {
+            console.error('Failed to load sources:', sourcesRes.status, sourcesRes.statusText);
+            return;
+        }
         availableSources = await sourcesRes.json();
         sourceMap = new Map(availableSources.map(s => [s.id, s.name]));
     } catch (error) {
         console.error('Error loading default data:', error);
+        handleError(error);
     }
 }
 
@@ -364,7 +396,7 @@ function buildDynamicTable() {
     const thead = document.querySelector('#client-list table thead tr');
     if (!thead) return;
     
-    thead.innerHTML = '';
+    thead.textContent = '';
 
     const staticFields = (visibleFields || []).filter(f => f.isStatic);
     const dynamicFields = (visibleFields || []).filter(f => !f.isStatic);
@@ -427,11 +459,15 @@ function buildDynamicTable() {
     });
 
     if (typeof initColumnResizer === 'function' && currentClientTypeId) {
-        setTimeout(() => {
+        if (columnResizerTimeoutId !== null) {
+            clearTimeout(columnResizerTimeoutId);
+        }
+        columnResizerTimeoutId = setTimeout(() => {
             initColumnResizer(currentClientTypeId);
             if (typeof applyColumnWidths === 'function') {
                 applyColumnWidths(currentClientTypeId);
             }
+            columnResizerTimeoutId = null;
         }, 0);
     }
 }
@@ -445,6 +481,9 @@ function buildDynamicFilters() {
     buildDynamicFilters._isBuilding = true;
     
     try {
+        customSelectTimeoutIds.forEach(id => clearTimeout(id));
+        customSelectTimeoutIds = [];
+        
         Object.keys(customSelects).forEach(selectId => {
             if (selectId.startsWith('filter-') && selectId !== 'filter-source') {
                 const customSelect = customSelects[selectId];
@@ -463,7 +502,7 @@ function buildDynamicFilters() {
         existingFilters.forEach(el => {
             const selects = el.querySelectorAll('select');
             selects.forEach(sel => {
-                sel.innerHTML = '';
+                sel.textContent = '';
             });
             el.remove();
         });
@@ -485,12 +524,31 @@ function buildDynamicFilters() {
         
         const createdAtBlock = document.createElement('div');
         createdAtBlock.className = 'filter-block';
-        createdAtBlock.innerHTML = `
-            <label class="from-to-style" for="filter-createdAt-from">Від:</label>
-            <input type="date" id="filter-createdAt-from" name="createdAtFrom">
-            <label class="from-to-style" for="filter-createdAt-to">До:</label>
-            <input type="date" id="filter-createdAt-to" name="createdAtTo">
-        `;
+        
+        const createdAtFromLabel = document.createElement('label');
+        createdAtFromLabel.className = 'from-to-style';
+        createdAtFromLabel.setAttribute('for', 'filter-createdAt-from');
+        createdAtFromLabel.textContent = 'Від:';
+        createdAtBlock.appendChild(createdAtFromLabel);
+        
+        const createdAtFromInput = document.createElement('input');
+        createdAtFromInput.type = 'date';
+        createdAtFromInput.id = 'filter-createdAt-from';
+        createdAtFromInput.name = 'createdAtFrom';
+        createdAtBlock.appendChild(createdAtFromInput);
+        
+        const createdAtToLabel = document.createElement('label');
+        createdAtToLabel.className = 'from-to-style';
+        createdAtToLabel.setAttribute('for', 'filter-createdAt-to');
+        createdAtToLabel.textContent = 'До:';
+        createdAtBlock.appendChild(createdAtToLabel);
+        
+        const createdAtToInput = document.createElement('input');
+        createdAtToInput.type = 'date';
+        createdAtToInput.id = 'filter-createdAt-to';
+        createdAtToInput.name = 'createdAtTo';
+        createdAtBlock.appendChild(createdAtToInput);
+        
         filterForm.appendChild(createdAtBlock);
         
         const updatedAtH2 = document.createElement('h2');
@@ -499,22 +557,50 @@ function buildDynamicFilters() {
         
         const updatedAtBlock = document.createElement('div');
         updatedAtBlock.className = 'filter-block';
-        updatedAtBlock.innerHTML = `
-            <label class="from-to-style" for="filter-updatedAt-from">Від:</label>
-            <input type="date" id="filter-updatedAt-from" name="updatedAtFrom">
-            <label class="from-to-style" for="filter-updatedAt-to">До:</label>
-            <input type="date" id="filter-updatedAt-to" name="updatedAtTo">
-        `;
+        
+        const updatedAtFromLabel = document.createElement('label');
+        updatedAtFromLabel.className = 'from-to-style';
+        updatedAtFromLabel.setAttribute('for', 'filter-updatedAt-from');
+        updatedAtFromLabel.textContent = 'Від:';
+        updatedAtBlock.appendChild(updatedAtFromLabel);
+        
+        const updatedAtFromInput = document.createElement('input');
+        updatedAtFromInput.type = 'date';
+        updatedAtFromInput.id = 'filter-updatedAt-from';
+        updatedAtFromInput.name = 'updatedAtFrom';
+        updatedAtBlock.appendChild(updatedAtFromInput);
+        
+        const updatedAtToLabel = document.createElement('label');
+        updatedAtToLabel.className = 'from-to-style';
+        updatedAtToLabel.setAttribute('for', 'filter-updatedAt-to');
+        updatedAtToLabel.textContent = 'До:';
+        updatedAtBlock.appendChild(updatedAtToLabel);
+        
+        const updatedAtToInput = document.createElement('input');
+        updatedAtToInput.type = 'date';
+        updatedAtToInput.id = 'filter-updatedAt-to';
+        updatedAtToInput.name = 'updatedAtTo';
+        updatedAtBlock.appendChild(updatedAtToInput);
+        
         filterForm.appendChild(updatedAtBlock);
 
         const sourceSelectItem = document.createElement('div');
         sourceSelectItem.className = 'select-section-item';
-        sourceSelectItem.innerHTML = `
-            <br>
-            <label class="select-label-style" for="filter-source">Залучення:</label>
-            <select id="filter-source" name="source" multiple>
-            </select>
-        `;
+        
+        sourceSelectItem.appendChild(document.createElement('br'));
+        
+        const sourceLabel = document.createElement('label');
+        sourceLabel.className = 'select-label-style';
+        sourceLabel.setAttribute('for', 'filter-source');
+        sourceLabel.textContent = 'Залучення:';
+        sourceSelectItem.appendChild(sourceLabel);
+        
+        const sourceSelect = document.createElement('select');
+        sourceSelect.id = 'filter-source';
+        sourceSelect.name = 'source';
+        sourceSelect.multiple = true;
+        sourceSelectItem.appendChild(sourceSelect);
+        
         filterForm.appendChild(sourceSelectItem);
 
 
@@ -528,12 +614,31 @@ function buildDynamicFilters() {
                     
                     const filterBlock = document.createElement('div');
                     filterBlock.className = 'filter-block';
-                    filterBlock.innerHTML = `
-                        <label class="from-to-style" for="filter-${field.fieldName}-from">Від:</label>
-                        <input type="date" id="filter-${field.fieldName}-from" name="${field.fieldName}From">
-                        <label class="from-to-style" for="filter-${field.fieldName}-to">До:</label>
-                        <input type="date" id="filter-${field.fieldName}-to" name="${field.fieldName}To">
-                    `;
+                    
+                    const fromLabel = document.createElement('label');
+                    fromLabel.className = 'from-to-style';
+                    fromLabel.setAttribute('for', `filter-${field.fieldName}-from`);
+                    fromLabel.textContent = 'Від:';
+                    filterBlock.appendChild(fromLabel);
+                    
+                    const fromInput = document.createElement('input');
+                    fromInput.type = 'date';
+                    fromInput.id = `filter-${field.fieldName}-from`;
+                    fromInput.name = `${field.fieldName}From`;
+                    filterBlock.appendChild(fromInput);
+                    
+                    const toLabel = document.createElement('label');
+                    toLabel.className = 'from-to-style';
+                    toLabel.setAttribute('for', `filter-${field.fieldName}-to`);
+                    toLabel.textContent = 'До:';
+                    filterBlock.appendChild(toLabel);
+                    
+                    const toInput = document.createElement('input');
+                    toInput.type = 'date';
+                    toInput.id = `filter-${field.fieldName}-to`;
+                    toInput.name = `${field.fieldName}To`;
+                    filterBlock.appendChild(toInput);
+                    
                     filterForm.appendChild(filterBlock);
                 } else if (field.fieldType === 'NUMBER') {
                     const h2 = document.createElement('h2');
@@ -542,12 +647,35 @@ function buildDynamicFilters() {
                     
                     const filterBlock = document.createElement('div');
                     filterBlock.className = 'filter-block';
-                    filterBlock.innerHTML = `
-                        <label class="from-to-style" for="filter-${field.fieldName}-from">Від:</label>
-                        <input type="number" id="filter-${field.fieldName}-from" name="${field.fieldName}From" step="any" placeholder="Мінімум">
-                        <label class="from-to-style" for="filter-${field.fieldName}-to">До:</label>
-                        <input type="number" id="filter-${field.fieldName}-to" name="${field.fieldName}To" step="any" placeholder="Максимум">
-                    `;
+                    
+                    const fromLabel = document.createElement('label');
+                    fromLabel.className = 'from-to-style';
+                    fromLabel.setAttribute('for', `filter-${field.fieldName}-from`);
+                    fromLabel.textContent = 'Від:';
+                    filterBlock.appendChild(fromLabel);
+                    
+                    const fromInput = document.createElement('input');
+                    fromInput.type = 'number';
+                    fromInput.id = `filter-${field.fieldName}-from`;
+                    fromInput.name = `${field.fieldName}From`;
+                    fromInput.step = 'any';
+                    fromInput.placeholder = 'Мінімум';
+                    filterBlock.appendChild(fromInput);
+                    
+                    const toLabel = document.createElement('label');
+                    toLabel.className = 'from-to-style';
+                    toLabel.setAttribute('for', `filter-${field.fieldName}-to`);
+                    toLabel.textContent = 'До:';
+                    filterBlock.appendChild(toLabel);
+                    
+                    const toInput = document.createElement('input');
+                    toInput.type = 'number';
+                    toInput.id = `filter-${field.fieldName}-to`;
+                    toInput.name = `${field.fieldName}To`;
+                    toInput.step = 'any';
+                    toInput.placeholder = 'Максимум';
+                    filterBlock.appendChild(toInput);
+                    
                     filterForm.appendChild(filterBlock);
                 } else if (field.fieldType === 'LIST') {
                     const selectId = `filter-${field.fieldName}`;
@@ -571,19 +699,22 @@ function buildDynamicFilters() {
                     
                     const selectItem = document.createElement('div');
                     selectItem.className = 'select-section-item';
-                    selectItem.innerHTML = `
-                        <br>
-                        <label class="select-label-style" for="filter-${field.fieldName}">${field.fieldLabel}:</label>
-                        <select id="filter-${field.fieldName}" name="${field.fieldName}" multiple>
-                        </select>
-                    `;
-                    filterForm.appendChild(selectItem);
                     
-                    const select = selectItem.querySelector('select');
-                    if (!select) {
-                        console.error('Select not found for field:', field.fieldName);
-                        return;
-                    }
+                    selectItem.appendChild(document.createElement('br'));
+                    
+                    const label = document.createElement('label');
+                    label.className = 'select-label-style';
+                    label.setAttribute('for', `filter-${field.fieldName}`);
+                    label.textContent = field.fieldLabel + ':';
+                    selectItem.appendChild(label);
+                    
+                    const select = document.createElement('select');
+                    select.id = `filter-${field.fieldName}`;
+                    select.name = field.fieldName;
+                    select.multiple = true;
+                    selectItem.appendChild(select);
+                    
+                    filterForm.appendChild(selectItem);
 
                     if (field.listValues && field.listValues.length > 0) {
                         field.listValues.forEach(listValue => {
@@ -594,7 +725,7 @@ function buildDynamicFilters() {
                         });
                     }
 
-                    setTimeout(() => {
+                    const timeoutId = setTimeout(() => {
                         if (typeof createCustomSelect === 'function') {
                             const existingContainer = document.querySelector(`.custom-select-container[data-for="${selectId}"]`);
                             if (existingContainer) {
@@ -616,30 +747,60 @@ function buildDynamicFilters() {
                             }
                         }
                     }, 0);
+                    customSelectTimeoutIds.push(timeoutId);
                 } else if (field.fieldType === 'TEXT' || field.fieldType === 'PHONE') {
                     const selectItem = document.createElement('div');
                     selectItem.className = 'select-section-item';
-                    selectItem.innerHTML = `
-                        <br>
-                        <label class="select-label-style" for="filter-${field.fieldName}">${field.fieldLabel}:</label>
-                        <input type="text" 
-                               id="filter-${field.fieldName}" 
-                               name="${field.fieldName}" 
-                               placeholder="Пошук...">
-                    `;
+                    
+                    selectItem.appendChild(document.createElement('br'));
+                    
+                    const label = document.createElement('label');
+                    label.className = 'select-label-style';
+                    label.setAttribute('for', `filter-${field.fieldName}`);
+                    label.textContent = field.fieldLabel + ':';
+                    selectItem.appendChild(label);
+                    
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.id = `filter-${field.fieldName}`;
+                    input.name = field.fieldName;
+                    input.placeholder = 'Пошук...';
+                    selectItem.appendChild(input);
+                    
                     filterForm.appendChild(selectItem);
                 } else if (field.fieldType === 'BOOLEAN') {
                     const selectItem = document.createElement('div');
                     selectItem.className = 'select-section-item';
-                    selectItem.innerHTML = `
-                        <br>
-                        <label class="select-label-style" for="filter-${field.fieldName}">${field.fieldLabel}:</label>
-                        <select id="filter-${field.fieldName}" name="${field.fieldName}">
-                            <option value="">Всі</option>
-                            <option value="true">Так</option>
-                            <option value="false">Ні</option>
-                        </select>
-                    `;
+                    
+                    selectItem.appendChild(document.createElement('br'));
+                    
+                    const label = document.createElement('label');
+                    label.className = 'select-label-style';
+                    label.setAttribute('for', `filter-${field.fieldName}`);
+                    label.textContent = field.fieldLabel + ':';
+                    selectItem.appendChild(label);
+                    
+                    const select = document.createElement('select');
+                    select.id = `filter-${field.fieldName}`;
+                    select.name = field.fieldName;
+                    
+                    const allOption = document.createElement('option');
+                    allOption.value = '';
+                    allOption.textContent = 'Всі';
+                    select.appendChild(allOption);
+                    
+                    const yesOption = document.createElement('option');
+                    yesOption.value = 'true';
+                    yesOption.textContent = 'Так';
+                    select.appendChild(yesOption);
+                    
+                    const noOption = document.createElement('option');
+                    noOption.value = 'false';
+                    noOption.textContent = 'Ні';
+                    select.appendChild(noOption);
+                    
+                    selectItem.appendChild(select);
+                    
                     filterForm.appendChild(selectItem);
                 }
             });
@@ -647,12 +808,25 @@ function buildDynamicFilters() {
 
         const isActiveBlock = document.createElement('div');
         isActiveBlock.className = 'filter-block';
-        isActiveBlock.innerHTML = `
-            <label style="display: flex; align-items: center; gap: 0.5em; margin: 0.5em 0;">
-                <input type="checkbox" id="filter-show-inactive" name="showInactive" value="true">
-                <span>Показати неактивних клієнтів</span>
-            </label>
-        `;
+        
+        const label = document.createElement('label');
+        label.style.display = 'flex';
+        label.style.alignItems = 'center';
+        label.style.gap = '0.5em';
+        label.style.margin = '0.5em 0';
+        
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.id = 'filter-show-inactive';
+        checkbox.name = 'showInactive';
+        checkbox.value = 'true';
+        label.appendChild(checkbox);
+        
+        const span = document.createElement('span');
+        span.textContent = 'Показати неактивних клієнтів';
+        label.appendChild(span);
+        
+        isActiveBlock.appendChild(label);
         filterForm.appendChild(isActiveBlock);
     } finally {
         buildDynamicFilters._isBuilding = false;
@@ -694,8 +868,87 @@ const findNameByIdFromMap = (map, id) => {
     return name || '';
 };
 
+function escapeHtml(text) {
+    if (text == null) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function createEmptyCellSpan() {
+    const emptySpan = document.createElement('span');
+    emptySpan.style.color = '#999';
+    emptySpan.style.fontStyle = 'italic';
+    emptySpan.textContent = '—';
+    return emptySpan;
+}
+
+function createCompanyCell(client, nameFieldLabel) {
+    const companyCell = document.createElement('td');
+    companyCell.setAttribute('data-label', nameFieldLabel);
+    companyCell.className = 'company-cell';
+    companyCell.style.cursor = 'pointer';
+    if (client.company) {
+        companyCell.textContent = client.company;
+    } else {
+        companyCell.appendChild(createEmptyCellSpan());
+    }
+    return companyCell;
+}
+
+function createSourceCell(client) {
+    const sourceCell = document.createElement('td');
+    sourceCell.setAttribute('data-label', 'Залучення');
+    const sourceId = client.sourceId ? (typeof client.sourceId === 'string' ? parseInt(client.sourceId) : client.sourceId) : null;
+    const sourceName = sourceId ? findNameByIdFromMap(sourceMap, sourceId) : '';
+    if (sourceName) {
+        sourceCell.textContent = sourceName;
+    } else {
+        sourceCell.appendChild(createEmptyCellSpan());
+    }
+    return sourceCell;
+}
+
+function attachCompanyCellClickHandler(companyCell, client) {
+    if (companyCell) {
+        companyCell.addEventListener('click', () => {
+            loadClientDetails(client);
+        });
+    }
+}
+
+function normalizeFilterKeys(filters, staticFilterKeys = [], validFieldNames = new Set()) {
+    const normalizedFilters = {};
+    Object.keys(filters).forEach(key => {
+        const normalizedKey = key.toLowerCase();
+        const normalizedStaticKeys = staticFilterKeys.map(k => k.toLowerCase());
+        
+        if (normalizedStaticKeys.includes(normalizedKey) || 
+            normalizedKey === 'source' ||
+            normalizedKey.endsWith('from') || 
+            normalizedKey.endsWith('to') ||
+            normalizedKey === 'createdatfrom' || 
+            normalizedKey === 'createdatto' ||
+            normalizedKey === 'updatedatfrom' || 
+            normalizedKey === 'updatedatto') {
+            const value = filters[key];
+            if (value !== null && value !== undefined && value !== '' && 
+                !(Array.isArray(value) && value.length === 0)) {
+                normalizedFilters[normalizedKey] = value;
+            }
+        } else if (validFieldNames.size === 0 || validFieldNames.has(key)) {
+            const value = filters[key];
+            if (value !== null && value !== undefined && value !== '' && 
+                !(Array.isArray(value) && (value.length === 0 || (value.length === 1 && (value[0] === '' || value[0] === 'null'))))) {
+                normalizedFilters[key] = value;
+            }
+        }
+    });
+    return normalizedFilters;
+}
+
 async function renderClients(clients) {
-    tableBody.innerHTML = '';
+    tableBody.textContent = '';
     
     if (currentClientTypeId && visibleFields && visibleFields.length > 0) {
         await renderClientsWithDynamicFields(clients);
@@ -706,16 +959,17 @@ async function renderClients(clients) {
     setupSortHandlers();
 
     if (typeof applyColumnWidths === 'function' && currentClientTypeId) {
-        setTimeout(() => {
+        if (columnResizerTimeoutId !== null) {
+            clearTimeout(columnResizerTimeoutId);
+        }
+        columnResizerTimeoutId = setTimeout(() => {
             applyColumnWidths(currentClientTypeId);
+            columnResizerTimeoutId = null;
         }, 0);
     }
 }
 
 async function renderClientsWithDynamicFields(clients) {
-    const fieldValuesPromises = clients.map(client => loadClientFieldValues(client.id));
-    const allFieldValues = await Promise.all(fieldValuesPromises);
-
     const staticFields = visibleFields.filter(f => f.isStatic);
     const dynamicFields = visibleFields.filter(f => !f.isStatic);
 
@@ -724,18 +978,17 @@ async function renderClientsWithDynamicFields(clients) {
 
     const allFields = [...staticFields, ...dynamicFields].sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
     
-    clients.forEach((client, index) => {
+    clients.forEach((client) => {
         const row = document.createElement('tr');
         row.classList.add('client-row');
-        
-        let html = '';
 
         if (!hasCompanyStatic) {
             const nameFieldLabel = currentClientType ? currentClientType.nameFieldLabel : 'Компанія';
-            html += `<td data-label="${nameFieldLabel}" class="company-cell" style="cursor: pointer;">${client.company || '<span style="color: #999; font-style: italic;">—</span>'}</td>`;
+            const companyCell = createCompanyCell(client, nameFieldLabel);
+            row.appendChild(companyCell);
         }
         
-        const fieldValues = allFieldValues[index];
+        const fieldValues = client.fieldValues || [];
         const fieldValuesMap = new Map();
         fieldValues.forEach(fv => {
             if (!fieldValuesMap.has(fv.fieldId)) {
@@ -747,26 +1000,47 @@ async function renderClientsWithDynamicFields(clients) {
         client._fieldValues = fieldValues;
 
         allFields.forEach(field => {
-            let cellValue = '';
+            const cell = document.createElement('td');
+            cell.setAttribute('data-label', field.fieldLabel);
             
             if (field.isStatic) {
                 switch (field.staticFieldName) {
                     case 'company':
-                        cellValue = client.company || '';
-                        html += `<td data-label="${field.fieldLabel}" class="company-cell" style="cursor: pointer;">${cellValue || '<span style="color: #999; font-style: italic;">—</span>'}</td>`;
+                        cell.className = 'company-cell';
+                        cell.style.cursor = 'pointer';
+                        if (client.company) {
+                            cell.textContent = client.company;
+                        } else {
+                            cell.appendChild(createEmptyCellSpan());
+                        }
                         break;
-                    case 'source':
+                    case 'source': {
                         const sourceId = client.sourceId ? (typeof client.sourceId === 'string' ? parseInt(client.sourceId) : client.sourceId) : null;
-                        cellValue = sourceId ? findNameByIdFromMap(sourceMap, sourceId) : '';
-                        html += `<td data-label="${field.fieldLabel}">${cellValue || '<span style="color: #999; font-style: italic;">—</span>'}</td>`;
+                        const sourceName = sourceId ? findNameByIdFromMap(sourceMap, sourceId) : '';
+                        if (sourceName) {
+                            cell.textContent = sourceName;
+                        } else {
+                            cell.appendChild(createEmptyCellSpan());
+                        }
                         break;
+                    }
                     case 'createdAt':
-                        cellValue = client.createdAt || '';
-                        html += `<td data-label="${field.fieldLabel}" data-sort="createdAt" style="cursor: pointer;">${cellValue || '<span style="color: #999; font-style: italic;">—</span>'}</td>`;
+                        cell.setAttribute('data-sort', 'createdAt');
+                        cell.style.cursor = 'pointer';
+                        if (client.createdAt) {
+                            cell.textContent = client.createdAt;
+                        } else {
+                            cell.appendChild(createEmptyCellSpan());
+                        }
                         break;
                     case 'updatedAt':
-                        cellValue = client.updatedAt || '';
-                        html += `<td data-label="${field.fieldLabel}" data-sort="updatedAt" style="cursor: pointer;">${cellValue || '<span style="color: #999; font-style: italic;">—</span>'}</td>`;
+                        cell.setAttribute('data-sort', 'updatedAt');
+                        cell.style.cursor = 'pointer';
+                        if (client.updatedAt) {
+                            cell.textContent = client.updatedAt;
+                        } else {
+                            cell.appendChild(createEmptyCellSpan());
+                        }
                         break;
                 }
             } else {
@@ -774,31 +1048,40 @@ async function renderClientsWithDynamicFields(clients) {
                 
                 if (values.length > 0) {
                     if (field.allowMultiple) {
-                        cellValue = values.map(v => formatFieldValue(v, field)).join('<br>');
+                        values.forEach((v, index) => {
+                            if (index > 0) {
+                                cell.appendChild(document.createElement('br'));
+                            }
+                            const value = formatFieldValue(v, field);
+                            if (value) {
+                                cell.appendChild(document.createTextNode(value));
+                            }
+                        });
                     } else {
-                        cellValue = formatFieldValue(values[0], field);
+                        const value = formatFieldValue(values[0], field);
+                        if (value) {
+                            cell.textContent = value;
+                        } else {
+                            cell.appendChild(createEmptyCellSpan());
+                        }
                     }
+                } else {
+                    cell.appendChild(createEmptyCellSpan());
                 }
-                
-                html += `<td data-label="${field.fieldLabel}">${cellValue || '<span style="color: #999; font-style: italic;">—</span>'}</td>`;
             }
+            
+            row.appendChild(cell);
         });
 
         if (!hasSourceStatic) {
-            const sourceId = client.sourceId ? (typeof client.sourceId === 'string' ? parseInt(client.sourceId) : client.sourceId) : null;
-            const sourceName = sourceId ? findNameByIdFromMap(sourceMap, sourceId) : '';
-            html += `<td data-label="Залучення">${sourceName || '<span style="color: #999; font-style: italic;">—</span>'}</td>`;
+            const sourceCell = createSourceCell(client);
+            row.appendChild(sourceCell);
         }
         
-        row.innerHTML = html;
         tableBody.appendChild(row);
         
         const companyCell = row.querySelector('.company-cell');
-        if (companyCell) {
-            companyCell.addEventListener('click', () => {
-                loadClientDetails(client);
-            });
-        }
+        attachCompanyCellClickHandler(companyCell, client);
     });
 }
 
@@ -807,18 +1090,16 @@ function renderClientsWithDefaultFields(clients) {
         const row = document.createElement('tr');
         row.classList.add('client-row');
 
-        const sourceName = findNameByIdFromMap(sourceMap, client.sourceId) || '';
-        row.innerHTML = `
-            <td data-label="Компанія" data-sort="company" class="company-cell" style="cursor: pointer;">${client.company || '<span style="color: #999; font-style: italic;">—</span>'}</td>
-            <td data-label="Залучення">${sourceName || '<span style="color: #999; font-style: italic;">—</span>'}</td>
-        `;
+        const companyCell = createCompanyCell(client, 'Компанія');
+        companyCell.setAttribute('data-sort', 'company');
+        row.appendChild(companyCell);
+
+        const sourceCell = createSourceCell(client);
+        row.appendChild(sourceCell);
+
         tableBody.appendChild(row);
-        const companyCell = row.querySelector('.company-cell');
-        if (companyCell) {
-            companyCell.addEventListener('click', () => {
-            loadClientDetails(client);
-        });
-        }
+        
+        attachCompanyCellClickHandler(companyCell, client);
     });
 }
 
@@ -851,8 +1132,7 @@ function formatFieldValueForModal(fieldValue, field) {
         case 'TEXT':
             return fieldValue.valueText || '';
         case 'PHONE':
-            const phone = fieldValue.valueText || '';
-            return phone ? `<a href="tel:${phone}">${phone}</a>` : '';
+            return fieldValue.valueText || '';
         case 'NUMBER':
             return fieldValue.valueNumber || '';
         case 'DATE':
@@ -930,7 +1210,6 @@ function handleSortClick(event) {
 
 async function loadDataWithSort(page, size, sort, direction) {
     loaderBackdrop.style.display = 'flex';
-    const searchInput = document.getElementById('inputSearch');
     const searchTerm = searchInput ? searchInput.value : '';
     let queryParams = `page=${page}&size=${size}&sort=${sort}&direction=${direction}`;
 
@@ -990,22 +1269,58 @@ function loadClientDetails(client) {
     showClientModal(client);
 }
 
-async function showClientModal(client) {
-    document.getElementById('client-modal').setAttribute('data-client-id', client.id);
+function closeModal() {
+    if (modalTimeoutId !== null) {
+        clearTimeout(modalTimeoutId);
+        modalTimeoutId = null;
+    }
+    
+    if (modalCloseHandler) {
+        closeModalClientBtn.removeEventListener('click', modalCloseHandler);
+        modalCloseHandler = null;
+    }
+    
+    if (modalClickHandler) {
+        window.removeEventListener('click', modalClickHandler);
+        modalClickHandler = null;
+    }
+    
+    clientModal.classList.remove('open');
+    clientModal.style.display = 'none';
+    editing = false;
+}
 
-    document.getElementById('modal-client-id').innerText = client.id;
+async function showClientModal(client) {
+    if (modalCloseHandler) {
+        closeModalClientBtn.removeEventListener('click', modalCloseHandler);
+        modalCloseHandler = null;
+    }
+    
+    if (modalClickHandler) {
+        window.removeEventListener('click', modalClickHandler);
+        modalClickHandler = null;
+    }
+    
+    if (modalTimeoutId !== null) {
+        clearTimeout(modalTimeoutId);
+        modalTimeoutId = null;
+    }
+
+    clientModal.setAttribute('data-client-id', client.id);
+
+    modalClientId.textContent = client.id;
     
     const modalContent = document.querySelector('.modal-content-client');
     const existingFields = modalContent.querySelectorAll('p[data-field-id]');
     existingFields.forEach(el => el.remove());
     
     const nameFieldLabel = currentClientType ? currentClientType.nameFieldLabel : 'Компанія';
-    document.getElementById('modal-client-company').parentElement.querySelector('strong').textContent = nameFieldLabel + ':';
-    document.getElementById('modal-client-company').innerText = client.company;
+    modalClientCompany.parentElement.querySelector('strong').textContent = nameFieldLabel + ':';
+    modalClientCompany.textContent = client.company;
     
     if (currentClientTypeId && clientTypeFields.length > 0) {
-        let fieldValues = client._fieldValues;
-        if (!fieldValues) {
+        let fieldValues = client._fieldValues || client.fieldValues;
+        if (!fieldValues || fieldValues.length === 0) {
             fieldValues = await loadClientFieldValues(client.id);
         }
         const fieldValuesMap = new Map();
@@ -1016,7 +1331,7 @@ async function showClientModal(client) {
             fieldValuesMap.get(fv.fieldId).push(fv);
         });
         
-        const companyP = document.getElementById('modal-client-company').parentElement;
+        const companyP = modalClientCompany.parentElement;
         
         clientTypeFields.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
         
@@ -1026,40 +1341,88 @@ async function showClientModal(client) {
             const fieldP = document.createElement('p');
             fieldP.setAttribute('data-field-id', field.id);
             
-            let fieldValue = '';
+            const strong = document.createElement('strong');
+            strong.textContent = field.fieldLabel + ':';
+            fieldP.appendChild(strong);
+
+            const valueSpan = document.createElement('span');
+            valueSpan.id = `modal-field-${field.id}`;
+            
             if (values.length > 0) {
                 if (field.allowMultiple) {
-                    fieldValue = values.map(v => formatFieldValueForModal(v, field)).join('<br>');
-    } else {
-                    fieldValue = formatFieldValueForModal(values[0], field);
+                    values.forEach((v, index) => {
+                        if (index > 0) {
+                            valueSpan.appendChild(document.createElement('br'));
+                        }
+                        if (field.fieldType === 'PHONE') {
+                            const phone = v.valueText || '';
+                            if (phone) {
+                                const phoneLink = document.createElement('a');
+                                phoneLink.href = `tel:${phone}`;
+                                phoneLink.textContent = phone;
+                                valueSpan.appendChild(phoneLink);
+                            }
+                        } else {
+                            const value = formatFieldValueForModal(v, field);
+                            if (value) {
+                                valueSpan.appendChild(document.createTextNode(value));
+                            }
+                        }
+                    });
+                } else {
+                    if (field.fieldType === 'PHONE') {
+                        const phone = values[0].valueText || '';
+                        if (phone) {
+                            const phoneLink = document.createElement('a');
+                            phoneLink.href = `tel:${phone}`;
+                            phoneLink.textContent = phone;
+                            valueSpan.appendChild(phoneLink);
+                        } else {
+                            valueSpan.className = 'empty-value';
+                            valueSpan.textContent = '—';
+                        }
+                    } else {
+                        const value = formatFieldValueForModal(values[0], field);
+                        if (value) {
+                            valueSpan.appendChild(document.createTextNode(value));
+                        } else {
+                            valueSpan.className = 'empty-value';
+                            valueSpan.textContent = '—';
+                        }
+                    }
                 }
+            } else {
+                valueSpan.className = 'empty-value';
+                valueSpan.textContent = '—';
+            }
+            fieldP.appendChild(valueSpan);
+
+            const canEdit = canEditClient(client);
+            if (canEdit) {
+                const editButton = document.createElement('button');
+                editButton.className = 'edit-icon';
+                editButton.setAttribute('data-field-id', field.id);
+                editButton.setAttribute('title', 'Редагувати');
+                editButton.onclick = () => enableEditField(field.id, field.fieldType, field.allowMultiple || false);
+                const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                svg.setAttribute('viewBox', '0 0 24 24');
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                path.setAttribute('d', 'M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z');
+                svg.appendChild(path);
+                editButton.appendChild(svg);
+                fieldP.appendChild(editButton);
             }
             
-            const canEdit = canEditClient(client);
-            const editButtonHtml = canEdit ? `
-                <button class="edit-icon" onclick="enableEditField(${field.id}, '${field.fieldType}', ${field.allowMultiple || false})" data-field-id="${field.id}" title="Редагувати">
-                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
-                    </svg>
-                </button>
-            ` : '';
-            
-            fieldP.innerHTML = `
-                <strong>${field.fieldLabel}:</strong>
-                <span id="modal-field-${field.id}" class="${!fieldValue ? 'empty-value' : ''}">${fieldValue || '—'}</span>
-                ${editButtonHtml}
-            `;
             fieldP.setAttribute('data-field-type', field.fieldType);
 
             lastInsertedElement.insertAdjacentElement('afterend', fieldP);
             lastInsertedElement = fieldP;
         });
 
-        const sourceElement = document.getElementById('modal-client-source')?.parentElement;
+        const sourceElement = modalClientSource?.parentElement;
         if (sourceElement) {
             sourceElement.style.display = '';
-    document.getElementById('modal-client-source').innerText =
-        findNameByIdFromMap(sourceMap, client.sourceId);
+            modalClientSource.textContent = findNameByIdFromMap(sourceMap, client.sourceId);
         }
 
         canEditClient(client);
@@ -1084,11 +1447,10 @@ async function showClientModal(client) {
             }
         }
     } else {
-        const sourceElement = document.getElementById('modal-client-source')?.parentElement;
+        const sourceElement = modalClientSource?.parentElement;
         if (sourceElement) {
             sourceElement.style.display = '';
-            document.getElementById('modal-client-source').innerText =
-                findNameByIdFromMap(sourceMap, client.sourceId);
+            modalClientSource.textContent = findNameByIdFromMap(sourceMap, client.sourceId);
         }
 
         canEditClient(client);
@@ -1114,37 +1476,38 @@ async function showClientModal(client) {
         }
     }
     
-    document.getElementById('modal-client-created').innerText = client.createdAt || '';
-    document.getElementById('modal-client-updated').innerText = client.updatedAt || '';
+    modalClientCreated.textContent = client.createdAt || '';
+    modalClientUpdated.textContent = client.updatedAt || '';
 
-    const modal = document.getElementById('client-modal');
-    modal.style.display = 'flex';
-    setTimeout(() => {
-        modal.classList.add('open');
+    clientModal.style.display = 'flex';
+    modalTimeoutId = setTimeout(() => {
+        clientModal.classList.add('open');
+        modalTimeoutId = null;
     }, 10);
 
-    document.getElementById('close-modal-client').addEventListener('click', () => {
+    modalCloseHandler = () => {
         if (!editing) {
-            modal.classList.remove('open');
-            setTimeout(() => {
+            clientModal.classList.remove('open');
+            modalTimeoutId = setTimeout(() => {
                 closeModal();
-            });
+                modalTimeoutId = null;
+            }, 200);
         } else {
             showMessage('Збережіть або відмініть зміни', 'error');
         }
-    });
+    };
+    closeModalClientBtn.addEventListener('click', modalCloseHandler);
 
-    window.onclick = function (event) {
-        if (event.target === modal) {
+    modalClickHandler = function (event) {
+        if (event.target === clientModal) {
             if (!editing) {
                 closeModal();
             } else {
                 showMessage('Збережіть або відмініть зміни', 'error');
             }
         }
-    }
-
-    const fullDeleteButton = document.getElementById('full-delete-client');
+    };
+    window.addEventListener('click', modalClickHandler);
     if (fullDeleteButton) {
         const canDelete = canDeleteClient(client);
 
@@ -1166,7 +1529,7 @@ async function showClientModal(client) {
                 return;
             }
             showMessage('Клієнт повністю видалений з бази даних', 'info');
-            modal.style.display = 'none';
+            clientModal.style.display = 'none';
 
             loadDataWithSort(currentPage, pageSize, currentSort, currentDirection);
         } catch (error) {
@@ -1178,8 +1541,6 @@ async function showClientModal(client) {
     };
 
 
-    const deleteButton = document.getElementById('delete-client');
-    const restoreButton = document.getElementById('restore-client');
 
     const canDelete = canDeleteClient(client);
 
@@ -1223,7 +1584,7 @@ async function showClientModal(client) {
                 return;
             }
             showMessage('Клієнт деактивовано (isActive = false)', 'info');
-            modal.style.display = 'none';
+            clientModal.style.display = 'none';
 
             loadDataWithSort(currentPage, pageSize, currentSort, currentDirection);
         } catch (error) {
@@ -1249,7 +1610,7 @@ async function showClientModal(client) {
             return;
         }
                 showMessage('Клієнт відновлено (isActive = true)', 'info');
-                modal.style.display = 'none';
+                clientModal.style.display = 'none';
 
         loadDataWithSort(currentPage, pageSize, currentSort, currentDirection);
     } catch (error) {
@@ -1266,59 +1627,72 @@ async function showClientModal(client) {
 
 /*-------create client-------*/
 
-var modal = document.getElementById("createClientModal");
-var btn = document.getElementById("open-modal");
-var span = document.getElementsByClassName("create-client-close")[0];
-let editing = false;
+function cleanupCreateModalTimeouts() {
+    createModalTimeoutIds.forEach(id => clearTimeout(id));
+    createModalTimeoutIds = [];
+}
 
-btn.onclick = function () {
-    if (!currentClientTypeId) {
-        showMessage('Будь ласка, виберіть тип клієнта з навігації', 'error');
-        return;
-    }
-    buildDynamicCreateForm();
-    modal.classList.remove('hide');
-    modal.style.display = "flex";
-    setTimeout(() => {
-        modal.classList.add('show');
-    }, 10);
-};
+if (openModalBtn) {
+    openModalBtn.onclick = function () {
+        if (!currentClientTypeId) {
+            showMessage('Будь ласка, виберіть тип клієнта з навігації', 'error');
+            return;
+        }
+        if (!createClientModal) return;
+        buildDynamicCreateForm();
+        createClientModal.classList.remove('hide');
+        createClientModal.style.display = "flex";
+        const timeoutId = setTimeout(() => {
+            if (createClientModal) {
+                createClientModal.classList.add('show');
+            }
+        }, 10);
+        createModalTimeoutIds.push(timeoutId);
+    };
+}
 
-span.onclick = function () {
-    modal.classList.remove('show');
-    modal.classList.add('hide');
-    setTimeout(() => {
-        modal.style.display = "none";
-        resetForm();
-    }, 300);
-};
-
-window.onclick = function (event) {
-    if (event.target === modal) {
-        modal.classList.remove('show');
-        modal.classList.add('hide');
-        setTimeout(() => {
-            modal.style.display = "none";
+if (createClientCloseBtn && createClientModal) {
+    createClientCloseBtn.onclick = function () {
+        cleanupCreateModalTimeouts();
+        createClientModal.classList.remove('show');
+        createClientModal.classList.add('hide');
+        const timeoutId = setTimeout(() => {
+            if (createClientModal) {
+                createClientModal.style.display = "none";
+            }
             resetForm();
         }, 300);
+        createModalTimeoutIds.push(timeoutId);
+    };
+}
+
+if (createModalClickHandler) {
+    window.removeEventListener('click', createModalClickHandler);
+}
+createModalClickHandler = function (event) {
+    if (event.target === createClientModal) {
+        cleanupCreateModalTimeouts();
+        createClientModal.classList.remove('show');
+        createClientModal.classList.add('hide');
+        const timeoutId = setTimeout(() => {
+            createClientModal.style.display = "none";
+            resetForm();
+        }, 300);
+        createModalTimeoutIds.push(timeoutId);
     }
 };
-
-
-window.onclick = function (event) {
-    if (event.target === modal) {
-        modal.style.display = "none";
-        resetForm();
-    }
-}
+window.addEventListener('click', createModalClickHandler);
 
 function buildDynamicCreateForm() {
     if (!currentClientTypeId) {
         return;
     }
 
+    customSelectTimeoutIds.forEach(id => clearTimeout(id));
+    customSelectTimeoutIds = [];
+
     const form = document.getElementById('client-form');
-    form.innerHTML = '';
+    form.textContent = '';
 
     const nameFieldLabel = currentClientType ? currentClientType.nameFieldLabel : 'Компанія';
     
@@ -1455,7 +1829,7 @@ function buildDynamicCreateForm() {
             }
             fieldDiv.appendChild(input);
             form.appendChild(fieldDiv);
-            setTimeout(() => {
+            const timeoutId = setTimeout(() => {
                 if (typeof createCustomSelect === 'function') {
                     const customSelect = createCustomSelect(input);
                     customSelects[`field-${field.id}`] = customSelect;
@@ -1471,6 +1845,7 @@ function buildDynamicCreateForm() {
                     }
                 }
             }, 0);
+            customSelectTimeoutIds.push(timeoutId);
             return;
         } else if (field.fieldType === 'BOOLEAN') {
             input = document.createElement('select');
@@ -1529,7 +1904,7 @@ function buildDynamicCreateForm() {
     sourceFieldDiv.appendChild(sourceSelect);
     form.appendChild(sourceFieldDiv);
 
-    setTimeout(() => {
+    const timeoutId = setTimeout(() => {
         if (typeof createCustomSelect === 'function') {
             const customSelect = createCustomSelect(sourceSelect);
             customSelects['source-custom'] = customSelect;
@@ -1543,6 +1918,7 @@ function buildDynamicCreateForm() {
             }
         }
     }, 0);
+    customSelectTimeoutIds.push(timeoutId);
 
     const submitButton = document.createElement('button');
     submitButton.type = 'submit';
@@ -1564,7 +1940,7 @@ function buildDynamicCreateForm() {
 function updatePhoneOutput(fieldId, value) {
     const outputDiv = document.getElementById(`output-${fieldId}`);
     if (!outputDiv) return;
-    outputDiv.innerHTML = '';
+    outputDiv.textContent = '';
 
     let formattedNumbers = value.split(',')
         .map(num => num.trim())
@@ -1608,7 +1984,7 @@ function resetForm() {
 
 const defaultValues = {
     source: () => {
-        const currentUserId = localStorage.getItem('userId');
+        const currentUserId = getUserId();
         if (!currentUserId || !availableSources || availableSources.length === 0) {
             return '';
         }
@@ -1616,7 +1992,7 @@ const defaultValues = {
             const sourceUserId = source.userId !== null && source.userId !== undefined 
                 ? String(source.userId) 
                 : null;
-            return sourceUserId === currentUserId;
+            return sourceUserId === String(currentUserId);
         });
         return userSource ? String(userSource.id) : '';
     }
@@ -1792,7 +2168,7 @@ document.getElementById('client-form').addEventListener('submit',
 
             const data = await response.json();
 
-            modal.style.display = "none";
+            createClientModal.style.display = "none";
             resetForm();
             loadDataWithSort(0, pageSize, currentSort, currentDirection);
 
@@ -1808,19 +2184,34 @@ document.getElementById('client-form').addEventListener('submit',
 
 /*--search--*/
 
-const searchInput = document.getElementById('inputSearch');
-const searchButton = document.getElementById('searchButton');
+let searchDebounceTimer = null;
 
-searchInput.addEventListener('keypress', async (event) => {
-    if (event.key === 'Enter') {
-        searchButton.click();
-    }
-});
+function debounce(func, delay) {
+    return function(...args) {
+        clearTimeout(searchDebounceTimer);
+        searchDebounceTimer = setTimeout(() => func.apply(this, args), delay);
+    };
+}
 
-searchButton.addEventListener('click', async () => {
+const performSearch = async () => {
     const searchTerm = searchInput.value;
     localStorage.setItem('searchTerm', searchTerm);
     loadDataWithSort(0, 100, currentSort, currentDirection);
+};
+
+const debouncedSearch = debounce(performSearch, 400);
+
+searchInput.addEventListener('keypress', async (event) => {
+    if (event.key === 'Enter') {
+        clearTimeout(searchDebounceTimer);
+        performSearch();
+    } else {
+        debouncedSearch();
+    }
+});
+
+searchInput.addEventListener('input', () => {
+    debouncedSearch();
 });
 
 /*--filter--*/
@@ -1831,9 +2222,13 @@ const closeFilter = document.querySelector('.close-filter');
 const modalContent = filterModal.querySelector('.modal-content-filter');
 
 filterButton.addEventListener('click', () => {
+    if (filterModalTimeoutId !== null) {
+        clearTimeout(filterModalTimeoutId);
+    }
     filterModal.style.display = 'block';
-    setTimeout(() => {
+    filterModalTimeoutId = setTimeout(() => {
         filterModal.classList.add('show');
+        filterModalTimeoutId = null;
     }, 10);
 });
 
@@ -1848,13 +2243,18 @@ filterModal.addEventListener('click', (event) => {
 });
 
 function closeModalFilter() {
+    if (filterModalTimeoutId !== null) {
+        clearTimeout(filterModalTimeoutId);
+        filterModalTimeoutId = null;
+    }
     filterModal.classList.add('closing');
     modalContent.classList.add('closing-content');
 
-    setTimeout(() => {
+    filterModalTimeoutId = setTimeout(() => {
         filterModal.style.display = 'none';
         filterModal.classList.remove('closing');
         modalContent.classList.remove('closing-content');
+        filterModalTimeoutId = null;
     }, 200);
 }
 
@@ -1871,7 +2271,7 @@ document.getElementById("modal-filter-button-submit").addEventListener('click',
 
 function updateSelectedFilters() {
     if (typeof selectedFilters === 'undefined') {
-        window.selectedFilters = {};
+        selectedFilters = {};
     }
 
     Object.keys(selectedFilters).forEach(key => delete selectedFilters[key]);
@@ -1947,10 +2347,7 @@ function updateSelectedFilters() {
 }
 
 function updateFilterCounter() {
-    const counterElement = document.getElementById('filter-counter');
-    const countElement = document.getElementById('filter-count');
-
-    if (!counterElement || !countElement) return;
+    if (!filterCounter || !filterCount) return;
 
     let totalFilters = 0;
 
@@ -1965,18 +2362,20 @@ function updateFilterCounter() {
     });
 
     if (totalFilters > 0) {
-        countElement.textContent = totalFilters;
-        counterElement.style.display = 'inline-flex';
+        filterCount.textContent = totalFilters;
+        filterCounter.style.display = 'inline-flex';
     } else {
-        countElement.textContent = '0';
-        counterElement.style.display = 'none';
+        filterCount.textContent = '0';
+        filterCounter.style.display = 'none';
     }
 }
 
 
-document.getElementById('filter-counter').addEventListener('click', () => {
-    clearFilters();
-});
+if (filterCounter) {
+    filterCounter.addEventListener('click', () => {
+        clearFilters();
+    });
+}
 
 function clearFilters() {
     Object.keys(selectedFilters).forEach(key => delete selectedFilters[key]);
@@ -1994,14 +2393,12 @@ function clearFilters() {
         });
     }
 
-    const searchInput = document.getElementById('inputSearch');
     if (searchInput) {
-    searchInput.value = '';
+        searchInput.value = '';
     }
 
     localStorage.removeItem('selectedFilters');
     localStorage.removeItem('searchTerm');
-    window.selectedFilters = {};
 
     updateFilterCounter();
     loadDataWithSort(currentPage, pageSize, currentSort, currentDirection);
@@ -2014,7 +2411,7 @@ function populateSelect(selectId, data) {
         return;
     }
 
-    select.innerHTML = '';
+    select.textContent = '';
 
     if (!selectId.endsWith('-filter')) {
         const defaultOption = document.createElement('option');
@@ -2050,23 +2447,21 @@ function populateSelect(selectId, data) {
 }
 
 async function showClientTypeSelectionModal() {
-    const modal = document.getElementById('clientTypeSelectionModal');
-    const listContainer = document.getElementById('client-types-selection-list');
-    
-    if (!modal || !listContainer) return;
+    if (!clientTypeSelectionModal || !clientTypesSelectionList) return;
     
     try {
         const response = await fetch('/api/v1/client-type/active');
         if (!response.ok) {
-            console.error('Failed to load client types');
+            console.error('Failed to load client types:', response.status, response.statusText);
+            handleError(new ErrorResponse('CLIENT_ERROR_DEFAULT', 'Не вдалося завантажити типи клієнтів', null));
             return;
         }
         const allClientTypes = await response.json();
 
-        const userId = localStorage.getItem('userId');
+        const currentUserId = getUserId();
         let accessibleClientTypeIds = new Set();
         
-        if (userId) {
+        if (currentUserId) {
             try {
                 const permissionsResponse = await fetch(`/api/v1/client-type/permission/me`);
                 if (permissionsResponse.ok) {
@@ -2076,25 +2471,15 @@ async function showClientTypeSelectionModal() {
                             accessibleClientTypeIds.add(perm.clientTypeId);
                         }
                     });
+                } else {
+                    console.warn('Failed to load user client type permissions:', permissionsResponse.status, permissionsResponse.statusText);
                 }
             } catch (error) {
                 console.warn('Failed to load user client type permissions:', error);
-                allClientTypes.forEach(type => accessibleClientTypeIds.add(type.id));
             }
         }
 
-        const authorities = localStorage.getItem('authorities');
-        let userAuthorities = [];
-        try {
-            if (authorities) {
-                userAuthorities = authorities.startsWith('[')
-                    ? JSON.parse(authorities)
-                    : authorities.split(',').map(auth => auth.trim());
-            }
-        } catch (error) {
-            console.error('Failed to parse authorities:', error);
-        }
-        
+        const userAuthorities = getAuthorities();
         const isAdmin = userAuthorities.includes('system:admin') || userAuthorities.includes('administration:view');
 
         if (isAdmin || accessibleClientTypeIds.size === 0) {
@@ -2104,38 +2489,50 @@ async function showClientTypeSelectionModal() {
         const accessibleClientTypes = allClientTypes.filter(type => accessibleClientTypeIds.has(type.id));
         
         if (accessibleClientTypes.length === 0) {
-            listContainer.innerHTML = '<p style="text-align: center; color: var(--main-grey); padding: 2em;">Немає доступних типів клієнтів</p>';
-            modal.style.display = 'flex';
+            const emptyMessage = document.createElement('p');
+            emptyMessage.style.textAlign = 'center';
+            emptyMessage.style.color = 'var(--main-grey)';
+            emptyMessage.style.padding = '2em';
+            emptyMessage.textContent = 'Немає доступних типів клієнтів';
+            clientTypesSelectionList.appendChild(emptyMessage);
+            clientTypeSelectionModal.style.display = 'flex';
         } else if (accessibleClientTypes.length === 1) {
             window.location.href = `/clients?type=${accessibleClientTypes[0].id}`;
             return;
         } else {
-            listContainer.innerHTML = '';
+            clientTypesSelectionList.textContent = '';
             accessibleClientTypes.forEach(type => {
                 const card = document.createElement('div');
                 card.className = 'client-type-card';
-                card.innerHTML = `
-                    <div class="client-type-card-icon">👥</div>
-                    <div class="client-type-card-name">${type.name}</div>
-                `;
+                
+                const iconDiv = document.createElement('div');
+                iconDiv.className = 'client-type-card-icon';
+                iconDiv.textContent = '👥';
+                card.appendChild(iconDiv);
+                
+                const nameDiv = document.createElement('div');
+                nameDiv.className = 'client-type-card-name';
+                nameDiv.textContent = type.name;
+                card.appendChild(nameDiv);
+                
                 card.addEventListener('click', () => {
                     window.location.href = `/clients?type=${type.id}`;
                 });
-                listContainer.appendChild(card);
+                clientTypesSelectionList.appendChild(card);
             });
-            modal.style.display = 'flex';
+            clientTypeSelectionModal.style.display = 'flex';
         }
 
         const closeBtn = document.querySelector('.close-client-type-modal');
         if (closeBtn) {
             closeBtn.addEventListener('click', () => {
-                modal.style.display = 'none';
+                clientTypeSelectionModal.style.display = 'none';
             });
         }
         
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                modal.style.display = 'none';
+        clientTypeSelectionModal.addEventListener('click', (e) => {
+            if (e.target === clientTypeSelectionModal) {
+                clientTypeSelectionModal.style.display = 'none';
             }
         });
     } catch (error) {
@@ -2146,17 +2543,31 @@ async function showClientTypeSelectionModal() {
 async function updateNavigationWithCurrentType(typeId) {
     try {
         const response = await fetch(`/api/v1/client-type/${typeId}`);
-        if (!response.ok) return;
+        if (!response.ok) {
+            console.error('Failed to load client type:', response.status, response.statusText);
+            return;
+        }
         
         const clientType = await response.json();
         const navLink = document.querySelector('#nav-clients a');
         
         if (navLink && clientType.name) {
-            navLink.innerHTML = `
-                <span class="nav-client-type-label">Клієнти:</span>
-                <span class="nav-client-type-name">${clientType.name}</span>
-                <span class="dropdown-arrow">▼</span>
-            `;
+            navLink.textContent = '';
+            
+            const labelSpan = document.createElement('span');
+            labelSpan.className = 'nav-client-type-label';
+            labelSpan.textContent = 'Клієнти:';
+            navLink.appendChild(labelSpan);
+            
+            const nameSpan = document.createElement('span');
+            nameSpan.className = 'nav-client-type-name';
+            nameSpan.textContent = clientType.name;
+            navLink.appendChild(nameSpan);
+            
+            const arrowSpan = document.createElement('span');
+            arrowSpan.className = 'dropdown-arrow';
+            arrowSpan.textContent = '▼';
+            navLink.appendChild(arrowSpan);
         }
 
         const dropdown = document.getElementById('client-types-dropdown');

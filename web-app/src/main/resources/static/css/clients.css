@@ -48,7 +48,7 @@
 #inputSearch {
     padding: 0.2em;
     border: 1px solid var(--dark-green);
-    border-radius: 10px 0 0 10px;
+    border-radius: 10px;
     font-size: var(--base-text-size);
     outline: none;
     width: 30em;
@@ -57,29 +57,6 @@
 
 #inputSearch:focus {
     border-color: var(--bright-blue);
-}
-
-#searchButton {
-    padding: 0.5em;
-    background-color: var(--dark-green);
-    border: 1px solid var(--dark-green);
-    border-radius: 0 10px 10px 0;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background-color 0.3s;
-    font-size: 0.9em;
-}
-
-#searchButton:hover {
-    background-color: var(--bright-blue);
-}
-
-#searchButton svg {
-    color: #fff;
-    width: 1em;
-    height: 1em;
 }
 
 /*--filter-button--*/

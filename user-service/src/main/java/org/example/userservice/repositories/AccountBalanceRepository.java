@@ -22,5 +22,8 @@ public interface AccountBalanceRepository extends CrudRepository<AccountBalance,
     @Modifying
     @Query("UPDATE AccountBalance ab SET ab.amount = ab.amount - :amount WHERE ab.accountId = :accountId AND ab.currency = :currency")
     void subtractAmount(@Param("accountId") Long accountId, @Param("currency") String currency, @Param("amount") BigDecimal amount);
+    
+    @Query("SELECT COUNT(ab) FROM AccountBalance ab WHERE ab.accountId = :accountId AND ab.amount != 0")
+    long countNonZeroBalances(@Param("accountId") Long accountId);
 }
 

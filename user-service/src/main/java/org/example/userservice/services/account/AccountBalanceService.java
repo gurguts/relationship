@@ -26,34 +26,33 @@ public class AccountBalanceService {
 
     @Transactional
     public void addAmount(Long accountId, String currency, BigDecimal amount) {
-        // Verify account exists
-        accountRepository.findById(accountId)
-                .orElseThrow(() -> new AccountNotFoundException(
-                        String.format("Account with ID %d not found", accountId)));
-
-        // Verify currency is supported
         accountBalanceRepository
                 .findByAccountIdAndCurrency(accountId, currency.toUpperCase())
-                .orElseThrow(() -> new AccountException("CURRENCY",
-                        String.format("Currency %s is not supported for account %d", currency, accountId)));
+                .orElseThrow(() -> {
+                    if (!accountRepository.existsById(accountId)) {
+                        return new AccountNotFoundException(
+                                String.format("Account with ID %d not found", accountId));
+                    }
+                    return new AccountException("CURRENCY",
+                            String.format("Currency %s is not supported for account %d", currency, accountId));
+                });
 
         accountBalanceRepository.addAmount(accountId, currency.toUpperCase(), amount);
     }
 
     @Transactional
     public void subtractAmount(Long accountId, String currency, BigDecimal amount) {
-        // Verify account exists
-        accountRepository.findById(accountId)
-                .orElseThrow(() -> new AccountNotFoundException(
-                        String.format("Account with ID %d not found", accountId)));
-
-        // Verify currency is supported
         accountBalanceRepository
                 .findByAccountIdAndCurrency(accountId, currency.toUpperCase())
-                .orElseThrow(() -> new AccountException("CURRENCY",
-                        String.format("Currency %s is not supported for account %d", currency, accountId)));
+                .orElseThrow(() -> {
+                    if (!accountRepository.existsById(accountId)) {
+                        return new AccountNotFoundException(
+                                String.format("Account with ID %d not found", accountId));
+                    }
+                    return new AccountException("CURRENCY",
+                            String.format("Currency %s is not supported for account %d", currency, accountId));
+                });
 
-        // Allow negative balances - no balance check
         accountBalanceRepository.subtractAmount(accountId, currency.toUpperCase(), amount);
     }
 

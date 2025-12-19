@@ -22,4 +22,6 @@ public interface UserRepository extends CrudRepository<User, Long> {
     
     @EntityGraph(attributePaths = {"permissions"})
     List<User> findByStatus(org.example.userservice.models.user.Status status);
+    
+    boolean existsByLogin(String login);
 }

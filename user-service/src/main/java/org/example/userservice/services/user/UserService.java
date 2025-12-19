@@ -15,7 +15,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.*;
+import java.util.List;
+import java.util.Set;
 
 @Slf4j
 @Service
@@ -71,17 +72,13 @@ public class UserService implements IUserService {
     public User createUser(User user) {
         log.info(String.format("Started saving by user: %s", user.getLogin()));
 
-        Optional<User> existingUser = userRepository.findByLogin(user.getLogin());
-        if (existingUser.isPresent()) {
+        if (userRepository.existsByLogin(user.getLogin())) {
             throw new UserException("ALREADY_EXISTS", String.format("User with login %s already exists",
                     user.getLogin()));
         }
         user.setPassword(passwordEncoder.encode(user.getPassword()));
 
-        User savedUser = userRepository.save(user);
-
-        // Balance creation is now handled by Accounts
-        return userRepository.save(savedUser);
+        return userRepository.save(user);
     }
 
     @Override

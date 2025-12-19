@@ -10,6 +10,7 @@ import org.example.userservice.services.impl.IAuthService;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -25,6 +26,7 @@ public class AuthService implements IAuthService {
     private final AuthenticationManager authenticationManager;
 
     @Override
+    @Transactional(readOnly = true)
     public Map<String, Object> authenticate(String login, String password) {
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(login, password));
