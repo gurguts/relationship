@@ -94,7 +94,8 @@ public class VehicleExportService {
                     "Відправник", "Отримувач", "Країна призначення", "Місце призначення",
                     "Товар", "Кількість товару", "Номер декларації", "Термінал",
                     "Водій (ПІБ)", "EUR1", "FITO", "Дата митниці", "Дата розмитнення",
-                    "Дата вивантаження", "Перевізник", "Товари зі складу", "Витрати на машину", "Загальна вартість (EUR)"
+                    "Дата вивантаження", "Перевізник (назва)", "Перевізник (адреса)", "Перевізник (телефон)", 
+                    "Перевізник (код)", "Перевізник (рахунок)", "Товари зі складу", "Витрати на машину", "Загальна вартість (EUR)"
             };
 
             for (int i = 0; i < headers.length; i++) {
@@ -148,7 +149,20 @@ public class VehicleExportService {
                 setCellValue(mainRow, 15, vehicleDTO.getCustomsDate(), dateStyle);
                 setCellValue(mainRow, 16, vehicleDTO.getCustomsClearanceDate(), dateStyle);
                 setCellValue(mainRow, 17, vehicleDTO.getUnloadingDate(), dateStyle);
-                setCellValue(mainRow, 18, vehicleDTO.getCarrier() != null ? vehicleDTO.getCarrier().getCompanyName() : "", dataStyle);
+                
+                if (vehicleDTO.getCarrier() != null) {
+                    setCellValue(mainRow, 18, vehicleDTO.getCarrier().getCompanyName(), dataStyle);
+                    setCellValue(mainRow, 19, vehicleDTO.getCarrier().getRegistrationAddress(), dataStyle);
+                    setCellValue(mainRow, 20, vehicleDTO.getCarrier().getPhoneNumber(), dataStyle);
+                    setCellValue(mainRow, 21, vehicleDTO.getCarrier().getCode(), dataStyle);
+                    setCellValue(mainRow, 22, vehicleDTO.getCarrier().getAccount(), dataStyle);
+                } else {
+                    setCellValue(mainRow, 18, "", dataStyle);
+                    setCellValue(mainRow, 19, "", dataStyle);
+                    setCellValue(mainRow, 20, "", dataStyle);
+                    setCellValue(mainRow, 21, "", dataStyle);
+                    setCellValue(mainRow, 22, "", dataStyle);
+                }
 
                 StringBuilder productsText = new StringBuilder();
                 if (vehicleDTO.getItems() != null && !vehicleDTO.getItems().isEmpty()) {
@@ -162,7 +176,7 @@ public class VehicleExportService {
                                 formatNumber(item.getTotalCostEur())));
                     }
                 }
-                setCellValue(mainRow, 19, productsText.toString(), dataStyle);
+                setCellValue(mainRow, 23, productsText.toString(), dataStyle);
 
                 StringBuilder expensesText = new StringBuilder();
                 BigDecimal totalExpenses = BigDecimal.ZERO;
@@ -185,8 +199,8 @@ public class VehicleExportService {
                                 description != null && !description.isEmpty() ? " - " + description : ""));
                     }
                 }
-                setCellValue(mainRow, 20, expensesText.toString(), dataStyle);
-                setCellValue(mainRow, 21, vehicleDTO.getTotalCostEur(), numberStyle);
+                setCellValue(mainRow, 24, expensesText.toString(), dataStyle);
+                setCellValue(mainRow, 25, vehicleDTO.getTotalCostEur(), numberStyle);
             }
 
             for (int i = 0; i < headers.length; i++) {

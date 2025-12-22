@@ -27,7 +27,7 @@
 #inputSearch {
     padding: 0.2em;
     border: 1px solid var(--dark-green);
-    border-radius: 10px 0 0 10px;
+    border-radius: 10px;
     font-size: var(--base-text-size);
     outline: none;
     width: 30em;

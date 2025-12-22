@@ -103,14 +103,6 @@
     <div class="search-block">
         <label style="display: none" for="inputSearch"></label>
         <input type="text" id="inputSearch" placeholder="Пошук">
-        <button id="searchButton">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16px" height="16px" viewBox="0 0 24 24" fill="none"
-                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                 class="feather feather-search">
-                <circle cx="11" cy="11" r="8"></circle>
-                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
-        </button>
     </div>
 
     <div class="filter-button-block">
@@ -256,7 +248,6 @@
         <div class="section-client-buttons">
             <div class="section-client-buttons-block">
                 <button id="show-purchases-client" class="client-action-info-button">Закупівлі</button>
-                <button id="show-sale-client" class="client-action-info-button">Продажі</button>
                 <button id="show-containers-client" class="client-action-info-button">Тара</button>
             </div>
         </div>
@@ -322,29 +313,6 @@
     </div>
 </div>
 
-<div id="saleClientModal" class="modal-sale-client" style="display: none;">
-    <div class="modal-sale-client-content">
-        <span id="closeSaleModal">&times;</span>
-        <h3 id="client-id-sale">Клієнт:</h3>
-        <table id="saleTable">
-            <thead>
-            <tr>
-                <th>Водій</th>
-                <th>Залучення</th>
-                <th>Товар</th>
-                <th>Кількість</th>
-                <th>Ціна</th>
-                <th>Сплачено</th>
-                <th>Форма</th>
-                <th>Валюта</th>
-                <th>Дата</th>
-            </tr>
-            </thead>
-            <tbody></tbody>
-        </table>
-    </div>
-</div>
-
 <div id="containerClientModal" class="modal-container-client" style="display: none;">
     <div class="modal-container-client-content">
         <span id="closeContainerModal">&times;</span>
@@ -352,9 +320,10 @@
         <table id="containerTable">
             <thead>
             <tr>
-                <th>Тип тари</th>
                 <th>Кількість</th>
-                <th>Дата</th>
+                <th>Тип тари</th>
+                <th>Власник</th>
+                <th>Оновлено</th>
             </tr>
             </thead>
             <tbody></tbody>

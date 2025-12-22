@@ -567,19 +567,21 @@ function buildDynamicFilters() {
                     
                     const selectItem = document.createElement('div');
                     selectItem.className = 'select-section-item';
-                    selectItem.innerHTML = `
-                        <br>
-                        <label class="select-label-style" for="filter-${field.fieldName}">${field.fieldLabel}:</label>
-                        <select id="filter-${field.fieldName}" name="${field.fieldName}" multiple>
-                        </select>
-                    `;
-                    filterForm.appendChild(selectItem);
+                    selectItem.appendChild(document.createElement('br'));
                     
-                    const select = selectItem.querySelector('select');
-                    if (!select) {
-                        console.error('Select not found for field:', field.fieldName);
-                        return;
-                    }
+                    const label = document.createElement('label');
+                    label.className = 'select-label-style';
+                    label.setAttribute('for', `filter-${field.fieldName}`);
+                    label.textContent = field.fieldLabel + ':';
+                    selectItem.appendChild(label);
+                    
+                    const select = document.createElement('select');
+                    select.id = `filter-${field.fieldName}`;
+                    select.name = field.fieldName;
+                    select.multiple = true;
+                    selectItem.appendChild(select);
+                    
+                    filterForm.appendChild(selectItem);
 
                     if (field.listValues && field.listValues.length > 0) {
                         field.listValues.forEach(listValue => {
@@ -615,14 +617,21 @@ function buildDynamicFilters() {
                 } else if (field.fieldType === 'TEXT' || field.fieldType === 'PHONE') {
                     const selectItem = document.createElement('div');
                     selectItem.className = 'select-section-item';
-                    selectItem.innerHTML = `
-                        <br>
-                        <label class="select-label-style" for="filter-${field.fieldName}">${field.fieldLabel}:</label>
-                        <input type="text" 
-                               id="filter-${field.fieldName}" 
-                               name="${field.fieldName}" 
-                               placeholder="Пошук...">
-                    `;
+                    selectItem.appendChild(document.createElement('br'));
+                    
+                    const label = document.createElement('label');
+                    label.className = 'select-label-style';
+                    label.setAttribute('for', `filter-${field.fieldName}`);
+                    label.textContent = field.fieldLabel + ':';
+                    selectItem.appendChild(label);
+                    
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.id = `filter-${field.fieldName}`;
+                    input.name = field.fieldName;
+                    input.placeholder = 'Пошук...';
+                    selectItem.appendChild(input);
+                    
                     filterForm.appendChild(selectItem);
                 } else if (field.fieldType === 'BOOLEAN') {
                     const selectItem = document.createElement('div');
@@ -689,6 +698,13 @@ const findNameByIdFromMap = (map, id) => {
 
     return name || '';
 };
+
+function escapeHtml(text) {
+    if (text == null) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
 
 function createEmptyCellSpan() {
     const emptySpan = document.createElement('span');
@@ -1004,20 +1020,24 @@ function formatFieldValueForModal(fieldValue, field) {
     
     switch (field.fieldType) {
         case 'TEXT':
-            return fieldValue.valueText || '';
+            return escapeHtml(fieldValue.valueText || '');
         case 'PHONE':
             const phone = fieldValue.valueText || '';
-            return phone ? `<a href="tel:${phone}">${phone}</a>` : '';
+            if (phone) {
+                const escapedPhone = escapeHtml(phone);
+                return `<a href="tel:${escapedPhone}">${escapedPhone}</a>`;
+            }
+            return '';
         case 'NUMBER':
-            return fieldValue.valueNumber || '';
+            return escapeHtml(String(fieldValue.valueNumber || ''));
         case 'DATE':
-            return fieldValue.valueDate || '';
+            return escapeHtml(fieldValue.valueDate || '');
         case 'BOOLEAN':
             if (fieldValue.valueBoolean === true) return 'Так';
             if (fieldValue.valueBoolean === false) return 'Ні';
             return '';
         case 'LIST':
-            return fieldValue.valueListValue || '';
+            return escapeHtml(fieldValue.valueListValue || '');
         default:
             return '';
     }
@@ -1189,19 +1209,36 @@ async function showClientModal(client) {
             }
             
             const canEdit = canEditClient(client);
-            const editButtonHtml = canEdit ? `
-                <button class="edit-icon" onclick="enableEditField(${field.id}, '${field.fieldType}', ${field.allowMultiple || false})" data-field-id="${field.id}" title="Редагувати">
+            
+            const strong = document.createElement('strong');
+            strong.textContent = field.fieldLabel + ':';
+            fieldP.appendChild(strong);
+            
+            const valueSpan = document.createElement('span');
+            valueSpan.id = `modal-field-${field.id}`;
+            if (!fieldValue) {
+                valueSpan.classList.add('empty-value');
+            }
+            if (fieldValue) {
+                valueSpan.innerHTML = fieldValue;
+            } else {
+                valueSpan.textContent = '—';
+            }
+            fieldP.appendChild(valueSpan);
+            
+            if (canEdit) {
+                const editButton = document.createElement('button');
+                editButton.className = 'edit-icon';
+                editButton.setAttribute('onclick', `enableEditField(${field.id}, '${escapeHtml(field.fieldType)}', ${field.allowMultiple || false})`);
+                editButton.setAttribute('data-field-id', field.id);
+                editButton.setAttribute('title', 'Редагувати');
+                editButton.innerHTML = `
                     <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                         <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
                     </svg>
-                </button>
-            ` : '';
-            
-            fieldP.innerHTML = `
-                <strong>${field.fieldLabel}:</strong>
-                <span id="modal-field-${field.id}" class="${!fieldValue ? 'empty-value' : ''}">${fieldValue || '—'}</span>
-                ${editButtonHtml}
-            `;
+                `;
+                fieldP.appendChild(editButton);
+            }
             fieldP.setAttribute('data-field-type', field.fieldType);
 
             lastInsertedElement.insertAdjacentElement('afterend', fieldP);
@@ -1276,18 +1313,29 @@ async function showClientModal(client) {
         modal.classList.add('open');
     }, 10);
 
-    document.getElementById('close-modal-client').addEventListener('click', () => {
-        if (!editing) {
-            modal.classList.remove('open');
-            setTimeout(() => {
-                closeModal();
-            });
-        } else {
-            showMessage('Збережіть або відмініть зміни', 'error');
+    const closeModalBtn = document.getElementById('close-modal-client');
+    if (closeModalBtn) {
+        if (closeModalBtn._closeHandler) {
+            closeModalBtn.removeEventListener('click', closeModalBtn._closeHandler);
         }
-    });
+        const handleClose = () => {
+            if (!editing) {
+                modal.classList.remove('open');
+                setTimeout(() => {
+                    closeModal();
+                });
+            } else {
+                showMessage('Збережіть або відмініть зміни', 'error');
+            }
+        };
+        closeModalBtn._closeHandler = handleClose;
+        closeModalBtn.addEventListener('click', handleClose);
+    }
 
-    window.onclick = function (event) {
+    if (modal._modalClickHandler) {
+        modal.removeEventListener('click', modal._modalClickHandler);
+    }
+    const handleModalClick = function (event) {
         if (event.target === modal) {
             if (!editing) {
                 closeModal();
@@ -1295,7 +1343,9 @@ async function showClientModal(client) {
                 showMessage('Збережіть або відмініть зміни', 'error');
             }
         }
-    }
+    };
+    modal._modalClickHandler = handleModalClick;
+    modal.addEventListener('click', handleModalClick);
 
     const fullDeleteButton = document.getElementById('full-delete-client');
     if (fullDeleteButton) {
@@ -1437,16 +1487,18 @@ btn.onclick = function () {
     }, 10);
 };
 
-span.onclick = function () {
-    modal.classList.remove('show');
-    modal.classList.add('hide');
-    setTimeout(() => {
-        modal.style.display = "none";
-        resetForm();
-    }, 300);
-};
+if (span) {
+    span.onclick = function () {
+        modal.classList.remove('show');
+        modal.classList.add('hide');
+        setTimeout(() => {
+            modal.style.display = "none";
+            resetForm();
+        }, 300);
+    };
+}
 
-window.onclick = function (event) {
+const handleCreateModalClick = function (event) {
     if (event.target === modal) {
         modal.classList.remove('show');
         modal.classList.add('hide');
@@ -1456,14 +1508,8 @@ window.onclick = function (event) {
         }, 300);
     }
 };
-
-
-window.onclick = function (event) {
-    if (event.target === modal) {
-        modal.style.display = "none";
-        resetForm();
-    }
-}
+modal.removeEventListener('click', handleCreateModalClick);
+modal.addEventListener('click', handleCreateModalClick);
 
 function buildDynamicCreateForm() {
     if (!currentClientTypeId) {
@@ -1705,10 +1751,14 @@ function buildDynamicCreateForm() {
 
     const companyInput = document.getElementById('company');
     if (companyInput) {
+        if (companyInput._validateHandler) {
+            companyInput.removeEventListener('input', companyInput._validateHandler);
+        }
         const validateForm = () => {
             const isCompanyFilled = companyInput.value.trim() !== '';
             submitButton.disabled = !isCompanyFilled;
         };
+        companyInput._validateHandler = validateForm;
         companyInput.addEventListener('input', validateForm);
         validateForm();
     }
@@ -2270,20 +2320,33 @@ async function showClientTypeSelectionModal() {
         const accessibleClientTypes = allClientTypes.filter(type => accessibleClientTypeIds.has(type.id));
         
         if (accessibleClientTypes.length === 0) {
-            listContainer.innerHTML = '<p style="text-align: center; color: var(--main-grey); padding: 2em;">Немає доступних типів клієнтів</p>';
+            const emptyMessage = document.createElement('p');
+            emptyMessage.style.textAlign = 'center';
+            emptyMessage.style.color = 'var(--main-grey)';
+            emptyMessage.style.padding = '2em';
+            emptyMessage.textContent = 'Немає доступних типів клієнтів';
+            listContainer.textContent = '';
+            listContainer.appendChild(emptyMessage);
             modal.style.display = 'flex';
         } else if (accessibleClientTypes.length === 1) {
             window.location.href = `/routes?type=${accessibleClientTypes[0].id}`;
             return;
     } else {
-            listContainer.innerHTML = '';
+            listContainer.textContent = '';
             accessibleClientTypes.forEach(type => {
                 const card = document.createElement('div');
                 card.className = 'client-type-card';
-                card.innerHTML = `
-                    <div class="client-type-card-icon">👥</div>
-                    <div class="client-type-card-name">${type.name}</div>
-                `;
+                
+                const iconDiv = document.createElement('div');
+                iconDiv.className = 'client-type-card-icon';
+                iconDiv.textContent = '👥';
+                card.appendChild(iconDiv);
+                
+                const nameDiv = document.createElement('div');
+                nameDiv.className = 'client-type-card-name';
+                nameDiv.textContent = type.name;
+                card.appendChild(nameDiv);
+                
                 card.addEventListener('click', () => {
                     window.location.href = `/routes?type=${type.id}`;
                 });
@@ -2294,16 +2357,26 @@ async function showClientTypeSelectionModal() {
 
         const closeBtn = document.querySelector('.close-client-type-modal');
         if (closeBtn) {
-            closeBtn.addEventListener('click', () => {
+            if (closeBtn._closeTypeModalHandler) {
+                closeBtn.removeEventListener('click', closeBtn._closeTypeModalHandler);
+            }
+            const closeHandler = () => {
                 modal.style.display = 'none';
-            });
+            };
+            closeBtn._closeTypeModalHandler = closeHandler;
+            closeBtn.addEventListener('click', closeHandler);
         }
         
-        modal.addEventListener('click', (e) => {
+        if (modal._typeModalClickHandler) {
+            modal.removeEventListener('click', modal._typeModalClickHandler);
+        }
+        const modalClickHandler = (e) => {
             if (e.target === modal) {
                 modal.style.display = 'none';
             }
-        });
+        };
+        modal._typeModalClickHandler = modalClickHandler;
+        modal.addEventListener('click', modalClickHandler);
     } catch (error) {
         console.error('Error loading client types:', error);
     }
@@ -2321,11 +2394,22 @@ async function updateNavigationWithCurrentType(typeId) {
         const navLink = document.querySelector('#nav-routes a');
         
         if (navLink && clientType.name) {
-            navLink.innerHTML = `
-                <span class="nav-client-type-label">Маршрути:</span>
-                <span class="nav-client-type-name">${clientType.name}</span>
-                <span class="dropdown-arrow">▼</span>
-            `;
+            navLink.textContent = '';
+            
+            const labelSpan = document.createElement('span');
+            labelSpan.className = 'nav-client-type-label';
+            labelSpan.textContent = 'Маршрути:';
+            navLink.appendChild(labelSpan);
+            
+            const nameSpan = document.createElement('span');
+            nameSpan.className = 'nav-client-type-name';
+            nameSpan.textContent = clientType.name;
+            navLink.appendChild(nameSpan);
+            
+            const arrowSpan = document.createElement('span');
+            arrowSpan.className = 'dropdown-arrow';
+            arrowSpan.textContent = '▼';
+            navLink.appendChild(arrowSpan);
         }
 
         const dropdown = document.getElementById('route-types-dropdown');
@@ -2623,16 +2707,25 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
-    window.addEventListener('click', (e) => {
-        const purchaseModal = document.getElementById('createPurchaseModal');
-        const containerModal = document.getElementById('createContainerModal');
-        if (e.target === purchaseModal) {
-            purchaseModal.style.display = 'none';
+    const handlePurchaseModalClick = (e) => {
+        if (e.target === createPurchaseModal) {
+            createPurchaseModal.style.display = 'none';
         }
-        if (e.target === containerModal) {
-            containerModal.style.display = 'none';
+    };
+    const handleContainerModalClick = (e) => {
+        if (e.target === createContainerModal) {
+            createContainerModal.style.display = 'none';
         }
-    });
+    };
+    
+    if (createPurchaseModal) {
+        createPurchaseModal.removeEventListener('click', handlePurchaseModalClick);
+        createPurchaseModal.addEventListener('click', handlePurchaseModalClick);
+    }
+    if (createContainerModal) {
+        createContainerModal.removeEventListener('click', handleContainerModalClick);
+        createContainerModal.addEventListener('click', handleContainerModalClick);
+    }
 });
 
 async function loadContainers() {
@@ -2679,7 +2772,3 @@ async function openCreateContainerModal(clientId) {
     
     modal.style.display = 'flex';
 }
-
-
-
-

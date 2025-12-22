@@ -1,3 +1,10 @@
+function escapeHtml(text) {
+    if (text == null) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
 let productMap = new Map();
 let warehouseMap = new Map();
 let carrierMap = new Map();
@@ -68,7 +75,11 @@ async function fetchCarriers() {
 function populateCarriers(selectId) {
     const select = document.getElementById(selectId);
     if (!select) return;
-    select.innerHTML = '<option value="">Оберіть перевізника</option>';
+    select.textContent = '';
+    const defaultOption = document.createElement('option');
+    defaultOption.value = '';
+    defaultOption.textContent = 'Оберіть перевізника';
+    select.appendChild(defaultOption);
     for (const [id, carrier] of carrierMap.entries()) {
         const option = document.createElement('option');
         option.value = id;
@@ -108,6 +119,63 @@ const editVehicleItemForm = document.getElementById('edit-vehicle-item-form');
 const editVehicleItemQuantityInput = document.getElementById('edit-vehicle-item-quantity');
 const editVehicleItemTotalCostInput = document.getElementById('edit-vehicle-item-total-cost');
 const editVehicleItemModeRadios = document.querySelectorAll('input[name="edit-vehicle-item-mode"]');
+
+const vehiclesTbody = document.getElementById('vehicles-tbody');
+const vehiclesCount = document.getElementById('vehicles-count');
+const vehiclesTable = document.getElementById('vehicles-table');
+const vehiclesPagination = document.getElementById('vehicles-pagination');
+const vehiclesSearchInput = document.getElementById('vehicles-search-input');
+
+const vehicleVehicleNumber = document.getElementById('vehicle-vehicle-number');
+const vehicleInvoiceUa = document.getElementById('vehicle-invoice-ua');
+const vehicleInvoiceEu = document.getElementById('vehicle-invoice-eu');
+const vehicleDescription = document.getElementById('vehicle-description');
+const vehicleSender = document.getElementById('vehicle-sender');
+const vehicleReceiver = document.getElementById('vehicle-receiver');
+const vehicleDestinationCountry = document.getElementById('vehicle-destination-country');
+const vehicleDestinationPlace = document.getElementById('vehicle-destination-place');
+const vehicleProduct = document.getElementById('vehicle-product');
+const vehicleProductQuantity = document.getElementById('vehicle-product-quantity');
+const vehicleDeclarationNumber = document.getElementById('vehicle-declaration-number');
+const vehicleTerminal = document.getElementById('vehicle-terminal');
+const vehicleDriverFullName = document.getElementById('vehicle-driver-full-name');
+const vehicleEur1 = document.getElementById('vehicle-eur1');
+const vehicleFito = document.getElementById('vehicle-fito');
+const vehicleCustomsDate = document.getElementById('vehicle-customs-date');
+const vehicleCustomsClearanceDate = document.getElementById('vehicle-customs-clearance-date');
+const vehicleUnloadingDate = document.getElementById('vehicle-unloading-date');
+const vehicleIsOurVehicle = document.getElementById('vehicle-is-our-vehicle');
+const vehicleCarrierId = document.getElementById('vehicle-carrier-id');
+
+const vehiclesDateFromFilter = document.getElementById('vehicles-date-from-filter');
+const vehiclesDateToFilter = document.getElementById('vehicles-date-to-filter');
+const vehiclesCustomsDateFromFilter = document.getElementById('vehicles-customs-date-from-filter');
+const vehiclesCustomsDateToFilter = document.getElementById('vehicles-customs-date-to-filter');
+const vehiclesCustomsClearanceDateFromFilter = document.getElementById('vehicles-customs-clearance-date-from-filter');
+const vehiclesCustomsClearanceDateToFilter = document.getElementById('vehicles-customs-clearance-date-to-filter');
+const vehiclesUnloadingDateFromFilter = document.getElementById('vehicles-unloading-date-from-filter');
+const vehiclesUnloadingDateToFilter = document.getElementById('vehicles-unloading-date-to-filter');
+const vehiclesIsOurVehicleFilter = document.getElementById('vehicles-is-our-vehicle-filter');
+
+const vehicleItemsTbody = document.getElementById('vehicle-items-tbody');
+const vehicleTotalCost = document.getElementById('vehicle-total-cost');
+
+const carrierForm = document.getElementById('carrier-form');
+const carrierId = document.getElementById('carrier-id');
+const carrierCompanyName = document.getElementById('carrier-company-name');
+const carrierRegistrationAddress = document.getElementById('carrier-registration-address');
+const carrierPhoneNumber = document.getElementById('carrier-phone-number');
+const carrierCode = document.getElementById('carrier-code');
+const carrierAccount = document.getElementById('carrier-account');
+const carrierFormTitle = document.getElementById('carrier-form-title');
+
+const expenseFromAccount = document.getElementById('expense-from-account');
+const expenseCategory = document.getElementById('expense-category');
+const expenseAmount = document.getElementById('expense-amount');
+const expenseCurrency = document.getElementById('expense-currency');
+const expenseDescription = document.getElementById('expense-description');
+const createVehicleExpenseForm = document.getElementById('create-vehicle-expense-form');
+const vehicleExpensesTbody = document.getElementById('vehicle-expenses-tbody');
 
 let currentVehicleId = null;
 let vehiclesCache = [];
@@ -238,28 +306,28 @@ if (createVehicleForm) {
     createVehicleForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         
-        const carrierIdValue = document.getElementById('vehicle-carrier-id').value;
+        const carrierIdValue = vehicleCarrierId?.value;
         const vehicleData = {
-            vehicleNumber: document.getElementById('vehicle-vehicle-number').value,
-            invoiceUa: document.getElementById('vehicle-invoice-ua').value,
-            invoiceEu: document.getElementById('vehicle-invoice-eu').value,
-            description: document.getElementById('vehicle-description').value,
-            sender: document.getElementById('vehicle-sender').value,
-            receiver: document.getElementById('vehicle-receiver').value,
-            destinationCountry: document.getElementById('vehicle-destination-country').value,
-            destinationPlace: document.getElementById('vehicle-destination-place').value,
-            product: document.getElementById('vehicle-product').value,
-            productQuantity: document.getElementById('vehicle-product-quantity').value,
-            declarationNumber: document.getElementById('vehicle-declaration-number').value,
-            terminal: document.getElementById('vehicle-terminal').value,
-            driverFullName: document.getElementById('vehicle-driver-full-name').value,
-            eur1: document.getElementById('vehicle-eur1').checked,
-            fito: document.getElementById('vehicle-fito').checked,
-            customsDate: document.getElementById('vehicle-customs-date').value || null,
-            customsClearanceDate: document.getElementById('vehicle-customs-clearance-date').value || null,
-            unloadingDate: document.getElementById('vehicle-unloading-date').value || null,
+            vehicleNumber: vehicleVehicleNumber?.value || '',
+            invoiceUa: vehicleInvoiceUa?.value || '',
+            invoiceEu: vehicleInvoiceEu?.value || '',
+            description: vehicleDescription?.value || '',
+            sender: vehicleSender?.value || '',
+            receiver: vehicleReceiver?.value || '',
+            destinationCountry: vehicleDestinationCountry?.value || '',
+            destinationPlace: vehicleDestinationPlace?.value || '',
+            product: vehicleProduct?.value || '',
+            productQuantity: vehicleProductQuantity?.value || '',
+            declarationNumber: vehicleDeclarationNumber?.value || '',
+            terminal: vehicleTerminal?.value || '',
+            driverFullName: vehicleDriverFullName?.value || '',
+            eur1: vehicleEur1?.checked || false,
+            fito: vehicleFito?.checked || false,
+            customsDate: vehicleCustomsDate?.value || null,
+            customsClearanceDate: vehicleCustomsClearanceDate?.value || null,
+            unloadingDate: vehicleUnloadingDate?.value || null,
             carrierId: carrierIdValue ? Number(carrierIdValue) : null,
-            isOurVehicle: document.getElementById('vehicle-is-our-vehicle').checked
+            isOurVehicle: vehicleIsOurVehicle?.checked || false
         };
         
         try {
@@ -278,7 +346,7 @@ if (createVehicleForm) {
             showMessage('Машину успішно створено', 'success');
             
             closeModal('create-vehicle-modal');
-            document.getElementById('create-vehicle-form')?.reset();
+            createVehicleForm?.reset();
             
             await loadVehicles(0);
         } catch (error) {
@@ -291,8 +359,8 @@ if (createVehicleForm) {
 function buildFilters() {
     const filters = {};
     
-    const dateFrom = document.getElementById('vehicles-date-from-filter')?.value;
-    const dateTo = document.getElementById('vehicles-date-to-filter')?.value;
+    const dateFrom = vehiclesDateFromFilter?.value;
+    const dateTo = vehiclesDateToFilter?.value;
     if (dateFrom) {
         filters.shipmentDateFrom = [dateFrom];
     }
@@ -300,13 +368,13 @@ function buildFilters() {
         filters.shipmentDateTo = [dateTo];
     }
     
-    const isOurVehicleFilter = document.getElementById('vehicles-is-our-vehicle-filter')?.checked;
+    const isOurVehicleFilter = vehiclesIsOurVehicleFilter?.checked;
     if (isOurVehicleFilter !== undefined && isOurVehicleFilter) {
         filters.isOurVehicle = ['true'];
     }
     
-    const customsDateFrom = document.getElementById('vehicles-customs-date-from-filter')?.value;
-    const customsDateTo = document.getElementById('vehicles-customs-date-to-filter')?.value;
+    const customsDateFrom = vehiclesCustomsDateFromFilter?.value;
+    const customsDateTo = vehiclesCustomsDateToFilter?.value;
     if (customsDateFrom) {
         filters.customsDateFrom = [customsDateFrom];
     }
@@ -314,8 +382,8 @@ function buildFilters() {
         filters.customsDateTo = [customsDateTo];
     }
     
-    const customsClearanceDateFrom = document.getElementById('vehicles-customs-clearance-date-from-filter')?.value;
-    const customsClearanceDateTo = document.getElementById('vehicles-customs-clearance-date-to-filter')?.value;
+    const customsClearanceDateFrom = vehiclesCustomsClearanceDateFromFilter?.value;
+    const customsClearanceDateTo = vehiclesCustomsClearanceDateToFilter?.value;
     if (customsClearanceDateFrom) {
         filters.customsClearanceDateFrom = [customsClearanceDateFrom];
     }
@@ -323,8 +391,8 @@ function buildFilters() {
         filters.customsClearanceDateTo = [customsClearanceDateTo];
     }
     
-    const unloadingDateFrom = document.getElementById('vehicles-unloading-date-from-filter')?.value;
-    const unloadingDateTo = document.getElementById('vehicles-unloading-date-to-filter')?.value;
+    const unloadingDateFrom = vehiclesUnloadingDateFromFilter?.value;
+    const unloadingDateTo = vehiclesUnloadingDateToFilter?.value;
     if (unloadingDateFrom) {
         filters.unloadingDateFrom = [unloadingDateFrom];
     }
@@ -338,7 +406,7 @@ function buildFilters() {
 async function loadVehicles(page = 0) {
     currentPage = page;
     
-    const searchTerm = document.getElementById('vehicles-search-input')?.value || '';
+    const searchTerm = vehiclesSearchInput?.value || '';
     const filters = buildFilters();
     const filtersJson = Object.keys(filters).length > 0 ? JSON.stringify(filters) : '';
     
@@ -370,64 +438,126 @@ async function loadVehicles(page = 0) {
         console.error('Error loading vehicles:', error);
         showMessage('Помилка завантаження машин', 'error');
         
-        const tbody = document.getElementById('vehicles-tbody');
-        if (tbody) {
-            tbody.innerHTML = '<tr class="loading-row"><td colspan="21" style="text-align: center; color: var(--text-muted);">Помилка завантаження даних</td></tr>';
+        if (vehiclesTbody) {
+            vehiclesTbody.textContent = '';
+            const row = document.createElement('tr');
+            row.className = 'loading-row';
+            const cell = document.createElement('td');
+            cell.colSpan = 21;
+            cell.style.textAlign = 'center';
+            cell.style.color = 'var(--text-muted)';
+            cell.textContent = 'Помилка завантаження даних';
+            row.appendChild(cell);
+            vehiclesTbody.appendChild(row);
         }
     }
 }
 
 function renderPagination() {
-    const paginationContainer = document.getElementById('vehicles-pagination');
-    if (!paginationContainer) return;
+    if (!vehiclesPagination) return;
     
     if (totalPages <= 1) {
-        paginationContainer.innerHTML = '';
+        vehiclesPagination.textContent = '';
         return;
     }
     
-    let paginationHTML = '<div class="pagination">';
+    vehiclesPagination.textContent = '';
+    const paginationDiv = document.createElement('div');
+    paginationDiv.className = 'pagination';
     
-    paginationHTML += `<button class="pagination-btn" ${currentPage === 0 ? 'disabled' : ''} onclick="loadVehicles(0)">
-        <span>«</span>
-    </button>`;
+    const firstBtn = document.createElement('button');
+    firstBtn.className = 'pagination-btn';
+    firstBtn.disabled = currentPage === 0;
+    const firstSpan = document.createElement('span');
+    firstSpan.textContent = '«';
+    firstBtn.appendChild(firstSpan);
+    const firstBtnHandler = () => loadVehicles(0);
+    firstBtn.addEventListener('click', firstBtnHandler);
+    firstBtn._clickHandler = firstBtnHandler;
+    paginationDiv.appendChild(firstBtn);
     
-    paginationHTML += `<button class="pagination-btn" ${currentPage === 0 ? 'disabled' : ''} onclick="loadVehicles(${currentPage - 1})">
-        <span>‹</span>
-    </button>`;
+    const prevBtn = document.createElement('button');
+    prevBtn.className = 'pagination-btn';
+    prevBtn.disabled = currentPage === 0;
+    const prevSpan = document.createElement('span');
+    prevSpan.textContent = '‹';
+    prevBtn.appendChild(prevSpan);
+    const prevBtnHandler = () => loadVehicles(currentPage - 1);
+    prevBtn.addEventListener('click', prevBtnHandler);
+    prevBtn._clickHandler = prevBtnHandler;
+    paginationDiv.appendChild(prevBtn);
     
     const startPage = Math.max(0, currentPage - 2);
     const endPage = Math.min(totalPages - 1, currentPage + 2);
     
     if (startPage > 0) {
-        paginationHTML += `<button class="pagination-btn" onclick="loadVehicles(0)">1</button>`;
+        const firstPageBtn = document.createElement('button');
+        firstPageBtn.className = 'pagination-btn';
+        firstPageBtn.textContent = '1';
+        const firstPageBtnHandler = () => loadVehicles(0);
+        firstPageBtn.addEventListener('click', firstPageBtnHandler);
+        firstPageBtn._clickHandler = firstPageBtnHandler;
+        paginationDiv.appendChild(firstPageBtn);
         if (startPage > 1) {
-            paginationHTML += `<span class="pagination-ellipsis">...</span>`;
+            const ellipsis1 = document.createElement('span');
+            ellipsis1.className = 'pagination-ellipsis';
+            ellipsis1.textContent = '...';
+            paginationDiv.appendChild(ellipsis1);
         }
     }
     
     for (let i = startPage; i <= endPage; i++) {
-        paginationHTML += `<button class="pagination-btn ${i === currentPage ? 'active' : ''}" onclick="loadVehicles(${i})">${i + 1}</button>`;
+        const pageBtn = document.createElement('button');
+        pageBtn.className = 'pagination-btn';
+        if (i === currentPage) {
+            pageBtn.classList.add('active');
+        }
+        pageBtn.textContent = (i + 1).toString();
+        const pageBtnHandler = () => loadVehicles(i);
+        pageBtn.addEventListener('click', pageBtnHandler);
+        pageBtn._clickHandler = pageBtnHandler;
+        paginationDiv.appendChild(pageBtn);
     }
     
     if (endPage < totalPages - 1) {
         if (endPage < totalPages - 2) {
-            paginationHTML += `<span class="pagination-ellipsis">...</span>`;
+            const ellipsis2 = document.createElement('span');
+            ellipsis2.className = 'pagination-ellipsis';
+            ellipsis2.textContent = '...';
+            paginationDiv.appendChild(ellipsis2);
         }
-        paginationHTML += `<button class="pagination-btn" onclick="loadVehicles(${totalPages - 1})">${totalPages}</button>`;
+        const lastPageBtn = document.createElement('button');
+        lastPageBtn.className = 'pagination-btn';
+        lastPageBtn.textContent = totalPages.toString();
+        const lastPageBtnHandler = () => loadVehicles(totalPages - 1);
+        lastPageBtn.addEventListener('click', lastPageBtnHandler);
+        lastPageBtn._clickHandler = lastPageBtnHandler;
+        paginationDiv.appendChild(lastPageBtn);
     }
     
-    paginationHTML += `<button class="pagination-btn" ${currentPage >= totalPages - 1 ? 'disabled' : ''} onclick="loadVehicles(${currentPage + 1})">
-        <span>›</span>
-    </button>`;
+    const nextBtn = document.createElement('button');
+    nextBtn.className = 'pagination-btn';
+    nextBtn.disabled = currentPage >= totalPages - 1;
+    const nextSpan = document.createElement('span');
+    nextSpan.textContent = '›';
+    nextBtn.appendChild(nextSpan);
+    const nextBtnHandler = () => loadVehicles(currentPage + 1);
+    nextBtn.addEventListener('click', nextBtnHandler);
+    nextBtn._clickHandler = nextBtnHandler;
+    paginationDiv.appendChild(nextBtn);
     
-    paginationHTML += `<button class="pagination-btn" ${currentPage >= totalPages - 1 ? 'disabled' : ''} onclick="loadVehicles(${totalPages - 1})">
-        <span>»</span>
-    </button>`;
+    const lastBtn = document.createElement('button');
+    lastBtn.className = 'pagination-btn';
+    lastBtn.disabled = currentPage >= totalPages - 1;
+    const lastSpan = document.createElement('span');
+    lastSpan.textContent = '»';
+    lastBtn.appendChild(lastSpan);
+    const lastBtnHandler = () => loadVehicles(totalPages - 1);
+    lastBtn.addEventListener('click', lastBtnHandler);
+    lastBtn._clickHandler = lastBtnHandler;
+    paginationDiv.appendChild(lastBtn);
     
-    paginationHTML += '</div>';
-    
-    paginationContainer.innerHTML = paginationHTML;
+    vehiclesPagination.appendChild(paginationDiv);
 }
 
 function formatDate(dateString) {
@@ -444,67 +574,88 @@ function formatCarrier(carrier) {
 }
 
 function renderVehicles(vehicles) {
-    const tbody = document.getElementById('vehicles-tbody');
-    const countElement = document.getElementById('vehicles-count');
-    
-    if (!tbody) {
+    if (!vehiclesTbody) {
         return;
     }
     
-    if (countElement) {
+    if (vehiclesCount) {
         const start = currentPage * pageSize + 1;
         const end = Math.min((currentPage + 1) * pageSize, totalElements);
-        countElement.textContent = totalElements > 0 
+        vehiclesCount.textContent = totalElements > 0 
             ? `Показано ${start}-${end} з ${totalElements} ${totalElements === 1 ? 'машини' : 'машин'}`
             : '0 машин';
     }
     
     if (!vehicles || vehicles.length === 0) {
-        tbody.innerHTML = '<tr class="loading-row"><td colspan="21" style="text-align: center; color: var(--text-muted);">Немає даних</td></tr>';
+        vehiclesTbody.textContent = '';
+        const row = document.createElement('tr');
+        row.className = 'loading-row';
+        const cell = document.createElement('td');
+        cell.colSpan = 21;
+        cell.style.textAlign = 'center';
+        cell.style.color = 'var(--text-muted)';
+        cell.textContent = 'Немає даних';
+        row.appendChild(cell);
+        vehiclesTbody.appendChild(row);
         return;
     }
     
-    tbody.innerHTML = vehicles.map(vehicle => `
-        <tr onclick="viewVehicleDetails(${vehicle.id})">
-            <td data-label="Загальна вартість" style="font-weight: 600; color: var(--primary);">${formatNumber(vehicle.totalCostEur, 2)} EUR</td>
-            <td data-label="Дата відвантаження">${formatDate(vehicle.shipmentDate)}</td>
-            <td data-label="Номер машини">${vehicle.vehicleNumber || '-'}</td>
-            <td data-label="Інвойс УА">${vehicle.invoiceUa || '-'}</td>
-            <td data-label="Інвойс ЄС">${vehicle.invoiceEu || '-'}</td>
-            <td data-label="Наше завантаження">${formatBoolean(vehicle.isOurVehicle)}</td>
-            <td data-label="Відправник">${vehicle.sender || '-'}</td>
-            <td data-label="Отримувач">${vehicle.receiver || '-'}</td>
-            <td data-label="Країна призначення">${vehicle.destinationCountry || '-'}</td>
-            <td data-label="Місце призначення">${vehicle.destinationPlace || '-'}</td>
-            <td data-label="Товар">${vehicle.product || '-'}</td>
-            <td data-label="Кількість товару">${vehicle.productQuantity || '-'}</td>
-            <td data-label="Номер декларації">${vehicle.declarationNumber || '-'}</td>
-            <td data-label="Термінал">${vehicle.terminal || '-'}</td>
-            <td data-label="Водій (ПІБ)">${vehicle.driverFullName || '-'}</td>
-            <td data-label="EUR1">${formatBoolean(vehicle.eur1)}</td>
-            <td data-label="FITO">${formatBoolean(vehicle.fito)}</td>
-            <td data-label="Дата митниці">${formatDate(vehicle.customsDate)}</td>
-            <td data-label="Дата розмитнення">${formatDate(vehicle.customsClearanceDate)}</td>
-            <td data-label="Дата вивантаження">${formatDate(vehicle.unloadingDate)}</td>
-            <td data-label="Перевізник">${formatCarrier(vehicle.carrier)}</td>
-            <td data-label="Коментар">${vehicle.description || '-'}</td>
-        </tr>
-    `).join('');
+    vehiclesTbody.textContent = '';
+    vehicles.forEach(vehicle => {
+        const row = document.createElement('tr');
+        const rowClickHandler = () => viewVehicleDetails(vehicle.id);
+        row.addEventListener('click', rowClickHandler);
+        row._clickHandler = rowClickHandler;
+        
+        const createCell = (text, label, style) => {
+            const cell = document.createElement('td');
+            cell.setAttribute('data-label', label);
+            if (style) {
+                Object.assign(cell.style, style);
+            }
+            cell.textContent = text;
+            return cell;
+        };
+        
+        row.appendChild(createCell(`${formatNumber(vehicle.totalCostEur, 2)} EUR`, 'Загальна вартість', { fontWeight: '600', color: 'var(--primary)' }));
+        row.appendChild(createCell(formatDate(vehicle.shipmentDate), 'Дата відвантаження'));
+        row.appendChild(createCell(vehicle.vehicleNumber || '-', 'Номер машини'));
+        row.appendChild(createCell(vehicle.invoiceUa || '-', 'Інвойс УА'));
+        row.appendChild(createCell(vehicle.invoiceEu || '-', 'Інвойс ЄС'));
+        row.appendChild(createCell(formatBoolean(vehicle.isOurVehicle), 'Наше завантаження'));
+        row.appendChild(createCell(vehicle.sender || '-', 'Відправник'));
+        row.appendChild(createCell(vehicle.receiver || '-', 'Отримувач'));
+        row.appendChild(createCell(vehicle.destinationCountry || '-', 'Країна призначення'));
+        row.appendChild(createCell(vehicle.destinationPlace || '-', 'Місце призначення'));
+        row.appendChild(createCell(vehicle.product || '-', 'Товар'));
+        row.appendChild(createCell(vehicle.productQuantity || '-', 'Кількість товару'));
+        row.appendChild(createCell(vehicle.declarationNumber || '-', 'Номер декларації'));
+        row.appendChild(createCell(vehicle.terminal || '-', 'Термінал'));
+        row.appendChild(createCell(vehicle.driverFullName || '-', 'Водій (ПІБ)'));
+        row.appendChild(createCell(formatBoolean(vehicle.eur1), 'EUR1'));
+        row.appendChild(createCell(formatBoolean(vehicle.fito), 'FITO'));
+        row.appendChild(createCell(formatDate(vehicle.customsDate), 'Дата митниці'));
+        row.appendChild(createCell(formatDate(vehicle.customsClearanceDate), 'Дата розмитнення'));
+        row.appendChild(createCell(formatDate(vehicle.unloadingDate), 'Дата вивантаження'));
+        row.appendChild(createCell(formatCarrier(vehicle.carrier), 'Перевізник'));
+        row.appendChild(createCell(vehicle.description || '-', 'Коментар'));
+        
+        vehiclesTbody.appendChild(row);
+    });
     
     applySavedColumnWidths();
     initializeColumnResize();
 }
 
 function applySavedColumnWidths() {
-    const table = document.getElementById('vehicles-table');
-    if (!table) return;
+    if (!vehiclesTable) return;
     
     // Don't apply column widths on mobile devices
     if (window.innerWidth <= 1024) {
         return;
     }
     
-    const headers = table.querySelectorAll('.resizable-header');
+    const headers = vehiclesTable.querySelectorAll('.resizable-header');
     headers.forEach(header => {
         const column = header.dataset.column;
         const savedWidth = localStorage.getItem(`vehicle-column-width-${column}`);
@@ -513,7 +664,7 @@ function applySavedColumnWidths() {
             header.style.minWidth = width + 'px';
             header.style.width = width + 'px';
             const index = Array.from(header.parentElement.children).indexOf(header);
-            const cells = table.querySelectorAll(`tbody tr td:nth-child(${index + 1})`);
+            const cells = vehiclesTable.querySelectorAll(`tbody tr td:nth-child(${index + 1})`);
             cells.forEach(cell => {
                 cell.style.minWidth = width + 'px';
                 cell.style.width = width + 'px';
@@ -542,7 +693,10 @@ async function viewVehicleDetails(vehicleId) {
         document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
         document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
         document.querySelector('.tab-btn[data-tab="info"]')?.classList.add('active');
-        document.getElementById('tab-info')?.classList.add('active');
+        const tabInfo = document.getElementById('tab-info');
+        if (tabInfo) {
+            tabInfo.classList.add('active');
+        }
         
         await loadVehicleExpenses(vehicleId);
         
@@ -558,12 +712,22 @@ function renderVehicleDetails(vehicle) {
     populateVehicleForm(vehicle);
     setVehicleFormEditable(false);
     
-    const itemsTbody = document.getElementById('vehicle-items-tbody');
+    if (!vehicleItemsTbody) return;
+    
+    vehicleItemsTbody.textContent = '';
     
     if (!vehicle.items || vehicle.items.length === 0) {
-        itemsTbody.innerHTML = '<tr class="loading-row"><td colspan="6" style="text-align: center; color: var(--text-muted);">Товари ще не додані</td></tr>';
+        const row = document.createElement('tr');
+        row.className = 'loading-row';
+        const cell = document.createElement('td');
+        cell.colSpan = 6;
+        cell.style.textAlign = 'center';
+        cell.style.color = 'var(--text-muted)';
+        cell.textContent = 'Товари ще не додані';
+        row.appendChild(cell);
+        vehicleItemsTbody.appendChild(row);
     } else {
-        itemsTbody.innerHTML = vehicle.items.map(item => {
+        vehicle.items.forEach(item => {
             const productName = findNameByIdFromMap(productMap, item.productId) || 'Невідомий товар';
             const warehouseName = findNameByIdFromMap(warehouseMap, item.warehouseId) || 'Невідомий склад';
 
@@ -573,20 +737,34 @@ function renderVehicleDetails(vehicle) {
                 warehouseName
             });
 
-            return `
-                <tr class="vehicle-item-row" data-item-id="${item.withdrawalId}">
-                    <td data-label="Товар">${productName}</td>
-                    <td data-label="Склад">${warehouseName}</td>
-                    <td data-label="Кількість">${formatNumber(item.quantity, 2)} кг</td>
-                    <td data-label="Ціна за кг" style="text-align: right;">${formatNumber(item.unitPriceEur, 6)} EUR</td>
-                    <td data-label="Загальна вартість" style="text-align: right; font-weight: 600; color: var(--primary);">${formatNumber(item.totalCostEur, 6)} EUR</td>
-                    <td data-label="Дата списання">${item.withdrawalDate || vehicle.shipmentDate}</td>
-                </tr>
-            `;
-        }).join('');
+            const row = document.createElement('tr');
+            row.className = 'vehicle-item-row';
+            row.setAttribute('data-item-id', item.withdrawalId.toString());
+            
+            const createCell = (text, label, style) => {
+                const cell = document.createElement('td');
+                cell.setAttribute('data-label', label);
+                if (style) {
+                    Object.assign(cell.style, style);
+                }
+                cell.textContent = text;
+                return cell;
+            };
+            
+            row.appendChild(createCell(productName, 'Товар'));
+            row.appendChild(createCell(warehouseName, 'Склад'));
+            row.appendChild(createCell(`${formatNumber(item.quantity, 2)} кг`, 'Кількість'));
+            row.appendChild(createCell(`${formatNumber(item.unitPriceEur, 6)} EUR`, 'Ціна за кг', { textAlign: 'right' }));
+            row.appendChild(createCell(`${formatNumber(item.totalCostEur, 6)} EUR`, 'Загальна вартість', { textAlign: 'right', fontWeight: '600', color: 'var(--primary)' }));
+            row.appendChild(createCell(item.withdrawalDate || vehicle.shipmentDate || '-', 'Дата списання'));
+            
+            vehicleItemsTbody.appendChild(row);
+        });
     }
     
-    document.getElementById('vehicle-total-cost').textContent = formatNumber(vehicle.totalCostEur, 2);
+    if (vehicleTotalCost) {
+        vehicleTotalCost.textContent = formatNumber(vehicle.totalCostEur, 2);
+    }
 }
 
 
@@ -628,30 +806,31 @@ document.getElementById('apply-vehicles-filters')?.addEventListener('click', asy
 });
 
 document.getElementById('clear-vehicles-filters')?.addEventListener('click', () => {
-    document.getElementById('vehicles-date-from-filter').value = '';
-    document.getElementById('vehicles-date-to-filter').value = '';
-    document.getElementById('vehicles-customs-date-from-filter').value = '';
-    document.getElementById('vehicles-customs-date-to-filter').value = '';
-    document.getElementById('vehicles-customs-clearance-date-from-filter').value = '';
-    document.getElementById('vehicles-customs-clearance-date-to-filter').value = '';
-    document.getElementById('vehicles-unloading-date-from-filter').value = '';
-    document.getElementById('vehicles-unloading-date-to-filter').value = '';
-    document.getElementById('vehicles-is-our-vehicle-filter').checked = false;
-    const searchInput = document.getElementById('vehicles-search-input');
-    if (searchInput) {
-        searchInput.value = '';
+    if (vehiclesDateFromFilter) vehiclesDateFromFilter.value = '';
+    if (vehiclesDateToFilter) vehiclesDateToFilter.value = '';
+    if (vehiclesCustomsDateFromFilter) vehiclesCustomsDateFromFilter.value = '';
+    if (vehiclesCustomsDateToFilter) vehiclesCustomsDateToFilter.value = '';
+    if (vehiclesCustomsClearanceDateFromFilter) vehiclesCustomsClearanceDateFromFilter.value = '';
+    if (vehiclesCustomsClearanceDateToFilter) vehiclesCustomsClearanceDateToFilter.value = '';
+    if (vehiclesUnloadingDateFromFilter) vehiclesUnloadingDateFromFilter.value = '';
+    if (vehiclesUnloadingDateToFilter) vehiclesUnloadingDateToFilter.value = '';
+    if (vehiclesIsOurVehicleFilter) vehiclesIsOurVehicleFilter.checked = false;
+    if (vehiclesSearchInput) {
+        vehiclesSearchInput.value = '';
     }
     setDefaultVehicleDates();
     loadVehicles(0);
 });
 
 let searchTimeout;
-document.getElementById('vehicles-search-input')?.addEventListener('input', () => {
-    clearTimeout(searchTimeout);
-    searchTimeout = setTimeout(() => {
-        loadVehicles(0);
-    }, 500);
-});
+if (vehiclesSearchInput) {
+    vehiclesSearchInput.addEventListener('input', () => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            loadVehicles(0);
+        }, 500);
+    });
+}
 
 document.getElementById('open-vehicles-filter-modal')?.addEventListener('click', () => {
     openModal('vehicles-filter-modal');
@@ -892,8 +1071,8 @@ function closeModal(modalId) {
     modal.classList.remove('open');
     document.body.classList.remove('modal-open');
     
-    if (modalId === 'create-vehicle-modal') {
-        document.getElementById('create-vehicle-form')?.reset();
+        if (modalId === 'create-vehicle-modal') {
+        createVehicleForm?.reset();
     } else if (modalId === 'vehicle-details-modal') {
         resetVehicleFormState();
     } else if (modalId === 'edit-vehicle-item-modal') {
@@ -903,26 +1082,59 @@ function closeModal(modalId) {
         currentVehicleItemId = null;
         updateVehicleItemMode();
     } else if (modalId === 'carrier-form-modal') {
-        document.getElementById('carrier-form')?.reset();
+        carrierForm?.reset();
     }
 }
 
 window.closeModal = closeModal;
 
-document.querySelectorAll('.modal-close').forEach(btn => {
-    btn.addEventListener('click', () => {
-        const modal = btn.closest('.modal-overlay');
-        if (modal) {
-            closeModal(modal.id);
-        }
-    });
-});
+function initializeModalClickHandlers() {
+    const modals = [
+        document.getElementById('vehicles-filter-modal'),
+        document.getElementById('create-vehicle-modal'),
+        document.getElementById('vehicle-details-modal'),
+        document.getElementById('create-vehicle-expense-modal'),
+        document.getElementById('edit-vehicle-item-modal'),
+        document.getElementById('manage-carriers-modal'),
+        document.getElementById('carrier-form-modal')
+    ];
 
-window.addEventListener('click', (e) => {
-    if (e.target.classList.contains('modal-overlay')) {
-        closeModal(e.target.id);
-    }
-});
+    modals.forEach(modal => {
+        if (!modal) return;
+
+        if (modal._modalClickHandler) {
+            modal.removeEventListener('click', modal._modalClickHandler);
+        }
+
+        modal._modalClickHandler = (e) => {
+            if (e.target === modal) {
+                if (modal.id === 'vehicles-filter-modal') {
+                    modal.classList.remove('open');
+                    document.body.classList.remove('modal-open');
+                } else {
+                    closeModal(modal.id);
+                }
+            }
+        };
+
+        modal.addEventListener('click', modal._modalClickHandler);
+    });
+
+    document.querySelectorAll('.modal-close').forEach(btn => {
+        if (btn._closeModalHandler) {
+            btn.removeEventListener('click', btn._closeModalHandler);
+        }
+
+        btn._closeModalHandler = () => {
+            const modal = btn.closest('.modal-overlay');
+            if (modal) {
+                closeModal(modal.id);
+            }
+        };
+
+        btn.addEventListener('click', btn._closeModalHandler);
+    });
+}
 
 document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -948,14 +1160,11 @@ function setDefaultVehicleDates() {
     const formattedToday = today.toISOString().split('T')[0];
     const formattedFrom = last30Days.toISOString().split('T')[0];
 
-    const fromInput = document.getElementById('vehicles-date-from-filter');
-    const toInput = document.getElementById('vehicles-date-to-filter');
-
-    if (fromInput && !fromInput.value) {
-        fromInput.value = formattedFrom;
+    if (vehiclesDateFromFilter && !vehiclesDateFromFilter.value) {
+        vehiclesDateFromFilter.value = formattedFrom;
     }
-    if (toInput && !toInput.value) {
-        toInput.value = formattedToday;
+    if (vehiclesDateToFilter && !vehiclesDateToFilter.value) {
+        vehiclesDateToFilter.value = formattedToday;
     }
 }
 
@@ -964,26 +1173,63 @@ async function loadCarriers() {
     const tbody = document.getElementById('carriers-tbody');
     if (!tbody) return;
     
+    tbody.textContent = '';
+    
     if (!carriers || carriers.length === 0) {
-        tbody.innerHTML = '<tr class="loading-row"><td colspan="6" style="text-align: center; color: var(--text-muted);">Немає перевізників</td></tr>';
+        const row = document.createElement('tr');
+        row.className = 'loading-row';
+        const cell = document.createElement('td');
+        cell.colSpan = 6;
+        cell.style.textAlign = 'center';
+        cell.style.color = 'var(--text-muted)';
+        cell.textContent = 'Немає перевізників';
+        row.appendChild(cell);
+        tbody.appendChild(row);
         return;
     }
     
-    tbody.innerHTML = carriers.map(carrier => `
-        <tr>
-            <td data-label="Назва компанії">${carrier.companyName || '-'}</td>
-            <td data-label="Адреса реєстрації">${carrier.registrationAddress || '-'}</td>
-            <td data-label="Телефон">${carrier.phoneNumber || '-'}</td>
-            <td data-label="Код">${carrier.code || '-'}</td>
-            <td data-label="Рахунок">${carrier.account || '-'}</td>
-            <td data-label="Дії">
-                <div class="action-buttons">
-                    <button class="btn btn-secondary btn-sm" onclick="editCarrier(${carrier.id})">✏️ Редагувати</button>
-                    <button class="btn btn-danger btn-sm" onclick="deleteCarrier(${carrier.id})">🗑️ Видалити</button>
-                </div>
-            </td>
-        </tr>
-    `).join('');
+    carriers.forEach(carrier => {
+        const row = document.createElement('tr');
+        
+        const createCell = (text, label) => {
+            const cell = document.createElement('td');
+            cell.setAttribute('data-label', label);
+            cell.textContent = text || '-';
+            return cell;
+        };
+        
+        row.appendChild(createCell(carrier.companyName, 'Назва компанії'));
+        row.appendChild(createCell(carrier.registrationAddress, 'Адреса реєстрації'));
+        row.appendChild(createCell(carrier.phoneNumber, 'Телефон'));
+        row.appendChild(createCell(carrier.code, 'Код'));
+        row.appendChild(createCell(carrier.account, 'Рахунок'));
+        
+        const actionsCell = document.createElement('td');
+        actionsCell.setAttribute('data-label', 'Дії');
+        const actionsDiv = document.createElement('div');
+        actionsDiv.className = 'action-buttons';
+        
+        const editBtn = document.createElement('button');
+        editBtn.className = 'btn btn-secondary btn-sm';
+        editBtn.textContent = '✏️ Редагувати';
+        const editBtnHandler = () => editCarrier(carrier.id);
+        editBtn.addEventListener('click', editBtnHandler);
+        editBtn._clickHandler = editBtnHandler;
+        actionsDiv.appendChild(editBtn);
+        
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'btn btn-danger btn-sm';
+        deleteBtn.textContent = '🗑️ Видалити';
+        const deleteBtnHandler = () => deleteCarrier(carrier.id);
+        deleteBtn.addEventListener('click', deleteBtnHandler);
+        deleteBtn._clickHandler = deleteBtnHandler;
+        actionsDiv.appendChild(deleteBtn);
+        
+        actionsCell.appendChild(actionsDiv);
+        row.appendChild(actionsCell);
+        
+        tbody.appendChild(row);
+    });
 }
 
 document.getElementById('manage-carriers-btn')?.addEventListener('click', async () => {
@@ -992,26 +1238,26 @@ document.getElementById('manage-carriers-btn')?.addEventListener('click', async 
 });
 
 document.getElementById('create-carrier-btn')?.addEventListener('click', () => {
-    document.getElementById('carrier-form-title').textContent = '➕ Створити перевізника';
-    document.getElementById('carrier-form').reset();
-    document.getElementById('carrier-id').value = '';
+    if (carrierFormTitle) carrierFormTitle.textContent = '➕ Створити перевізника';
+    if (carrierForm) carrierForm.reset();
+    if (carrierId) carrierId.value = '';
     openModal('carrier-form-modal');
 });
 
-async function editCarrier(carrierId) {
-    const carrier = carrierMap.get(carrierId);
+async function editCarrier(id) {
+    const carrier = carrierMap.get(id);
     if (!carrier) {
         showMessage('Перевізник не знайдений', 'error');
         return;
     }
     
-    document.getElementById('carrier-form-title').textContent = '✏️ Редагувати перевізника';
-    document.getElementById('carrier-id').value = carrier.id;
-    document.getElementById('carrier-company-name').value = carrier.companyName || '';
-    document.getElementById('carrier-registration-address').value = carrier.registrationAddress || '';
-    document.getElementById('carrier-phone-number').value = carrier.phoneNumber || '';
-    document.getElementById('carrier-code').value = carrier.code || '';
-    document.getElementById('carrier-account').value = carrier.account || '';
+    if (carrierFormTitle) carrierFormTitle.textContent = '✏️ Редагувати перевізника';
+    if (carrierId) carrierId.value = carrier.id;
+    if (carrierCompanyName) carrierCompanyName.value = carrier.companyName || '';
+    if (carrierRegistrationAddress) carrierRegistrationAddress.value = carrier.registrationAddress || '';
+    if (carrierPhoneNumber) carrierPhoneNumber.value = carrier.phoneNumber || '';
+    if (carrierCode) carrierCode.value = carrier.code || '';
+    if (carrierAccount) carrierAccount.value = carrier.account || '';
     openModal('carrier-form-modal');
 }
 
@@ -1039,52 +1285,66 @@ async function deleteCarrier(carrierId) {
     }
 }
 
-document.getElementById('carrier-form')?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    const carrierId = document.getElementById('carrier-id').value;
-    const carrierData = {
-        companyName: document.getElementById('carrier-company-name').value,
-        registrationAddress: document.getElementById('carrier-registration-address').value,
-        phoneNumber: document.getElementById('carrier-phone-number').value,
-        code: document.getElementById('carrier-code').value,
-        account: document.getElementById('carrier-account').value
-    };
-    
-    try {
-        let response;
-        if (carrierId) {
-            response = await fetch(`/api/v1/carriers/${carrierId}`, {
-                method: 'PUT',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(carrierData)
-            });
-        } else {
-            response = await fetch('/api/v1/carriers', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(carrierData)
-            });
-        }
+if (carrierForm) {
+    carrierForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
         
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || 'Failed to save carrier');
+        const id = carrierId?.value;
+        const carrierData = {
+            companyName: carrierCompanyName?.value || '',
+            registrationAddress: carrierRegistrationAddress?.value || '',
+            phoneNumber: carrierPhoneNumber?.value || '',
+            code: carrierCode?.value || '',
+            account: carrierAccount?.value || ''
+        };
+    
+        try {
+            let response;
+            if (id) {
+                response = await fetch(`/api/v1/carriers/${id}`, {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(carrierData)
+                });
+            } else {
+                response = await fetch('/api/v1/carriers', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(carrierData)
+                });
+            }
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Failed to save carrier');
+            }
+            
+            showMessage(id ? 'Перевізника успішно оновлено' : 'Перевізника успішно створено', 'success');
+            closeModal('carrier-form-modal');
+            await loadCarriers();
+            await fetchCarriers();
+            populateCarriers('vehicle-carrier-id');
+            populateCarriers('detail-vehicle-carrier-id');
+        } catch (error) {
+            showMessage(error.message || 'Помилка при збереженні перевізника', 'error');
         }
-        
-        showMessage(carrierId ? 'Перевізника успішно оновлено' : 'Перевізника успішно створено', 'success');
-        closeModal('carrier-form-modal');
-        await loadCarriers();
-        await fetchCarriers();
-        populateCarriers('vehicle-carrier-id');
-        populateCarriers('detail-vehicle-carrier-id');
-    } catch (error) {
-        showMessage(error.message || 'Помилка при збереженні перевізника', 'error');
-    }
-});
+    });
+}
 
 document.getElementById('cancel-carrier-btn')?.addEventListener('click', () => {
     closeModal('carrier-form-modal');
+});
+
+document.getElementById('cancel-create-vehicle-btn')?.addEventListener('click', () => {
+    closeModal('create-vehicle-modal');
+});
+
+document.getElementById('cancel-create-vehicle-expense-btn')?.addEventListener('click', () => {
+    closeModal('create-vehicle-expense-modal');
+});
+
+document.getElementById('cancel-edit-vehicle-item-btn')?.addEventListener('click', () => {
+    closeModal('edit-vehicle-item-modal');
 });
 
 let currentResizeHeader = null;
@@ -1092,27 +1352,29 @@ let startX = 0;
 let startWidth = 0;
 
 function initializeColumnResize() {
-    const table = document.getElementById('vehicles-table');
-    if (!table) return;
+    if (!vehiclesTable) return;
     
     // Don't initialize column resize on mobile devices
     if (window.innerWidth <= 1024) {
         return;
     }
     
-    const headers = table.querySelectorAll('.resizable-header');
+    const headers = vehiclesTable.querySelectorAll('.resizable-header');
     
     headers.forEach(header => {
-        if (header.querySelector('.resize-handle')) {
-            return;
+        let resizeHandle = header.querySelector('.resize-handle');
+        if (resizeHandle) {
+            if (resizeHandle._mousedownHandler) {
+                resizeHandle.removeEventListener('mousedown', resizeHandle._mousedownHandler);
+            }
+        } else {
+            resizeHandle = document.createElement('div');
+            resizeHandle.className = 'resize-handle';
+            header.style.position = 'relative';
+            header.appendChild(resizeHandle);
         }
         
-        const resizeHandle = document.createElement('div');
-        resizeHandle.className = 'resize-handle';
-        header.style.position = 'relative';
-        header.appendChild(resizeHandle);
-        
-        resizeHandle.addEventListener('mousedown', (e) => {
+        const mousedownHandler = (e) => {
             e.preventDefault();
             e.stopPropagation();
             currentResizeHeader = header;
@@ -1121,11 +1383,13 @@ function initializeColumnResize() {
             header.classList.add('resizing');
             document.body.style.cursor = 'col-resize';
             document.body.style.userSelect = 'none';
-        });
+        };
+        resizeHandle.addEventListener('mousedown', mousedownHandler);
+        resizeHandle._mousedownHandler = mousedownHandler;
     });
     
     if (!window.columnResizeInitialized) {
-        document.addEventListener('mousemove', (e) => {
+        const mousemoveHandler = (e) => {
             if (!currentResizeHeader) return;
             
             const diff = e.pageX - startX;
@@ -1135,14 +1399,14 @@ function initializeColumnResize() {
             currentResizeHeader.style.minWidth = newWidth + 'px';
             currentResizeHeader.style.width = newWidth + 'px';
             const index = Array.from(currentResizeHeader.parentElement.children).indexOf(currentResizeHeader);
-            const cells = table.querySelectorAll(`tbody tr td:nth-child(${index + 1})`);
+            const cells = vehiclesTable.querySelectorAll(`tbody tr td:nth-child(${index + 1})`);
             cells.forEach(cell => {
                 cell.style.minWidth = newWidth + 'px';
                 cell.style.width = newWidth + 'px';
             });
-        });
+        };
         
-        document.addEventListener('mouseup', () => {
+        const mouseupHandler = () => {
             if (currentResizeHeader) {
                 const column = currentResizeHeader.dataset.column;
                 const width = Math.max(50, currentResizeHeader.offsetWidth);
@@ -1152,8 +1416,13 @@ function initializeColumnResize() {
                 document.body.style.cursor = '';
                 document.body.style.userSelect = '';
             }
-        });
+        };
         
+        document.addEventListener('mousemove', mousemoveHandler);
+        document.addEventListener('mouseup', mouseupHandler);
+        
+        window.columnResizeMousemoveHandler = mousemoveHandler;
+        window.columnResizeMouseupHandler = mouseupHandler;
         window.columnResizeInitialized = true;
     }
     
@@ -1170,6 +1439,7 @@ async function initialize() {
     setDefaultVehicleDates();
     await loadVehicles(0);
     initializeColumnResize();
+    initializeModalClickHandlers();
 }
 
 let accountsCache = [];
@@ -1192,7 +1462,11 @@ async function loadAccounts() {
 function populateAccounts(selectId) {
     const select = document.getElementById(selectId);
     if (!select) return;
-    select.innerHTML = '<option value="">Оберіть рахунок</option>';
+    select.textContent = '';
+    const defaultOption = document.createElement('option');
+    defaultOption.value = '';
+    defaultOption.textContent = 'Оберіть рахунок';
+    select.appendChild(defaultOption);
     accountsCache.forEach(account => {
         const option = document.createElement('option');
         option.value = account.id;
@@ -1223,7 +1497,11 @@ async function loadCategoriesForVehicleExpense() {
 function populateCategories(selectId, categories) {
     const select = document.getElementById(selectId);
     if (!select) return;
-    select.innerHTML = '<option value="">Оберіть категорію</option>';
+    select.textContent = '';
+    const defaultOption = document.createElement('option');
+    defaultOption.value = '';
+    defaultOption.textContent = 'Оберіть категорію';
+    select.appendChild(defaultOption);
     if (categories && categories.length > 0) {
         categories.forEach(category => {
             const option = document.createElement('option');
@@ -1237,7 +1515,11 @@ function populateCategories(selectId, categories) {
 function populateCurrencies(selectId, accountId) {
     const select = document.getElementById(selectId);
     if (!select) return;
-    select.innerHTML = '<option value="">Оберіть валюту</option>';
+    select.textContent = '';
+    const defaultOption = document.createElement('option');
+    defaultOption.value = '';
+    defaultOption.textContent = 'Оберіть валюту';
+    select.appendChild(defaultOption);
     
     if (!accountId) return;
     
@@ -1253,8 +1535,7 @@ function populateCurrencies(selectId, accountId) {
 }
 
 async function loadVehicleExpenses(vehicleId) {
-    const tbody = document.getElementById('vehicle-expenses-tbody');
-    if (!tbody) return;
+    if (!vehicleExpensesTbody) return;
     
     try {
         if (!categoriesCache.has('VEHICLE_EXPENSE') || categoriesCache.get('VEHICLE_EXPENSE')?.length === 0) {
@@ -1268,14 +1549,24 @@ async function loadVehicleExpenses(vehicleId) {
         
         const transactions = await response.json();
         
+        vehicleExpensesTbody.textContent = '';
+        
         if (!transactions || transactions.length === 0) {
-            tbody.innerHTML = '<tr class="loading-row"><td colspan="8" style="text-align: center; color: var(--text-muted);">Немає витрат</td></tr>';
+            const row = document.createElement('tr');
+            row.className = 'loading-row';
+            const cell = document.createElement('td');
+            cell.colSpan = 8;
+            cell.style.textAlign = 'center';
+            cell.style.color = 'var(--text-muted)';
+            cell.textContent = 'Немає витрат';
+            row.appendChild(cell);
+            vehicleExpensesTbody.appendChild(row);
             return;
         }
         
         const accountMap = new Map(accountsCache.map(a => [a.id, a]));
         
-        tbody.innerHTML = transactions.map(transaction => {
+        transactions.forEach(transaction => {
             const account = accountMap.get(transaction.fromAccountId);
             const accountName = account ? (account.name || `Рахунок #${account.id}`) : '-';
             const date = transaction.createdAt ? new Date(transaction.createdAt).toLocaleDateString('uk-UA') : '-';
@@ -1283,22 +1574,38 @@ async function loadVehicleExpenses(vehicleId) {
             const exchangeRate = transaction.exchangeRate ? formatNumber(transaction.exchangeRate, 6) : '-';
             const convertedAmount = transaction.convertedAmount ? formatNumber(transaction.convertedAmount, 2) : '-';
             
-            return `
-                <tr>
-                    <td data-label="Дата">${date}</td>
-                    <td data-label="Сума">${formatNumber(transaction.amount, 2)}</td>
-                    <td data-label="Валюта">${transaction.currency || '-'}</td>
-                    <td data-label="Курс">${exchangeRate}</td>
-                    <td data-label="Сума в EUR">${convertedAmount}</td>
-                    <td data-label="Категорія">${categoryName}</td>
-                    <td data-label="Рахунок">${accountName}</td>
-                    <td data-label="Опис">${transaction.description || '-'}</td>
-                </tr>
-            `;
-        }).join('');
+            const row = document.createElement('tr');
+            
+            const createCell = (text, label) => {
+                const cell = document.createElement('td');
+                cell.setAttribute('data-label', label);
+                cell.textContent = text || '-';
+                return cell;
+            };
+            
+            row.appendChild(createCell(date, 'Дата'));
+            row.appendChild(createCell(formatNumber(transaction.amount, 2), 'Сума'));
+            row.appendChild(createCell(transaction.currency, 'Валюта'));
+            row.appendChild(createCell(exchangeRate, 'Курс'));
+            row.appendChild(createCell(convertedAmount, 'Сума в EUR'));
+            row.appendChild(createCell(categoryName, 'Категорія'));
+            row.appendChild(createCell(accountName, 'Рахунок'));
+            row.appendChild(createCell(transaction.description, 'Опис'));
+            
+            vehicleExpensesTbody.appendChild(row);
+        });
     } catch (error) {
         console.error('Error loading vehicle expenses:', error);
-        tbody.innerHTML = '<tr class="loading-row"><td colspan="8" style="text-align: center; color: var(--danger);">Помилка завантаження витрат</td></tr>';
+        vehicleExpensesTbody.textContent = '';
+        const row = document.createElement('tr');
+        row.className = 'loading-row';
+        const cell = document.createElement('td');
+        cell.colSpan = 8;
+        cell.style.textAlign = 'center';
+        cell.style.color = 'var(--danger)';
+        cell.textContent = 'Помилка завантаження витрат';
+        row.appendChild(cell);
+        vehicleExpensesTbody.appendChild(row);
     }
 }
 
@@ -1317,59 +1624,63 @@ document.getElementById('create-vehicle-expense-btn')?.addEventListener('click',
     const categories = await loadCategoriesForVehicleExpense();
     populateCategories('expense-category', categories);
     
-    document.getElementById('expense-from-account').value = '';
-    document.getElementById('expense-category').value = '';
-    document.getElementById('expense-amount').value = '';
-    document.getElementById('expense-currency').value = '';
-    document.getElementById('expense-description').value = '';
+    if (expenseFromAccount) expenseFromAccount.value = '';
+    if (expenseCategory) expenseCategory.value = '';
+    if (expenseAmount) expenseAmount.value = '';
+    if (expenseCurrency) expenseCurrency.value = '';
+    if (expenseDescription) expenseDescription.value = '';
     
     openModal('create-vehicle-expense-modal');
 });
 
-document.getElementById('expense-from-account')?.addEventListener('change', (e) => {
-    const accountId = e.target.value;
-    populateCurrencies('expense-currency', accountId);
-});
+if (expenseFromAccount) {
+    expenseFromAccount.addEventListener('change', (e) => {
+        const accountId = e.target.value;
+        populateCurrencies('expense-currency', accountId);
+    });
+}
 
-document.getElementById('create-vehicle-expense-form')?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    if (!currentVehicleId) {
-        showMessage('Не вдалося визначити машину', 'error');
-        return;
-    }
-    
-    const formData = {
-        type: 'VEHICLE_EXPENSE',
-        fromAccountId: parseInt(document.getElementById('expense-from-account').value),
-        categoryId: parseInt(document.getElementById('expense-category').value),
-        amount: parseFloat(document.getElementById('expense-amount').value),
-        currency: document.getElementById('expense-currency').value,
-        description: document.getElementById('expense-description').value,
-        vehicleId: currentVehicleId
-    };
-    
-    try {
-        const response = await fetch('/api/v1/transaction', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(formData)
-        });
+if (createVehicleExpenseForm) {
+    createVehicleExpenseForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
         
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || 'Failed to create vehicle expense');
+        if (!currentVehicleId) {
+            showMessage('Не вдалося визначити машину', 'error');
+            return;
         }
         
-        showMessage('Витрату успішно створено', 'success');
-        closeModal('create-vehicle-expense-modal');
-        document.getElementById('create-vehicle-expense-form')?.reset();
+        const formData = {
+            type: 'VEHICLE_EXPENSE',
+            fromAccountId: parseInt(expenseFromAccount?.value || '0'),
+            categoryId: parseInt(expenseCategory?.value || '0'),
+            amount: parseFloat(expenseAmount?.value || '0'),
+            currency: expenseCurrency?.value || '',
+            description: expenseDescription?.value || '',
+            vehicleId: currentVehicleId
+        };
         
-        await loadVehicleExpenses(currentVehicleId);
-    } catch (error) {
-        showMessage(error.message || 'Помилка при створенні витрати', 'error');
-    }
-});
+        try {
+            const response = await fetch('/api/v1/transaction', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(formData)
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Failed to create vehicle expense');
+            }
+            
+            showMessage('Витрату успішно створено', 'success');
+            closeModal('create-vehicle-expense-modal');
+            createVehicleExpenseForm.reset();
+            
+            await loadVehicleExpenses(currentVehicleId);
+        } catch (error) {
+            showMessage(error.message || 'Помилка при створенні витрати', 'error');
+        }
+    });
+}
 
 document.getElementById('export-vehicles-btn')?.addEventListener('click', async () => {
     try {

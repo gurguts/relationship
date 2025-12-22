@@ -1,12 +1,20 @@
 const API_URL_CONTAINER = '/api/v1/containers/client';
 const API_URL = '/api/v1/client';
 
+function escapeHtml(text) {
+    if (text == null) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
 const prevPageButton = document.getElementById('prev-btn');
 const nextPageButton = document.getElementById('next-btn');
 const paginationInfo = document.getElementById('pagination-info');
 const allClientInfo = document.getElementById('all-client-info');
 const loaderBackdrop = document.getElementById('loader-backdrop');
 const filterForm = document.getElementById('filterForm');
+const searchInput = document.getElementById('inputSearch');
 let currentSort = 'updatedAt';
 let currentDirection = 'DESC';
 let currentPage = 0;
@@ -65,17 +73,47 @@ function renderContainers(containers) {
     const tbodyData = document.getElementById('client-table-body');
     if (!tbodyData) return;
     
-    tbodyData.innerHTML = '';
+    tbodyData.textContent = '';
 
     containers.forEach(container => {
         const row = document.createElement('tr');
         row.classList.add('container-row');
         row.dataset.id = container.containerId;
 
-        row.innerHTML = getRowHtml(container);
+        const clientName = container.client ? (container.client.company || container.client.person || '') : '';
+        const containerName = container.containerName || '';
+        const quantity = container.quantity ? container.quantity.toString() : '';
+        const userName = findNameByIdFromMap(userMap, container.userId) || '';
+        const updatedAt = container.updatedAt ? new Date(container.updatedAt).toLocaleDateString('ua-UA') : '';
+
+        const companyCell = document.createElement('td');
+        companyCell.className = 'company-cell';
+        companyCell.setAttribute('data-label', 'Назва клієнта');
+        companyCell.textContent = clientName;
+        row.appendChild(companyCell);
+
+        const containerCell = document.createElement('td');
+        containerCell.setAttribute('data-label', 'Тип тари');
+        containerCell.textContent = containerName;
+        row.appendChild(containerCell);
+
+        const quantityCell = document.createElement('td');
+        quantityCell.setAttribute('data-label', 'Кількість');
+        quantityCell.textContent = quantity;
+        row.appendChild(quantityCell);
+
+        const userCell = document.createElement('td');
+        userCell.setAttribute('data-label', 'Власник');
+        userCell.textContent = userName;
+        row.appendChild(userCell);
+
+        const updatedAtCell = document.createElement('td');
+        updatedAtCell.setAttribute('data-label', 'Оновлено');
+        updatedAtCell.textContent = updatedAt;
+        row.appendChild(updatedAtCell);
+
         tbodyData.appendChild(row);
 
-        const companyCell = row.querySelector('.company-cell');
         if (companyCell && container.client) {
             companyCell.addEventListener('click', () => {
                 if (typeof loadClientDetails === 'function') {
@@ -93,22 +131,6 @@ function renderContainers(containers) {
     }
 }
 
-function getRowHtml(container) {
-    const clientName = container.client ? (container.client.company || container.client.person || '') : '';
-    const containerName = container.containerName || '';
-    const quantity = container.quantity ? container.quantity.toString() : '';
-    const userName = findNameByIdFromMap(userMap, container.userId) || '';
-    const updatedAt = container.updatedAt ? new Date(container.updatedAt).toLocaleDateString('ua-UA') : '';
-    
-    return `
-        <td class="company-cell" data-label="Назва клієнта">${clientName}</td>
-        <td data-label="Тип тари">${containerName}</td>
-        <td data-label="Кількість">${quantity}</td>
-        <td data-label="Власник">${userName}</td>
-        <td data-label="Оновлено">${updatedAt}</td>
-    `;
-}
-
 
 async function loadDataWithSort(page, size, sort, direction) {
     if (!currentClientTypeId) {
@@ -116,7 +138,6 @@ async function loadDataWithSort(page, size, sort, direction) {
     }
     
     loaderBackdrop.style.display = 'flex';
-    const searchInput = document.getElementById('inputSearch');
     const searchTerm = searchInput ? searchInput.value : '';
     let queryParams = `page=${page}&size=${size}&sort=${sort}&direction=${direction}`;
 
@@ -212,7 +233,7 @@ function buildContainersTable() {
     const thead = document.querySelector('#client-list table thead tr');
     if (!thead) return;
     
-    thead.innerHTML = '';
+    thead.textContent = '';
     
     const headers = [
         { text: 'Назва клієнта', sort: null },
@@ -325,20 +346,33 @@ async function showClientTypeSelectionModal() {
         if (!listContainer) return;
         
         if (accessibleClientTypes.length === 0) {
-            listContainer.innerHTML = '<p style="text-align: center; color: var(--main-grey); padding: 2em;">Немає доступних типів клієнтів</p>';
+            listContainer.textContent = '';
+            const emptyMessage = document.createElement('p');
+            emptyMessage.style.textAlign = 'center';
+            emptyMessage.style.color = 'var(--main-grey)';
+            emptyMessage.style.padding = '2em';
+            emptyMessage.textContent = 'Немає доступних типів клієнтів';
+            listContainer.appendChild(emptyMessage);
             modal.style.display = 'flex';
         } else if (accessibleClientTypes.length === 1) {
             window.location.href = `/containers?type=${accessibleClientTypes[0].id}`;
             return;
         } else {
-            listContainer.innerHTML = '';
+            listContainer.textContent = '';
             accessibleClientTypes.forEach(type => {
                 const card = document.createElement('div');
                 card.className = 'client-type-card';
-                card.innerHTML = `
-                    <div class="client-type-card-icon">👥</div>
-                    <div class="client-type-card-name">${type.name}</div>
-                `;
+                
+                const iconDiv = document.createElement('div');
+                iconDiv.className = 'client-type-card-icon';
+                iconDiv.textContent = '👥';
+                card.appendChild(iconDiv);
+                
+                const nameDiv = document.createElement('div');
+                nameDiv.className = 'client-type-card-name';
+                nameDiv.textContent = type.name;
+                card.appendChild(nameDiv);
+                
                 card.addEventListener('click', () => {
                     window.location.href = `/containers?type=${type.id}`;
                 });
@@ -349,16 +383,26 @@ async function showClientTypeSelectionModal() {
 
         const closeBtn = document.querySelector('.close-client-type-modal');
         if (closeBtn) {
-            closeBtn.addEventListener('click', () => {
+            if (closeBtn._closeTypeModalHandler) {
+                closeBtn.removeEventListener('click', closeBtn._closeTypeModalHandler);
+            }
+            const closeTypeModalHandler = () => {
                 modal.style.display = 'none';
-            });
+            };
+            closeBtn._closeTypeModalHandler = closeTypeModalHandler;
+            closeBtn.addEventListener('click', closeTypeModalHandler);
         }
         
-        modal.addEventListener('click', (e) => {
+        if (modal._typeModalClickHandler) {
+            modal.removeEventListener('click', modal._typeModalClickHandler);
+        }
+        const modalClickHandler = (e) => {
             if (e.target === modal) {
                 modal.style.display = 'none';
             }
-        });
+        };
+        modal._typeModalClickHandler = modalClickHandler;
+        modal.addEventListener('click', modalClickHandler);
     } catch (error) {
         console.error('Error loading client types:', error);
     }
@@ -373,10 +417,17 @@ async function updateNavigationWithCurrentType(typeId) {
         const navLink = document.querySelector('#nav-containers a');
         
         if (navLink && clientType.name) {
-            navLink.innerHTML = `
-                <span class="nav-client-type-label">Тари:</span>
-                <span class="nav-client-type-name">${clientType.name}</span>
-            `;
+            navLink.textContent = '';
+            
+            const labelSpan = document.createElement('span');
+            labelSpan.className = 'nav-client-type-label';
+            labelSpan.textContent = 'Тари:';
+            navLink.appendChild(labelSpan);
+            
+            const nameSpan = document.createElement('span');
+            nameSpan.className = 'nav-client-type-name';
+            nameSpan.textContent = clientType.name;
+            navLink.appendChild(nameSpan);
         }
     } catch (error) {
         console.error('Error updating navigation:', error);
@@ -453,31 +504,52 @@ async function showClientModal(client) {
             const values = fieldValuesMap.get(field.id) || [];
             const fieldP = document.createElement('p');
             fieldP.setAttribute('data-field-id', field.id);
+            fieldP.setAttribute('data-field-type', field.fieldType);
             
-            let fieldValue = '';
-            if (values.length > 0) {
+            const strong = document.createElement('strong');
+            strong.textContent = field.fieldLabel + ':';
+            fieldP.appendChild(strong);
+            
+            const valueSpan = document.createElement('span');
+            valueSpan.id = `modal-field-${field.id}`;
+            if (values.length === 0) {
+                valueSpan.classList.add('empty-value');
+                valueSpan.textContent = '—';
+            } else {
                 if (field.allowMultiple) {
-                    fieldValue = values.map(v => formatFieldValueForModal(v, field)).join('<br>');
-    } else {
-                    fieldValue = formatFieldValueForModal(values[0], field);
+                    const fragment = document.createDocumentFragment();
+                    values.forEach((v, index) => {
+                        if (index > 0) {
+                            const br = document.createElement('br');
+                            fragment.appendChild(br);
+                        }
+                        const text = document.createTextNode(formatFieldValueForModal(v, field));
+                        fragment.appendChild(text);
+                    });
+                    valueSpan.appendChild(fragment);
+                } else {
+                    valueSpan.textContent = formatFieldValueForModal(values[0], field);
                 }
             }
+            fieldP.appendChild(valueSpan);
             
             const canEdit = canEditClient(client);
-            const editButtonHtml = canEdit ? `
-                <button class="edit-icon" onclick="enableEditField(${field.id}, '${field.fieldType}', ${field.allowMultiple || false})" data-field-id="${field.id}" title="Редагувати">
-                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
-                    </svg>
-                </button>
-            ` : '';
-            
-            fieldP.innerHTML = `
-                <strong>${field.fieldLabel}:</strong>
-                <span id="modal-field-${field.id}" class="${!fieldValue ? 'empty-value' : ''}">${fieldValue || '—'}</span>
-                ${editButtonHtml}
-            `;
-            fieldP.setAttribute('data-field-type', field.fieldType);
+            if (canEdit) {
+                const editBtn = document.createElement('button');
+                editBtn.className = 'edit-icon';
+                editBtn.setAttribute('data-field-id', field.id);
+                editBtn.setAttribute('title', 'Редагувати');
+                editBtn.setAttribute('onclick', `enableEditField(${field.id}, '${escapeHtml(field.fieldType)}', ${field.allowMultiple || false})`);
+                
+                const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                svg.setAttribute('viewBox', '0 0 24 24');
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                path.setAttribute('d', 'M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z');
+                svg.appendChild(path);
+                editBtn.appendChild(svg);
+                
+                fieldP.appendChild(editBtn);
+            }
 
             lastInsertedElement.insertAdjacentElement('afterend', fieldP);
             lastInsertedElement = fieldP;
@@ -554,26 +626,39 @@ async function showClientModal(client) {
     const originalDeleteButtonDisplay = document.getElementById('delete-client')?.style.display || '';
     const originalRestoreButtonDisplay = document.getElementById('restore-client')?.style.display || '';
 
-    document.getElementById('close-modal-client').addEventListener('click', () => {
-        if (!editing) {
-        modal.classList.remove('open');
-        setTimeout(() => {
-            closeModal();
-        });
-        } else {
-            showMessage('Збережіть або відмініть зміни', 'error');
+    const closeModalBtn = document.getElementById('close-modal-client');
+    if (closeModalBtn) {
+        if (closeModalBtn._closeModalHandler) {
+            closeModalBtn.removeEventListener('click', closeModalBtn._closeModalHandler);
         }
-    });
+        const closeModalHandler = () => {
+            if (!editing) {
+                modal.classList.remove('open');
+                setTimeout(() => {
+                    closeModal();
+                });
+            } else {
+                showMessage('Збережіть або відмініть зміни', 'error');
+            }
+        };
+        closeModalBtn._closeModalHandler = closeModalHandler;
+        closeModalBtn.addEventListener('click', closeModalHandler);
+    }
 
-    window.onclick = function (event) {
+    if (modal._modalClickHandler) {
+        modal.removeEventListener('click', modal._modalClickHandler);
+    }
+    const handleModalClick = function (event) {
         if (event.target === modal) {
             if (!editing) {
-            closeModal();
+                closeModal();
             } else {
                 showMessage('Збережіть або відмініть зміни', 'error');
             }
         }
-    }
+    };
+    modal._modalClickHandler = handleModalClick;
+    modal.addEventListener('click', handleModalClick);
 
     const fullDeleteButton = document.getElementById('full-delete-client');
     if (fullDeleteButton) {
@@ -582,31 +667,37 @@ async function showClientModal(client) {
         if (fullDeleteButton.style.display !== 'none' && !canDelete) {
             fullDeleteButton.style.display = 'none';
         }
-    }
-    fullDeleteButton.onclick = async () => {
-        if (!confirm('Ви впевнені, що хочете повністю видалити цього клієнта з бази даних? Ця дія незворотна!')) {
-            return;
+
+        if (fullDeleteButton._fullDeleteHandler) {
+            fullDeleteButton.removeEventListener('click', fullDeleteButton._fullDeleteHandler);
         }
-        
-        loaderBackdrop.style.display = 'flex';
-        try {
-            const response = await fetch(`${API_URL}/${client.id}`, {method: 'DELETE'});
-            if (!response.ok) {
-                const errorData = await response.json();
-                handleError(new ErrorResponse(errorData.error, errorData.message, errorData.details));
+        const fullDeleteHandler = async () => {
+            if (!confirm('Ви впевнені, що хочете повністю видалити цього клієнта з бази даних? Ця дія незворотна!')) {
                 return;
             }
-            showMessage('Клієнт повністю видалений з бази даних', 'info');
-            modal.style.display = 'none';
+            
+            loaderBackdrop.style.display = 'flex';
+            try {
+                const response = await fetch(`${API_URL}/${client.id}`, {method: 'DELETE'});
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    handleError(new ErrorResponse(errorData.error, errorData.message, errorData.details));
+                    return;
+                }
+                showMessage('Клієнт повністю видалений з бази даних', 'info');
+                modal.style.display = 'none';
 
-            loadDataWithSort(currentPage, pageSize, currentSort, currentDirection);
-        } catch (error) {
-            console.error('Помилка видалення клієнта:', error);
-            handleError(error);
-        } finally {
-            loaderBackdrop.style.display = 'none';
-        }
-    };
+                loadDataWithSort(currentPage, pageSize, currentSort, currentDirection);
+            } catch (error) {
+                console.error('Помилка видалення клієнта:', error);
+                handleError(error);
+            } finally {
+                loaderBackdrop.style.display = 'none';
+            }
+        };
+        fullDeleteButton._fullDeleteHandler = fullDeleteHandler;
+        fullDeleteButton.addEventListener('click', fullDeleteHandler);
+    }
 
     const deleteButton = document.getElementById('delete-client');
     const restoreButton = document.getElementById('restore-client');
@@ -628,56 +719,68 @@ async function showClientModal(client) {
         }
     }
     
-    deleteButton.onclick = async () => {
-        if (!confirm('Ви впевнені, що хочете деактивувати цього клієнта? Клієнт буде прихований, але залишиться в базі даних.')) {
-            return;
+    if (deleteButton) {
+        if (deleteButton._deleteHandler) {
+            deleteButton.removeEventListener('click', deleteButton._deleteHandler);
         }
-        
-        loaderBackdrop.style.display = 'flex';
-        try {
-            const response = await fetch(`${API_URL}/active/${client.id}`, {method: 'DELETE'});
-            if (!response.ok) {
-                const errorData = await response.json();
-                handleError(new ErrorResponse(errorData.error, errorData.message, errorData.details));
+        const deleteHandler = async () => {
+            if (!confirm('Ви впевнені, що хочете деактивувати цього клієнта? Клієнт буде прихований, але залишиться в базі даних.')) {
                 return;
             }
-            showMessage('Клієнт деактивовано (isActive = false)', 'info');
-            modal.style.display = 'none';
+            
+            loaderBackdrop.style.display = 'flex';
+            try {
+                const response = await fetch(`${API_URL}/active/${client.id}`, {method: 'DELETE'});
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    handleError(new ErrorResponse(errorData.error, errorData.message, errorData.details));
+                    return;
+                }
+                showMessage('Клієнт деактивовано (isActive = false)', 'info');
+                modal.style.display = 'none';
 
-            loadDataWithSort(currentPage, pageSize, currentSort, currentDirection);
-        } catch (error) {
-            console.error('Помилка деактивації клієнта:', error);
-            handleError(error);
-        } finally {
-            loaderBackdrop.style.display = 'none';
-        }
-    };
+                loadDataWithSort(currentPage, pageSize, currentSort, currentDirection);
+            } catch (error) {
+                console.error('Помилка деактивації клієнта:', error);
+                handleError(error);
+            } finally {
+                loaderBackdrop.style.display = 'none';
+            }
+        };
+        deleteButton._deleteHandler = deleteHandler;
+        deleteButton.addEventListener('click', deleteHandler);
+    }
 
     if (restoreButton) {
-        restoreButton.onclick = async () => {
+        if (restoreButton._restoreHandler) {
+            restoreButton.removeEventListener('click', restoreButton._restoreHandler);
+        }
+        const restoreHandler = async () => {
             if (!confirm('Ви впевнені, що хочете відновити цього клієнта? Клієнт знову стане активним.')) {
                 return;
-}
+            }
 
-    loaderBackdrop.style.display = 'flex';
-    try {
+            loaderBackdrop.style.display = 'flex';
+            try {
                 const response = await fetch(`${API_URL}/active/${client.id}`, {method: 'PATCH'});
-        if (!response.ok) {
-            const errorData = await response.json();
-            handleError(new ErrorResponse(errorData.error, errorData.message, errorData.details));
-            return;
-        }
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    handleError(new ErrorResponse(errorData.error, errorData.message, errorData.details));
+                    return;
+                }
                 showMessage('Клієнт відновлено (isActive = true)', 'info');
                 modal.style.display = 'none';
 
-        loadDataWithSort(currentPage, pageSize, currentSort, currentDirection);
-    } catch (error) {
+                loadDataWithSort(currentPage, pageSize, currentSort, currentDirection);
+            } catch (error) {
                 console.error('Помилка відновлення клієнта:', error);
-        handleError(error);
-    } finally {
-        loaderBackdrop.style.display = 'none';
+                handleError(error);
+            } finally {
+                loaderBackdrop.style.display = 'none';
             }
         };
+        restoreButton._restoreHandler = restoreHandler;
+        restoreButton.addEventListener('click', restoreHandler);
     }
 }
 
@@ -737,8 +840,10 @@ function formatFieldValueForModal(fieldValue, field) {
     
     switch (field.fieldType) {
         case 'TEXT':
+            return escapeHtml(fieldValue.valueText || '');
         case 'PHONE':
-            return fieldValue.valueText || '';
+            const phoneValue = fieldValue.valueText || '';
+            return escapeHtml(phoneValue);
         case 'NUMBER':
             return fieldValue.valueNumber ? fieldValue.valueNumber.toString() : '';
         case 'DATE':
@@ -746,7 +851,7 @@ function formatFieldValueForModal(fieldValue, field) {
         case 'BOOLEAN':
             return fieldValue.valueBoolean ? 'Так' : 'Ні';
         case 'LIST':
-            return fieldValue.valueListValue || '';
+            return escapeHtml(fieldValue.valueListValue || '');
         default:
             return '';
     }
@@ -763,20 +868,37 @@ async function loadClientFieldValues(clientId) {
     }
 }
 
-const searchInput = document.getElementById('inputSearch');
-const searchButton = document.getElementById('searchButton');
+let searchDebounceTimer = null;
 
-searchInput.addEventListener('keypress', async (event) => {
-    if (event.key === 'Enter') {
-        searchButton.click();
-    }
-});
+function debounce(func, delay) {
+    return function(...args) {
+        clearTimeout(searchDebounceTimer);
+        searchDebounceTimer = setTimeout(() => func.apply(this, args), delay);
+    };
+}
 
-searchButton.addEventListener('click', async () => {
+const performSearch = async () => {
     const searchTerm = searchInput.value;
     localStorage.setItem('searchTerm', searchTerm);
     loadDataWithSort(0, pageSize, currentSort, currentDirection);
-});
+};
+
+const debouncedSearch = debounce(performSearch, 400);
+
+if (searchInput) {
+    searchInput.addEventListener('keypress', async (event) => {
+        if (event.key === 'Enter') {
+            clearTimeout(searchDebounceTimer);
+            performSearch();
+        } else {
+            debouncedSearch();
+        }
+    });
+
+    searchInput.addEventListener('input', () => {
+        debouncedSearch();
+    });
+}
 
 const filterButton = document.querySelector('.filter-button-block');
 const filterModal = document.getElementById('filterModal');
@@ -849,7 +971,7 @@ function buildDynamicFilters() {
         existingFilters.forEach(el => {
             const selects = el.querySelectorAll('select');
             selects.forEach(sel => {
-                sel.innerHTML = '';
+                sel.textContent = '';
             });
             el.remove();
         });
@@ -860,22 +982,34 @@ function buildDynamicFilters() {
 
         const containerSelectItem = document.createElement('div');
         containerSelectItem.className = 'select-section-item';
-        containerSelectItem.innerHTML = `
-            <br>
-            <label class="select-label-style" for="filter-container">Тип тари:</label>
-            <select id="filter-container" name="container" multiple>
-            </select>
-        `;
+        const containerBr = document.createElement('br');
+        containerSelectItem.appendChild(containerBr);
+        const containerLabel = document.createElement('label');
+        containerLabel.className = 'select-label-style';
+        containerLabel.setAttribute('for', 'filter-container');
+        containerLabel.textContent = 'Тип тари:';
+        containerSelectItem.appendChild(containerLabel);
+        const containerSelect = document.createElement('select');
+        containerSelect.id = 'filter-container';
+        containerSelect.name = 'container';
+        containerSelect.multiple = true;
+        containerSelectItem.appendChild(containerSelect);
         filterForm.appendChild(containerSelectItem);
 
         const userSelectItem = document.createElement('div');
         userSelectItem.className = 'select-section-item';
-        userSelectItem.innerHTML = `
-            <br>
-            <label class="select-label-style" for="filter-user">Власник:</label>
-            <select id="filter-user" name="user" multiple>
-            </select>
-        `;
+        const userBr = document.createElement('br');
+        userSelectItem.appendChild(userBr);
+        const userLabel = document.createElement('label');
+        userLabel.className = 'select-label-style';
+        userLabel.setAttribute('for', 'filter-user');
+        userLabel.textContent = 'Власник:';
+        userSelectItem.appendChild(userLabel);
+        const userSelect = document.createElement('select');
+        userSelect.id = 'filter-user';
+        userSelect.name = 'user';
+        userSelect.multiple = true;
+        userSelectItem.appendChild(userSelect);
         filterForm.appendChild(userSelectItem);
 
         const quantityH2 = document.createElement('h2');
@@ -884,12 +1018,30 @@ function buildDynamicFilters() {
         
         const quantityBlock = document.createElement('div');
         quantityBlock.className = 'filter-block';
-        quantityBlock.innerHTML = `
-            <label class="from-to-style" for="filter-quantity-from">Від:</label>
-            <input type="number" id="filter-quantity-from" name="quantityFrom" step="0.01" placeholder="Мінімум">
-            <label class="from-to-style" for="filter-quantity-to">До:</label>
-            <input type="number" id="filter-quantity-to" name="quantityTo" step="0.01" placeholder="Максимум">
-        `;
+        const quantityFromLabel = document.createElement('label');
+        quantityFromLabel.className = 'from-to-style';
+        quantityFromLabel.setAttribute('for', 'filter-quantity-from');
+        quantityFromLabel.textContent = 'Від:';
+        quantityBlock.appendChild(quantityFromLabel);
+        const quantityFromInput = document.createElement('input');
+        quantityFromInput.type = 'number';
+        quantityFromInput.id = 'filter-quantity-from';
+        quantityFromInput.name = 'quantityFrom';
+        quantityFromInput.step = '0.01';
+        quantityFromInput.placeholder = 'Мінімум';
+        quantityBlock.appendChild(quantityFromInput);
+        const quantityToLabel = document.createElement('label');
+        quantityToLabel.className = 'from-to-style';
+        quantityToLabel.setAttribute('for', 'filter-quantity-to');
+        quantityToLabel.textContent = 'До:';
+        quantityBlock.appendChild(quantityToLabel);
+        const quantityToInput = document.createElement('input');
+        quantityToInput.type = 'number';
+        quantityToInput.id = 'filter-quantity-to';
+        quantityToInput.name = 'quantityTo';
+        quantityToInput.step = '0.01';
+        quantityToInput.placeholder = 'Максимум';
+        quantityBlock.appendChild(quantityToInput);
         filterForm.appendChild(quantityBlock);
 
         const updatedAtH2 = document.createElement('h2');
@@ -898,12 +1050,26 @@ function buildDynamicFilters() {
         
         const updatedAtBlock = document.createElement('div');
         updatedAtBlock.className = 'filter-block';
-        updatedAtBlock.innerHTML = `
-            <label class="from-to-style" for="filter-updatedAt-from">Від:</label>
-            <input type="date" id="filter-updatedAt-from" name="updatedAtFrom">
-            <label class="from-to-style" for="filter-updatedAt-to">До:</label>
-            <input type="date" id="filter-updatedAt-to" name="updatedAtTo">
-        `;
+        const updatedAtFromLabel = document.createElement('label');
+        updatedAtFromLabel.className = 'from-to-style';
+        updatedAtFromLabel.setAttribute('for', 'filter-updatedAt-from');
+        updatedAtFromLabel.textContent = 'Від:';
+        updatedAtBlock.appendChild(updatedAtFromLabel);
+        const updatedAtFromInput = document.createElement('input');
+        updatedAtFromInput.type = 'date';
+        updatedAtFromInput.id = 'filter-updatedAt-from';
+        updatedAtFromInput.name = 'updatedAtFrom';
+        updatedAtBlock.appendChild(updatedAtFromInput);
+        const updatedAtToLabel = document.createElement('label');
+        updatedAtToLabel.className = 'from-to-style';
+        updatedAtToLabel.setAttribute('for', 'filter-updatedAt-to');
+        updatedAtToLabel.textContent = 'До:';
+        updatedAtBlock.appendChild(updatedAtToLabel);
+        const updatedAtToInput = document.createElement('input');
+        updatedAtToInput.type = 'date';
+        updatedAtToInput.id = 'filter-updatedAt-to';
+        updatedAtToInput.name = 'updatedAtTo';
+        updatedAtBlock.appendChild(updatedAtToInput);
         filterForm.appendChild(updatedAtBlock);
 
         const clientH2 = document.createElement('h2');
@@ -916,12 +1082,26 @@ function buildDynamicFilters() {
         
         const clientCreatedAtBlock = document.createElement('div');
         clientCreatedAtBlock.className = 'filter-block';
-        clientCreatedAtBlock.innerHTML = `
-            <label class="from-to-style" for="filter-clientCreatedAt-from">Від:</label>
-            <input type="date" id="filter-clientCreatedAt-from" name="clientCreatedAtFrom">
-            <label class="from-to-style" for="filter-clientCreatedAt-to">До:</label>
-            <input type="date" id="filter-clientCreatedAt-to" name="clientCreatedAtTo">
-        `;
+        const clientCreatedAtFromLabel = document.createElement('label');
+        clientCreatedAtFromLabel.className = 'from-to-style';
+        clientCreatedAtFromLabel.setAttribute('for', 'filter-clientCreatedAt-from');
+        clientCreatedAtFromLabel.textContent = 'Від:';
+        clientCreatedAtBlock.appendChild(clientCreatedAtFromLabel);
+        const clientCreatedAtFromInput = document.createElement('input');
+        clientCreatedAtFromInput.type = 'date';
+        clientCreatedAtFromInput.id = 'filter-clientCreatedAt-from';
+        clientCreatedAtFromInput.name = 'clientCreatedAtFrom';
+        clientCreatedAtBlock.appendChild(clientCreatedAtFromInput);
+        const clientCreatedAtToLabel = document.createElement('label');
+        clientCreatedAtToLabel.className = 'from-to-style';
+        clientCreatedAtToLabel.setAttribute('for', 'filter-clientCreatedAt-to');
+        clientCreatedAtToLabel.textContent = 'До:';
+        clientCreatedAtBlock.appendChild(clientCreatedAtToLabel);
+        const clientCreatedAtToInput = document.createElement('input');
+        clientCreatedAtToInput.type = 'date';
+        clientCreatedAtToInput.id = 'filter-clientCreatedAt-to';
+        clientCreatedAtToInput.name = 'clientCreatedAtTo';
+        clientCreatedAtBlock.appendChild(clientCreatedAtToInput);
         filterForm.appendChild(clientCreatedAtBlock);
 
         const clientUpdatedAtH2 = document.createElement('h2');
@@ -930,22 +1110,42 @@ function buildDynamicFilters() {
         
         const clientUpdatedAtBlock = document.createElement('div');
         clientUpdatedAtBlock.className = 'filter-block';
-        clientUpdatedAtBlock.innerHTML = `
-            <label class="from-to-style" for="filter-clientUpdatedAt-from">Від:</label>
-            <input type="date" id="filter-clientUpdatedAt-from" name="clientUpdatedAtFrom">
-            <label class="from-to-style" for="filter-clientUpdatedAt-to">До:</label>
-            <input type="date" id="filter-clientUpdatedAt-to" name="clientUpdatedAtTo">
-        `;
+        const clientUpdatedAtFromLabel = document.createElement('label');
+        clientUpdatedAtFromLabel.className = 'from-to-style';
+        clientUpdatedAtFromLabel.setAttribute('for', 'filter-clientUpdatedAt-from');
+        clientUpdatedAtFromLabel.textContent = 'Від:';
+        clientUpdatedAtBlock.appendChild(clientUpdatedAtFromLabel);
+        const clientUpdatedAtFromInput = document.createElement('input');
+        clientUpdatedAtFromInput.type = 'date';
+        clientUpdatedAtFromInput.id = 'filter-clientUpdatedAt-from';
+        clientUpdatedAtFromInput.name = 'clientUpdatedAtFrom';
+        clientUpdatedAtBlock.appendChild(clientUpdatedAtFromInput);
+        const clientUpdatedAtToLabel = document.createElement('label');
+        clientUpdatedAtToLabel.className = 'from-to-style';
+        clientUpdatedAtToLabel.setAttribute('for', 'filter-clientUpdatedAt-to');
+        clientUpdatedAtToLabel.textContent = 'До:';
+        clientUpdatedAtBlock.appendChild(clientUpdatedAtToLabel);
+        const clientUpdatedAtToInput = document.createElement('input');
+        clientUpdatedAtToInput.type = 'date';
+        clientUpdatedAtToInput.id = 'filter-clientUpdatedAt-to';
+        clientUpdatedAtToInput.name = 'clientUpdatedAtTo';
+        clientUpdatedAtBlock.appendChild(clientUpdatedAtToInput);
         filterForm.appendChild(clientUpdatedAtBlock);
 
         const clientSourceSelectItem = document.createElement('div');
         clientSourceSelectItem.className = 'select-section-item';
-        clientSourceSelectItem.innerHTML = `
-            <br>
-            <label class="select-label-style" for="filter-clientSource">Залучення клієнта:</label>
-            <select id="filter-clientSource" name="clientSource" multiple>
-            </select>
-        `;
+        const clientSourceBr = document.createElement('br');
+        clientSourceSelectItem.appendChild(clientSourceBr);
+        const clientSourceLabel = document.createElement('label');
+        clientSourceLabel.className = 'select-label-style';
+        clientSourceLabel.setAttribute('for', 'filter-clientSource');
+        clientSourceLabel.textContent = 'Залучення клієнта:';
+        clientSourceSelectItem.appendChild(clientSourceLabel);
+        const clientSourceSelect = document.createElement('select');
+        clientSourceSelect.id = 'filter-clientSource';
+        clientSourceSelect.name = 'clientSource';
+        clientSourceSelect.multiple = true;
+        clientSourceSelectItem.appendChild(clientSourceSelect);
         filterForm.appendChild(clientSourceSelectItem);
 
         setTimeout(() => {
@@ -1011,12 +1211,26 @@ function buildDynamicFilters() {
                     
                     const filterBlock = document.createElement('div');
                     filterBlock.className = 'filter-block';
-                    filterBlock.innerHTML = `
-                        <label class="from-to-style" for="filter-${field.fieldName}-from">Від:</label>
-                        <input type="date" id="filter-${field.fieldName}-from" name="${field.fieldName}From">
-                        <label class="from-to-style" for="filter-${field.fieldName}-to">До:</label>
-                        <input type="date" id="filter-${field.fieldName}-to" name="${field.fieldName}To">
-                    `;
+                    const dateFromLabel = document.createElement('label');
+                    dateFromLabel.className = 'from-to-style';
+                    dateFromLabel.setAttribute('for', `filter-${escapeHtml(field.fieldName)}-from`);
+                    dateFromLabel.textContent = 'Від:';
+                    filterBlock.appendChild(dateFromLabel);
+                    const dateFromInput = document.createElement('input');
+                    dateFromInput.type = 'date';
+                    dateFromInput.id = `filter-${escapeHtml(field.fieldName)}-from`;
+                    dateFromInput.name = `${escapeHtml(field.fieldName)}From`;
+                    filterBlock.appendChild(dateFromInput);
+                    const dateToLabel = document.createElement('label');
+                    dateToLabel.className = 'from-to-style';
+                    dateToLabel.setAttribute('for', `filter-${escapeHtml(field.fieldName)}-to`);
+                    dateToLabel.textContent = 'До:';
+                    filterBlock.appendChild(dateToLabel);
+                    const dateToInput = document.createElement('input');
+                    dateToInput.type = 'date';
+                    dateToInput.id = `filter-${escapeHtml(field.fieldName)}-to`;
+                    dateToInput.name = `${escapeHtml(field.fieldName)}To`;
+                    filterBlock.appendChild(dateToInput);
                     filterForm.appendChild(filterBlock);
                 } else if (field.fieldType === 'NUMBER') {
                     const h2 = document.createElement('h2');
@@ -1025,12 +1239,30 @@ function buildDynamicFilters() {
                     
                     const filterBlock = document.createElement('div');
                     filterBlock.className = 'filter-block';
-                    filterBlock.innerHTML = `
-                        <label class="from-to-style" for="filter-${field.fieldName}-from">Від:</label>
-                        <input type="number" id="filter-${field.fieldName}-from" name="${field.fieldName}From" step="any" placeholder="Мінімум">
-                        <label class="from-to-style" for="filter-${field.fieldName}-to">До:</label>
-                        <input type="number" id="filter-${field.fieldName}-to" name="${field.fieldName}To" step="any" placeholder="Максимум">
-                    `;
+                    const numberFromLabel = document.createElement('label');
+                    numberFromLabel.className = 'from-to-style';
+                    numberFromLabel.setAttribute('for', `filter-${escapeHtml(field.fieldName)}-from`);
+                    numberFromLabel.textContent = 'Від:';
+                    filterBlock.appendChild(numberFromLabel);
+                    const numberFromInput = document.createElement('input');
+                    numberFromInput.type = 'number';
+                    numberFromInput.id = `filter-${escapeHtml(field.fieldName)}-from`;
+                    numberFromInput.name = `${escapeHtml(field.fieldName)}From`;
+                    numberFromInput.step = 'any';
+                    numberFromInput.placeholder = 'Мінімум';
+                    filterBlock.appendChild(numberFromInput);
+                    const numberToLabel = document.createElement('label');
+                    numberToLabel.className = 'from-to-style';
+                    numberToLabel.setAttribute('for', `filter-${escapeHtml(field.fieldName)}-to`);
+                    numberToLabel.textContent = 'До:';
+                    filterBlock.appendChild(numberToLabel);
+                    const numberToInput = document.createElement('input');
+                    numberToInput.type = 'number';
+                    numberToInput.id = `filter-${escapeHtml(field.fieldName)}-to`;
+                    numberToInput.name = `${escapeHtml(field.fieldName)}To`;
+                    numberToInput.step = 'any';
+                    numberToInput.placeholder = 'Максимум';
+                    filterBlock.appendChild(numberToInput);
                     filterForm.appendChild(filterBlock);
                 } else if (field.fieldType === 'LIST') {
                     const selectId = `filter-${field.fieldName}`;
@@ -1054,12 +1286,18 @@ function buildDynamicFilters() {
                     
                     const selectItem = document.createElement('div');
                     selectItem.className = 'select-section-item';
-                    selectItem.innerHTML = `
-                        <br>
-                        <label class="select-label-style" for="filter-${field.fieldName}">${field.fieldLabel}:</label>
-                        <select id="filter-${field.fieldName}" name="${field.fieldName}" multiple>
-                        </select>
-                    `;
+                    const listBr = document.createElement('br');
+                    selectItem.appendChild(listBr);
+                    const listLabel = document.createElement('label');
+                    listLabel.className = 'select-label-style';
+                    listLabel.setAttribute('for', `filter-${escapeHtml(field.fieldName)}`);
+                    listLabel.textContent = field.fieldLabel + ':';
+                    selectItem.appendChild(listLabel);
+                    const listSelect = document.createElement('select');
+                    listSelect.id = `filter-${escapeHtml(field.fieldName)}`;
+                    listSelect.name = escapeHtml(field.fieldName);
+                    listSelect.multiple = true;
+                    selectItem.appendChild(listSelect);
                     filterForm.appendChild(selectItem);
                     
                     const select = selectItem.querySelector('select');
@@ -1096,8 +1334,8 @@ function buildDynamicFilters() {
                                     }));
                                     customSelect.populate(listData);
                                     
-                                    if (window.selectedFilters[field.fieldName]) {
-                                        const savedValues = window.selectedFilters[field.fieldName];
+                                    if (selectedFilters[field.fieldName]) {
+                                        const savedValues = selectedFilters[field.fieldName];
                                         if (Array.isArray(savedValues) && savedValues.length > 0) {
                                             const validValues = savedValues.filter(v => v !== null && v !== undefined && v !== '' && v !== 'null');
                                             if (validValues.length > 0) {
@@ -1114,27 +1352,46 @@ function buildDynamicFilters() {
                 } else if (field.fieldType === 'TEXT' || field.fieldType === 'PHONE') {
                     const selectItem = document.createElement('div');
                     selectItem.className = 'select-section-item';
-                    selectItem.innerHTML = `
-                        <br>
-                        <label class="select-label-style" for="filter-${field.fieldName}">${field.fieldLabel}:</label>
-                        <input type="text" 
-                               id="filter-${field.fieldName}" 
-                               name="${field.fieldName}" 
-                               placeholder="Пошук...">
-                    `;
+                    const textBr = document.createElement('br');
+                    selectItem.appendChild(textBr);
+                    const textLabel = document.createElement('label');
+                    textLabel.className = 'select-label-style';
+                    textLabel.setAttribute('for', `filter-${escapeHtml(field.fieldName)}`);
+                    textLabel.textContent = field.fieldLabel + ':';
+                    selectItem.appendChild(textLabel);
+                    const textInput = document.createElement('input');
+                    textInput.type = 'text';
+                    textInput.id = `filter-${escapeHtml(field.fieldName)}`;
+                    textInput.name = escapeHtml(field.fieldName);
+                    textInput.placeholder = 'Пошук...';
+                    selectItem.appendChild(textInput);
                     filterForm.appendChild(selectItem);
                 } else if (field.fieldType === 'BOOLEAN') {
                     const selectItem = document.createElement('div');
                     selectItem.className = 'select-section-item';
-                    selectItem.innerHTML = `
-                        <br>
-                        <label class="select-label-style" for="filter-${field.fieldName}">${field.fieldLabel}:</label>
-                        <select id="filter-${field.fieldName}" name="${field.fieldName}">
-                            <option value="">Всі</option>
-                            <option value="true">Так</option>
-                            <option value="false">Ні</option>
-                        </select>
-                    `;
+                    const booleanBr = document.createElement('br');
+                    selectItem.appendChild(booleanBr);
+                    const booleanLabel = document.createElement('label');
+                    booleanLabel.className = 'select-label-style';
+                    booleanLabel.setAttribute('for', `filter-${escapeHtml(field.fieldName)}`);
+                    booleanLabel.textContent = field.fieldLabel + ':';
+                    selectItem.appendChild(booleanLabel);
+                    const booleanSelect = document.createElement('select');
+                    booleanSelect.id = `filter-${escapeHtml(field.fieldName)}`;
+                    booleanSelect.name = escapeHtml(field.fieldName);
+                    const optionAll = document.createElement('option');
+                    optionAll.value = '';
+                    optionAll.textContent = 'Всі';
+                    booleanSelect.appendChild(optionAll);
+                    const optionTrue = document.createElement('option');
+                    optionTrue.value = 'true';
+                    optionTrue.textContent = 'Так';
+                    booleanSelect.appendChild(optionTrue);
+                    const optionFalse = document.createElement('option');
+                    optionFalse.value = 'false';
+                    optionFalse.textContent = 'Ні';
+                    booleanSelect.appendChild(optionFalse);
+                    selectItem.appendChild(booleanSelect);
                     filterForm.appendChild(selectItem);
                 }
             });
@@ -1145,10 +1402,6 @@ function buildDynamicFilters() {
 }
 
 function updateSelectedFilters() {
-    if (typeof selectedFilters === 'undefined') {
-        window.selectedFilters = {};
-    }
-
     Object.keys(selectedFilters).forEach(key => delete selectedFilters[key]);
 
     Object.keys(customSelects).forEach(selectId => {
@@ -1298,9 +1551,8 @@ function clearFilters() {
         });
     }
 
-    const searchInput = document.getElementById('inputSearch');
     if (searchInput) {
-    searchInput.value = '';
+        searchInput.value = '';
     }
 
     localStorage.removeItem('selectedFilters');
@@ -1347,14 +1599,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     } else {
         parsedFilters = {};
     }
-    window.selectedFilters = parsedFilters;
+    Object.keys(selectedFilters).forEach(key => delete selectedFilters[key]);
+    Object.assign(selectedFilters, parsedFilters);
 
     const savedSearchTerm = localStorage.getItem('searchTerm');
-    if (savedSearchTerm) {
-        const searchInput = document.getElementById('inputSearch');
-        if (searchInput) {
+    if (savedSearchTerm && searchInput) {
         searchInput.value = savedSearchTerm;
-        }
     }
 
     try {

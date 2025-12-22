@@ -1,7 +1,18 @@
-document.addEventListener('DOMContentLoaded', async () => {
-    await loadUserContainerBalances();
-    await loadContainerTypes();
-});
+function escapeHtml(text) {
+    if (text == null) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+const userContainerBalanceList = document.getElementById('user-container-balance-list');
+const balanceOperationModal = document.getElementById('balanceOperationModal');
+const operationUserId = document.getElementById('operationUserId');
+const balanceOperationForm = document.getElementById('balanceOperationForm');
+const operationContainerType = document.getElementById('operationContainerType');
+const operationAction = document.getElementById('operationAction');
+const operationQuantity = document.getElementById('operationQuantity');
+
 
 async function loadUserContainerBalances() {
     try {
@@ -42,13 +53,14 @@ async function loadContainerTypes() {
         }
 
         const types = await response.json();
-        const select = document.getElementById('operationContainerType');
-        types.forEach(type => {
-            const option = document.createElement('option');
-            option.value = type.id;
-            option.textContent = type.name;
-            select.appendChild(option);
-        });
+        if (operationContainerType) {
+            types.forEach(type => {
+                const option = document.createElement('option');
+                option.value = type.id;
+                option.textContent = type.name;
+                operationContainerType.appendChild(option);
+            });
+        }
     } catch (error) {
         console.error('Error:', error);
         handleError(error);
@@ -56,8 +68,9 @@ async function loadContainerTypes() {
 }
 
 function renderUserContainerBalances(balances) {
-    const list = document.getElementById('user-container-balance-list');
-    list.innerHTML = '';
+    if (!userContainerBalanceList) return;
+    
+    userContainerBalanceList.textContent = '';
 
     balances.forEach(userBalance => {
         const item = document.createElement('li');
@@ -65,81 +78,135 @@ function renderUserContainerBalances(balances) {
 
         const header = document.createElement('div');
         header.className = 'user-container-balance-item-header';
-        header.innerHTML = `
-            <span class="user-name">${userBalance.userName}</span>
-            <button class="user-container-balance-button" 
-            onclick="openBalanceOperationModal(${userBalance.userId})">Операція</button>        `;
+        
+        const userNameSpan = document.createElement('span');
+        userNameSpan.className = 'user-name';
+        userNameSpan.textContent = userBalance.userName || '';
+        header.appendChild(userNameSpan);
+        
+        const operationButton = document.createElement('button');
+        operationButton.className = 'user-container-balance-button';
+        operationButton.textContent = 'Операція';
+        operationButton.addEventListener('click', () => {
+            openBalanceOperationModal(userBalance.userId);
+        });
+        header.appendChild(operationButton);
 
         const balanceList = document.createElement('ul');
-        userBalance.balances.forEach(balance => {
-            const balanceItem = document.createElement('li');
-            balanceItem.textContent = `${balance.containerName} - 
-            ${balance.totalQuantity} шт - у клієнта ${balance.clientQuantity} шт`;
-            balanceList.appendChild(balanceItem);
-        });
+        if (userBalance.balances && Array.isArray(userBalance.balances)) {
+            userBalance.balances.forEach(balance => {
+                const balanceItem = document.createElement('li');
+                const containerName = balance.containerName || '';
+                const totalQuantity = balance.totalQuantity != null ? balance.totalQuantity : 0;
+                const clientQuantity = balance.clientQuantity != null ? balance.clientQuantity : 0;
+                balanceItem.textContent = `${containerName} - ${totalQuantity} шт - у клієнта ${clientQuantity} шт`;
+                balanceList.appendChild(balanceItem);
+            });
+        }
 
         item.appendChild(header);
         item.appendChild(balanceList);
-        list.appendChild(item);
+        userContainerBalanceList.appendChild(item);
     });
 }
 
 function openBalanceOperationModal(userId) {
-    const modal = document.getElementById('balanceOperationModal');
-    modal.classList.add('show');
-    document.getElementById('operationUserId').value = userId;
+    if (balanceOperationModal) {
+        balanceOperationModal.classList.add('show');
+    }
+    if (operationUserId) {
+        operationUserId.value = userId;
+    }
 }
 
 function closeBalanceOperationModal() {
-    const modal = document.getElementById('balanceOperationModal');
-    modal.classList.remove('show');
-    document.getElementById('balanceOperationForm').reset();
+    if (balanceOperationModal) {
+        balanceOperationModal.classList.remove('show');
+    }
+    if (balanceOperationForm) {
+        balanceOperationForm.reset();
+    }
 }
 
-document.querySelector('.close-balance-operation').addEventListener('click', closeBalanceOperationModal);
-window.addEventListener('click', (event) => {
-    const modal = document.getElementById('balanceOperationModal');
-    if (event.target === modal) {
-        closeBalanceOperationModal();
-    }
-});
-
-document.getElementById('balanceOperationForm').addEventListener('submit',
-    async (event) => {
-        event.preventDefault();
-
-        const action = document.getElementById('operationAction').value;
-        const containerId = document.getElementById('operationContainerType').value;
-        const quantity = document.getElementById('operationQuantity').value;
-        const userId = document.getElementById('operationUserId').value;
-
-        const endpoint = `/api/v1/containers/balance/${action}`;
-        const requestBody = {
-            userId: parseInt(userId),
-            containerId: parseInt(containerId),
-            quantity: quantity,
+function initBalanceOperationModal() {
+    const closeBtn = document.querySelector('.close-balance-operation');
+    if (closeBtn) {
+        if (closeBtn._closeModalHandler) {
+            closeBtn.removeEventListener('click', closeBtn._closeModalHandler);
+        }
+        const closeModalHandler = () => {
+            closeBalanceOperationModal();
         };
+        closeBtn._closeModalHandler = closeModalHandler;
+        closeBtn.addEventListener('click', closeModalHandler);
+    }
 
-        try {
-            const response = await fetch(endpoint, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(requestBody),
-            });
+    if (balanceOperationModal) {
+        if (balanceOperationModal._modalClickHandler) {
+            balanceOperationModal.removeEventListener('click', balanceOperationModal._modalClickHandler);
+        }
+        const handleModalClick = (event) => {
+            if (event.target === balanceOperationModal) {
+                closeBalanceOperationModal();
+            }
+        };
+        balanceOperationModal._modalClickHandler = handleModalClick;
+        balanceOperationModal.addEventListener('click', handleModalClick);
+    }
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                handleError(new ErrorResponse(errorData.error, errorData.message, errorData.details));
+    if (balanceOperationForm) {
+        if (balanceOperationForm._submitHandler) {
+            balanceOperationForm.removeEventListener('submit', balanceOperationForm._submitHandler);
+        }
+        const submitHandler = async (event) => {
+            event.preventDefault();
+
+            if (!operationAction || !operationContainerType || !operationQuantity || !operationUserId) {
                 return;
             }
 
-            closeBalanceOperationModal();
-            await loadUserContainerBalances();
-            showMessage('Операція успішно виконана', 'info');
-        } catch (error) {
-            console.error('Ошибка:', error);
-            handleError(error);
-        }
-    });
+            const action = operationAction.value;
+            const containerId = operationContainerType.value;
+            const quantity = operationQuantity.value;
+            const userId = operationUserId.value;
+
+            const endpoint = `/api/v1/containers/balance/${action}`;
+            const requestBody = {
+                userId: parseInt(userId),
+                containerId: parseInt(containerId),
+                quantity: quantity,
+            };
+
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestBody),
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    handleError(new ErrorResponse(errorData.error, errorData.message, errorData.details));
+                    return;
+                }
+
+                closeBalanceOperationModal();
+                await loadUserContainerBalances();
+                showMessage('Операція успішно виконана', 'info');
+            } catch (error) {
+                console.error('Ошибка:', error);
+                handleError(error);
+            }
+        };
+        balanceOperationForm._submitHandler = submitHandler;
+        balanceOperationForm.addEventListener('submit', submitHandler);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+    await loadUserContainerBalances();
+    await loadContainerTypes();
+    initBalanceOperationModal();
+});

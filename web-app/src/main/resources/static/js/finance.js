@@ -15,6 +15,13 @@ const transactionTypeMap = {
     'VEHICLE_EXPENSE': 'Витрати на машину'
 };
 
+function escapeHtml(text) {
+    if (text == null) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     initializeTabs();
     initializeModals();
@@ -53,21 +60,40 @@ function initializeTabs() {
 }
 
 function initializeModals() {
-    // Close modals on X click
+    const modals = [
+        document.getElementById('create-transaction-modal'),
+        document.getElementById('view-balances-modal'),
+        document.getElementById('edit-transaction-modal'),
+        document.getElementById('edit-exchange-rate-modal')
+    ];
+
+    modals.forEach(modal => {
+        if (!modal) return;
+
+        if (modal._modalClickHandler) {
+            modal.removeEventListener('click', modal._modalClickHandler);
+        }
+        const handleModalClick = (e) => {
+            if (e.target === modal) {
+                modal.style.display = 'none';
+            }
+        };
+        modal._modalClickHandler = handleModalClick;
+        modal.addEventListener('click', handleModalClick);
+    });
+
     document.querySelectorAll('.close').forEach(closeBtn => {
-        closeBtn.addEventListener('click', (e) => {
+        if (closeBtn._closeModalHandler) {
+            closeBtn.removeEventListener('click', closeBtn._closeModalHandler);
+        }
+        const handleCloseClick = (e) => {
             const modal = e.target.closest('.modal');
             if (modal) {
                 modal.style.display = 'none';
             }
-        });
-    });
-
-    // Close modals on outside click
-    window.addEventListener('click', (e) => {
-        if (e.target.classList.contains('modal')) {
-            e.target.style.display = 'none';
-        }
+        };
+        closeBtn._closeModalHandler = handleCloseClick;
+        closeBtn.addEventListener('click', handleCloseClick);
     });
 }
 
@@ -174,7 +200,8 @@ async function loadAccountsAndBranches() {
 
 async function renderAccountsAndBranches(branches, accounts) {
     const container = document.getElementById('accounts-branches-container');
-    container.innerHTML = '';
+    if (!container) return;
+    container.textContent = '';
     
     // Group accounts by branch
     const accountsByBranch = {};
@@ -214,27 +241,55 @@ async function createBranchSection(branch, accounts) {
     
     const branchHeader = document.createElement('div');
     branchHeader.className = 'branch-header';
-    branchHeader.innerHTML = `
-        <div class="branch-header-content">
-            <div class="branch-info">
-                <h3 class="branch-name">${branch.name}</h3>
-                ${branch.description ? `<p class="branch-description">${branch.description}</p>` : ''}
-            </div>
-            <div class="branch-balance">
-                <span class="balance-label">Загальний баланс:</span>
-                <span class="balance-value">${formatBranchBalance(branch.totalBalance)}</span>
-            </div>
-            <div class="branch-actions">
-                <!-- Редагування та видалення філій перенесено на сторінку Налаштування -->
-            </div>
-        </div>
-    `;
+    
+    const headerContent = document.createElement('div');
+    headerContent.className = 'branch-header-content';
+    
+    const branchInfo = document.createElement('div');
+    branchInfo.className = 'branch-info';
+    
+    const branchName = document.createElement('h3');
+    branchName.className = 'branch-name';
+    branchName.textContent = branch.name || '';
+    branchInfo.appendChild(branchName);
+    
+    if (branch.description) {
+        const branchDescription = document.createElement('p');
+        branchDescription.className = 'branch-description';
+        branchDescription.textContent = branch.description;
+        branchInfo.appendChild(branchDescription);
+    }
+    
+    const branchBalance = document.createElement('div');
+    branchBalance.className = 'branch-balance';
+    
+    const balanceLabel = document.createElement('span');
+    balanceLabel.className = 'balance-label';
+    balanceLabel.textContent = 'Загальний баланс:';
+    branchBalance.appendChild(balanceLabel);
+    
+    const balanceValue = document.createElement('span');
+    balanceValue.className = 'balance-value';
+    const balanceHtml = formatBranchBalance(branch.totalBalance);
+    balanceValue.innerHTML = balanceHtml;
+    branchBalance.appendChild(balanceValue);
+    
+    const branchActions = document.createElement('div');
+    branchActions.className = 'branch-actions';
+    
+    headerContent.appendChild(branchInfo);
+    headerContent.appendChild(branchBalance);
+    headerContent.appendChild(branchActions);
+    branchHeader.appendChild(headerContent);
     
     const accountsContainer = document.createElement('div');
     accountsContainer.className = 'branch-accounts';
     
     if (accounts.length === 0) {
-        accountsContainer.innerHTML = '<p class="no-accounts">Немає рахунків у цій філії</p>';
+        const noAccounts = document.createElement('p');
+        noAccounts.className = 'no-accounts';
+        noAccounts.textContent = 'Немає рахунків у цій філії';
+        accountsContainer.appendChild(noAccounts);
     } else {
         // Load account rows asynchronously
         const accountRows = await Promise.all(
@@ -255,17 +310,35 @@ async function createStandaloneAccountsSection(accounts, totalBalance) {
     
     const header = document.createElement('div');
     header.className = 'branch-header';
-    header.innerHTML = `
-        <div class="branch-header-content">
-            <div class="branch-info">
-                <h3 class="branch-name">Рахунки без філії</h3>
-            </div>
-            <div class="branch-balance">
-                <span class="balance-label">Загальний баланс:</span>
-                <span class="balance-value">${formatBranchBalance(totalBalance)}</span>
-            </div>
-        </div>
-    `;
+    
+    const headerContent = document.createElement('div');
+    headerContent.className = 'branch-header-content';
+    
+    const branchInfo = document.createElement('div');
+    branchInfo.className = 'branch-info';
+    
+    const branchName = document.createElement('h3');
+    branchName.className = 'branch-name';
+    branchName.textContent = 'Рахунки без філії';
+    branchInfo.appendChild(branchName);
+    
+    const branchBalance = document.createElement('div');
+    branchBalance.className = 'branch-balance';
+    
+    const balanceLabel = document.createElement('span');
+    balanceLabel.className = 'balance-label';
+    balanceLabel.textContent = 'Загальний баланс:';
+    branchBalance.appendChild(balanceLabel);
+    
+    const balanceValue = document.createElement('span');
+    balanceValue.className = 'balance-value';
+    const balanceHtml = formatBranchBalance(totalBalance);
+    balanceValue.innerHTML = balanceHtml;
+    branchBalance.appendChild(balanceValue);
+    
+    headerContent.appendChild(branchInfo);
+    headerContent.appendChild(branchBalance);
+    header.appendChild(headerContent);
     
     const accountsContainer = document.createElement('div');
     accountsContainer.className = 'branch-accounts';
@@ -293,48 +366,97 @@ async function createAccountRow(account, isInBranch) {
         canOperateAccount = branch ? (branch.canOperate === true) : false;
     }
     
-    const currenciesHtml = Array.from(account.currencies || [])
-        .map(c => `<span class="currency-badge">${c}</span>`)
-        .join('');
+    const accountInfo = document.createElement('div');
+    accountInfo.className = 'account-info';
     
-    // Load balances for this account
-    let balancesHtml = '<div class="account-balances-loading">Завантаження...</div>';
+    const accountName = document.createElement('div');
+    accountName.className = 'account-name';
+    accountName.textContent = account.name || '';
+    accountInfo.appendChild(accountName);
+    
+    const accountDetails = document.createElement('div');
+    accountDetails.className = 'account-details';
+    
+    if (account.userId) {
+        const accountUser = document.createElement('span');
+        accountUser.className = 'account-user';
+        accountUser.textContent = `👤 ${getUserName(account.userId)}`;
+        accountDetails.appendChild(accountUser);
+    }
+    
+    const accountCurrencies = document.createElement('span');
+    accountCurrencies.className = 'account-currencies';
+    if (account.currencies && Array.isArray(account.currencies)) {
+        account.currencies.forEach(currency => {
+            const currencyBadge = document.createElement('span');
+            currencyBadge.className = 'currency-badge';
+            currencyBadge.textContent = currency || '';
+            accountCurrencies.appendChild(currencyBadge);
+        });
+    }
+    accountDetails.appendChild(accountCurrencies);
+    
+    const accountBalances = document.createElement('div');
+    accountBalances.className = 'account-balances';
+    
+    const loadingDiv = document.createElement('div');
+    loadingDiv.className = 'account-balances-loading';
+    loadingDiv.textContent = 'Завантаження...';
+    accountBalances.appendChild(loadingDiv);
+    
     try {
         const balancesResponse = await fetch(`${API_BASE}/accounts/${account.id}/balances`);
         if (balancesResponse.ok) {
             const balances = await balancesResponse.json();
+            accountBalances.textContent = '';
             if (balances && balances.length > 0) {
-                balancesHtml = balances.map(balance => 
-                    `<div class="balance-item-row">
-                        <span class="balance-currency">${balance.currency}</span>
-                        <span class="balance-amount">${formatNumber(balance.amount)}</span>
-                    </div>`
-                ).join('');
+                balances.forEach(balance => {
+                    const balanceItemRow = document.createElement('div');
+                    balanceItemRow.className = 'balance-item-row';
+                    
+                    const balanceCurrency = document.createElement('span');
+                    balanceCurrency.className = 'balance-currency';
+                    balanceCurrency.textContent = balance.currency || '';
+                    balanceItemRow.appendChild(balanceCurrency);
+                    
+                    const balanceAmount = document.createElement('span');
+                    balanceAmount.className = 'balance-amount';
+                    balanceAmount.textContent = formatNumber(balance.amount);
+                    balanceItemRow.appendChild(balanceAmount);
+                    
+                    accountBalances.appendChild(balanceItemRow);
+                });
             } else {
-                balancesHtml = '<div class="account-balances-empty">Немає балансів</div>';
+                const emptyDiv = document.createElement('div');
+                emptyDiv.className = 'account-balances-empty';
+                emptyDiv.textContent = 'Немає балансів';
+                accountBalances.appendChild(emptyDiv);
             }
         }
     } catch (error) {
         console.warn(`Failed to load balances for account ${account.id}`, error);
-        balancesHtml = '<div class="account-balances-error">Помилка завантаження</div>';
+        accountBalances.textContent = '';
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'account-balances-error';
+        errorDiv.textContent = 'Помилка завантаження';
+        accountBalances.appendChild(errorDiv);
     }
     
-    row.innerHTML = `
-        <div class="account-info">
-            <div class="account-name">${account.name}</div>
-            <div class="account-details">
-                ${account.userId ? `<span class="account-user">👤 ${getUserName(account.userId)}</span>` : ''}
-                <span class="account-currencies">${currenciesHtml}</span>
-            </div>
-            <div class="account-balances">
-                ${balancesHtml}
-            </div>
-        </div>
-        <div class="account-actions">
-            ${!canOperateAccount ? `<span class="no-permission-hint">Немає прав на операції</span>` : ''}
-            <!-- Редагування та видалення рахунків перенесено на сторінку Налаштування -->
-        </div>
-    `;
+    accountInfo.appendChild(accountDetails);
+    accountInfo.appendChild(accountBalances);
+    
+    const accountActions = document.createElement('div');
+    accountActions.className = 'account-actions';
+    
+    if (!canOperateAccount) {
+        const noPermissionHint = document.createElement('span');
+        noPermissionHint.className = 'no-permission-hint';
+        noPermissionHint.textContent = 'Немає прав на операції';
+        accountActions.appendChild(noPermissionHint);
+    }
+    
+    row.appendChild(accountInfo);
+    row.appendChild(accountActions);
     
     return row;
 }
@@ -345,20 +467,34 @@ async function viewAccountBalances(accountId, accountName) {
         if (!response.ok) throw new Error('Failed to load balances');
         const balances = await response.json();
 
-        document.getElementById('balances-account-name').textContent = `Баланси рахунку: ${accountName}`;
+        const balancesAccountName = document.getElementById('balances-account-name');
+        if (balancesAccountName) {
+            balancesAccountName.textContent = `Баланси рахунку: ${accountName || ''}`;
+        }
+        
         const tbody = document.getElementById('balances-body');
-        tbody.innerHTML = '';
+        if (!tbody) return;
+        tbody.textContent = '';
 
         balances.forEach(balance => {
             const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>${balance.currency}</td>
-                <td class="balance-value">${formatNumber(balance.amount)}</td>
-            `;
+            
+            const currencyCell = document.createElement('td');
+            currencyCell.textContent = balance.currency || '';
+            row.appendChild(currencyCell);
+            
+            const amountCell = document.createElement('td');
+            amountCell.className = 'balance-value';
+            amountCell.textContent = formatNumber(balance.amount);
+            row.appendChild(amountCell);
+            
             tbody.appendChild(row);
         });
 
-        document.getElementById('view-balances-modal').style.display = 'block';
+        const viewBalancesModal = document.getElementById('view-balances-modal');
+        if (viewBalancesModal) {
+            viewBalancesModal.style.display = 'block';
+        }
     } catch (error) {
         console.error('Error loading balances:', error);
         showFinanceMessage('Помилка завантаження балансів', 'error');
@@ -484,18 +620,28 @@ function formatBranchBalance(balanceObj) {
 
 function renderBranches(branches) {
     const tbody = document.getElementById('branches-body');
-    tbody.innerHTML = '';
+    if (!tbody) return;
+    tbody.textContent = '';
 
     branches.forEach(branch => {
         const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${branch.name}</td>
-            <td>${branch.description || '-'}</td>
-            <td>${formatBranchBalance(branch.totalBalance)}</td>
-            <td>
-                <!-- Редагування та видалення філій перенесено на сторінку Налаштування -->
-            </td>
-        `;
+        
+        const nameCell = document.createElement('td');
+        nameCell.textContent = branch.name || '';
+        row.appendChild(nameCell);
+        
+        const descriptionCell = document.createElement('td');
+        descriptionCell.textContent = branch.description || '-';
+        row.appendChild(descriptionCell);
+        
+        const balanceCell = document.createElement('td');
+        const balanceHtml = formatBranchBalance(branch.totalBalance);
+        balanceCell.innerHTML = balanceHtml;
+        row.appendChild(balanceCell);
+        
+        const actionsCell = document.createElement('td');
+        row.appendChild(actionsCell);
+        
         tbody.appendChild(row);
     });
 }
@@ -595,11 +741,16 @@ async function exportTransactionsToExcel() {
 
 function renderTransactions(transactions) {
     const tbody = document.getElementById('transactions-body');
-    tbody.innerHTML = '';
+    if (!tbody) return;
+    tbody.textContent = '';
 
     if (transactions.length === 0) {
         const row = document.createElement('tr');
-        row.innerHTML = '<td colspan="10" style="text-align: center;">Транзакції не знайдено</td>';
+        const emptyCell = document.createElement('td');
+        emptyCell.colSpan = 11;
+        emptyCell.style.textAlign = 'center';
+        emptyCell.textContent = 'Транзакції не знайдено';
+        row.appendChild(emptyCell);
         tbody.appendChild(row);
         return;
     }
@@ -607,7 +758,7 @@ function renderTransactions(transactions) {
     transactions.forEach(transaction => {
         const row = document.createElement('tr');
         const date = transaction.createdAt ? new Date(transaction.createdAt).toLocaleDateString('uk-UA') : '—';
-        const type = transactionTypeMap[transaction.type] || transaction.type;
+        const type = transactionTypeMap[transaction.type] || transaction.type || '—';
         const category = transaction.categoryName || '—';
         const fromAccount = transaction.fromAccountName || '—';
         const toAccount = transaction.toAccountName || '—';
@@ -617,8 +768,6 @@ function renderTransactions(transactions) {
         const description = transaction.description || '—';
         const vehicle = transaction.vehicleNumber || '—';
 
-        // For currency conversion, show converted amount
-        // For internal transfer, show commission if exists
         let amountDisplay = amount;
         if (transaction.type === 'CURRENCY_CONVERSION' && transaction.convertedAmount) {
             amountDisplay = `${amount} → ${formatNumber(transaction.convertedAmount)} ${transaction.convertedCurrency || ''}`;
@@ -627,23 +776,70 @@ function renderTransactions(transactions) {
             amountDisplay = `${amount} (комісія: ${formatNumber(transaction.commission)}, переказ: ${formatNumber(transferAmount)})`;
         }
 
-        row.innerHTML = `
-            <td data-label="Дата">${date}</td>
-            <td data-label="Тип">${type}</td>
-            <td data-label="Машина">${vehicle}</td>
-            <td data-label="Категорія">${category}</td>
-            <td data-label="З рахунку">${fromAccount}</td>
-            <td data-label="На рахунок">${toAccount}</td>
-            <td data-label="Сума">${amountDisplay}</td>
-            <td data-label="Валюта">${currency}</td>
-            <td data-label="Клієнт">${client}</td>
-            <td data-label="Опис">${description}</td>
-            <td data-label="Дії">
-                <div class="action-buttons-table">
-                    <button class="action-btn btn-edit" onclick="openEditTransactionModal(${transaction.id})">Редагувати</button>
-                </div>
-            </td>
-        `;
+        const dateCell = document.createElement('td');
+        dateCell.setAttribute('data-label', 'Дата');
+        dateCell.textContent = date;
+        row.appendChild(dateCell);
+
+        const typeCell = document.createElement('td');
+        typeCell.setAttribute('data-label', 'Тип');
+        typeCell.textContent = type;
+        row.appendChild(typeCell);
+
+        const vehicleCell = document.createElement('td');
+        vehicleCell.setAttribute('data-label', 'Машина');
+        vehicleCell.textContent = vehicle;
+        row.appendChild(vehicleCell);
+
+        const categoryCell = document.createElement('td');
+        categoryCell.setAttribute('data-label', 'Категорія');
+        categoryCell.textContent = category;
+        row.appendChild(categoryCell);
+
+        const fromAccountCell = document.createElement('td');
+        fromAccountCell.setAttribute('data-label', 'З рахунку');
+        fromAccountCell.textContent = fromAccount;
+        row.appendChild(fromAccountCell);
+
+        const toAccountCell = document.createElement('td');
+        toAccountCell.setAttribute('data-label', 'На рахунок');
+        toAccountCell.textContent = toAccount;
+        row.appendChild(toAccountCell);
+
+        const amountCell = document.createElement('td');
+        amountCell.setAttribute('data-label', 'Сума');
+        amountCell.textContent = amountDisplay;
+        row.appendChild(amountCell);
+
+        const currencyCell = document.createElement('td');
+        currencyCell.setAttribute('data-label', 'Валюта');
+        currencyCell.textContent = currency;
+        row.appendChild(currencyCell);
+
+        const clientCell = document.createElement('td');
+        clientCell.setAttribute('data-label', 'Клієнт');
+        clientCell.textContent = client;
+        row.appendChild(clientCell);
+
+        const descriptionCell = document.createElement('td');
+        descriptionCell.setAttribute('data-label', 'Опис');
+        descriptionCell.textContent = description;
+        row.appendChild(descriptionCell);
+
+        const actionsCell = document.createElement('td');
+        actionsCell.setAttribute('data-label', 'Дії');
+        const actionButtonsTable = document.createElement('div');
+        actionButtonsTable.className = 'action-buttons-table';
+        const editButton = document.createElement('button');
+        editButton.className = 'action-btn btn-edit';
+        editButton.textContent = 'Редагувати';
+        editButton.addEventListener('click', () => {
+            openEditTransactionModal(transaction.id);
+        });
+        actionButtonsTable.appendChild(editButton);
+        actionsCell.appendChild(actionButtonsTable);
+        row.appendChild(actionsCell);
+
         tbody.appendChild(row);
     });
 }
@@ -711,7 +907,13 @@ async function openEditTransactionModal(transactionId) {
         
         // Load categories for this transaction type
         const categorySelect = document.getElementById('edit-transaction-category');
-        categorySelect.innerHTML = '<option value="">Без категорії</option>';
+        if (categorySelect) {
+            categorySelect.textContent = '';
+            const defaultOption = document.createElement('option');
+            defaultOption.value = '';
+            defaultOption.textContent = 'Без категорії';
+            categorySelect.appendChild(defaultOption);
+        }
         
         if (typeStr) {
             const categories = await loadCategoriesForType(typeStr);
@@ -876,11 +1078,15 @@ async function populateTransactionFilters() {
     // Populate account filter - only show accounts user can view
     const accountFilter = document.getElementById('transaction-account-filter');
     if (accountFilter) {
-        accountFilter.innerHTML = '<option value="">Всі рахунки</option>';
+        accountFilter.textContent = '';
+        const defaultOption = document.createElement('option');
+        defaultOption.value = '';
+        defaultOption.textContent = 'Всі рахунки';
+        accountFilter.appendChild(defaultOption);
         accountsCache.forEach(account => {
             const option = document.createElement('option');
             option.value = account.id;
-            option.textContent = account.name;
+            option.textContent = account.name || '';
             accountFilter.appendChild(option);
         });
     }
@@ -904,11 +1110,17 @@ async function populateTransactionFilters() {
 
         const categoryFilter = document.getElementById('transaction-category-filter');
         if (categoryFilter) {
-            categoryFilter.innerHTML = '<option value="">Всі категорії</option>';
+            categoryFilter.textContent = '';
+            const defaultOption = document.createElement('option');
+            defaultOption.value = '';
+            defaultOption.textContent = 'Всі категорії';
+            categoryFilter.appendChild(defaultOption);
             allCategories.forEach(category => {
                 const option = document.createElement('option');
                 option.value = category.id;
-                option.textContent = `${transactionTypeMap[category.type] || category.type} - ${category.name}`;
+                const typeName = transactionTypeMap[category.type] || category.type || '';
+                const categoryName = category.name || '';
+                option.textContent = `${typeName} - ${categoryName}`;
                 categoryFilter.appendChild(option);
             });
         }
@@ -940,13 +1152,17 @@ function populateTransactionForm() {
 
     [fromAccountSelect, toAccountSelect, conversionAccountSelect].forEach(select => {
         if (!select) return;
-        select.innerHTML = '<option value="">Виберіть рахунок</option>';
+        select.textContent = '';
+        const defaultOption = document.createElement('option');
+        defaultOption.value = '';
+        defaultOption.textContent = 'Виберіть рахунок';
+        select.appendChild(defaultOption);
         accountsCache.forEach(account => {
             // Only show accounts user can operate
             if (canOperateAccount(account)) {
                 const option = document.createElement('option');
                 option.value = account.id;
-                option.textContent = account.name;
+                option.textContent = account.name || '';
                 select.appendChild(option);
             }
         });
@@ -959,7 +1175,11 @@ function populateTransactionForm() {
     
     [currencySelect, conversionCurrencySelect].forEach(select => {
         if (select) {
-            select.innerHTML = '<option value="">Виберіть валюту</option>';
+            select.textContent = '';
+            const defaultOption = document.createElement('option');
+            defaultOption.value = '';
+            defaultOption.textContent = 'Виберіть валюту';
+            select.appendChild(defaultOption);
             currencies.forEach(currency => {
                 const option = document.createElement('option');
                 option.value = currency;
@@ -995,12 +1215,16 @@ function initializeClientAutocomplete() {
         });
 
         if (filtered.length === 0) {
-            dropdown.innerHTML = '<div class="client-autocomplete-item">Клієнтів не знайдено</div>';
+            dropdown.textContent = '';
+            const noResultsItem = document.createElement('div');
+            noResultsItem.className = 'client-autocomplete-item';
+            noResultsItem.textContent = 'Клієнтів не знайдено';
+            dropdown.appendChild(noResultsItem);
             dropdown.style.display = 'block';
             return;
         }
 
-        dropdown.innerHTML = '';
+        dropdown.textContent = '';
         filtered.forEach(client => {
             const item = document.createElement('div');
             item.className = 'client-autocomplete-item';
@@ -1072,12 +1296,16 @@ function handleTransactionTypeChange() {
     loadCategoriesForType(type).then(categories => {
         const select = document.getElementById('transaction-category');
         if (select) {
-            select.innerHTML = '<option value="">Без категорії</option>';
+            select.textContent = '';
+            const defaultOption = document.createElement('option');
+            defaultOption.value = '';
+            defaultOption.textContent = 'Без категорії';
+            select.appendChild(defaultOption);
             if (Array.isArray(categories)) {
                 categories.forEach(cat => {
                     const option = document.createElement('option');
                     option.value = cat.id;
-                    option.textContent = cat.name;
+                    option.textContent = cat.name || '';
                     select.appendChild(option);
                 });
             }
@@ -1441,7 +1669,7 @@ function renderExchangeRates(rates) {
     const tbody = document.getElementById('exchange-rates-body');
     if (!tbody) return;
     
-    tbody.innerHTML = '';
+    tbody.textContent = '';
     
     // Expected currencies: UAH and USD
     const expectedCurrencies = ['UAH', 'USD'];
@@ -1454,16 +1682,32 @@ function renderExchangeRates(rates) {
             ? new Date(rate.updatedAt).toLocaleString('uk-UA')
             : 'Не встановлено';
         
-        row.innerHTML = `
-            <td data-label="Валюта">${currency}</td>
-            <td data-label="Курс до EUR">${rate ? rate.rate.toFixed(6) : 'Не встановлено'}</td>
-            <td data-label="Оновлено">${updatedAt}</td>
-            <td data-label="Дії">
-                <button class="action-btn btn-edit" onclick="openEditExchangeRateModal('${currency}', ${rate ? rate.rate : 'null'})">
-                    ${rate ? 'Оновити' : 'Встановити'}
-                </button>
-            </td>
-        `;
+        const currencyCell = document.createElement('td');
+        currencyCell.setAttribute('data-label', 'Валюта');
+        currencyCell.textContent = currency;
+        row.appendChild(currencyCell);
+        
+        const rateCell = document.createElement('td');
+        rateCell.setAttribute('data-label', 'Курс до EUR');
+        rateCell.textContent = rate ? rate.rate.toFixed(6) : 'Не встановлено';
+        row.appendChild(rateCell);
+        
+        const updatedAtCell = document.createElement('td');
+        updatedAtCell.setAttribute('data-label', 'Оновлено');
+        updatedAtCell.textContent = updatedAt;
+        row.appendChild(updatedAtCell);
+        
+        const actionsCell = document.createElement('td');
+        actionsCell.setAttribute('data-label', 'Дії');
+        const editButton = document.createElement('button');
+        editButton.className = 'action-btn btn-edit';
+        editButton.textContent = rate ? 'Оновити' : 'Встановити';
+        editButton.addEventListener('click', () => {
+            openEditExchangeRateModal(currency, rate ? rate.rate : null);
+        });
+        actionsCell.appendChild(editButton);
+        row.appendChild(actionsCell);
+        
         tbody.appendChild(row);
     });
 }

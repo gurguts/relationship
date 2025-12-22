@@ -33,7 +33,7 @@
     <nav>
         <ul>
             <li id="nav-clients" class="dropdown">
-                <a href="#" onclick="return false;">
+                <a href="#">
                     Клієнти
                     <span class="dropdown-arrow">▼</span>
                 </a>
@@ -41,7 +41,7 @@
                 </ul>
             </li>
             <li id="nav-routes" class="dropdown">
-                <a href="#" onclick="return false;">
+                <a href="#">
                     Маршрути
                     <span class="dropdown-arrow">▼</span>
                 </a>
@@ -49,7 +49,7 @@
                 </ul>
             </li>
             <li id="nav-purchase" class="dropdown">
-                <a href="#" onclick="return false;">
+                <a href="#">
                     Закупівлі
                     <span class="dropdown-arrow">▼</span>
                 </a>
@@ -57,7 +57,7 @@
                 </ul>
             </li>
             <li id="nav-containers" class="dropdown">
-                <a href="#" onclick="return false;">
+                <a href="#">
                     Тари
                     <span class="dropdown-arrow">▼</span>
                 </a>
@@ -389,7 +389,7 @@
             </form>
         </div>
         <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" onclick="closeModal('create-vehicle-modal')">Скасувати</button>
+            <button type="button" class="btn btn-secondary" id="cancel-create-vehicle-btn">Скасувати</button>
             <button type="submit" form="create-vehicle-form" class="btn btn-primary">Створити</button>
         </div>
     </div>
@@ -649,7 +649,7 @@
             </form>
         </div>
         <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" onclick="closeModal('create-vehicle-expense-modal')">Скасувати</button>
+            <button type="button" class="btn btn-secondary" id="cancel-create-vehicle-expense-btn">Скасувати</button>
             <button type="submit" form="create-vehicle-expense-form" class="btn btn-primary">Створити</button>
         </div>
     </div>
@@ -685,7 +685,7 @@
             </form>
         </div>
         <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" onclick="closeModal('edit-vehicle-item-modal')">Скасувати</button>
+            <button type="button" class="btn btn-secondary" id="cancel-edit-vehicle-item-btn">Скасувати</button>
             <button type="submit" form="edit-vehicle-item-form" class="btn btn-primary">Зберегти</button>
         </div>
     </div>

@@ -248,6 +248,12 @@ body {
     cursor: default;
 }
 
+#tab-expenses .modern-table tbody tr:hover {
+    background: var(--bg-primary);
+    transform: none;
+    cursor: default;
+}
+
 .modern-table tbody tr.loading-row {
     text-align: center;
     padding: 3rem;

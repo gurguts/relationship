@@ -39,15 +39,17 @@ let currentWithdrawalItem = null;
 
 let transfersCache = [];
 
-/**
- * Formats a number by removing trailing zeros
- * Examples: 25.000000 -> 25, 25.500000 -> 25.5, 25.333333 -> 25.333333
- */
+function escapeHtml(text) {
+    if (text == null) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
 function formatNumber(value, maxDecimals = 6) {
     if (value === null || value === undefined || value === '') return '0';
     const num = parseFloat(value);
     if (isNaN(num)) return '0';
-    // toFixed to limit decimals, then parseFloat to remove trailing zeros
     return parseFloat(num.toFixed(maxDecimals)).toString();
 }
 
@@ -151,11 +153,15 @@ function populateTransferReasons(selectId) {
         return;
     }
     const reasons = getWithdrawalReasonsByPurpose('BOTH');
-    select.innerHTML = '<option value="">Оберіть причину</option>';
+    select.textContent = '';
+    const defaultOption = document.createElement('option');
+    defaultOption.value = '';
+    defaultOption.textContent = 'Оберіть причину';
+    select.appendChild(defaultOption);
     reasons.forEach(reason => {
         const option = document.createElement('option');
         option.value = String(reason.id);
-        option.textContent = reason.name;
+        option.textContent = reason.name || '';
         select.appendChild(option);
     });
 }
@@ -337,7 +343,6 @@ async function loadBalance() {
         }
         const balances = await response.json();
         
-        // Group balances by warehouse
         const balancesByWarehouse = {};
         balances.forEach(balance => {
             if (!balancesByWarehouse[balance.warehouseId]) {
@@ -346,64 +351,131 @@ async function loadBalance() {
             balancesByWarehouse[balance.warehouseId].push(balance);
         });
         
-        // Sort warehouses by ID to maintain consistent order
         const sortedWarehouseIds = Object.keys(balancesByWarehouse).sort((a, b) => Number(a) - Number(b));
         
         const container = document.getElementById('balance-container');
-        let html = '';
+        if (!container) return;
+        container.textContent = '';
         
-        // Display balances grouped by warehouse (sorted by warehouse ID)
+        if (sortedWarehouseIds.length === 0) {
+            const emptyMessage = document.createElement('p');
+            emptyMessage.textContent = 'Немає активних балансів на складі';
+            container.appendChild(emptyMessage);
+            return;
+        }
+        
         for (const warehouseId of sortedWarehouseIds) {
             const warehouseBalances = balancesByWarehouse[warehouseId];
-            
-            // Sort products by product ID to maintain consistent order
             warehouseBalances.sort((a, b) => Number(a.productId) - Number(b.productId));
             
-            const warehouseName = findNameByIdFromMap(warehouseMap, warehouseId);
-            html += `<h3>Склад: ${warehouseName}</h3>`;
-            html += '<table class="balance-table"><thead><tr>';
-            html += '<th>Товар</th>';
-            html += '<th>Кількість (кг)</th>';
-            html += '<th>Середня ціна (EUR/кг)</th>';
-            html += '<th>Загальна вартість (EUR)</th>';
-            html += '</tr></thead><tbody>';
+            const warehouseName = findNameByIdFromMap(warehouseMap, warehouseId) || '';
             
+            const warehouseHeading = document.createElement('h3');
+            warehouseHeading.textContent = `Склад: ${warehouseName}`;
+            container.appendChild(warehouseHeading);
+            
+            const table = document.createElement('table');
+            table.className = 'balance-table';
+            
+            const thead = document.createElement('thead');
+            const headerRow = document.createElement('tr');
+            
+            const th1 = document.createElement('th');
+            th1.textContent = 'Товар';
+            headerRow.appendChild(th1);
+            
+            const th2 = document.createElement('th');
+            th2.textContent = 'Кількість (кг)';
+            headerRow.appendChild(th2);
+            
+            const th3 = document.createElement('th');
+            th3.textContent = 'Середня ціна (EUR/кг)';
+            headerRow.appendChild(th3);
+            
+            const th4 = document.createElement('th');
+            th4.textContent = 'Загальна вартість (EUR)';
+            headerRow.appendChild(th4);
+            
+            thead.appendChild(headerRow);
+            table.appendChild(thead);
+            
+            const tbody = document.createElement('tbody');
             let warehouseTotal = 0;
+            
             for (const balance of warehouseBalances) {
-                const productName = findNameByIdFromMap(productMap, balance.productId);
+                const productName = findNameByIdFromMap(productMap, balance.productId) || '';
                 const quantity = formatNumber(balance.quantity, 2);
                 const avgPrice = formatNumber(balance.averagePriceEur, 6);
                 const totalCost = formatNumber(balance.totalCostEur, 6);
                 warehouseTotal += parseFloat(totalCost);
                 
-                html += `<tr class="balance-row"
-                            data-warehouse-id="${warehouseId}"
-                            data-product-id="${balance.productId}"
-                            data-warehouse-name="${warehouseName}"
-                            data-product-name="${productName}"
-                            data-quantity="${balance.quantity}"
-                            data-total-cost="${balance.totalCostEur}"
-                            data-average-price="${balance.averagePriceEur}">
-                            <td data-label="Товар">${productName}</td>
-                            <td data-label="Кількість (кг)">${quantity}</td>
-                            <td data-label="Середня ціна (EUR/кг)">${avgPrice}</td>
-                            <td data-label="Загальна вартість (EUR)">${totalCost}</td>
-                        </tr>`;
+                const row = document.createElement('tr');
+                row.className = 'balance-row';
+                row.setAttribute('data-warehouse-id', warehouseId);
+                row.setAttribute('data-product-id', balance.productId);
+                row.setAttribute('data-warehouse-name', warehouseName);
+                row.setAttribute('data-product-name', productName);
+                row.setAttribute('data-quantity', balance.quantity);
+                row.setAttribute('data-total-cost', balance.totalCostEur);
+                row.setAttribute('data-average-price', balance.averagePriceEur);
+                
+                const productCell = document.createElement('td');
+                productCell.setAttribute('data-label', 'Товар');
+                productCell.textContent = productName;
+                row.appendChild(productCell);
+                
+                const quantityCell = document.createElement('td');
+                quantityCell.setAttribute('data-label', 'Кількість (кг)');
+                quantityCell.textContent = quantity;
+                row.appendChild(quantityCell);
+                
+                const avgPriceCell = document.createElement('td');
+                avgPriceCell.setAttribute('data-label', 'Середня ціна (EUR/кг)');
+                avgPriceCell.textContent = avgPrice;
+                row.appendChild(avgPriceCell);
+                
+                const totalCostCell = document.createElement('td');
+                totalCostCell.setAttribute('data-label', 'Загальна вартість (EUR)');
+                totalCostCell.textContent = totalCost;
+                row.appendChild(totalCostCell);
+                
+                tbody.appendChild(row);
             }
             
-            html += '</tbody><tfoot><tr class="balance-tfoot-row">';
-            html += '<td data-label="Загальна вартість складу"><strong>Загальна вартість складу:</strong></td>';
-            html += '<td data-label=""></td>';
-            html += '<td data-label=""></td>';
-            html += `<td data-label="Сума"><strong>${formatNumber(warehouseTotal, 6)} EUR</strong></td>`;
-            html += '</tr></tfoot></table>';
+            table.appendChild(tbody);
+            
+            const tfoot = document.createElement('tfoot');
+            const footerRow = document.createElement('tr');
+            footerRow.className = 'balance-tfoot-row';
+            
+            const footerCell1 = document.createElement('td');
+            footerCell1.setAttribute('data-label', 'Загальна вартість складу');
+            const strong1 = document.createElement('strong');
+            strong1.textContent = 'Загальна вартість складу:';
+            footerCell1.appendChild(strong1);
+            footerRow.appendChild(footerCell1);
+            
+            const footerCell2 = document.createElement('td');
+            footerCell2.setAttribute('data-label', '');
+            footerRow.appendChild(footerCell2);
+            
+            const footerCell3 = document.createElement('td');
+            footerCell3.setAttribute('data-label', '');
+            footerRow.appendChild(footerCell3);
+            
+            const footerCell4 = document.createElement('td');
+            footerCell4.setAttribute('data-label', 'Сума');
+            const strong2 = document.createElement('strong');
+            strong2.textContent = `${formatNumber(warehouseTotal, 6)} EUR`;
+            footerCell4.appendChild(strong2);
+            footerRow.appendChild(footerCell4);
+            
+            tfoot.appendChild(footerRow);
+            table.appendChild(tfoot);
+            
+            container.appendChild(table);
         }
         
-        if (html === '') {
-            html = '<p>Немає активних балансів на складі</p>';
-        }
-        
-        container.innerHTML = html;
         attachBalanceRowListeners();
     } catch (error) {
         console.error('Error loading balance:', error);
@@ -417,11 +489,11 @@ function populateSelect(selectId, data) {
         console.error(`Select with id "${selectId}" not found in DOM`);
         return;
     }
-    select.innerHTML = '';
+    select.textContent = '';
     data.forEach(item => {
         const option = document.createElement('option');
         option.value = String(item.id || item.value);
-        option.text = item.name || item.text || item.value;
+        option.text = item.name || item.text || item.value || '';
         select.appendChild(option);
     });
     if (customSelects[selectId]) {
@@ -434,22 +506,32 @@ function populateSelect(selectId, data) {
 
 function populateProducts(selectId) {
     const select = document.getElementById(selectId);
-    select.innerHTML = '<option value="">Оберіть продукт</option>';
+    if (!select) return;
+    select.textContent = '';
+    const defaultOption = document.createElement('option');
+    defaultOption.value = '';
+    defaultOption.textContent = 'Оберіть продукт';
+    select.appendChild(defaultOption);
     for (const [id, name] of productMap.entries()) {
         const option = document.createElement('option');
         option.value = id;
-        option.textContent = name;
+        option.textContent = name || '';
         select.appendChild(option);
     }
 }
 
 function populateWarehouses(selectId) {
     const select = document.getElementById(selectId);
-    select.innerHTML = '<option value="">Оберіть склад</option>';
+    if (!select) return;
+    select.textContent = '';
+    const defaultOption = document.createElement('option');
+    defaultOption.value = '';
+    defaultOption.textContent = 'Оберіть склад';
+    select.appendChild(defaultOption);
     for (const [id, name] of warehouseMap.entries()) {
         const option = document.createElement('option');
         option.value = id;
-        option.textContent = name;
+        option.textContent = name || '';
         select.appendChild(option);
     }
 }
@@ -473,31 +555,74 @@ async function loadWithdrawalHistory(page) {
         }
         const data = await response.json();
         const container = document.getElementById('history-content');
-        let html = '';
+        if (!container) return;
+        container.textContent = '';
+        
         for (const withdrawal of data.content) {
             const productName = findNameByIdFromMap(productMap, withdrawal.productId) || 'Не вказано';
             const warehouseName = findNameByIdFromMap(warehouseMap, withdrawal.warehouseId) || 'Не вказано';
             const reason = withdrawal.withdrawalReason ? withdrawal.withdrawalReason.name : 'Невідома причина';
             const unitPrice = withdrawal.unitPriceEur ? formatNumber(withdrawal.unitPriceEur, 6) + ' EUR' : '-';
             const totalCost = withdrawal.totalCostEur ? formatNumber(withdrawal.totalCostEur, 6) + ' EUR' : '-';
-            html += `
-                        <tr data-id="${withdrawal.id}">
-                            <td data-label="Склад">${warehouseName}</td>
-                            <td data-label="Товар">${productName}</td>
-                            <td data-label="Причина">${reason}</td>
-                            <td data-label="Кількість">${withdrawal.quantity} кг</td>
-                            <td data-label="Ціна за кг" style="text-align: right;">${unitPrice}</td>
-                            <td data-label="Загальна вартість" style="text-align: right; font-weight: bold;">${totalCost}</td>
-                            <td data-label="Дата списання">${withdrawal.withdrawalDate}</td>
-                            <td data-label="Опис">${withdrawal.description || ''}</td>
-                            <td data-label="Створено">${new Date(withdrawal.createdAt).toLocaleString()}</td>
-                        </tr>`;
+            
+            const row = document.createElement('tr');
+            row.setAttribute('data-id', withdrawal.id);
+            
+            const warehouseCell = document.createElement('td');
+            warehouseCell.setAttribute('data-label', 'Склад');
+            warehouseCell.textContent = warehouseName;
+            row.appendChild(warehouseCell);
+            
+            const productCell = document.createElement('td');
+            productCell.setAttribute('data-label', 'Товар');
+            productCell.textContent = productName;
+            row.appendChild(productCell);
+            
+            const reasonCell = document.createElement('td');
+            reasonCell.setAttribute('data-label', 'Причина');
+            reasonCell.textContent = reason;
+            row.appendChild(reasonCell);
+            
+            const quantityCell = document.createElement('td');
+            quantityCell.setAttribute('data-label', 'Кількість');
+            quantityCell.textContent = `${withdrawal.quantity} кг`;
+            row.appendChild(quantityCell);
+            
+            const unitPriceCell = document.createElement('td');
+            unitPriceCell.setAttribute('data-label', 'Ціна за кг');
+            unitPriceCell.style.textAlign = 'right';
+            unitPriceCell.textContent = unitPrice;
+            row.appendChild(unitPriceCell);
+            
+            const totalCostCell = document.createElement('td');
+            totalCostCell.setAttribute('data-label', 'Загальна вартість');
+            totalCostCell.style.textAlign = 'right';
+            totalCostCell.style.fontWeight = 'bold';
+            totalCostCell.textContent = totalCost;
+            row.appendChild(totalCostCell);
+            
+            const withdrawalDateCell = document.createElement('td');
+            withdrawalDateCell.setAttribute('data-label', 'Дата списання');
+            withdrawalDateCell.textContent = withdrawal.withdrawalDate || '';
+            row.appendChild(withdrawalDateCell);
+            
+            const descriptionCell = document.createElement('td');
+            descriptionCell.setAttribute('data-label', 'Опис');
+            descriptionCell.textContent = withdrawal.description || '';
+            row.appendChild(descriptionCell);
+            
+            const createdAtCell = document.createElement('td');
+            createdAtCell.setAttribute('data-label', 'Створено');
+            createdAtCell.textContent = withdrawal.createdAt ? new Date(withdrawal.createdAt).toLocaleString() : '';
+            row.appendChild(createdAtCell);
+            
+            if (row._clickHandler) {
+                row.removeEventListener('click', row._clickHandler);
+            }
+            row._clickHandler = () => openEditModal(row.dataset.id, data.content);
+            row.addEventListener('click', row._clickHandler);
+            container.appendChild(row);
         }
-        container.innerHTML = html;
-
-        document.querySelectorAll('.history-table tr').forEach(row => {
-            row.addEventListener('click', () => openEditModal(row.dataset.id, data.content));
-        });
         updatePagination(data.totalPages, page);
     } catch (error) {
         console.error('Error loading withdrawals:', error);
@@ -530,30 +655,69 @@ async function loadWarehouseEntries(page) {
 
         const data = await response.json();
         const container = document.getElementById('entries-body');
-        let html = '';
+        if (!container) return;
+        container.textContent = '';
+        
         for (const entry of data.content) {
-            const productName = findNameByIdFromMap(productMap, entry.productId);
-            const warehouseName = findNameByIdFromMap(warehouseMap, entry.warehouseId);
-            const userName = findNameByIdFromMap(userMap, entry.userId);
+            const productName = findNameByIdFromMap(productMap, entry.productId) || '';
+            const warehouseName = findNameByIdFromMap(warehouseMap, entry.warehouseId) || '';
+            const userName = findNameByIdFromMap(userMap, entry.userId) || '';
             const typeName = entry.type ? entry.type.name : 'Невідомий тип';
             const driverBalance = entry.driverBalanceQuantity || 0;
             const receivedQuantity = entry.quantity || 0;
             const difference = receivedQuantity - driverBalance;
             const totalCost = formatNumber(entry.totalCostEur, 6);
-            html += `
-                <tr data-id="${entry.id}">
-                    <td data-label="Склад">${warehouseName}</td>
-                    <td data-label="Дата">${entry.entryDate}</td>
-                    <td data-label="Водій">${userName}</td>
-                    <td data-label="Товар">${productName}</td>
-                    <td data-label="Тип">${typeName}</td>
-                    <td data-label="Привезено">${receivedQuantity} кг</td>
-                    <td data-label="Закуплено">${driverBalance} кг</td>
-                    <td data-label="Різниця">${difference} кг</td>
-                    <td data-label="Вартість">${totalCost} EUR</td>
-                </tr>`;
+            
+            const row = document.createElement('tr');
+            row.setAttribute('data-id', entry.id);
+            
+            const warehouseCell = document.createElement('td');
+            warehouseCell.setAttribute('data-label', 'Склад');
+            warehouseCell.textContent = warehouseName;
+            row.appendChild(warehouseCell);
+            
+            const entryDateCell = document.createElement('td');
+            entryDateCell.setAttribute('data-label', 'Дата');
+            entryDateCell.textContent = entry.entryDate || '';
+            row.appendChild(entryDateCell);
+            
+            const userCell = document.createElement('td');
+            userCell.setAttribute('data-label', 'Водій');
+            userCell.textContent = userName;
+            row.appendChild(userCell);
+            
+            const productCell = document.createElement('td');
+            productCell.setAttribute('data-label', 'Товар');
+            productCell.textContent = productName;
+            row.appendChild(productCell);
+            
+            const typeCell = document.createElement('td');
+            typeCell.setAttribute('data-label', 'Тип');
+            typeCell.textContent = typeName;
+            row.appendChild(typeCell);
+            
+            const receivedCell = document.createElement('td');
+            receivedCell.setAttribute('data-label', 'Привезено');
+            receivedCell.textContent = `${receivedQuantity} кг`;
+            row.appendChild(receivedCell);
+            
+            const purchasedCell = document.createElement('td');
+            purchasedCell.setAttribute('data-label', 'Закуплено');
+            purchasedCell.textContent = `${driverBalance} кг`;
+            row.appendChild(purchasedCell);
+            
+            const differenceCell = document.createElement('td');
+            differenceCell.setAttribute('data-label', 'Різниця');
+            differenceCell.textContent = `${difference} кг`;
+            row.appendChild(differenceCell);
+            
+            const totalCostCell = document.createElement('td');
+            totalCostCell.setAttribute('data-label', 'Вартість');
+            totalCostCell.textContent = `${totalCost} EUR`;
+            row.appendChild(totalCostCell);
+            
+            container.appendChild(row);
         }
-        container.innerHTML = html;
 
         updateEntriesPagination(data.totalPages, page);
     } catch (error) {
@@ -873,7 +1037,7 @@ function createCustomSelect(selectElement) {
 
     function updateSelection() {
         requestAnimationFrame(() => {
-            tagsContainer.innerHTML = '';
+            tagsContainer.textContent = '';
             placeholder.style.display = selectedValues.size === 0 ? 'block' : 'none';
             if (isMultiple) {
                 selectedValues.forEach(value => {
@@ -924,10 +1088,10 @@ function createCustomSelect(selectElement) {
             const option = document.createElement('div');
             option.className = 'custom-select-option';
             option.dataset.value = String(item.id);
-            option.textContent = item.name;
+            option.textContent = item.name || '';
             fragment.appendChild(option);
         });
-        dropdown.innerHTML = '';
+        dropdown.textContent = '';
         dropdown.appendChild(fragment);
     }
 
@@ -946,7 +1110,7 @@ function createCustomSelect(selectElement) {
         populateDropdown(filtered);
     }
 
-    dropdown.addEventListener('click', (e) => {
+    const dropdownClickHandler = (e) => {
         e.stopPropagation();
         const option = e.target.closest('.custom-select-option');
         if (option) {
@@ -973,9 +1137,10 @@ function createCustomSelect(selectElement) {
             updateHiddenInput();
             populateDropdown(selectData);
         }
-    });
+    };
+    dropdown.addEventListener('click', dropdownClickHandler);
 
-    tagsContainer.addEventListener('click', (e) => {
+    const tagsContainerClickHandler = (e) => {
         const removeButton = e.target.closest('.custom-select-tag-remove');
         if (!removeButton) return;
         e.stopPropagation();
@@ -987,21 +1152,27 @@ function createCustomSelect(selectElement) {
         updateSelection();
         updateHiddenInput();
         populateDropdown(selectData);
-    });
+    };
+    tagsContainer.addEventListener('click', tagsContainerClickHandler);
 
-    trigger.addEventListener('click', (e) => {
+    const triggerClickHandler = (e) => {
         e.stopPropagation();
         dropdown.classList.toggle('open');
         if (dropdown.classList.contains('open')) searchInput.focus();
-    });
+    };
+    trigger.addEventListener('click', triggerClickHandler);
 
-    document.addEventListener('click', (e) => {
+    const documentClickHandler = (e) => {
         if (!selectContainer.contains(e.target)) dropdown.classList.remove('open');
-    });
+    };
+    document.addEventListener('click', documentClickHandler);
+    selectContainer._documentClickHandler = documentClickHandler;
 
-    searchInput.addEventListener('input', debounce(() => {
+    const debouncedSearch = debounce(() => {
         sortAndFilterOptions(searchInput.value);
-    }, 200));
+    }, 200);
+    searchInput.addEventListener('input', debouncedSearch);
+    searchInput._inputHandler = debouncedSearch;
 
     selectContainer.appendChild(dropdown);
     selectContainer.appendChild(hiddenInput);
@@ -1016,11 +1187,11 @@ function createCustomSelect(selectElement) {
                 nameLower: item.name.toLowerCase()
             }));
             if (currentSelect.options.length === 0) {
-                currentSelect.innerHTML = '';
+                currentSelect.textContent = '';
                 selectData.forEach(item => {
                     const option = document.createElement('option');
                     option.value = item.id;
-                    option.text = item.name;
+                    option.text = item.name || '';
                     currentSelect.appendChild(option);
                 });
             }
@@ -1050,6 +1221,20 @@ function createCustomSelect(selectElement) {
             updateSelection();
             updateHiddenInput();
             populateDropdown(selectData);
+        },
+        destroy: function () {
+            if (selectContainer._documentClickHandler) {
+                document.removeEventListener('click', selectContainer._documentClickHandler);
+            }
+            if (searchInput._inputHandler) {
+                searchInput.removeEventListener('input', searchInput._inputHandler);
+            }
+            dropdown.removeEventListener('click', dropdownClickHandler);
+            tagsContainer.removeEventListener('click', tagsContainerClickHandler);
+            trigger.removeEventListener('click', triggerClickHandler);
+            if (selectContainer.parentNode) {
+                selectContainer.parentNode.removeChild(selectContainer);
+            }
         }
     };
 }
@@ -1231,14 +1416,46 @@ Array.from(closeBtns).forEach(btn => {
     });
 });
 
-window.addEventListener('click', (e) => {
-    if (e.target === withdrawModal || e.target === editModal || e.target === moveModal || e.target === entryModal ||
-        e.target === driverBalancesModal || e.target === createVehicleModal ||
-        e.target === vehicleDetailsModal || e.target === addProductToVehicleModal || e.target === editVehicleItemModal ||
-        e.target === editTransferModal || e.target === balanceEditModal) {
-        closeModal(e.target.id);
-    }
-});
+function initializeModalClickHandlers() {
+    const modals = [
+        withdrawModal,
+        editModal,
+        moveModal,
+        entryModal,
+        driverBalancesModal,
+        createVehicleModal,
+        vehicleDetailsModal,
+        addProductToVehicleModal,
+        editVehicleItemModal,
+        editTransferModal,
+        balanceEditModal,
+        balanceHistoryModal,
+        document.getElementById('history-filter-modal'),
+        document.getElementById('entries-filter-modal'),
+        document.getElementById('transfers-filter-modal')
+    ];
+
+    modals.forEach(modal => {
+        if (!modal) return;
+
+        if (modal._modalClickHandler) {
+            modal.removeEventListener('click', modal._modalClickHandler);
+        }
+
+        modal._modalClickHandler = (e) => {
+            if (e.target === modal) {
+                if (modal.id === 'history-filter-modal' || modal.id === 'entries-filter-modal' || modal.id === 'transfers-filter-modal') {
+                    modal.classList.remove('open');
+                    document.body.classList.remove('modal-open');
+                } else {
+                    closeModal(modal.id);
+                }
+            }
+        };
+
+        modal.addEventListener('click', modal._modalClickHandler);
+    });
+}
 
 function closeModal(modalId) {
     const modal = document.getElementById(modalId);
@@ -1648,49 +1865,117 @@ async function loadDriverBalances() {
         });
         
         const container = document.getElementById('driver-balances-container');
-        let html = '';
+        if (!container) return;
+        container.textContent = '';
         
-        // Display balances grouped by driver
+        const driverIds = Object.keys(balancesByDriver);
+        if (driverIds.length === 0) {
+            const emptyMessage = document.createElement('p');
+            emptyMessage.textContent = 'Немає активних балансів водіїв';
+            container.appendChild(emptyMessage);
+            return;
+        }
+        
         for (const [driverId, driverBalances] of Object.entries(balancesByDriver)) {
-            const driverName = findNameByIdFromMap(userMap, driverId);
-            html += `<h4>Водій: ${driverName}</h4>`;
-            html += '<table class="balance-table"><thead><tr>';
-            html += '<th>Товар</th>';
-            html += '<th>Кількість (кг)</th>';
-            html += '<th>Середня ціна (EUR/кг)</th>';
-            html += '<th>Загальна вартість (EUR)</th>';
-            html += '</tr></thead><tbody>';
+            const driverName = findNameByIdFromMap(userMap, driverId) || '';
             
+            const driverHeading = document.createElement('h4');
+            driverHeading.textContent = `Водій: ${driverName}`;
+            container.appendChild(driverHeading);
+            
+            const table = document.createElement('table');
+            table.className = 'balance-table';
+            
+            const thead = document.createElement('thead');
+            const headerRow = document.createElement('tr');
+            
+            const th1 = document.createElement('th');
+            th1.textContent = 'Товар';
+            headerRow.appendChild(th1);
+            
+            const th2 = document.createElement('th');
+            th2.textContent = 'Кількість (кг)';
+            headerRow.appendChild(th2);
+            
+            const th3 = document.createElement('th');
+            th3.textContent = 'Середня ціна (EUR/кг)';
+            headerRow.appendChild(th3);
+            
+            const th4 = document.createElement('th');
+            th4.textContent = 'Загальна вартість (EUR)';
+            headerRow.appendChild(th4);
+            
+            thead.appendChild(headerRow);
+            table.appendChild(thead);
+            
+            const tbody = document.createElement('tbody');
             let driverTotal = 0;
+            
             for (const balance of driverBalances) {
-                // Note: driver balances table is rendered dynamically, data-label will be added via CSS
-                const productName = findNameByIdFromMap(productMap, balance.productId);
+                const productName = findNameByIdFromMap(productMap, balance.productId) || '';
                 const quantity = formatNumber(balance.quantity, 2);
                 const avgPrice = formatNumber(balance.averagePriceEur, 6);
                 const totalCost = formatNumber(balance.totalCostEur, 6);
                 driverTotal += parseFloat(totalCost);
                 
-                html += '<tr>';
-                html += `<td data-label="Товар">${productName}</td>`;
-                html += `<td data-label="Кількість (кг)">${quantity}</td>`;
-                html += `<td data-label="Середня ціна (EUR/кг)">${avgPrice}</td>`;
-                html += `<td data-label="Загальна вартість (EUR)">${totalCost}</td>`;
-                html += '</tr>';
+                const row = document.createElement('tr');
+                
+                const productCell = document.createElement('td');
+                productCell.setAttribute('data-label', 'Товар');
+                productCell.textContent = productName;
+                row.appendChild(productCell);
+                
+                const quantityCell = document.createElement('td');
+                quantityCell.setAttribute('data-label', 'Кількість (кг)');
+                quantityCell.textContent = quantity;
+                row.appendChild(quantityCell);
+                
+                const avgPriceCell = document.createElement('td');
+                avgPriceCell.setAttribute('data-label', 'Середня ціна (EUR/кг)');
+                avgPriceCell.textContent = avgPrice;
+                row.appendChild(avgPriceCell);
+                
+                const totalCostCell = document.createElement('td');
+                totalCostCell.setAttribute('data-label', 'Загальна вартість (EUR)');
+                totalCostCell.textContent = totalCost;
+                row.appendChild(totalCostCell);
+                
+                tbody.appendChild(row);
             }
             
-            html += '</tbody><tfoot><tr class="balance-tfoot-row">';
-            html += '<td data-label="Загальна вартість товару водія"><strong>Загальна вартість товару водія:</strong></td>';
-            html += '<td data-label=""></td>';
-            html += '<td data-label=""></td>';
-            html += `<td data-label="Сума"><strong>${formatNumber(driverTotal, 6)} EUR</strong></td>`;
-            html += '</tr></tfoot></table>';
+            table.appendChild(tbody);
+            
+            const tfoot = document.createElement('tfoot');
+            const footerRow = document.createElement('tr');
+            footerRow.className = 'balance-tfoot-row';
+            
+            const footerCell1 = document.createElement('td');
+            footerCell1.setAttribute('data-label', 'Загальна вартість товару водія');
+            const strong1 = document.createElement('strong');
+            strong1.textContent = 'Загальна вартість товару водія:';
+            footerCell1.appendChild(strong1);
+            footerRow.appendChild(footerCell1);
+            
+            const footerCell2 = document.createElement('td');
+            footerCell2.setAttribute('data-label', '');
+            footerRow.appendChild(footerCell2);
+            
+            const footerCell3 = document.createElement('td');
+            footerCell3.setAttribute('data-label', '');
+            footerRow.appendChild(footerCell3);
+            
+            const footerCell4 = document.createElement('td');
+            footerCell4.setAttribute('data-label', 'Сума');
+            const strong2 = document.createElement('strong');
+            strong2.textContent = `${formatNumber(driverTotal, 6)} EUR`;
+            footerCell4.appendChild(strong2);
+            footerRow.appendChild(footerCell4);
+            
+            tfoot.appendChild(footerRow);
+            table.appendChild(tfoot);
+            
+            container.appendChild(table);
         }
-        
-        if (html === '') {
-            html = '<p>Немає активних балансів водіїв</p>';
-        }
-        
-        container.innerHTML = html;
     } catch (error) {
         console.error('Error loading driver balances:', error);
         handleError(error);
@@ -1732,6 +2017,8 @@ const editVehicleItemForm = document.getElementById('edit-vehicle-item-form');
 const editVehicleItemQuantityInput = document.getElementById('edit-vehicle-item-quantity');
 const editVehicleItemTotalCostInput = document.getElementById('edit-vehicle-item-total-cost');
 const editVehicleItemModeRadios = document.querySelectorAll('input[name="edit-vehicle-item-mode"]');
+
+initializeModalClickHandlers();
 
 let currentVehicleId = null;
 let vehiclesCache = [];
@@ -1887,15 +2174,20 @@ async function loadVehicles() {
     } catch (error) {
         showMessage('Помилка завантаження машин', 'error');
         
-        // Show empty table even on error
         const tbody = document.getElementById('vehicles-tbody');
         if (tbody) {
-            tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;">Помилка завантаження даних</td></tr>';
+            tbody.textContent = '';
+            const errorRow = document.createElement('tr');
+            const errorCell = document.createElement('td');
+            errorCell.setAttribute('colspan', '4');
+            errorCell.style.textAlign = 'center';
+            errorCell.textContent = 'Помилка завантаження даних';
+            errorRow.appendChild(errorCell);
+            tbody.appendChild(errorRow);
         }
     }
 }
 
-// Render vehicles table
 function renderVehicles(vehicles) {
     const tbody = document.getElementById('vehicles-tbody');
     
@@ -1903,19 +2195,52 @@ function renderVehicles(vehicles) {
         return;
     }
     
+    tbody.textContent = '';
+    
     if (!vehicles || vehicles.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;">Немає даних</td></tr>';
+        const emptyRow = document.createElement('tr');
+        const emptyCell = document.createElement('td');
+        emptyCell.setAttribute('colspan', '4');
+        emptyCell.style.textAlign = 'center';
+        emptyCell.textContent = 'Немає даних';
+        emptyRow.appendChild(emptyCell);
+        tbody.appendChild(emptyRow);
         return;
     }
     
-    tbody.innerHTML = vehicles.map(vehicle => `
-        <tr onclick="viewVehicleDetails(${vehicle.id})" style="cursor: pointer;">
-            <td data-label="Дата відвантаження">${vehicle.shipmentDate}</td>
-            <td data-label="Номер машини">${vehicle.vehicleNumber || '-'}</td>
-            <td data-label="Загальна вартість" style="font-weight: bold; color: #FF6F00;">${formatNumber(vehicle.totalCostEur, 2)} EUR</td>
-            <td data-label="Коментар">${vehicle.description || '-'}</td>
-        </tr>
-    `).join('');
+    vehicles.forEach(vehicle => {
+        const row = document.createElement('tr');
+        row.style.cursor = 'pointer';
+        if (row._clickHandler) {
+            row.removeEventListener('click', row._clickHandler);
+        }
+        row._clickHandler = () => viewVehicleDetails(vehicle.id);
+        row.addEventListener('click', row._clickHandler);
+        
+        const shipmentDateCell = document.createElement('td');
+        shipmentDateCell.setAttribute('data-label', 'Дата відвантаження');
+        shipmentDateCell.textContent = vehicle.shipmentDate || '';
+        row.appendChild(shipmentDateCell);
+        
+        const vehicleNumberCell = document.createElement('td');
+        vehicleNumberCell.setAttribute('data-label', 'Номер машини');
+        vehicleNumberCell.textContent = vehicle.vehicleNumber || '-';
+        row.appendChild(vehicleNumberCell);
+        
+        const totalCostCell = document.createElement('td');
+        totalCostCell.setAttribute('data-label', 'Загальна вартість');
+        totalCostCell.style.fontWeight = 'bold';
+        totalCostCell.style.color = '#FF6F00';
+        totalCostCell.textContent = `${formatNumber(vehicle.totalCostEur, 2)} EUR`;
+        row.appendChild(totalCostCell);
+        
+        const descriptionCell = document.createElement('td');
+        descriptionCell.setAttribute('data-label', 'Коментар');
+        descriptionCell.textContent = vehicle.description || '-';
+        row.appendChild(descriptionCell);
+        
+        tbody.appendChild(row);
+    });
 }
 
 // View vehicle details
@@ -1948,11 +2273,20 @@ function renderVehicleDetails(vehicle) {
     setVehicleFormEditable(false);
     
     const itemsTbody = document.getElementById('vehicle-items-tbody');
+    if (!itemsTbody) return;
+    
+    itemsTbody.textContent = '';
     
     if (!vehicle.items || vehicle.items.length === 0) {
-        itemsTbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">Товари ще не додані</td></tr>';
+        const emptyRow = document.createElement('tr');
+        const emptyCell = document.createElement('td');
+        emptyCell.setAttribute('colspan', '6');
+        emptyCell.style.textAlign = 'center';
+        emptyCell.textContent = 'Товари ще не додані';
+        emptyRow.appendChild(emptyCell);
+        itemsTbody.appendChild(emptyRow);
     } else {
-        itemsTbody.innerHTML = vehicle.items.map(item => {
+        vehicle.items.forEach(item => {
             const productName = findNameByIdFromMap(productMap, item.productId) || 'Невідомий товар';
             const warehouseName = findNameByIdFromMap(warehouseMap, item.warehouseId) || 'Невідомий склад';
 
@@ -1962,17 +2296,46 @@ function renderVehicleDetails(vehicle) {
                 warehouseName
             });
 
-            return `
-                <tr class="vehicle-item-row" data-item-id="${item.withdrawalId}" style="cursor: pointer;">
-                    <td data-label="Товар">${productName}</td>
-                    <td data-label="Склад">${warehouseName}</td>
-                    <td data-label="Кількість">${formatNumber(item.quantity, 2)} кг</td>
-                    <td data-label="Ціна за кг" style="text-align: right;">${formatNumber(item.unitPriceEur, 6)} EUR</td>
-                    <td data-label="Загальна вартість" style="text-align: right; font-weight: bold;">${formatNumber(item.totalCostEur, 6)} EUR</td>
-                    <td data-label="Дата списання">${item.withdrawalDate || vehicle.shipmentDate}</td>
-                </tr>
-            `;
-        }).join('');
+            const row = document.createElement('tr');
+            row.className = 'vehicle-item-row';
+            row.setAttribute('data-item-id', item.withdrawalId);
+            row.style.cursor = 'pointer';
+            
+            const productCell = document.createElement('td');
+            productCell.setAttribute('data-label', 'Товар');
+            productCell.textContent = productName;
+            row.appendChild(productCell);
+            
+            const warehouseCell = document.createElement('td');
+            warehouseCell.setAttribute('data-label', 'Склад');
+            warehouseCell.textContent = warehouseName;
+            row.appendChild(warehouseCell);
+            
+            const quantityCell = document.createElement('td');
+            quantityCell.setAttribute('data-label', 'Кількість');
+            quantityCell.textContent = `${formatNumber(item.quantity, 2)} кг`;
+            row.appendChild(quantityCell);
+            
+            const unitPriceCell = document.createElement('td');
+            unitPriceCell.setAttribute('data-label', 'Ціна за кг');
+            unitPriceCell.style.textAlign = 'right';
+            unitPriceCell.textContent = `${formatNumber(item.unitPriceEur, 6)} EUR`;
+            row.appendChild(unitPriceCell);
+            
+            const totalCostCell = document.createElement('td');
+            totalCostCell.setAttribute('data-label', 'Загальна вартість');
+            totalCostCell.style.textAlign = 'right';
+            totalCostCell.style.fontWeight = 'bold';
+            totalCostCell.textContent = `${formatNumber(item.totalCostEur, 6)} EUR`;
+            row.appendChild(totalCostCell);
+            
+            const withdrawalDateCell = document.createElement('td');
+            withdrawalDateCell.setAttribute('data-label', 'Дата списання');
+            withdrawalDateCell.textContent = item.withdrawalDate || vehicle.shipmentDate || '';
+            row.appendChild(withdrawalDateCell);
+            
+            itemsTbody.appendChild(row);
+        });
     }
     
     document.getElementById('vehicle-total-cost').textContent = formatNumber(vehicle.totalCostEur, 2);
@@ -2158,44 +2521,93 @@ async function loadDiscrepancies() {
         
         const data = await response.json();
         
-        // Render table
         const tbody = document.getElementById('discrepancies-table-body');
-        tbody.innerHTML = '';
+        if (!tbody) return;
+        tbody.textContent = '';
         
         if (data.content.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; padding: 30px; color: #999;">Немає даних</td></tr>';
+            const emptyRow = document.createElement('tr');
+            const emptyCell = document.createElement('td');
+            emptyCell.setAttribute('colspan', '10');
+            emptyCell.style.textAlign = 'center';
+            emptyCell.style.padding = '30px';
+            emptyCell.style.color = '#999';
+            emptyCell.textContent = 'Немає даних';
+            emptyRow.appendChild(emptyCell);
+            tbody.appendChild(emptyRow);
         } else {
             for (const item of data.content) {
                 const row = document.createElement('tr');
                 
-                const driverName = findNameByIdFromMap(userMap, item.driverId);
-                const productName = findNameByIdFromMap(productMap, item.productId);
-                const warehouseName = findNameByIdFromMap(warehouseMap, item.warehouseId);
+                const driverName = findNameByIdFromMap(userMap, item.driverId) || '';
+                const productName = findNameByIdFromMap(productMap, item.productId) || '';
+                const warehouseName = findNameByIdFromMap(warehouseMap, item.warehouseId) || '';
                 
                 const typeLabel = item.type === 'LOSS' ? 'Втрата' : 'Придбання';
                 const typeClass = item.type === 'LOSS' ? 'loss' : 'gain';
                 const typeColor = item.type === 'LOSS' ? '#d32f2f' : '#388e3c';
                 
-                row.innerHTML = `
-                    <td data-label="Дата">${formatDate(item.receiptDate)}</td>
-                    <td data-label="Водій">${driverName}</td>
-                    <td data-label="Товар">${productName}</td>
-                    <td data-label="Склад">${warehouseName}</td>
-                    <td data-label="Закуплено" style="text-align: center;">${item.purchasedQuantity} кг</td>
-                    <td data-label="Прийнято" style="text-align: center;">${item.receivedQuantity} кг</td>
-                    <td data-label="Різниця" style="text-align: center; font-weight: bold; color: ${typeColor};">
-                        ${item.discrepancyQuantity > 0 ? '+' : ''}${item.discrepancyQuantity} кг
-                    </td>
-                    <td data-label="Ціна/кг" style="text-align: right;">${formatNumber(item.unitPriceEur, 6)} EUR</td>
-                    <td data-label="Вартість" style="text-align: right; font-weight: bold;">
-                        ${formatNumber(Math.abs(item.discrepancyValueEur), 6)} EUR
-                    </td>
-                    <td data-label="Тип" style="text-align: center;">
-                        <span class="discrepancy-type-badge ${typeClass}">
-                            ${typeLabel}
-                        </span>
-                    </td>
-                `;
+                const receiptDateCell = document.createElement('td');
+                receiptDateCell.setAttribute('data-label', 'Дата');
+                receiptDateCell.textContent = formatDate(item.receiptDate);
+                row.appendChild(receiptDateCell);
+                
+                const driverCell = document.createElement('td');
+                driverCell.setAttribute('data-label', 'Водій');
+                driverCell.textContent = driverName;
+                row.appendChild(driverCell);
+                
+                const productCell = document.createElement('td');
+                productCell.setAttribute('data-label', 'Товар');
+                productCell.textContent = productName;
+                row.appendChild(productCell);
+                
+                const warehouseCell = document.createElement('td');
+                warehouseCell.setAttribute('data-label', 'Склад');
+                warehouseCell.textContent = warehouseName;
+                row.appendChild(warehouseCell);
+                
+                const purchasedCell = document.createElement('td');
+                purchasedCell.setAttribute('data-label', 'Закуплено');
+                purchasedCell.style.textAlign = 'center';
+                purchasedCell.textContent = `${item.purchasedQuantity} кг`;
+                row.appendChild(purchasedCell);
+                
+                const receivedCell = document.createElement('td');
+                receivedCell.setAttribute('data-label', 'Прийнято');
+                receivedCell.style.textAlign = 'center';
+                receivedCell.textContent = `${item.receivedQuantity} кг`;
+                row.appendChild(receivedCell);
+                
+                const discrepancyCell = document.createElement('td');
+                discrepancyCell.setAttribute('data-label', 'Різниця');
+                discrepancyCell.style.textAlign = 'center';
+                discrepancyCell.style.fontWeight = 'bold';
+                discrepancyCell.style.color = typeColor;
+                discrepancyCell.textContent = `${item.discrepancyQuantity > 0 ? '+' : ''}${item.discrepancyQuantity} кг`;
+                row.appendChild(discrepancyCell);
+                
+                const unitPriceCell = document.createElement('td');
+                unitPriceCell.setAttribute('data-label', 'Ціна/кг');
+                unitPriceCell.style.textAlign = 'right';
+                unitPriceCell.textContent = `${formatNumber(item.unitPriceEur, 6)} EUR`;
+                row.appendChild(unitPriceCell);
+                
+                const valueCell = document.createElement('td');
+                valueCell.setAttribute('data-label', 'Вартість');
+                valueCell.style.textAlign = 'right';
+                valueCell.style.fontWeight = 'bold';
+                valueCell.textContent = `${formatNumber(Math.abs(item.discrepancyValueEur), 6)} EUR`;
+                row.appendChild(valueCell);
+                
+                const typeCell = document.createElement('td');
+                typeCell.setAttribute('data-label', 'Тип');
+                typeCell.style.textAlign = 'center';
+                const typeBadge = document.createElement('span');
+                typeBadge.className = `discrepancy-type-badge ${typeClass}`;
+                typeBadge.textContent = typeLabel;
+                typeCell.appendChild(typeBadge);
+                row.appendChild(typeCell);
                 
                 tbody.appendChild(row);
             }
@@ -2207,7 +2619,18 @@ async function loadDiscrepancies() {
     } catch (error) {
         console.error('Error loading discrepancies:', error);
         const tbody = document.getElementById('discrepancies-table-body');
-        tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; padding: 30px; color: #d32f2f;">Помилка завантаження даних</td></tr>';
+        if (tbody) {
+            tbody.textContent = '';
+            const errorRow = document.createElement('tr');
+            const errorCell = document.createElement('td');
+            errorCell.setAttribute('colspan', '10');
+            errorCell.style.textAlign = 'center';
+            errorCell.style.padding = '30px';
+            errorCell.style.color = '#d32f2f';
+            errorCell.textContent = 'Помилка завантаження даних';
+            errorRow.appendChild(errorCell);
+            tbody.appendChild(errorRow);
+        }
     }
 }
 
@@ -2222,9 +2645,9 @@ function updateDiscrepanciesPagination(data) {
     prevBtn.disabled = data.page === 0;
     nextBtn.disabled = data.page >= data.totalPages - 1;
     
-    // Generate page numbers
     const pageNumbersContainer = document.getElementById('discrepancies-page-numbers');
-    pageNumbersContainer.innerHTML = '';
+    if (!pageNumbersContainer) return;
+    pageNumbersContainer.textContent = '';
     
     const maxPagesToShow = 5;
     let startPage = Math.max(0, data.page - Math.floor(maxPagesToShow / 2));
@@ -2243,10 +2666,14 @@ function updateDiscrepanciesPagination(data) {
             pageBtn.classList.add('active');
         }
         
-        pageBtn.addEventListener('click', async () => {
+        if (pageBtn._clickHandler) {
+            pageBtn.removeEventListener('click', pageBtn._clickHandler);
+        }
+        pageBtn._clickHandler = async () => {
             currentDiscrepanciesPage = i;
             await loadDiscrepancies();
-        });
+        };
+        pageBtn.addEventListener('click', pageBtn._clickHandler);
         
         pageNumbersContainer.appendChild(pageBtn);
     }
@@ -2426,20 +2853,27 @@ async function loadTransfers() {
     }
 }
 
-// Render transfers table
 function renderTransfers(transfers) {
     const tbody = document.getElementById('transfers-body');
     if (!tbody) return;
     
+    tbody.textContent = '';
+    
     if (!Array.isArray(transfers) || transfers.length === 0) {
         transfersCache = [];
-        tbody.innerHTML = '<tr><td colspan="10" style="text-align: center;">Немає даних</td></tr>';
+        const emptyRow = document.createElement('tr');
+        const emptyCell = document.createElement('td');
+        emptyCell.setAttribute('colspan', '10');
+        emptyCell.style.textAlign = 'center';
+        emptyCell.textContent = 'Немає даних';
+        emptyRow.appendChild(emptyCell);
+        tbody.appendChild(emptyRow);
         return;
     }
     
     transfersCache = transfers.slice();
     
-    tbody.innerHTML = transfers.map(item => {
+    transfers.forEach(item => {
         const fromProductName = findNameByIdFromMap(productMap, item.fromProductId) || 'Не вказано';
         const toProductName = findNameByIdFromMap(productMap, item.toProductId) || 'Не вказано';
         const warehouseName = findNameByIdFromMap(warehouseMap, item.warehouseId) || 'Не вказано';
@@ -2447,24 +2881,70 @@ function renderTransfers(transfers) {
         const reasonObj = withdrawalReasonMap.get(Number(item.reasonId));
         const reasonName = reasonObj ? reasonObj.name : 'Не вказано';
         
-        return `
-            <tr data-id="${item.id}">
-                <td data-label="Дата" style="text-align: center;">${item.transferDate || ''}</td>
-                <td data-label="Склад">${warehouseName}</td>
-                <td data-label="З товару">${fromProductName}</td>
-                <td data-label="До товару">${toProductName}</td>
-                <td data-label="Кількість" style="text-align: center;">${formatNumber(item.quantity, 2)} кг</td>
-                <td data-label="Ціна за кг" style="text-align: right;">${formatNumber(item.unitPriceEur, 6)} EUR</td>
-                <td data-label="Загальна вартість" style="text-align: right; font-weight: bold;">${formatNumber(item.totalCostEur, 6)} EUR</td>
-                <td data-label="Виконавець">${userName}</td>
-                <td data-label="Причина">${reasonName}</td>
-                <td data-label="Опис">${item.description || ''}</td>
-            </tr>
-        `;
-    }).join('');
-    
-    tbody.querySelectorAll('tr[data-id]').forEach(row => {
-        row.addEventListener('click', () => openEditTransferModal(Number(row.dataset.id)));
+        const row = document.createElement('tr');
+        row.setAttribute('data-id', item.id);
+        if (row._clickHandler) {
+            row.removeEventListener('click', row._clickHandler);
+        }
+        row._clickHandler = () => openEditTransferModal(Number(item.id));
+        row.addEventListener('click', row._clickHandler);
+        
+        const transferDateCell = document.createElement('td');
+        transferDateCell.setAttribute('data-label', 'Дата');
+        transferDateCell.style.textAlign = 'center';
+        transferDateCell.textContent = item.transferDate || '';
+        row.appendChild(transferDateCell);
+        
+        const warehouseCell = document.createElement('td');
+        warehouseCell.setAttribute('data-label', 'Склад');
+        warehouseCell.textContent = warehouseName;
+        row.appendChild(warehouseCell);
+        
+        const fromProductCell = document.createElement('td');
+        fromProductCell.setAttribute('data-label', 'З товару');
+        fromProductCell.textContent = fromProductName;
+        row.appendChild(fromProductCell);
+        
+        const toProductCell = document.createElement('td');
+        toProductCell.setAttribute('data-label', 'До товару');
+        toProductCell.textContent = toProductName;
+        row.appendChild(toProductCell);
+        
+        const quantityCell = document.createElement('td');
+        quantityCell.setAttribute('data-label', 'Кількість');
+        quantityCell.style.textAlign = 'center';
+        quantityCell.textContent = `${formatNumber(item.quantity, 2)} кг`;
+        row.appendChild(quantityCell);
+        
+        const unitPriceCell = document.createElement('td');
+        unitPriceCell.setAttribute('data-label', 'Ціна за кг');
+        unitPriceCell.style.textAlign = 'right';
+        unitPriceCell.textContent = `${formatNumber(item.unitPriceEur, 6)} EUR`;
+        row.appendChild(unitPriceCell);
+        
+        const totalCostCell = document.createElement('td');
+        totalCostCell.setAttribute('data-label', 'Загальна вартість');
+        totalCostCell.style.textAlign = 'right';
+        totalCostCell.style.fontWeight = 'bold';
+        totalCostCell.textContent = `${formatNumber(item.totalCostEur, 6)} EUR`;
+        row.appendChild(totalCostCell);
+        
+        const userCell = document.createElement('td');
+        userCell.setAttribute('data-label', 'Виконавець');
+        userCell.textContent = userName;
+        row.appendChild(userCell);
+        
+        const reasonCell = document.createElement('td');
+        reasonCell.setAttribute('data-label', 'Причина');
+        reasonCell.textContent = reasonName;
+        row.appendChild(reasonCell);
+        
+        const descriptionCell = document.createElement('td');
+        descriptionCell.setAttribute('data-label', 'Опис');
+        descriptionCell.textContent = item.description || '';
+        row.appendChild(descriptionCell);
+        
+        tbody.appendChild(row);
     });
 }
 
@@ -3089,7 +3569,10 @@ if (editTransferForm) {
 function attachBalanceRowListeners() {
     const rows = document.querySelectorAll('.balance-row');
     rows.forEach(row => {
-        row.addEventListener('click', () => {
+        if (row._clickHandler) {
+            row.removeEventListener('click', row._clickHandler);
+        }
+        row._clickHandler = () => {
             const data = row.dataset;
             openBalanceEditModal({
                 warehouseId: Number(data.warehouseId),
@@ -3100,7 +3583,8 @@ function attachBalanceRowListeners() {
                 totalCost: parseFloat(data.totalCost ?? '0') || 0,
                 averagePrice: parseFloat(data.averagePrice ?? '0') || 0
             });
-        });
+        };
+        row.addEventListener('click', row._clickHandler);
     });
 }
 
@@ -3122,7 +3606,7 @@ function resetBalanceEditModal() {
         }
     });
     if (balanceHistoryBody) {
-        balanceHistoryBody.innerHTML = '';
+        balanceHistoryBody.textContent = '';
     }
     if (balanceHistoryEmpty) {
         balanceHistoryEmpty.style.display = 'none';
@@ -3192,7 +3676,14 @@ async function loadBalanceHistory(warehouseId, productId) {
         return;
     }
 
-    balanceHistoryBody.innerHTML = '<tr><td colspan="7" style="text-align: center;">Завантаження...</td></tr>';
+    balanceHistoryBody.textContent = '';
+    const loadingRow = document.createElement('tr');
+    const loadingCell = document.createElement('td');
+    loadingCell.setAttribute('colspan', '7');
+    loadingCell.style.textAlign = 'center';
+    loadingCell.textContent = 'Завантаження...';
+    loadingRow.appendChild(loadingCell);
+    balanceHistoryBody.appendChild(loadingRow);
     balanceHistoryEmpty.style.display = 'none';
 
     try {
@@ -3202,8 +3693,9 @@ async function loadBalanceHistory(warehouseId, productId) {
         }
         const history = await response.json();
 
+        balanceHistoryBody.textContent = '';
+
         if (!Array.isArray(history) || history.length === 0) {
-            balanceHistoryBody.innerHTML = '';
             balanceHistoryEmpty.style.display = 'block';
             return;
         }
@@ -3214,7 +3706,7 @@ async function loadBalanceHistory(warehouseId, productId) {
             BOTH: 'Кількість та вартість'
         };
 
-        balanceHistoryBody.innerHTML = history.map(item => {
+        history.forEach(item => {
             const userName = findNameByIdFromMap(userMap, item.userId) || '—';
             const typeLabel = typeLabels[item.adjustmentType] || item.adjustmentType || '—';
             const createdAt = item.createdAt ? new Date(item.createdAt).toLocaleString() : '—';
@@ -3223,21 +3715,56 @@ async function loadBalanceHistory(warehouseId, productId) {
             const averageChange = `${formatNumber(item.previousAveragePriceEur, 6)} → ${formatNumber(item.newAveragePriceEur, 6)} EUR/кг`;
             const description = item.description || '—';
 
-            return `
-                <tr>
-                    <td data-label="Дата">${createdAt}</td>
-                    <td data-label="Користувач">${userName}</td>
-                    <td data-label="Тип">${typeLabel}</td>
-                    <td data-label="Кількість">${quantityChange}</td>
-                    <td data-label="Загальна вартість">${totalChange}</td>
-                    <td data-label="Середня ціна">${averageChange}</td>
-                    <td data-label="Коментар">${description}</td>
-                </tr>
-            `;
-        }).join('');
+            const row = document.createElement('tr');
+            
+            const createdAtCell = document.createElement('td');
+            createdAtCell.setAttribute('data-label', 'Дата');
+            createdAtCell.textContent = createdAt;
+            row.appendChild(createdAtCell);
+            
+            const userCell = document.createElement('td');
+            userCell.setAttribute('data-label', 'Користувач');
+            userCell.textContent = userName;
+            row.appendChild(userCell);
+            
+            const typeCell = document.createElement('td');
+            typeCell.setAttribute('data-label', 'Тип');
+            typeCell.textContent = typeLabel;
+            row.appendChild(typeCell);
+            
+            const quantityCell = document.createElement('td');
+            quantityCell.setAttribute('data-label', 'Кількість');
+            quantityCell.textContent = quantityChange;
+            row.appendChild(quantityCell);
+            
+            const totalCell = document.createElement('td');
+            totalCell.setAttribute('data-label', 'Загальна вартість');
+            totalCell.textContent = totalChange;
+            row.appendChild(totalCell);
+            
+            const averageCell = document.createElement('td');
+            averageCell.setAttribute('data-label', 'Середня ціна');
+            averageCell.textContent = averageChange;
+            row.appendChild(averageCell);
+            
+            const descriptionCell = document.createElement('td');
+            descriptionCell.setAttribute('data-label', 'Коментар');
+            descriptionCell.textContent = description;
+            row.appendChild(descriptionCell);
+            
+            balanceHistoryBody.appendChild(row);
+        });
     } catch (error) {
         console.error('Error loading balance history:', error);
-        balanceHistoryBody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #e53935;">Помилка завантаження історії</td></tr>';
+        balanceHistoryBody.textContent = '';
+        const errorRow = document.createElement('tr');
+        const errorCell = document.createElement('td');
+        errorCell.setAttribute('colspan', '7');
+        errorCell.style.textAlign = 'center';
+        errorCell.style.color = '#e53935';
+        errorCell.textContent = 'Помилка завантаження історії';
+        errorRow.appendChild(errorCell);
+        balanceHistoryBody.appendChild(errorRow);
         balanceHistoryEmpty.style.display = 'none';
     }
 }
@@ -3353,7 +3880,7 @@ if (balanceHistoryBtn) {
 
 function resetBalanceHistoryModal() {
     if (balanceHistoryBody) {
-        balanceHistoryBody.innerHTML = '';
+        balanceHistoryBody.textContent = '';
     }
     if (balanceHistoryEmpty) {
         balanceHistoryEmpty.style.display = 'none';

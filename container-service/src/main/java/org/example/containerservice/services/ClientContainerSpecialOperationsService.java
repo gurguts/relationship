@@ -39,14 +39,7 @@ public class ClientContainerSpecialOperationsService implements IClientContainer
     private final ClientContainerRepository clientContainerRepository;
     private final ClientApiClient clientApiClient;
     private final ClientTypeFieldApiClient clientTypeFieldApiClient;
-    private final SourceClient sourceClient;
-    private final ProductClient productClient;
     private final UserApiClient userClient;
-    private final StatusClient statusClient;
-    private final RouteClient routeClient;
-    private final RegionClient regionClient;
-    private final BusinessClient businessClient;
-    private final ClientProductClient clientProductClient;
 
     @Override
     @org.springframework.transaction.annotation.Transactional(readOnly = true)
@@ -83,13 +76,6 @@ public class ClientContainerSpecialOperationsService implements IClientContainer
     }
 
     private record FilterIds(
-            List<SourceDTO> sourceDTOs, List<Long> sourceIds,
-            List<StatusDTO> statusDTOs, List<Long> statusIds,
-            List<RouteDTO> routeDTOs, List<Long> routeIds,
-            List<RegionDTO> regionDTOs, List<Long> regionIds,
-            List<BusinessDTO> businessDTOs, List<Long> businessIds,
-            List<ClientProductDTO> clientProductDTOs, List<Long> clientProductIds,
-            List<ProductDTO> productDTOs, List<Long> productIds,
             List<UserDTO> userDTOs, List<Long> userIds
     ) {}
 
@@ -98,39 +84,10 @@ public class ClientContainerSpecialOperationsService implements IClientContainer
     }
 
     private FilterIds fetchFilterIds() {
-        List<SourceDTO> sourceDTOs = sourceClient.getAllSource();
-        List<Long> sourceIds = sourceDTOs.stream().map(SourceDTO::getId).toList();
-
-        List<StatusDTO> statusDTOs = statusClient.getAllStatus();
-        List<Long> statusIds = statusDTOs.stream().map(StatusDTO::getId).toList();
-
-        List<RouteDTO> routeDTOs = routeClient.getAllRoute();
-        List<Long> routeIds = routeDTOs.stream().map(RouteDTO::getId).toList();
-
-        List<RegionDTO> regionDTOs = regionClient.getAllRegion();
-        List<Long> regionIds = regionDTOs.stream().map(RegionDTO::getId).toList();
-
-        List<BusinessDTO> businessDTOs = businessClient.getAllBusiness();
-        List<Long> businessIds = businessDTOs.stream().map(BusinessDTO::getId).toList();
-
-        List<ClientProductDTO> clientProductDTOs = clientProductClient.getAllClientProduct();
-        List<Long> clientProductIds = clientProductDTOs.stream().map(ClientProductDTO::getId).toList();
-
-        List<ProductDTO> productDTOs = productClient.getAllProduct();
-        List<Long> productIds = productDTOs.stream().map(ProductDTO::getId).toList();
-
         List<UserDTO> userDTOs = userClient.getAllUsers();
         List<Long> userIds = userDTOs.stream().map(UserDTO::getId).toList();
 
-        return new FilterIds(
-                sourceDTOs, sourceIds,
-                statusDTOs, statusIds,
-                routeDTOs, routeIds,
-                regionDTOs, regionIds,
-                businessDTOs, businessIds,
-                clientProductDTOs, clientProductIds,
-                productDTOs, productIds,
-                userDTOs, userIds);
+        return new FilterIds(userDTOs, userIds);
     }
 
     private List<ClientDTO> fetchClientIds(String query, Map<String, List<String>> filterParams) {

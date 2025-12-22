@@ -8,103 +8,43 @@ class ErrorResponse extends Error {
 
 function handleError(error) {
     if (error instanceof ErrorResponse) {
-        switch (error.error) {
-            case 'VALIDATION_ERROR':
-                const detailsMessage = error.details
-                    ? Object.entries(error.details)
-                        .map(([, message]) => `${message}`)
-                        .join('\n')
-                    : '';
-                showMessage(
-                    `Помилка валідації:\n${detailsMessage || error.message}`,
-                    'error'
-                );
-                break;
-            case 'ACCESS_DENIED':
-                showMessage(error.message, 'error');
-                break;
-            case 'CLIENT_ERROR_DEFAULT':
-                showMessage(`Помилка клієнта: ${error.message}`, 'error');
-                break;
-            case 'CLIENT_NOT_FOUND':
-                showMessage(`Клієнта не знайдено: ${error.message}`, 'error');
-                break;
-            case 'BALANCE_ERROR_DEFAULT':
-                showMessage(`Помилка балансу: ${error.message}`, 'error');
-                break;
-            case 'BALANCE_NOT_FOUND':
-                showMessage(`Баланс не знайдено: ${error.message}`, 'error');
-                break;
-            case 'STATUSCLIENT_ERROR_DEFAULT':
-                showMessage(`Помилка балансу: ${error.message}`, 'error');
-                break;
-            case 'STATUSCLIENT_NOT_FOUND':
-                showMessage(`Баланс не знайдено: ${error.message}`, 'error');
-                break;
-            case 'BUSINESS_ERROR_DEFAULT':
-                showMessage(`Помилка бізнесу: ${error.message}`, 'error');
-                break;
-            case 'BUSINESS_NOT_FOUND':
-                showMessage(`Бізнес не знайдено: ${error.message}`, 'error');
-                break;
-            case 'SOURCE_ERROR_DEFAULT':
-                showMessage(`Помилка залучення: ${error.message}`, 'error');
-                break;
-            case 'SOURCE_NOT_FOUND':
-                showMessage(`Залучення не знайдено: ${error.message}`, 'error');
-                break;
-            case 'ROUTE_ERROR_DEFAULT':
-                showMessage(`Помилка маршруту: ${error.message}`, 'error');
-                break;
-            case 'ROUTE_NOT_FOUND':
-                showMessage(`Маршрут не знайдено: ${error.message}`, 'error');
-                break;
-            case 'REGION_ERROR_DEFAULT':
-                showMessage(`Помилка області: ${error.message}`, 'error');
-                break;
-            case 'REGION_NOT_FOUND':
-                showMessage(`Область не знайдено: ${error.message}`, 'error');
-                break;
-            case 'PRODUCT_ERROR_DEFAULT':
-                showMessage(`Помилка продукту: ${error.message}`, 'error');
-                break;
-            case 'PRODUCT_NOT_FOUND':
-                showMessage(`Продукт не знайдено: ${error.message}`, 'error');
-                break;
-            case 'PURCHASE_ERROR_DEFAULT':
-                showMessage(`Помилка закупівлі: ${error.message}`, 'error');
-                break;
-            case 'PURCHASE_NOT_FOUND':
-                showMessage(`Закупівлю не знайдено: ${error.message}`, 'error');
-                break;
-            case 'SALE_ERROR_DEFAULT':
-                showMessage(`Помилка продажі: ${error.message}`, 'error');
-                break;
-            case 'SALE_NOT_FOUND':
-                showMessage(`Продаж не знайдено: ${error.message}`, 'error');
-                break;
-            case 'TRANSACTION_ERROR_DEFAULT':
-                showMessage(`Помилка транзакції: ${error.message}`, 'error');
-                break;
-            case 'TRANSACTION_NOT_FOUND':
-                showMessage(`Продаж не транзакції: ${error.message}`, 'error');
-                break;
-            case 'USER_ERROR_DEFAULT':
-                showMessage(`Помилка користувача: ${error.message}`, 'error');
-                break;
-            case 'USER_NOT_FOUND':
-                showMessage(`Користувача не знайдено: ${error.message}`, 'error');
-                break;
-            case 'INVALID_JSON':
-                showMessage(`Некорректный формат JSON: ${error.message}`, 'error');
-                break;
-            case 'SERVER_ERROR':
-                showMessage('Виникла помилка на сервері.', 'error');
-                break;
-            default:
-                showMessage(`Помилка: ${error.message}`, 'error');
+        if (error.error === 'VALIDATION_ERROR' && error.details) {
+            const detailsMessage = Object.entries(error.details)
+                .map(([, message]) => `${message}`)
+                .join('\n');
+            const fullMessage = detailsMessage 
+                ? `${error.message}\n${detailsMessage}`
+                : error.message;
+            showMessage(fullMessage, 'error');
+        } else {
+            showMessage(error.message || 'Виникла помилка', 'error');
         }
+    } else if (error instanceof TypeError && (error.message.includes('fetch') || error.message.includes('Failed to fetch'))) {
+        showMessage('Сервер недоступен. Перевірте підключення до інтернету.', 'error');
+        console.error('Network error:', error);
+    } else if (error instanceof Error) {
+        showMessage(error.message || 'Неможливо виконати запит', 'error');
+        console.error('Error:', error);
     } else {
-        showMessage(`Неможливо виконати запит: ${error.message}`, 'error');
+        showMessage('Виникла невідома помилка', 'error');
+        console.error('Unknown error:', error);
+    }
+}
+
+async function parseErrorResponse(response) {
+    try {
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+            const errorData = await response.json();
+            if (errorData.error && errorData.message) {
+                return new ErrorResponse(errorData.error, errorData.message, errorData.details || null);
+            } else if (errorData.message) {
+                return new Error(errorData.message);
+            }
+        }
+        const text = await response.text();
+        return new Error(text || `HTTP ${response.status}: ${response.statusText}`);
+    } catch (e) {
+        return new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
 }
