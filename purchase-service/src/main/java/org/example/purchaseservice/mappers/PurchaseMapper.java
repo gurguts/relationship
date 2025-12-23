@@ -59,7 +59,7 @@ public class PurchaseMapper {
                 LocalDate localDate = LocalDate.parse(createdAt, DATE_FORMATTER);
                 return localDate.atStartOfDay();
             } catch (Exception e) {
-                throw new PurchaseException(String.format("Invalid date format for createdAt: %s", createdAt));
+                throw new PurchaseException("INVALID_DATE_FORMAT", String.format("Invalid date format for createdAt: %s", createdAt));
             }
         }
         return null;

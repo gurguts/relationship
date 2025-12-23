@@ -81,18 +81,23 @@ public class GlobalExceptionAdvice {
     @ExceptionHandler(ClientException.class)
     public ErrorResponse handleClientException(ClientException ex, Locale locale) {
         log.warn("Client error: code={}, message={}", ex.getErrorCode(), ex.getMessage());
-        String localizedMessage = messageSource.getMessage(
-                String.format("client.error.%s", ex.getErrorCode().toUpperCase()), null, null, locale);
         
-        String message = (localizedMessage != null && !localizedMessage.equals(String.format("client.error.%s", ex.getErrorCode().toUpperCase())))
+        // Try to get localized message from messages.properties
+        String messageKey = String.format("client.error.%s", ex.getErrorCode().toUpperCase());
+        String localizedMessage = messageSource.getMessage(messageKey, null, null, locale);
+        
+        // If no localized message found, use the English message from exception
+        String message = (localizedMessage != null && !localizedMessage.equals(messageKey))
                 ? localizedMessage 
                 : ex.getMessage();
         
         Map<String, String> details = null;
+        // For complex error messages (with newlines or long text), put full message in details
         if (ex.getMessage() != null && (ex.getMessage().contains("\n") || ex.getMessage().length() > 100)) {
             details = new HashMap<>();
             details.put("error", ex.getMessage());
-            if (localizedMessage != null && !localizedMessage.equals(String.format("client.error.%s", ex.getErrorCode().toUpperCase()))) {
+            // Use localized message if available, otherwise use first line of English message
+            if (localizedMessage != null && !localizedMessage.equals(messageKey)) {
                 message = localizedMessage;
             } else {
                 String[] lines = ex.getMessage().split("\n");

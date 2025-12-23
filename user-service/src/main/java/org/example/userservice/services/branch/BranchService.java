@@ -2,6 +2,7 @@ package org.example.userservice.services.branch;
 
 import lombok.RequiredArgsConstructor;
 import org.example.userservice.exceptions.branch.BranchNotFoundException;
+import org.example.userservice.exceptions.user.UserException;
 import org.example.userservice.models.branch.Branch;
 import org.example.userservice.repositories.BranchRepository;
 import org.springframework.stereotype.Service;
@@ -63,7 +64,7 @@ public class BranchService {
     @Transactional
     public Branch createBranch(Branch branch) {
         if (branchRepository.findByName(branch.getName()).isPresent()) {
-            throw new IllegalArgumentException("Branch with name '" + branch.getName() + "' already exists");
+            throw new UserException("BRANCH_ALREADY_EXISTS", "Branch with name '" + branch.getName() + "' already exists");
         }
         return branchRepository.save(branch);
     }

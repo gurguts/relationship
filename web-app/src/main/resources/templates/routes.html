@@ -293,7 +293,7 @@
 
 <div id="createPurchaseModal" class="modal" style="display: none;">
     <div class="modal-content">
-        <span class="close" id="closeCreatePurchaseModal">&times;</span>
+        <span id="closeCreatePurchaseModal" class="close">&times;</span>
         <h2>Створення закупівлі</h2>
         <div id="exchange-rate-warning" style="display: none; background-color: #fff3cd; border: 2px solid #ffc107; border-radius: 8px; padding: 15px; margin-bottom: 20px; color: #856404;">
             <div style="display: flex; align-items: center; gap: 10px;">
@@ -343,7 +343,6 @@
             </label>
             <div class="modal-buttons">
                 <button type="submit">Створити</button>
-                <button type="button" id="cancelCreatePurchase">Відмінити</button>
             </div>
         </form>
     </div>
@@ -351,7 +350,7 @@
 
 <div id="createContainerModal" class="modal" style="display: none;">
     <div class="modal-content">
-        <span class="close" id="closeCreateContainerModal">&times;</span>
+        <span id="closeCreateContainerModal" class="close">&times;</span>
         <h2>Транзакція тари</h2>
         <form id="createContainerForm">
             <input type="hidden" id="containerClientId" name="clientId">
@@ -370,7 +369,6 @@
             </label>
             <div class="modal-buttons">
                 <button type="submit">Виконати</button>
-                <button type="button" id="cancelCreateContainer">Відмінити</button>
             </div>
         </form>
     </div>

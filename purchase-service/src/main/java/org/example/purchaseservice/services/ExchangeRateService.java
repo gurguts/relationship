@@ -32,7 +32,7 @@ public class ExchangeRateService {
         
         ExchangeRate rate = exchangeRateRepository.findByFromCurrency(fromCurrency.toUpperCase())
                 .orElseThrow(() -> new PurchaseException("EXCHANGE_RATE_NOT_FOUND", 
-                        String.format("Курс валют для %s не знайдено. Будь ласка, встановіть курс в налаштуваннях.", fromCurrency)));
+                        String.format("Exchange rate for %s not found. Please set the rate in settings.", fromCurrency)));
         
         return rate.getRate();
     }
@@ -51,7 +51,7 @@ public class ExchangeRateService {
     @Transactional
     public ExchangeRate updateExchangeRate(String fromCurrency, BigDecimal rate) {
         if (rate == null || rate.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new PurchaseException("INVALID_RATE", "Курс валют повинен бути більше нуля");
+            throw new PurchaseException("INVALID_RATE", "Exchange rate must be greater than zero");
         }
         
         Long userId = SecurityUtils.getCurrentUserId();

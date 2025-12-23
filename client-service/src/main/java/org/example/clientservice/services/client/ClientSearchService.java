@@ -62,7 +62,7 @@ public class ClientSearchService implements IClientSearchService {
 
     private void validateQuery(String query) {
         if (query != null && query.length() > 255) {
-            throw new ClientException("Search query cannot exceed 255 characters");
+            throw new ClientException("INVALID_QUERY", "Search query cannot exceed 255 characters");
         }
     }
 

@@ -17,6 +17,7 @@ import org.example.containerservice.models.dto.clienttype.ClientFieldValueDTO;
 import org.example.containerservice.models.dto.clienttype.ClientTypeFieldDTO;
 import org.example.containerservice.models.dto.fields.*;
 import org.example.containerservice.models.dto.impl.IdNameDTO;
+import org.example.containerservice.exceptions.ContainerException;
 import org.example.containerservice.repositories.ClientContainerRepository;
 import org.example.containerservice.services.impl.IClientContainerSpecialOperationsService;
 import org.example.containerservice.spec.ClientContainerSpecification;
@@ -49,8 +50,10 @@ public class ClientContainerSpecialOperationsService implements IClientContainer
             String query,
             Map<String, List<String>> filterParams,
             HttpServletResponse response,
-            List<String> selectedFields) throws IOException {
+            List<String> selectedFields) {
 
+        validateInputs(query, selectedFields);
+        
         Sort sort = createSort(sortDirection, sortProperty);
         FilterIds filterIds = fetchFilterIds();
 
@@ -78,6 +81,15 @@ public class ClientContainerSpecialOperationsService implements IClientContainer
     private record FilterIds(
             List<UserDTO> userDTOs, List<Long> userIds
     ) {}
+
+    private void validateInputs(String query, List<String> selectedFields) {
+        if (query != null && query.length() > 255) {
+            throw new ContainerException("INVALID_QUERY", "Search query cannot exceed 255 characters");
+        }
+        if (selectedFields == null || selectedFields.isEmpty()) {
+            throw new ContainerException("INVALID_FIELDS", "The list of fields for export cannot be empty");
+        }
+    }
 
     private Sort createSort(Sort.Direction sortDirection, String sortProperty) {
         return Sort.by(sortDirection, sortProperty);
@@ -364,13 +376,23 @@ public class ClientContainerSpecialOperationsService implements IClientContainer
                 .orElse("");
     }
 
-    private void sendExcelFileResponse(Workbook workbook, HttpServletResponse response) throws IOException {
-        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-        String dateStr = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
-        String filename = "container_data_" + dateStr + ".xlsx";
-        response.setHeader("Content-Disposition", "attachment; filename=" + filename);
-        workbook.write(response.getOutputStream());
-        workbook.close();
+    private void sendExcelFileResponse(Workbook workbook, HttpServletResponse response) {
+        try {
+            response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+            String dateStr = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+            String filename = "container_data_" + dateStr + ".xlsx";
+            response.setHeader("Content-Disposition", "attachment; filename=" + filename);
+            workbook.write(response.getOutputStream());
+            workbook.close();
+        } catch (IOException e) {
+            try {
+                workbook.close();
+            } catch (IOException closeException) {
+                log.warn("Failed to close workbook: {}", closeException.getMessage());
+            }
+            throw new ContainerException("EXCEL_GENERATION_ERROR", 
+                String.format("Error generating Excel file: %s", e.getMessage()));
+        }
     }
 }
 

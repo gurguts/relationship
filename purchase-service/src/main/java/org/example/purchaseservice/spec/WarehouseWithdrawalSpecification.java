@@ -50,7 +50,7 @@ public class WarehouseWithdrawalSpecification implements Specification<Warehouse
                         LocalDate fromDate = LocalDate.parse(fromDates.getFirst(), DateTimeFormatter.ISO_LOCAL_DATE);
                         predicates.add(cb.greaterThanOrEqualTo(root.get("withdrawalDate"), fromDate));
                     } catch (Exception e) {
-                        throw new WarehouseException(String.format("Invalid withdrawal_date_from format: %s",
+                        throw new WarehouseException("INVALID_FILTER", String.format("Invalid withdrawal_date_from format: %s",
                                 fromDates.getFirst()));
                     }
                 }
@@ -63,7 +63,7 @@ public class WarehouseWithdrawalSpecification implements Specification<Warehouse
                         LocalDate toDate = LocalDate.parse(toDates.getFirst(), DateTimeFormatter.ISO_LOCAL_DATE);
                         predicates.add(cb.lessThanOrEqualTo(root.get("withdrawalDate"), toDate));
                     } catch (Exception e) {
-                        throw new WarehouseException(String.format("Invalid withdrawal_date_to format: %s",
+                        throw new WarehouseException("INVALID_FILTER", String.format("Invalid withdrawal_date_to format: %s",
                                 toDates.getFirst()));
                     }
                 }

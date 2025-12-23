@@ -321,9 +321,9 @@ function showEditModal(purchase) {
         }, 300);
     };
 
-    const cancelButton = document.getElementById('cancel-edit');
-    if (cancelButton) {
-        cancelButton.onclick = () => {
+    const closeButton = document.getElementById('close-edit-modal');
+    if (closeButton) {
+        closeButton.onclick = () => {
             modal.classList.remove('active');
             setTimeout(() => {
                 modal.style.display = 'none';
@@ -1691,20 +1691,21 @@ async function showClientModal(client) {
         closeModalBtn.addEventListener('click', handleClose);
     }
 
-    if (modal._modalClickHandler) {
-        modal.removeEventListener('click', modal._modalClickHandler);
-    }
-    const handleModalClick = function (event) {
-        if (event.target === modal) {
-            if (!editing) {
-                closeModal();
-            } else {
-                showMessage('Збережіть або відмініть зміни', 'error');
-            }
-        }
-    };
-    modal._modalClickHandler = handleModalClick;
-    modal.addEventListener('click', handleModalClick);
+    // Removed: modal click handler to prevent closing on outside click
+    // if (modal._modalClickHandler) {
+    //     modal.removeEventListener('click', modal._modalClickHandler);
+    // }
+    // const handleModalClick = function (event) {
+    //     if (event.target === modal) {
+    //         if (!editing) {
+    //             closeModal();
+    //         } else {
+    //             showMessage('Збережіть або відмініть зміни', 'error');
+    //         }
+    //     }
+    // };
+    // modal._modalClickHandler = handleModalClick;
+    // modal.addEventListener('click', handleModalClick);
 
     const fullDeleteButton = document.getElementById('full-delete-client');
     if (fullDeleteButton) {
@@ -2259,11 +2260,12 @@ if (filterButton && filterModal) {
     }
 
     if (modalContent) {
-        filterModal.addEventListener('click', (event) => {
-            if (!modalContent.contains(event.target)) {
-                closeModalFilter();
-            }
-        });
+        // Removed: filter modal click handler to prevent closing on outside click
+        // filterModal.addEventListener('click', (event) => {
+        //     if (!modalContent.contains(event.target)) {
+        //         closeModalFilter();
+        //     }
+        // });
     }
 }
 

@@ -7,6 +7,7 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import lombok.extern.slf4j.Slf4j;
 import org.example.webapp.config.SecretKeyConfig;
+import org.example.webapp.exceptions.WebAppException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -64,13 +65,13 @@ public class JwtTokenProvider {
                     }
                 }
             } else {
-                throw new IllegalArgumentException("Authorities claim is not a list of strings");
+                throw new WebAppException("INVALID_TOKEN_CLAIM", "Authorities claim is not a list of strings");
             }
 
             return new UsernamePasswordAuthenticationToken(username, "", authorities);
         } catch (JwtException | IllegalArgumentException e) {
             log.error("Failed to get authentication from token: {}", e.getMessage());
-            throw new IllegalArgumentException("Invalid token: " + e.getMessage(), e);
+            throw new WebAppException("INVALID_TOKEN", "Invalid token: " + e.getMessage());
         }
     }
 

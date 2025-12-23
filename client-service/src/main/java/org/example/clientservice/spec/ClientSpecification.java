@@ -244,7 +244,8 @@ public class ClientSpecification implements Specification<Client> {
                     .collect(Collectors.toList());
             predicate = criteriaBuilder.and(predicate, root.get(field).in(ids));
         } catch (NumberFormatException e) {
-            throw new ClientException(String.format("Incorrect ID format in filter %s: %s", field, values));
+            throw new ClientException("INVALID_FILTER", 
+                String.format("Incorrect ID format in filter %s: %s", field, values));
         }
         return predicate;
     }
@@ -261,7 +262,8 @@ public class ClientSpecification implements Specification<Client> {
                     criteriaBuilder.greaterThanOrEqualTo(root.get(field), dateTime) :
                     criteriaBuilder.lessThanOrEqualTo(root.get(field), dateTime));
         } catch (DateTimeParseException e) {
-            throw new ClientException(String.format("Incorrect date format in filter %s: %s", field, values));
+            throw new ClientException("INVALID_FILTER", 
+                String.format("Incorrect date format in filter %s: %s", field, values));
         }
         return predicate;
     }

@@ -55,7 +55,7 @@ public class WarehouseReceiptSpecification implements Specification<WarehouseRec
                         LocalDate fromDate = LocalDate.parse(fromDates.getFirst(), DateTimeFormatter.ISO_LOCAL_DATE);
                         predicates.add(cb.greaterThanOrEqualTo(root.get("entryDate"), fromDate));
                     } catch (Exception e) {
-                        throw new WarehouseException(String.format("Invalid entry_date_from format: %s",
+                        throw new WarehouseException("INVALID_FILTER", String.format("Invalid entry_date_from format: %s",
                                 fromDates.getFirst()));
                     }
                 }
@@ -68,7 +68,7 @@ public class WarehouseReceiptSpecification implements Specification<WarehouseRec
                         LocalDate toDate = LocalDate.parse(toDates.getFirst(), DateTimeFormatter.ISO_LOCAL_DATE);
                         predicates.add(cb.lessThanOrEqualTo(root.get("entryDate"), toDate));
                     } catch (Exception e) {
-                        throw new WarehouseException(String.format("Invalid entry_date_to format: %s",
+                        throw new WarehouseException("INVALID_FILTER", String.format("Invalid entry_date_to format: %s",
                                 toDates.getFirst()));
                     }
                 }

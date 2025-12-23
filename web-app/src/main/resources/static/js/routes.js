@@ -1332,20 +1332,21 @@ async function showClientModal(client) {
         closeModalBtn.addEventListener('click', handleClose);
     }
 
-    if (modal._modalClickHandler) {
-        modal.removeEventListener('click', modal._modalClickHandler);
-    }
-    const handleModalClick = function (event) {
-        if (event.target === modal) {
-            if (!editing) {
-                closeModal();
-            } else {
-                showMessage('Збережіть або відмініть зміни', 'error');
-            }
-        }
-    };
-    modal._modalClickHandler = handleModalClick;
-    modal.addEventListener('click', handleModalClick);
+    // Removed: modal click handler to prevent closing on outside click
+    // if (modal._modalClickHandler) {
+    //     modal.removeEventListener('click', modal._modalClickHandler);
+    // }
+    // const handleModalClick = function (event) {
+    //     if (event.target === modal) {
+    //         if (!editing) {
+    //             closeModal();
+    //         } else {
+    //             showMessage('Збережіть або відмініть зміни', 'error');
+    //         }
+    //     }
+    // };
+    // modal._modalClickHandler = handleModalClick;
+    // modal.addEventListener('click', handleModalClick);
 
     const fullDeleteButton = document.getElementById('full-delete-client');
     if (fullDeleteButton) {
@@ -1498,18 +1499,19 @@ if (span) {
     };
 }
 
-const handleCreateModalClick = function (event) {
-    if (event.target === modal) {
-        modal.classList.remove('show');
-        modal.classList.add('hide');
-        setTimeout(() => {
-            modal.style.display = "none";
-            resetForm();
-        }, 300);
-    }
-};
-modal.removeEventListener('click', handleCreateModalClick);
-modal.addEventListener('click', handleCreateModalClick);
+// Removed: create modal click handler to prevent closing on outside click
+// const handleCreateModalClick = function (event) {
+//     if (event.target === modal) {
+//         modal.classList.remove('show');
+//         modal.classList.add('hide');
+//         setTimeout(() => {
+//             modal.style.display = "none";
+//             resetForm();
+//         }, 300);
+//     }
+// };
+// modal.removeEventListener('click', handleCreateModalClick);
+// modal.addEventListener('click', handleCreateModalClick);
 
 function buildDynamicCreateForm() {
     if (!currentClientTypeId) {
@@ -2061,11 +2063,12 @@ closeFilter.addEventListener('click', () => {
     closeModalFilter();
 });
 
-filterModal.addEventListener('click', (event) => {
-    if (!modalContent.contains(event.target)) {
-        closeModalFilter();
-    }
-});
+// Removed: filter modal click handler to prevent closing on outside click
+// filterModal.addEventListener('click', (event) => {
+//     if (!modalContent.contains(event.target)) {
+//         closeModalFilter();
+//     }
+// });
 
 function closeModalFilter() {
     filterModal.classList.add('closing');
@@ -2562,7 +2565,6 @@ async function openCreatePurchaseModal(clientId) {
 document.addEventListener('DOMContentLoaded', () => {
     const createPurchaseModal = document.getElementById('createPurchaseModal');
     const closeCreatePurchaseModal = document.getElementById('closeCreatePurchaseModal');
-    const cancelCreatePurchase = document.getElementById('cancelCreatePurchase');
     const createPurchaseForm = document.getElementById('createPurchaseForm');
     const currencySelect = document.getElementById('purchaseCurrency');
     const exchangeRateLabel = document.getElementById('exchangeRateLabel');
@@ -2581,12 +2583,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
     if (closeCreatePurchaseModal) {
         closeCreatePurchaseModal.addEventListener('click', () => {
-            createPurchaseModal.style.display = 'none';
-        });
-    }
-    
-    if (cancelCreatePurchase) {
-        cancelCreatePurchase.addEventListener('click', () => {
             createPurchaseModal.style.display = 'none';
         });
     }
@@ -2638,17 +2634,10 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const createContainerModal = document.getElementById('createContainerModal');
     const closeCreateContainerModal = document.getElementById('closeCreateContainerModal');
-    const cancelCreateContainer = document.getElementById('cancelCreateContainer');
     const createContainerForm = document.getElementById('createContainerForm');
     
     if (closeCreateContainerModal) {
         closeCreateContainerModal.addEventListener('click', () => {
-            createContainerModal.style.display = 'none';
-        });
-    }
-    
-    if (cancelCreateContainer) {
-        cancelCreateContainer.addEventListener('click', () => {
             createContainerModal.style.display = 'none';
         });
     }
@@ -2705,26 +2694,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 loaderBackdrop.style.display = 'none';
             }
         });
-    }
-    
-    const handlePurchaseModalClick = (e) => {
-        if (e.target === createPurchaseModal) {
-            createPurchaseModal.style.display = 'none';
-        }
-    };
-    const handleContainerModalClick = (e) => {
-        if (e.target === createContainerModal) {
-            createContainerModal.style.display = 'none';
-        }
-    };
-    
-    if (createPurchaseModal) {
-        createPurchaseModal.removeEventListener('click', handlePurchaseModalClick);
-        createPurchaseModal.addEventListener('click', handlePurchaseModalClick);
-    }
-    if (createContainerModal) {
-        createContainerModal.removeEventListener('click', handleContainerModalClick);
-        createContainerModal.addEventListener('click', handleContainerModalClick);
     }
 });
 

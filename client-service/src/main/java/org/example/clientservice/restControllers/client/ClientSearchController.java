@@ -83,7 +83,7 @@ public class ClientSearchController {
             return objectMapper.readValue(filtersJson, new TypeReference<>() {
             });
         } catch (JsonProcessingException e) {
-            throw new ClientException("Invalid JSON format for filters");
+            throw new ClientException("INVALID_JSON", "Invalid JSON format for filters");
         }
     }
 

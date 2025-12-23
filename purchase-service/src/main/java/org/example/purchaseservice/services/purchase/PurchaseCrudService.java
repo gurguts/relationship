@@ -258,7 +258,7 @@ public class PurchaseCrudService implements IPurchaseCrudService {
     @Transactional(readOnly = true)
     public Purchase findPurchaseById(Long id) {
         if (id == null) {
-            throw new PurchaseException("ID cannot be null");
+            throw new PurchaseException("INVALID_ID", "ID cannot be null");
         }
         return purchaseRepository.findById(id)
                 .orElseThrow(() -> new PurchaseNotFoundException(String.format("Purchase with ID %d not found", id)));

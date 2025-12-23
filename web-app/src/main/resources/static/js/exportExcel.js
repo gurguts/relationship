@@ -86,14 +86,33 @@ function initExcelExport(config) {
         }, 10);
     });
 
-    document.getElementById(cancelId).addEventListener('click', () => {
-        const exportModal = document.getElementById(modalId);
-        exportModal.classList.add('hide');
-        exportModal.classList.remove('show');
-        setTimeout(() => {
-            exportModal.style.display = 'none';
-        }, 300);
+    // Close modal with cross button (close-export-modal)
+    // Use event delegation to ensure it works even if element is added dynamically
+    document.addEventListener('click', (event) => {
+        if (event.target && event.target.id === 'close-export-modal') {
+            const exportModal = document.getElementById(modalId);
+            if (exportModal) {
+                exportModal.classList.add('hide');
+                exportModal.classList.remove('show');
+                setTimeout(() => {
+                    exportModal.style.display = 'none';
+                }, 300);
+            }
+        }
     });
+
+    // Keep backward compatibility with cancel button if it exists
+    const cancelBtn = document.getElementById(cancelId);
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', () => {
+            const exportModal = document.getElementById(modalId);
+            exportModal.classList.add('hide');
+            exportModal.classList.remove('show');
+            setTimeout(() => {
+                exportModal.style.display = 'none';
+            }, 300);
+        });
+    }
 
     document.getElementById(confirmId).addEventListener('click', async () => {
         const exportModal = document.getElementById(modalId);

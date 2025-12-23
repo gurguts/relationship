@@ -58,7 +58,7 @@ public class ProductTransferService {
                 transferDTO.getFromProductId());
         
         if (sourceBalance == null) {
-            throw new RuntimeException(String.format(
+            throw new PurchaseException("PRODUCT_NOT_FOUND", String.format(
                     "Source product %d not found on warehouse %d",
                     transferDTO.getFromProductId(),
                     transferDTO.getWarehouseId()));
@@ -83,7 +83,7 @@ public class ProductTransferService {
                     transferDTO.getWarehouseId(),
                     transferDTO.getFromProductId());
             
-            throw new RuntimeException(String.format(
+            throw new PurchaseException("INSUFFICIENT_PRODUCT", String.format(
                     "Insufficient product on warehouse. Available: %s, requested: %s",
                     balance != null ? balance.getQuantity() : BigDecimal.ZERO,
                     transferDTO.getQuantity()));
@@ -115,7 +115,8 @@ public class ProductTransferService {
         Long userId = SecurityUtils.getCurrentUserId();
         
         WithdrawalReason reason = withdrawalReasonRepository.findById(transferDTO.getWithdrawalReasonId())
-                .orElseThrow(() -> new RuntimeException("Reason not found: " + transferDTO.getWithdrawalReasonId()));
+                .orElseThrow(() -> new PurchaseException("REASON_NOT_FOUND", 
+                    "Reason not found: " + transferDTO.getWithdrawalReasonId()));
         
         ProductTransfer transfer = new ProductTransfer();
         transfer.setWarehouseId(transferDTO.getWarehouseId());
@@ -276,7 +277,7 @@ public class ProductTransferService {
                 : originalQuantity;
 
         if (newQuantity.compareTo(BigDecimal.ZERO) < 0) {
-            throw new PurchaseException("INVALID_TRANSFER_QUANTITY", "Кількість не може бути від'ємною");
+            throw new PurchaseException("INVALID_TRANSFER_QUANTITY", "Quantity cannot be negative");
         }
 
         if (newQuantity.compareTo(BigDecimal.ZERO) == 0) {
@@ -374,11 +375,11 @@ public class ProductTransferService {
                 (transfer.getReason() == null || !updateDTO.getReasonId().equals(transfer.getReason().getId()))) {
             WithdrawalReason reason = withdrawalReasonRepository.findById(updateDTO.getReasonId())
                     .orElseThrow(() -> new PurchaseException("REASON_NOT_FOUND",
-                            "Причину не знайдено: " + updateDTO.getReasonId()));
+                            "Reason not found: " + updateDTO.getReasonId()));
 
             if (reason.getPurpose() != WithdrawalReason.Purpose.BOTH) {
                 throw new PurchaseException("INVALID_REASON_PURPOSE",
-                        "Для переміщення можна обирати лише причини з типом BOTH");
+                        "For transfers, only reasons with BOTH purpose type can be selected");
             }
 
             transfer.setReason(reason);
@@ -430,7 +431,7 @@ public class ProductTransferService {
         }
 
         throw new PurchaseException("TRANSFER_PRICE_MISSING",
-                String.format("В переміщенні %d відсутня інформація про ціну", transfer.getId()));
+                String.format("Transfer %d is missing price information", transfer.getId()));
     }
 }
 

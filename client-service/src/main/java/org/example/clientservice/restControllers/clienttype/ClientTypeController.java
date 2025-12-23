@@ -15,6 +15,7 @@ import org.example.clientservice.models.dto.clienttype.StaticFieldsConfig;
 import org.example.clientservice.repositories.clienttype.ClientTypeRepository;
 import org.example.clientservice.services.clienttype.StaticFieldsHelper;
 import org.example.clientservice.services.impl.IClientTypeService;
+import org.example.clientservice.exceptions.client.ClientException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -124,7 +125,8 @@ public class ClientTypeController {
             clientTypeRepository.save(clientType);
             return ResponseEntity.ok(config);
         } catch (JsonProcessingException e) {
-            throw new RuntimeException("Failed to serialize static fields config", e);
+            throw new ClientException("SERIALIZATION_ERROR", 
+                String.format("Failed to serialize static fields config: %s", e.getMessage()));
         }
     }
 }

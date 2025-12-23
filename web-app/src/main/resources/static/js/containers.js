@@ -645,20 +645,21 @@ async function showClientModal(client) {
         closeModalBtn.addEventListener('click', closeModalHandler);
     }
 
-    if (modal._modalClickHandler) {
-        modal.removeEventListener('click', modal._modalClickHandler);
-    }
-    const handleModalClick = function (event) {
-        if (event.target === modal) {
-            if (!editing) {
-                closeModal();
-            } else {
-                showMessage('Збережіть або відмініть зміни', 'error');
-            }
-        }
-    };
-    modal._modalClickHandler = handleModalClick;
-    modal.addEventListener('click', handleModalClick);
+    // Removed: modal click handler to prevent closing on outside click
+    // if (modal._modalClickHandler) {
+    //     modal.removeEventListener('click', modal._modalClickHandler);
+    // }
+    // const handleModalClick = function (event) {
+    //     if (event.target === modal) {
+    //         if (!editing) {
+    //             closeModal();
+    //         } else {
+    //             showMessage('Збережіть або відмініть зміни', 'error');
+    //         }
+    //     }
+    // };
+    // modal._modalClickHandler = handleModalClick;
+    // modal.addEventListener('click', handleModalClick);
 
     const fullDeleteButton = document.getElementById('full-delete-client');
     if (fullDeleteButton) {
@@ -916,11 +917,12 @@ closeFilter.addEventListener('click', () => {
     closeModalFilter();
 });
 
-filterModal.addEventListener('click', (event) => {
-    if (!modalContent.contains(event.target)) {
-        closeModalFilter();
-    }
-});
+// Removed: filter modal click handler to prevent closing on outside click
+// filterModal.addEventListener('click', (event) => {
+//     if (!modalContent.contains(event.target)) {
+//         closeModalFilter();
+//     }
+// });
 
 function closeModalFilter() {
     filterModal.classList.add('closing');

@@ -48,6 +48,8 @@ public class ClientImportService implements IClientImportService {
     private final ISourceService sourceService;
     
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private static final DateTimeFormatter ISO_DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
+    private static final DateTimeFormatter ISO_DATE_TIME_NO_SECONDS_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm");
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     
     @Override
@@ -64,8 +66,8 @@ public class ClientImportService implements IClientImportService {
         headerRow.createCell(colIndex++).setCellValue("ID (опціонально)");
         headerRow.createCell(colIndex++).setCellValue(clientType.getNameFieldLabel() != null ? clientType.getNameFieldLabel() : "Компанія");
         headerRow.createCell(colIndex++).setCellValue("Залучення (назва)");
-        headerRow.createCell(colIndex++).setCellValue("Дата створення (yyyy-MM-dd або yyyy-MM-dd HH:mm:ss)");
-        headerRow.createCell(colIndex++).setCellValue("Дата оновлення (yyyy-MM-dd або yyyy-MM-dd HH:mm:ss)");
+        headerRow.createCell(colIndex++).setCellValue("Дата створення (yyyy-MM-dd, yyyy-MM-dd HH:mm:ss, yyyy-MM-dd'T'HH:mm:ss або yyyy-MM-dd'T'HH:mm)");
+        headerRow.createCell(colIndex++).setCellValue("Дата оновлення (yyyy-MM-dd, yyyy-MM-dd HH:mm:ss, yyyy-MM-dd'T'HH:mm:ss або yyyy-MM-dd'T'HH:mm)");
         headerRow.createCell(colIndex++).setCellValue("Активний (Так/Ні)");
 
         for (ClientTypeField field : fields) {
@@ -128,7 +130,8 @@ public class ClientImportService implements IClientImportService {
             Sheet sheet = workbook.getSheetAt(0);
             
             if (sheet.getPhysicalNumberOfRows() < 2) {
-                throw new ClientException("Excel файл повинен містити принаймні заголовок та один рядок даних");
+                throw new ClientException("IMPORT_INVALID_FILE", 
+                    "Excel file must contain at least a header and one row of data");
             }
 
             Row headerRow = sheet.getRow(0);
@@ -180,7 +183,8 @@ public class ClientImportService implements IClientImportService {
             
             if (!rowErrors.isEmpty()) {
                 String errorDetails = String.join("\n", rowErrors);
-                throw new ClientException("Помилки при імпорті (" + rowErrors.size() + " рядків):\n" + errorDetails);
+                throw new ClientException("IMPORT_ERRORS", 
+                    String.format("Import errors (%d rows):\n%s", rowErrors.size(), errorDetails));
             }
             
             Long maxSpecifiedId = null;
@@ -256,10 +260,11 @@ public class ClientImportService implements IClientImportService {
                 }
             }
             
-            return "Успішно імпортовано " + clientsToCreate.size() + " клієнтів";
+            return String.format("Successfully imported %d clients", clientsToCreate.size());
             
         } catch (IOException e) {
-            throw new ClientException("Помилка читання Excel файлу: " + e.getMessage());
+            throw new ClientException("IMPORT_READ_ERROR", 
+                String.format("Error reading Excel file: %s", e.getMessage()));
         }
     }
     
@@ -337,7 +342,8 @@ public class ClientImportService implements IClientImportService {
                 Long id = parseIdFromCell(idCell);
                 if (id != null) {
                     if (clientRepository.existsById(id)) {
-                        throw new ClientException("ID " + id + " вже зайнятий");
+                        throw new ClientException("IMPORT_ID_EXISTS", 
+                            String.format("ID %d is already taken", id));
                     }
                     client.setId(id);
                 }
@@ -346,12 +352,14 @@ public class ClientImportService implements IClientImportService {
 
         Integer companyCol = columnIndexMap.get("company");
         if (companyCol == null) {
-            throw new ClientException("Не знайдено колонку з назвою компанії");
+            throw new ClientException("IMPORT_MISSING_COLUMN", 
+                "Company name column not found");
         }
         Cell companyCell = row.getCell(companyCol);
         String company = getCellValueAsString(companyCell);
         if (company == null || company.trim().isEmpty()) {
-            throw new ClientException("Назва компанії є обов'язковим полем");
+            throw new ClientException("IMPORT_REQUIRED_FIELD", 
+                "Company name is a required field");
         }
         client.setCompany(company.trim());
 
@@ -364,7 +372,8 @@ public class ClientImportService implements IClientImportService {
                 org.example.clientservice.models.field.Source foundSource = sourceNameMap.get(trimmedSource.toLowerCase());
                 
                 if (foundSource == null) {
-                    throw new ClientException("Залучення з назвою '" + trimmedSource + "' не знайдено");
+                    throw new ClientException("IMPORT_SOURCE_NOT_FOUND", 
+                        String.format("Source with name '%s' not found", trimmedSource));
                 }
                 client.setSource(foundSource.getId());
             }
@@ -414,7 +423,8 @@ public class ClientImportService implements IClientImportService {
                     client.getFieldValues().addAll(fieldValues);
                 } else {
                     if (field.getIsRequired() != null && field.getIsRequired()) {
-                        throw new ClientException("Поле '" + field.getFieldLabel() + "' є обов'язковим");
+                        throw new ClientException("IMPORT_REQUIRED_FIELD", 
+                            String.format("Field '%s' is required", field.getFieldLabel()));
                     }
                 }
             } else {
@@ -425,7 +435,8 @@ public class ClientImportService implements IClientImportService {
                                 .map(e -> e.getKey() + ":" + e.getValue())
                                 .collect(Collectors.joining(", ")));
                 if (field.getIsRequired() != null && field.getIsRequired()) {
-                    throw new ClientException("Поле '" + field.getFieldLabel() + "' є обов'язковим (колонка не знайдена)");
+                    throw new ClientException("IMPORT_REQUIRED_FIELD", 
+                        String.format("Field '%s' is required (column not found)", field.getFieldLabel()));
                 }
             }
         }
@@ -468,7 +479,8 @@ public class ClientImportService implements IClientImportService {
                     BigDecimal numberValue = new BigDecimal(value);
                     fieldValue.setValueNumber(numberValue);
                 } catch (NumberFormatException e) {
-                    throw new ClientException("Поле '" + field.getFieldLabel() + "': невірний формат числа: " + value);
+                    throw new ClientException("IMPORT_INVALID_NUMBER", 
+                        String.format("Field '%s': invalid number format: %s", field.getFieldLabel(), value));
                 }
             }
             case DATE -> {
@@ -476,7 +488,8 @@ public class ClientImportService implements IClientImportService {
                     LocalDate dateValue = LocalDate.parse(value, DATE_FORMATTER);
                     fieldValue.setValueDate(dateValue);
                 } catch (DateTimeParseException e) {
-                    throw new ClientException("Поле '" + field.getFieldLabel() + "': невірний формат дати (очікується yyyy-MM-dd): " + value);
+                    throw new ClientException("IMPORT_INVALID_DATE", 
+                        String.format("Field '%s': invalid date format (expected yyyy-MM-dd): %s", field.getFieldLabel(), value));
                 }
             }
             case BOOLEAN -> {
@@ -485,7 +498,8 @@ public class ClientImportService implements IClientImportService {
             case LIST -> {
                 ClientTypeFieldListValue listValue = findListValue(field, value);
                 if (listValue == null) {
-                    throw new ClientException("Поле '" + field.getFieldLabel() + "': значення '" + value + "' не знайдено в списку доступних значень");
+                    throw new ClientException("IMPORT_INVALID_LIST_VALUE", 
+                        String.format("Field '%s': value '%s' not found in available values list", field.getFieldLabel(), value));
                 }
                 fieldValue.setValueList(listValue);
             }
@@ -512,21 +526,33 @@ public class ClientImportService implements IClientImportService {
         } else if ("Ні".equalsIgnoreCase(trimmed) || "false".equalsIgnoreCase(trimmed) || "0".equals(trimmed)) {
             return false;
         } else {
-            throw new ClientException("Невірне значення boolean. Очікується 'Так' або 'Ні'");
+            throw new ClientException("IMPORT_INVALID_BOOLEAN", 
+                "Invalid boolean value. Expected 'Так' or 'Ні'");
         }
     }
     
     private LocalDateTime parseDateTime(String value) {
-        // Пробуем сначала с временем
+        // Пробуем сначала с временем (формат yyyy-MM-dd HH:mm:ss)
         try {
             return LocalDateTime.parse(value, DATE_TIME_FORMATTER);
         } catch (DateTimeParseException e) {
-            // Если не получилось, пробуем только дату
+            // Пробуем ISO формат с секундами (yyyy-MM-dd'T'HH:mm:ss)
             try {
-                LocalDate date = LocalDate.parse(value, DATE_FORMATTER);
-                return date.atTime(LocalTime.MIN);
-            } catch (DateTimeParseException ex) {
-                throw new ClientException("Невірний формат дати/часу. Очікується yyyy-MM-dd або yyyy-MM-dd HH:mm:ss");
+                return LocalDateTime.parse(value, ISO_DATE_TIME_FORMATTER);
+            } catch (DateTimeParseException e2) {
+                // Пробуем ISO формат без секунд (yyyy-MM-dd'T'HH:mm)
+                try {
+                    return LocalDateTime.parse(value, ISO_DATE_TIME_NO_SECONDS_FORMATTER);
+                } catch (DateTimeParseException e3) {
+                    // Если не получилось, пробуем только дату
+                    try {
+                        LocalDate date = LocalDate.parse(value, DATE_FORMATTER);
+                        return date.atTime(LocalTime.MIN);
+                    } catch (DateTimeParseException ex) {
+                        throw new ClientException("IMPORT_INVALID_DATETIME", 
+                            "Invalid date/time format. Expected yyyy-MM-dd, yyyy-MM-dd HH:mm:ss, yyyy-MM-dd'T'HH:mm:ss or yyyy-MM-dd'T'HH:mm");
+                    }
+                }
             }
         }
     }
@@ -678,7 +704,8 @@ public class ClientImportService implements IClientImportService {
             workbook.write(baos);
             return baos.toByteArray();
         } catch (IOException e) {
-            throw new ClientException("Помилка генерації Excel файлу: " + e.getMessage());
+            throw new ClientException("EXCEL_GENERATION_ERROR", 
+                String.format("Error generating Excel file: %s", e.getMessage()));
         } finally {
             try {
                 workbook.close();

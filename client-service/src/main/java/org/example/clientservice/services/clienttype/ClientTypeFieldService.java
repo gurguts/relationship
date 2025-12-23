@@ -31,7 +31,8 @@ public class ClientTypeFieldService implements IClientTypeFieldService {
         ClientType clientType = clientTypeService.getClientTypeById(clientTypeId);
 
         if (fieldRepository.findByClientTypeIdAndFieldName(clientTypeId, dto.getFieldName()).isPresent()) {
-            throw new ClientException("Field with name " + dto.getFieldName() + " already exists in this client type");
+            throw new ClientException("FIELD_ALREADY_EXISTS", 
+                String.format("Field with name %s already exists in this client type", dto.getFieldName()));
         }
 
         ClientTypeField field = fieldMapper.createDTOToField(dto, clientType);
@@ -105,7 +106,7 @@ public class ClientTypeFieldService implements IClientTypeFieldService {
         List<ClientTypeField> fields = fieldRepository.findByClientTypeIdOrderByDisplayOrderAsc(clientTypeId);
         
         if (fields.size() != dto.getFieldIds().size()) {
-            throw new ClientException("Field count mismatch");
+            throw new ClientException("FIELD_COUNT_MISMATCH", "Field count mismatch");
         }
 
         for (int i = 0; i < dto.getFieldIds().size(); i++) {

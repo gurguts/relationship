@@ -4,7 +4,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.example.purchaseservice.models.dto.purchase.PurchaseReportDTO;
 import org.springframework.data.domain.Sort;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
@@ -16,7 +15,7 @@ public interface IPurchaseSpecialOperationsService {
             String query,
             Map<String, List<String>> filterParams,
             HttpServletResponse response,
-            List<String> selectedFields) throws IOException;
+            List<String> selectedFields);
 
     PurchaseReportDTO generateReport(String query, Map<String, List<String>> filterParams);
 

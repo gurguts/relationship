@@ -151,6 +151,7 @@
 
 <div id="exportModalData" class="modal-export-data" style="display: none;">
     <div class="modal-export-data-content">
+        <span id="close-export-modal" class="close">&times;</span>
         <h3>Виберіть поля для експорту</h3>
         <form id="exportFieldsForm">
             <div class="export-fields-section">
@@ -179,7 +180,6 @@
             </div>
         </form>
         <button id="exportConfirm" class="btn btn-primary">Експортувати</button>
-        <button id="exportCancel" class="btn btn-secondary">Скасування</button>
     </div>
 </div>
 
@@ -206,6 +206,7 @@
 
 <div id="edit-modal" class="edit-modal" style="display: none;">
     <div class="edit-modal-content">
+        <span id="close-edit-modal" class="close">&times;</span>
         <h3>Редагувати закупівлю</h3>
         <form id="edit-form">
             <label>Товар:
@@ -230,7 +231,6 @@
                 <textarea name="comment"></textarea>
             </label>
             <button type="submit">Зберегти</button>
-            <button type="button" id="cancel-edit">Відмінити</button>
         </form>
     </div>
 </div>

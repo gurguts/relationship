@@ -2,6 +2,7 @@ package org.example.userservice.services.transaction;
 
 import lombok.RequiredArgsConstructor;
 import org.example.userservice.exceptions.transaction.TransactionCategoryNotFoundException;
+import org.example.userservice.exceptions.transaction.TransactionException;
 import org.example.userservice.models.transaction.TransactionCategory;
 import org.example.userservice.models.transaction.TransactionType;
 import org.example.userservice.repositories.TransactionCategoryRepository;
@@ -35,7 +36,7 @@ public class TransactionCategoryService {
     @Transactional
     public TransactionCategory createCategory(TransactionCategory category) {
         if (categoryRepository.existsByTypeAndName(category.getType(), category.getName())) {
-            throw new IllegalArgumentException(
+            throw new TransactionException("CATEGORY_ALREADY_EXISTS",
                     String.format("Category '%s' for type '%s' already exists", category.getName(), category.getType()));
         }
         return categoryRepository.save(category);

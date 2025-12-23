@@ -4,6 +4,10 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import jakarta.validation.ConstraintViolationException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.example.userservice.exceptions.account.AccountException;
+import org.example.userservice.exceptions.account.AccountNotFoundException;
+import org.example.userservice.exceptions.branch.BranchNotFoundException;
+import org.example.userservice.exceptions.transaction.TransactionCategoryNotFoundException;
 import org.example.userservice.exceptions.transaction.TransactionException;
 import org.example.userservice.exceptions.transaction.TransactionNotFoundException;
 import org.example.userservice.exceptions.user.UserException;
@@ -83,12 +87,16 @@ public class GlobalExceptionAdvice {
     @ExceptionHandler(UserException.class)
     public ErrorResponse handleUserException(UserException ex, Locale locale) {
         log.warn("User error: code={}, message={}", ex.getErrorCode(), ex.getMessage());
-        String message = messageSource.getMessage(
-                String.format("user.error.%s", ex.getErrorCode().toUpperCase()),
-                null,
-                ex.getMessage(),
-                locale
-        );
+        
+        // Try to get localized message from messages.properties
+        String messageKey = String.format("user.error.%s", ex.getErrorCode().toUpperCase());
+        String localizedMessage = messageSource.getMessage(messageKey, null, null, locale);
+        
+        // If no localized message found, use the English message from exception
+        String message = (localizedMessage != null && !localizedMessage.equals(messageKey))
+                ? localizedMessage 
+                : ex.getMessage();
+        
         return new ErrorResponse(ex.getErrorCode(), message, null);
     }
 
@@ -107,13 +115,31 @@ public class GlobalExceptionAdvice {
     @ExceptionHandler(TransactionException.class)
     public ErrorResponse handleTransactionException(TransactionException ex, Locale locale) {
         log.warn("Transaction error: code={}, message={}", ex.getErrorCode(), ex.getMessage());
-        String message = messageSource.getMessage(
-                String.format("transaction.error.%s", ex.getErrorCode().toUpperCase()),
-                null,
-                ex.getMessage(),
-                locale
-        );
-        return new ErrorResponse(ex.getErrorCode(), message, null);
+        
+        // Try to get localized message from messages.properties
+        String messageKey = String.format("transaction.error.%s", ex.getErrorCode().toUpperCase());
+        String localizedMessage = messageSource.getMessage(messageKey, null, null, locale);
+        
+        // If no localized message found, use the English message from exception
+        String message = (localizedMessage != null && !localizedMessage.equals(messageKey))
+                ? localizedMessage 
+                : ex.getMessage();
+        
+        Map<String, String> details = null;
+        // For complex error messages (with newlines or long text), put full message in details
+        if (ex.getMessage() != null && (ex.getMessage().contains("\n") || ex.getMessage().length() > 100)) {
+            details = new HashMap<>();
+            details.put("error", ex.getMessage());
+            // Use localized message if available, otherwise use first line of English message
+            if (localizedMessage != null && !localizedMessage.equals(messageKey)) {
+                message = localizedMessage;
+            } else {
+                String[] lines = ex.getMessage().split("\n");
+                message = lines.length > 0 ? lines[0] : ex.getMessage();
+            }
+        }
+        
+        return new ErrorResponse(ex.getErrorCode(), message, details);
     }
 
     @ResponseStatus(HttpStatus.NOT_FOUND)
@@ -123,6 +149,56 @@ public class GlobalExceptionAdvice {
         return new ErrorResponse(
                 "TRANSACTION_NOT_FOUND",
                 messageSource.getMessage("transaction.notfound", null, ex.getMessage(), locale),
+                null
+        );
+    }
+
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ExceptionHandler(AccountException.class)
+    public ErrorResponse handleAccountException(AccountException ex, Locale locale) {
+        log.warn("Account error: field={}, message={}", ex.getField(), ex.getMessage());
+        
+        // Use field as error code
+        String messageKey = String.format("account.error.%s", ex.getField().toUpperCase());
+        String localizedMessage = messageSource.getMessage(messageKey, null, null, locale);
+        
+        // If no localized message found, use the English message from exception
+        String message = (localizedMessage != null && !localizedMessage.equals(messageKey))
+                ? localizedMessage 
+                : ex.getMessage();
+        
+        return new ErrorResponse(ex.getField(), message, null);
+    }
+
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    @ExceptionHandler(AccountNotFoundException.class)
+    public ErrorResponse handleAccountNotFoundException(AccountNotFoundException ex, Locale locale) {
+        log.warn("Account not found: {}", ex.getMessage());
+        return new ErrorResponse(
+                "ACCOUNT_NOT_FOUND",
+                messageSource.getMessage("account.notfound", null, ex.getMessage(), locale),
+                null
+        );
+    }
+
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    @ExceptionHandler(TransactionCategoryNotFoundException.class)
+    public ErrorResponse handleTransactionCategoryNotFoundException(TransactionCategoryNotFoundException ex, Locale locale) {
+        log.warn("Transaction category not found: {}", ex.getMessage());
+        return new ErrorResponse(
+                "TRANSACTION_CATEGORY_NOT_FOUND",
+                messageSource.getMessage("transaction.category.notfound", null, ex.getMessage(), locale),
+                null
+        );
+    }
+
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    @ExceptionHandler(BranchNotFoundException.class)
+    public ErrorResponse handleBranchNotFoundException(BranchNotFoundException ex, Locale locale) {
+        log.warn("Branch not found: {}", ex.getMessage());
+        return new ErrorResponse(
+                "BRANCH_NOT_FOUND",
+                messageSource.getMessage("branch.notfound", null, ex.getMessage(), locale),
                 null
         );
     }
@@ -143,8 +219,8 @@ public class GlobalExceptionAdvice {
     public ErrorResponse handleBadCredentials(BadCredentialsException ex, Locale locale) {
         log.warn("Authentication failed: {}", ex.getMessage());
         return new ErrorResponse(
-                "auth.error",
-                messageSource.getMessage("auth.error", null, "Невірні данні для входу", locale),
+                "AUTH_ERROR",
+                messageSource.getMessage("auth.error", null, "Invalid login credentials", locale),
                 null);
     }
 

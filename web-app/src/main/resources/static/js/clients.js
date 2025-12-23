@@ -1498,16 +1498,17 @@ async function showClientModal(client) {
     };
     closeModalClientBtn.addEventListener('click', modalCloseHandler);
 
-    modalClickHandler = function (event) {
-        if (event.target === clientModal) {
-            if (!editing) {
-                closeModal();
-            } else {
-                showMessage('Збережіть або відмініть зміни', 'error');
-            }
-        }
-    };
-    window.addEventListener('click', modalClickHandler);
+    // Removed: modal click handler to prevent closing on outside click
+    // modalClickHandler = function (event) {
+    //     if (event.target === clientModal) {
+    //         if (!editing) {
+    //             closeModal();
+    //         } else {
+    //             showMessage('Збережіть або відмініть зміни', 'error');
+    //         }
+    //     }
+    // };
+    // window.addEventListener('click', modalClickHandler);
     if (fullDeleteButton) {
         const canDelete = canDeleteClient(client);
 
@@ -1669,19 +1670,20 @@ if (createClientCloseBtn && createClientModal) {
 if (createModalClickHandler) {
     window.removeEventListener('click', createModalClickHandler);
 }
-createModalClickHandler = function (event) {
-    if (event.target === createClientModal) {
-        cleanupCreateModalTimeouts();
-        createClientModal.classList.remove('show');
-        createClientModal.classList.add('hide');
-        const timeoutId = setTimeout(() => {
-            createClientModal.style.display = "none";
-            resetForm();
-        }, 300);
-        createModalTimeoutIds.push(timeoutId);
-    }
-};
-window.addEventListener('click', createModalClickHandler);
+// Removed: create modal click handler to prevent closing on outside click
+// createModalClickHandler = function (event) {
+//     if (event.target === createClientModal) {
+//         cleanupCreateModalTimeouts();
+//         createClientModal.classList.remove('show');
+//         createClientModal.classList.add('hide');
+//         const timeoutId = setTimeout(() => {
+//             createClientModal.style.display = "none";
+//             resetForm();
+//         }, 300);
+//         createModalTimeoutIds.push(timeoutId);
+//     }
+// };
+// window.addEventListener('click', createModalClickHandler);
 
 function buildDynamicCreateForm() {
     if (!currentClientTypeId) {
@@ -2236,11 +2238,12 @@ closeFilter.addEventListener('click', () => {
     closeModalFilter();
 });
 
-filterModal.addEventListener('click', (event) => {
-    if (!modalContent.contains(event.target)) {
-        closeModalFilter();
-    }
-});
+// Removed: filter modal click handler to prevent closing on outside click
+// filterModal.addEventListener('click', (event) => {
+//     if (!modalContent.contains(event.target)) {
+//         closeModalFilter();
+//     }
+// });
 
 function closeModalFilter() {
     if (filterModalTimeoutId !== null) {

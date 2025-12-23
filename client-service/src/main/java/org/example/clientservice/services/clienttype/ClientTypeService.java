@@ -33,7 +33,8 @@ public class ClientTypeService implements IClientTypeService {
     @Transactional
     public ClientType createClientType(ClientTypeCreateDTO dto) {
         if (existsByName(dto.getName())) {
-            throw new ClientException("Client type with name " + dto.getName() + " already exists");
+            throw new ClientException("CLIENT_TYPE_ALREADY_EXISTS", 
+                String.format("Client type with name %s already exists", dto.getName()));
         }
 
         ClientType clientType = clientTypeMapper.createDTOToClientType(dto);
@@ -48,7 +49,8 @@ public class ClientTypeService implements IClientTypeService {
 
         if (dto.getName() != null && !dto.getName().equals(clientType.getName())) {
             if (existsByName(dto.getName())) {
-                throw new ClientException("Client type with name " + dto.getName() + " already exists");
+                throw new ClientException("CLIENT_TYPE_ALREADY_EXISTS", 
+                    String.format("Client type with name %s already exists", dto.getName()));
             }
         }
 
@@ -97,7 +99,8 @@ public class ClientTypeService implements IClientTypeService {
         
         long clientCount = clientRepository.countByClientTypeId(id);
         if (clientCount > 0) {
-            throw new ClientException("Cannot delete client type. There are clients associated with this type.");
+            throw new ClientException("DELETE_FORBIDDEN", 
+                "Cannot delete client type. There are clients associated with this type.");
         }
 
         log.info("Deleting client type with ID: {}", id);

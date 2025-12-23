@@ -23,6 +23,7 @@ import org.example.purchaseservice.models.dto.fields.*;
 import org.example.purchaseservice.models.dto.impl.IdNameDTO;
 import org.example.purchaseservice.models.dto.purchase.PurchaseReportDTO;
 import org.example.purchaseservice.models.dto.user.UserDTO;
+import org.example.purchaseservice.exceptions.PurchaseException;
 import org.example.purchaseservice.repositories.PurchaseRepository;
 import org.example.purchaseservice.services.impl.IProductService;
 import org.example.purchaseservice.services.impl.IPurchaseSpecialOperationsService;
@@ -64,8 +65,10 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
             String query,
             Map<String, List<String>> filterParams,
             HttpServletResponse response,
-            List<String> selectedFields) throws IOException {
+            List<String> selectedFields) {
 
+        validateInputs(query, selectedFields);
+        
         Sort sort = createSort(sortDirection, sortProperty);
         List<ClientDTO> clients = fetchClientIds(query, filterParams);
         FilterIds filterIds = createFilterIds(clients);
@@ -468,13 +471,32 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
                 .orElse("");
     }
 
-    private void sendExcelFileResponse(Workbook workbook, HttpServletResponse response) throws IOException {
-        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-        String dateStr = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
-        String filename = "purchase_data_" + dateStr + ".xlsx";
-        response.setHeader("Content-Disposition", "attachment; filename=" + filename);
-        workbook.write(response.getOutputStream());
-        workbook.close();
+    private void validateInputs(String query, List<String> selectedFields) {
+        if (query != null && query.length() > 255) {
+            throw new PurchaseException("INVALID_QUERY", "Search query cannot exceed 255 characters");
+        }
+        if (selectedFields == null || selectedFields.isEmpty()) {
+            throw new PurchaseException("INVALID_FIELDS", "The list of fields for export cannot be empty");
+        }
+    }
+
+    private void sendExcelFileResponse(Workbook workbook, HttpServletResponse response) {
+        try {
+            response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+            String dateStr = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+            String filename = "purchase_data_" + dateStr + ".xlsx";
+            response.setHeader("Content-Disposition", "attachment; filename=" + filename);
+            workbook.write(response.getOutputStream());
+            workbook.close();
+        } catch (IOException e) {
+            try {
+                workbook.close();
+            } catch (IOException closeException) {
+                log.warn("Failed to close workbook: {}", closeException.getMessage());
+            }
+            throw new PurchaseException("EXCEL_GENERATION_ERROR", 
+                String.format("Error generating Excel file: %s", e.getMessage()));
+        }
     }
 
     @Override
@@ -779,10 +801,11 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
 
         } catch (DateTimeParseException e) {
             log.error("Invalid date format for purchaseDataFrom or purchaseDataTo. Expected format: yyyy-MM-dd", e);
-            throw new IllegalArgumentException("Invalid date format. Please use yyyy-MM-dd", e);
+            throw new PurchaseException("INVALID_DATE_FORMAT", "Invalid date format. Please use yyyy-MM-dd");
         } catch (Exception e) {
             log.error("Error generating Excel file", e);
-            throw new RuntimeException("Failed to generate Excel file", e);
+            throw new PurchaseException("EXCEL_GENERATION_ERROR", 
+                String.format("Failed to generate Excel file: %s", e.getMessage()));
         }
     }
 }

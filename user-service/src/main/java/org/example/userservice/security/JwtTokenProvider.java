@@ -4,6 +4,7 @@ import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import lombok.extern.slf4j.Slf4j;
 import org.example.userservice.config.SecretKeyConfig;
+import org.example.userservice.exceptions.user.UserException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -65,7 +66,7 @@ public class JwtTokenProvider {
                 }
             }
         } else {
-            throw new IllegalArgumentException("Authorities claim is not a list of strings");
+            throw new UserException("INVALID_TOKEN_CLAIM", "Authorities claim is not a list of strings");
         }
 
         UsernamePasswordAuthenticationToken authentication =

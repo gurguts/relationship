@@ -526,6 +526,7 @@ input.custom-select-placeholder {
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     transform: scale(0.9);
     transition: transform 0.3s ease;
+    position: relative;
 }
 
 .modal-export-data.show .modal-export-data-content {
@@ -590,6 +591,34 @@ input.custom-select-placeholder {
 
 .modal-export-data-content .btn-secondary:hover {
     background-color: #5a6268;
+}
+
+#close-export-modal {
+    position: absolute;
+    top: 0.5em;
+    right: 0.8em;
+    cursor: pointer;
+    font-size: 1.8em;
+    font-weight: bold;
+    color: #666;
+    transition: all 0.3s ease;
+    border: none;
+    background: none;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    z-index: 10;
+    touch-action: manipulation;
+}
+
+#close-export-modal:hover,
+#close-export-modal:active {
+    color: #c00;
+    background-color: rgba(204, 0, 0, 0.1);
+    transform: scale(1.1);
 }
 
 
@@ -804,6 +833,7 @@ input.custom-select-placeholder {
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
     transform: scale(0.9);
     transition: transform 0.3s ease-in-out;
+    position: relative;
 }
 
 .edit-modal.active .edit-modal-content {
@@ -883,13 +913,32 @@ input.custom-select-placeholder {
     background-color: #218838;
 }
 
-.edit-modal-content #cancel-edit {
-    background-color: #dc3545;
-    color: white;
+#close-edit-modal {
+    position: absolute;
+    top: 0.5em;
+    right: 0.8em;
+    cursor: pointer;
+    font-size: 1.8em;
+    font-weight: bold;
+    color: #666;
+    transition: all 0.3s ease;
+    border: none;
+    background: none;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    z-index: 1;
+    touch-action: manipulation;
 }
 
-.edit-modal-content #cancel-edit:hover {
-    background-color: #c82333;
+#close-edit-modal:hover,
+#close-edit-modal:active {
+    color: #c00;
+    background-color: rgba(204, 0, 0, 0.1);
+    transform: scale(1.1);
 }
 
 /*--pagination--*/
@@ -2205,7 +2254,18 @@ input.custom-select-placeholder {
     .edit-modal-content button[type="submit"] {
         margin-top: 1em;
     }
+
+    #close-edit-modal {
+        width: 44px;
+        height: 44px;
+        font-size: 2.2em;
+    }
 }
 
 @media (max-width: 768px) {
+    #close-edit-modal {
+        width: 44px;
+        height: 44px;
+        font-size: 2.2em;
+    }
 }

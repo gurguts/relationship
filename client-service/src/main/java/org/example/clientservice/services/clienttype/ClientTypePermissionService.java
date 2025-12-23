@@ -28,7 +28,8 @@ public class ClientTypePermissionService implements IClientTypePermissionService
         ClientType clientType = clientTypeService.getClientTypeById(clientTypeId);
 
         if (permissionRepository.findByUserIdAndClientTypeId(dto.getUserId(), clientTypeId).isPresent()) {
-            throw new ClientException("Permission already exists for user " + dto.getUserId() + " and client type " + clientTypeId);
+            throw new ClientException("PERMISSION_ALREADY_EXISTS", 
+                String.format("Permission already exists for user %d and client type %d", dto.getUserId(), clientTypeId));
         }
 
         ClientTypePermission permission = new ClientTypePermission();

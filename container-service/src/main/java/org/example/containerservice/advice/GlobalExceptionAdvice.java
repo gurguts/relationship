@@ -80,13 +80,31 @@ public class GlobalExceptionAdvice {
     @ExceptionHandler(ContainerException.class)
     public ErrorResponse handleContainerException(ContainerException ex, Locale locale) {
         log.warn("Container error: code={}, message={}", ex.getErrorCode(), ex.getMessage());
-        String message = messageSource.getMessage(
-                String.format("container.error.%s", ex.getErrorCode().toUpperCase()),
-                null,
-                ex.getMessage(),
-                locale
-        );
-        return new ErrorResponse(ex.getErrorCode(), message, null);
+        
+        // Try to get localized message from messages.properties
+        String messageKey = String.format("container.error.%s", ex.getErrorCode().toUpperCase());
+        String localizedMessage = messageSource.getMessage(messageKey, null, null, locale);
+        
+        // If no localized message found, use the English message from exception
+        String message = (localizedMessage != null && !localizedMessage.equals(messageKey))
+                ? localizedMessage 
+                : ex.getMessage();
+        
+        Map<String, String> details = null;
+        // For complex error messages (with newlines or long text), put full message in details
+        if (ex.getMessage() != null && (ex.getMessage().contains("\n") || ex.getMessage().length() > 100)) {
+            details = new HashMap<>();
+            details.put("error", ex.getMessage());
+            // Use localized message if available, otherwise use first line of English message
+            if (localizedMessage != null && !localizedMessage.equals(messageKey)) {
+                message = localizedMessage;
+            } else {
+                String[] lines = ex.getMessage().split("\n");
+                message = lines.length > 0 ? lines[0] : ex.getMessage();
+            }
+        }
+        
+        return new ErrorResponse(ex.getErrorCode(), message, details);
     }
 
     @ResponseStatus(HttpStatus.NOT_FOUND)

@@ -3,6 +3,8 @@ package org.example.clientservice.services.client;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.clientservice.clients.UserClient;
+import org.example.clientservice.clients.PurchaseClient;
+import org.example.clientservice.clients.ContainerClient;
 import org.example.clientservice.exceptions.client.ClientException;
 import org.example.clientservice.exceptions.client.ClientNotFoundException;
 import org.example.clientservice.models.client.Client;
@@ -28,6 +30,8 @@ public class ClientCrudService implements IClientCrudService {
     private final ISourceService sourceService;
     private final UserClient userCLient;
     private final IClientTypePermissionService clientTypePermissionService;
+    private final PurchaseClient purchaseClient;
+    private final ContainerClient containerClient;
 
     @Override
     @Transactional
@@ -39,7 +43,7 @@ public class ClientCrudService implements IClientCrudService {
             if (userId != null && !SecurityUtils.isAdmin()) {
                 if (!clientTypePermissionService.canUserCreate(userId, client.getClientType().getId())) {
                     throw new ClientException("ACCESS_DENIED", 
-                        "У вас немає прав на створення клієнтів цього типу");
+                        "You do not have permission to create clients of this type");
                 }
             }
         }
@@ -57,7 +61,7 @@ public class ClientCrudService implements IClientCrudService {
             if (userId != null && !SecurityUtils.isAdmin()) {
                 if (!clientTypePermissionService.canUserEdit(userId, existingClient.getClientType().getId())) {
                     throw new ClientException("ACCESS_DENIED", 
-                        "У вас немає прав на редагування клієнтів цього типу");
+                        "You do not have permission to edit clients of this type");
                 }
             }
         }
@@ -94,7 +98,7 @@ public class ClientCrudService implements IClientCrudService {
             if (userId != null && !SecurityUtils.isAdmin()) {
                 if (!clientTypePermissionService.canUserView(userId, client.getClientType().getId())) {
                     throw new ClientException("ACCESS_DENIED", 
-                        "У вас немає прав на перегляд клієнтів цього типу");
+                        "You do not have permission to view clients of this type");
                 }
             }
         }
@@ -115,11 +119,11 @@ public class ClientCrudService implements IClientCrudService {
                     clientTypePermissionService.getUserPermissions(userId, client.getClientType().getId());
                 if (permission == null || !Boolean.TRUE.equals(permission.getCanView())) {
                     throw new ClientException("ACCESS_DENIED", 
-                        "У вас немає прав на перегляд клієнтів цього типу");
+                        "You do not have permission to view clients of this type");
                 }
                 if (!Boolean.TRUE.equals(permission.getCanDelete())) {
                     throw new ClientException("ACCESS_DENIED", 
-                        "У вас немає прав на видалення клієнтів цього типу");
+                        "You do not have permission to delete clients of this type");
                 }
             }
         }
@@ -129,6 +133,38 @@ public class ClientCrudService implements IClientCrudService {
             clientSource = sourceService.getSource(client.getSource());
         }
         checkSourceBasedPermission(client, clientSource, "delete");
+        
+        // Проверяем наличие связанных закупок
+        try {
+            var purchasesResponse = purchaseClient.getPurchasesByClientId(clientId);
+            if (purchasesResponse.getBody() != null && !purchasesResponse.getBody().isEmpty()) {
+                throw new ClientException("DELETE_FORBIDDEN", 
+                    "Cannot delete client because there are purchases associated with it");
+            }
+        } catch (Exception e) {
+            // Если это наша ошибка - пробрасываем дальше
+            if (e instanceof ClientException) {
+                throw e;
+            }
+            // Если ошибка при обращении к сервису - логируем и продолжаем проверку
+            log.warn("Failed to check purchases for client {}: {}", clientId, e.getMessage());
+        }
+        
+        // Проверяем наличие связанной тары
+        try {
+            var containersResponse = containerClient.getClientContainers(clientId);
+            if (containersResponse.getBody() != null && !containersResponse.getBody().isEmpty()) {
+                throw new ClientException("DELETE_FORBIDDEN", 
+                    "Cannot delete client because there are containers associated with it");
+            }
+        } catch (Exception e) {
+            // Если это наша ошибка - пробрасываем дальше
+            if (e instanceof ClientException) {
+                throw e;
+            }
+            // Если ошибка при обращении к сервису - логируем и продолжаем проверку
+            log.warn("Failed to check containers for client {}: {}", clientId, e.getMessage());
+        }
         
         clientRepository.deleteById(clientId);
     }
@@ -146,11 +182,11 @@ public class ClientCrudService implements IClientCrudService {
                     clientTypePermissionService.getUserPermissions(userId, client.getClientType().getId());
                 if (permission == null || !Boolean.TRUE.equals(permission.getCanView())) {
                     throw new ClientException("ACCESS_DENIED", 
-                        "У вас немає прав на перегляд клієнтів цього типу");
+                        "You do not have permission to view clients of this type");
                 }
                 if (!Boolean.TRUE.equals(permission.getCanDelete())) {
                     throw new ClientException("ACCESS_DENIED", 
-                        "У вас немає прав на видалення клієнтів цього типу");
+                        "You do not have permission to delete clients of this type");
                 }
             }
         }
@@ -174,7 +210,7 @@ public class ClientCrudService implements IClientCrudService {
     private void updateExistingClient(Client existingClient, Client updatedClient, String fullName, Source clientSource) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null) {
-            throw new ClientException("Authentication required");
+            throw new ClientException("AUTHENTICATION_REQUIRED", "Authentication required");
         }
         
         Long currentUserId = SecurityUtils.getCurrentUserId();
@@ -208,12 +244,12 @@ public class ClientCrudService implements IClientCrudService {
 
         // Если нет прав на редактирование - выбрасываем исключение
         if (!canEditData) {
-            throw new ClientException("You do not have permission to edit this client");
+            throw new ClientException("ACCESS_DENIED", "You do not have permission to edit this client");
         }
 
         // Название клиента (company) можно редактировать только для "своих" клиентов или с правом client_stranger:edit
         if (updatedClient.getCompany() != null && !isOwnClient && !canEditStrangers) {
-            throw new ClientException("You do not have permission to edit client name");
+            throw new ClientException("ACCESS_DENIED", "You do not have permission to edit client name");
         }
         
         // Обновляем название клиента только если есть права
@@ -228,7 +264,7 @@ public class ClientCrudService implements IClientCrudService {
                 existingClient.getSource())) {
             // Изменять source могут только пользователи с правом client_stranger:edit
             if (!canEditStrangers) {
-                throw new ClientException("Only users with client_stranger:edit can update source");
+                throw new ClientException("ACCESS_DENIED", "Only users with client_stranger:edit can update source");
             }
             existingClient.setSource(updatedClient.getSource());
         }
@@ -276,7 +312,7 @@ public class ClientCrudService implements IClientCrudService {
     private void checkSourceBasedPermission(Client client, Source clientSource, String action) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null) {
-            throw new ClientException("Authentication required");
+            throw new ClientException("AUTHENTICATION_REQUIRED", "Authentication required");
         }
         
         Long currentUserId = SecurityUtils.getCurrentUserId();
@@ -300,9 +336,9 @@ public class ClientCrudService implements IClientCrudService {
         }
         
         // Source не закреплен или закреплен за другим - нет прав на выполнение действия
-        String actionText = "delete".equals(action) ? "видалення" : "редагування";
+        String actionText = "delete".equals(action) ? "deletion" : "editing";
         throw new ClientException("ACCESS_DENIED", 
-            String.format("У вас немає прав на %s цього клієнта. Клієнт має привлечення, закріплене за іншим користувачем.", actionText));
+            String.format("You do not have permission for %s of this client. The client has a source assigned to another user.", actionText));
     }
 }
 
