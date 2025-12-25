@@ -35,6 +35,13 @@ public class VehicleDetailsDTO {
     private LocalDate customsDate;
     private LocalDate customsClearanceDate;
     private LocalDate unloadingDate;
+    private LocalDate invoiceUaDate;
+    private BigDecimal invoiceUaPricePerTon;
+    private BigDecimal invoiceUaTotalPrice;
+    private LocalDate invoiceEuDate;
+    private BigDecimal invoiceEuPricePerTon;
+    private BigDecimal invoiceEuTotalPrice;
+    private BigDecimal reclamation;
     private CarrierDetailsDTO carrier;
     private List<VehicleItemDTO> items;
     

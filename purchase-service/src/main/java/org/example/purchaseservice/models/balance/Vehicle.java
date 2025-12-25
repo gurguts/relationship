@@ -90,6 +90,27 @@ public class Vehicle {
     @JoinColumn(name = "carrier_id")
     private Carrier carrier;
     
+    @Column(name = "invoice_ua_date")
+    private LocalDate invoiceUaDate;
+    
+    @Column(name = "invoice_ua_price_per_ton", precision = 20, scale = 6)
+    private BigDecimal invoiceUaPricePerTon;
+    
+    @Column(name = "invoice_ua_total_price", precision = 20, scale = 6)
+    private BigDecimal invoiceUaTotalPrice;
+    
+    @Column(name = "invoice_eu_date")
+    private LocalDate invoiceEuDate;
+    
+    @Column(name = "invoice_eu_price_per_ton", precision = 20, scale = 6)
+    private BigDecimal invoiceEuPricePerTon;
+    
+    @Column(name = "invoice_eu_total_price", precision = 20, scale = 6)
+    private BigDecimal invoiceEuTotalPrice;
+    
+    @Column(name = "reclamation", precision = 20, scale = 6)
+    private BigDecimal reclamation;
+    
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

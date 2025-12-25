@@ -11,6 +11,7 @@ import org.example.userservice.models.dto.transaction.TransactionPageDTO;
 import org.example.userservice.models.transaction.Transaction;
 import org.example.userservice.models.transaction.TransactionCategory;
 import org.example.userservice.repositories.AccountRepository;
+import org.example.userservice.repositories.CounterpartyRepository;
 import org.example.userservice.repositories.TransactionCategoryRepository;
 import org.example.userservice.repositories.TransactionRepository;
 import org.example.userservice.services.impl.ITransactionSearchService;
@@ -39,6 +40,7 @@ public class TransactionSearchService implements ITransactionSearchService {
     private final VehicleApiClient vehicleApiClient;
     private final AccountRepository accountRepository;
     private final TransactionCategoryRepository transactionCategoryRepository;
+    private final CounterpartyRepository counterpartyRepository;
 
     @Transactional(readOnly = true)
     public PageResponse<TransactionPageDTO> getTransactionsWithPagination(int page, int size, String sort,
@@ -99,6 +101,19 @@ public class TransactionSearchService implements ITransactionSearchService {
                 : StreamSupport.stream(transactionCategoryRepository.findAllById(categoryIds).spliterator(), false)
                 .collect(Collectors.toMap(TransactionCategory::getId, TransactionCategory::getName));
 
+        Set<Long> counterpartyIds = transactionPage.getContent().stream()
+                .map(Transaction::getCounterpartyId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        Map<Long, String> counterpartyNameMap = counterpartyIds.isEmpty()
+                ? Collections.emptyMap()
+                : StreamSupport.stream(counterpartyRepository.findAllById(counterpartyIds).spliterator(), false)
+                .collect(Collectors.toMap(
+                        org.example.userservice.models.transaction.Counterparty::getId,
+                        org.example.userservice.models.transaction.Counterparty::getName
+                ));
+
         List<Long> vehicleIds = transactionPage.getContent().stream()
                 .map(Transaction::getVehicleId)
                 .filter(Objects::nonNull)
@@ -138,6 +153,8 @@ public class TransactionSearchService implements ITransactionSearchService {
                             ? categoryNameMap.getOrDefault(transaction.getCategoryId(), "") : "");
                     dto.setVehicleNumber(transaction.getVehicleId() != null 
                             ? finalVehicleNumberMap.getOrDefault(transaction.getVehicleId(), "") : "");
+                    dto.setCounterpartyName(transaction.getCounterpartyId() != null 
+                            ? counterpartyNameMap.getOrDefault(transaction.getCounterpartyId(), "") : "");
                     return dto;
                 })
                 .toList();

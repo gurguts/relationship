@@ -63,4 +63,7 @@ public class Transaction {
 
     @Column(name = "vehicle_id")
     private Long vehicleId;
+
+    @Column(name = "counterparty_id")
+    private Long counterpartyId;
 }

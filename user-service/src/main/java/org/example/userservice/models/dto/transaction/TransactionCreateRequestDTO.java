@@ -19,5 +19,6 @@ public class TransactionCreateRequestDTO {
     private String description;
     private BigDecimal commission;
     private Long vehicleId;
+    private Long counterpartyId;
 }
 

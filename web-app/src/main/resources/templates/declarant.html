@@ -277,12 +277,12 @@
                             <input type="text" id="vehicle-vehicle-number" class="form-input" required>
                         </div>
                         <div class="form-group">
-                            <label for="vehicle-invoice-ua">Інвойс УА</label>
-                            <input type="text" id="vehicle-invoice-ua" class="form-input">
+                            <label for="vehicle-declaration-number">Номер декларації</label>
+                            <input type="text" id="vehicle-declaration-number" class="form-input">
                         </div>
                         <div class="form-group">
-                            <label for="vehicle-invoice-eu">Інвойс ЄС</label>
-                            <input type="text" id="vehicle-invoice-eu" class="form-input">
+                            <label for="vehicle-terminal">Термінал</label>
+                            <input type="text" id="vehicle-terminal" class="form-input">
                         </div>
                         <div class="form-group checkbox-group">
                             <label class="checkbox-label">
@@ -323,16 +323,56 @@
                             <input type="text" id="vehicle-product" class="form-input">
                         </div>
                         <div class="form-group">
-                            <label for="vehicle-product-quantity">Кількість товару</label>
+                            <label for="vehicle-product-quantity">Кількість товару (в тоннах)</label>
                             <input type="text" id="vehicle-product-quantity" class="form-input">
                         </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h4 class="section-title">Інвойс UA</h4>
+                    <div class="form-vertical">
                         <div class="form-group">
-                            <label for="vehicle-declaration-number">Номер декларації</label>
-                            <input type="text" id="vehicle-declaration-number" class="form-input">
+                            <label for="vehicle-invoice-ua">Інвойс UA</label>
+                            <input type="text" id="vehicle-invoice-ua" class="form-input">
                         </div>
                         <div class="form-group">
-                            <label for="vehicle-terminal">Термінал</label>
-                            <input type="text" id="vehicle-terminal" class="form-input">
+                            <label for="vehicle-invoice-ua-date">Дата інвойсу UA</label>
+                            <input type="date" id="vehicle-invoice-ua-date" class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <label for="vehicle-invoice-ua-price-per-ton">Ціна за тонну інвойсу UA (EUR)</label>
+                            <input type="number" id="vehicle-invoice-ua-price-per-ton" step="0.000001" min="0" class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <label for="vehicle-invoice-ua-total-price">Повна ціна інвойсу UA (EUR)</label>
+                            <input type="number" id="vehicle-invoice-ua-total-price" step="0.000001" min="0" class="form-input" readonly>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h4 class="section-title">Інвойс EU</h4>
+                    <div class="form-vertical">
+                        <div class="form-group">
+                            <label for="vehicle-invoice-eu">Інвойс EU</label>
+                            <input type="text" id="vehicle-invoice-eu" class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <label for="vehicle-invoice-eu-date">Дата інвойсу EU</label>
+                            <input type="date" id="vehicle-invoice-eu-date" class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <label for="vehicle-invoice-eu-price-per-ton">Ціна за тонну інвойсу EU (EUR)</label>
+                            <input type="number" id="vehicle-invoice-eu-price-per-ton" step="0.000001" min="0" class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <label for="vehicle-invoice-eu-total-price">Повна ціна інвойсу EU (EUR)</label>
+                            <input type="number" id="vehicle-invoice-eu-total-price" step="0.000001" min="0" class="form-input" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label for="vehicle-reclamation">Рекламація (EUR)</label>
+                            <input type="number" id="vehicle-reclamation" step="0.000001" min="0" class="form-input">
                         </div>
                     </div>
                 </div>
@@ -423,12 +463,12 @@
                                 <input type="text" id="detail-vehicle-vehicle-number" class="form-input" disabled>
                             </div>
                             <div class="form-group">
-                                <label for="detail-vehicle-invoice-ua">Інвойс УА</label>
-                                <input type="text" id="detail-vehicle-invoice-ua" class="form-input" disabled>
+                                <label for="detail-vehicle-declaration-number">Номер декларації</label>
+                                <input type="text" id="detail-vehicle-declaration-number" class="form-input" disabled>
                             </div>
                             <div class="form-group">
-                                <label for="detail-vehicle-invoice-eu">Інвойс ЄС</label>
-                                <input type="text" id="detail-vehicle-invoice-eu" class="form-input" disabled>
+                                <label for="detail-vehicle-terminal">Термінал</label>
+                                <input type="text" id="detail-vehicle-terminal" class="form-input" disabled>
                             </div>
                         </div>
                     </div>
@@ -463,16 +503,56 @@
                                 <input type="text" id="detail-vehicle-product" class="form-input" disabled>
                             </div>
                             <div class="form-group">
-                                <label for="detail-vehicle-product-quantity">Кількість товару</label>
+                                <label for="detail-vehicle-product-quantity">Кількість товару (в тоннах)</label>
                                 <input type="text" id="detail-vehicle-product-quantity" class="form-input" disabled>
                             </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h4 class="section-title">Інвойс UA</h4>
+                        <div class="form-grid">
                             <div class="form-group">
-                                <label for="detail-vehicle-declaration-number">Номер декларації</label>
-                                <input type="text" id="detail-vehicle-declaration-number" class="form-input" disabled>
+                                <label for="detail-vehicle-invoice-ua">Інвойс UA</label>
+                                <input type="text" id="detail-vehicle-invoice-ua" class="form-input" disabled>
                             </div>
                             <div class="form-group">
-                                <label for="detail-vehicle-terminal">Термінал</label>
-                                <input type="text" id="detail-vehicle-terminal" class="form-input" disabled>
+                                <label for="detail-vehicle-invoice-ua-date">Дата інвойсу UA</label>
+                                <input type="date" id="detail-vehicle-invoice-ua-date" class="form-input" disabled>
+                            </div>
+                            <div class="form-group">
+                                <label for="detail-vehicle-invoice-ua-price-per-ton">Ціна за тонну інвойсу UA (EUR)</label>
+                                <input type="number" id="detail-vehicle-invoice-ua-price-per-ton" step="0.000001" min="0" class="form-input" disabled>
+                            </div>
+                            <div class="form-group">
+                                <label for="detail-vehicle-invoice-ua-total-price">Повна ціна інвойсу UA (EUR)</label>
+                                <input type="number" id="detail-vehicle-invoice-ua-total-price" step="0.000001" min="0" class="form-input" readonly disabled>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h4 class="section-title">Інвойс EU</h4>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="detail-vehicle-invoice-eu">Інвойс EU</label>
+                                <input type="text" id="detail-vehicle-invoice-eu" class="form-input" disabled>
+                            </div>
+                            <div class="form-group">
+                                <label for="detail-vehicle-invoice-eu-date">Дата інвойсу EU</label>
+                                <input type="date" id="detail-vehicle-invoice-eu-date" class="form-input" disabled>
+                            </div>
+                            <div class="form-group">
+                                <label for="detail-vehicle-invoice-eu-price-per-ton">Ціна за тонну інвойсу EU (EUR)</label>
+                                <input type="number" id="detail-vehicle-invoice-eu-price-per-ton" step="0.000001" min="0" class="form-input" disabled>
+                            </div>
+                            <div class="form-group">
+                                <label for="detail-vehicle-invoice-eu-total-price">Повна ціна інвойсу EU (EUR)</label>
+                                <input type="number" id="detail-vehicle-invoice-eu-total-price" step="0.000001" min="0" class="form-input" readonly disabled>
+                            </div>
+                            <div class="form-group">
+                                <label for="detail-vehicle-reclamation">Рекламація (EUR)</label>
+                                <input type="number" id="detail-vehicle-reclamation" step="0.000001" min="0" class="form-input" disabled>
                             </div>
                         </div>
                     </div>
@@ -533,6 +613,33 @@
                         </div>
                     </div>
 
+                    <div class="form-section">
+                        <h4 class="section-title">Фінансові показники</h4>
+                        <div class="vehicle-total-card">
+                            <div style="margin-bottom: 1rem;">
+                                <span class="total-label">Загальні витрати (EUR):</span>
+                                <div class="total-value">
+                                    <span id="vehicle-total-expenses">0</span>
+                                    <span class="currency">EUR</span>
+                                </div>
+                            </div>
+                            <div style="margin-bottom: 1rem;">
+                                <span class="total-label">Загальний дохід (EUR):</span>
+                                <div class="total-value">
+                                    <span id="vehicle-total-income">0</span>
+                                    <span class="currency">EUR</span>
+                                </div>
+                            </div>
+                            <div>
+                                <span class="total-label">Маржа:</span>
+                                <div class="total-value">
+                                    <span id="vehicle-margin">0</span>
+                                    <span class="currency">EUR</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="form-actions">
                         <button type="button" class="btn btn-danger" id="delete-vehicle-from-details-btn">🗑️ Видалити машину</button>
                         <button type="button" class="btn btn-secondary" id="edit-vehicle-btn">✏️ Редагувати</button>
@@ -564,13 +671,6 @@
                                 </tr>
                             </tbody>
                         </table>
-                    </div>
-                    <div class="vehicle-total-card">
-                        <span class="total-label">Загальна вартість машини:</span>
-                        <div class="total-value">
-                            <span id="vehicle-total-cost">0</span>
-                            <span class="currency">EUR</span>
-                        </div>
                     </div>
                     <div class="products-actions">
                         <button class="btn btn-danger" id="delete-vehicle-btn">🗑️ Видалити машину</button>

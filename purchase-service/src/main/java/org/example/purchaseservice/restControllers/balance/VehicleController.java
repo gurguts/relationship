@@ -73,6 +73,11 @@ public class VehicleController {
                 dto.getCustomsDate(),
                 dto.getCustomsClearanceDate(),
                 dto.getUnloadingDate(),
+                dto.getInvoiceUaDate(),
+                dto.getInvoiceUaPricePerTon(),
+                dto.getInvoiceEuDate(),
+                dto.getInvoiceEuPricePerTon(),
+                dto.getReclamation(),
                 dto.getCarrierId()
         );
         
@@ -335,6 +340,13 @@ public class VehicleController {
                 .customsDate(vehicle.getCustomsDate())
                 .customsClearanceDate(vehicle.getCustomsClearanceDate())
                 .unloadingDate(vehicle.getUnloadingDate())
+                .invoiceUaDate(vehicle.getInvoiceUaDate())
+                .invoiceUaPricePerTon(vehicle.getInvoiceUaPricePerTon())
+                .invoiceUaTotalPrice(vehicle.getInvoiceUaTotalPrice())
+                .invoiceEuDate(vehicle.getInvoiceEuDate())
+                .invoiceEuPricePerTon(vehicle.getInvoiceEuPricePerTon())
+                .invoiceEuTotalPrice(vehicle.getInvoiceEuTotalPrice())
+                .reclamation(vehicle.getReclamation())
                 .carrier(carrierDTO)
                 .items(items)
                 .build();

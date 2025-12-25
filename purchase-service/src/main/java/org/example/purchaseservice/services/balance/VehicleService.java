@@ -47,7 +47,9 @@ public class VehicleService {
                                     String declarationNumber, String terminal, String driverFullName,
                                     Boolean eur1, Boolean fito, LocalDate customsDate,
                                     LocalDate customsClearanceDate, LocalDate unloadingDate,
-                                    Long carrierId) {
+                                    LocalDate invoiceUaDate, BigDecimal invoiceUaPricePerTon,
+                                    LocalDate invoiceEuDate, BigDecimal invoiceEuPricePerTon,
+                                    BigDecimal reclamation, Long carrierId) {
         log.info("Creating new vehicle: date={}, vehicle={}, invoiceUa={}, invoiceEu={}, isOurVehicle={}", 
                 shipmentDate, vehicleNumber, invoiceUa, invoiceEu, isOurVehicle);
         
@@ -74,6 +76,29 @@ public class VehicleService {
         vehicle.setCustomsDate(customsDate);
         vehicle.setCustomsClearanceDate(customsClearanceDate);
         vehicle.setUnloadingDate(unloadingDate);
+        vehicle.setInvoiceUaDate(invoiceUaDate);
+        vehicle.setInvoiceUaPricePerTon(invoiceUaPricePerTon);
+        vehicle.setInvoiceEuDate(invoiceEuDate);
+        vehicle.setInvoiceEuPricePerTon(invoiceEuPricePerTon);
+        vehicle.setReclamation(reclamation);
+        
+        if (invoiceUaPricePerTon != null && productQuantity != null) {
+            try {
+                BigDecimal quantityInTons = new BigDecimal(productQuantity.replace(",", "."));
+                vehicle.setInvoiceUaTotalPrice(invoiceUaPricePerTon.multiply(quantityInTons).setScale(6, java.math.RoundingMode.HALF_UP));
+            } catch (NumberFormatException e) {
+                vehicle.setInvoiceUaTotalPrice(null);
+            }
+        }
+        
+        if (invoiceEuPricePerTon != null && productQuantity != null) {
+            try {
+                BigDecimal quantityInTons = new BigDecimal(productQuantity.replace(",", "."));
+                vehicle.setInvoiceEuTotalPrice(invoiceEuPricePerTon.multiply(quantityInTons).setScale(6, java.math.RoundingMode.HALF_UP));
+            } catch (NumberFormatException e) {
+                vehicle.setInvoiceEuTotalPrice(null);
+            }
+        }
         
         if (carrierId != null) {
             Carrier carrier = carrierRepository.findById(carrierId)
@@ -320,6 +345,36 @@ public class VehicleService {
         vehicle.setCustomsDate(dto.getCustomsDate());
         vehicle.setCustomsClearanceDate(dto.getCustomsClearanceDate());
         vehicle.setUnloadingDate(dto.getUnloadingDate());
+        vehicle.setInvoiceUaDate(dto.getInvoiceUaDate());
+        vehicle.setInvoiceUaPricePerTon(dto.getInvoiceUaPricePerTon());
+        vehicle.setInvoiceEuDate(dto.getInvoiceEuDate());
+        vehicle.setInvoiceEuPricePerTon(dto.getInvoiceEuPricePerTon());
+        vehicle.setReclamation(dto.getReclamation());
+        
+        String productQuantity = vehicle.getProductQuantity();
+        if (productQuantity != null) {
+            try {
+                BigDecimal quantityInTons = new BigDecimal(productQuantity.replace(",", "."));
+                
+                if (vehicle.getInvoiceUaPricePerTon() != null) {
+                    vehicle.setInvoiceUaTotalPrice(vehicle.getInvoiceUaPricePerTon().multiply(quantityInTons).setScale(6, java.math.RoundingMode.HALF_UP));
+                } else {
+                    vehicle.setInvoiceUaTotalPrice(null);
+                }
+                
+                if (vehicle.getInvoiceEuPricePerTon() != null) {
+                    vehicle.setInvoiceEuTotalPrice(vehicle.getInvoiceEuPricePerTon().multiply(quantityInTons).setScale(6, java.math.RoundingMode.HALF_UP));
+                } else {
+                    vehicle.setInvoiceEuTotalPrice(null);
+                }
+            } catch (NumberFormatException e) {
+                vehicle.setInvoiceUaTotalPrice(null);
+                vehicle.setInvoiceEuTotalPrice(null);
+            }
+        } else {
+            vehicle.setInvoiceUaTotalPrice(null);
+            vehicle.setInvoiceEuTotalPrice(null);
+        }
         
         if (dto.getCarrierId() != null) {
             Carrier carrier = carrierRepository.findById(dto.getCarrierId())
@@ -554,6 +609,13 @@ public class VehicleService {
                 .customsDate(vehicle.getCustomsDate())
                 .customsClearanceDate(vehicle.getCustomsClearanceDate())
                 .unloadingDate(vehicle.getUnloadingDate())
+                .invoiceUaDate(vehicle.getInvoiceUaDate())
+                .invoiceUaPricePerTon(vehicle.getInvoiceUaPricePerTon())
+                .invoiceUaTotalPrice(vehicle.getInvoiceUaTotalPrice())
+                .invoiceEuDate(vehicle.getInvoiceEuDate())
+                .invoiceEuPricePerTon(vehicle.getInvoiceEuPricePerTon())
+                .invoiceEuTotalPrice(vehicle.getInvoiceEuTotalPrice())
+                .reclamation(vehicle.getReclamation())
                 .carrier(carrierDTO)
                 .items(items)
                 .build();

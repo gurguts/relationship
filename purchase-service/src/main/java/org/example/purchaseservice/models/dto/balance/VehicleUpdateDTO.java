@@ -2,6 +2,7 @@ package org.example.purchaseservice.models.dto.balance;
 
 import lombok.Data;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Data
@@ -26,6 +27,11 @@ public class VehicleUpdateDTO {
     private LocalDate customsDate;
     private LocalDate customsClearanceDate;
     private LocalDate unloadingDate;
+    private LocalDate invoiceUaDate;
+    private BigDecimal invoiceUaPricePerTon;
+    private LocalDate invoiceEuDate;
+    private BigDecimal invoiceEuPricePerTon;
+    private BigDecimal reclamation;
     private Long carrierId;
 }
 

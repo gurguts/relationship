@@ -95,7 +95,7 @@ public class Purchase {
             this.unitPriceEur = unitPrice;
         } else {
             if (exchangeRateToEur != null && exchangeRateToEur.compareTo(BigDecimal.ZERO) > 0) {
-                this.totalPriceEur = totalPrice.multiply(exchangeRateToEur).setScale(6, RoundingMode.HALF_UP);
+                this.totalPriceEur = totalPrice.divide(exchangeRateToEur, 6, RoundingMode.HALF_UP);
 
                 if (quantity.compareTo(BigDecimal.ZERO) != 0) {
                     this.unitPriceEur = this.totalPriceEur.divide(quantity, 6, RoundingMode.CEILING);

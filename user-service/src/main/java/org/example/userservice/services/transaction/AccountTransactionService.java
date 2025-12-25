@@ -340,9 +340,9 @@ public class AccountTransactionService {
                 }
             }
             if (convertedAmount == null || convertedAmount.compareTo(BigDecimal.ZERO) <= 0) {
-                convertedAmount = amount.multiply(exchangeRate).setScale(6, RoundingMode.HALF_UP);
+                convertedAmount = amount.divide(exchangeRate, 6, RoundingMode.HALF_UP);
             } else {
-                BigDecimal calculatedRate = convertedAmount.divide(amount, 6, RoundingMode.HALF_UP);
+                BigDecimal calculatedRate = amount.divide(convertedAmount, 6, RoundingMode.HALF_UP);
                 exchangeRate = calculatedRate;
             }
         } else {
@@ -426,12 +426,11 @@ public class AccountTransactionService {
             if (transaction.getAmount() == null || transaction.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
                 throw new TransactionException("INVALID_AMOUNT", "Amount must be greater than zero");
             }
-            exchangeRate = convertedAmount.divide(transaction.getAmount(), 6, RoundingMode.HALF_UP);
+            exchangeRate = transaction.getAmount().divide(convertedAmount, 6, RoundingMode.HALF_UP);
             transaction.setExchangeRate(exchangeRate);
         } else if (exchangeRate != null && exchangeRate.compareTo(BigDecimal.ZERO) > 0) {
             convertedAmount = transaction.getAmount()
-                    .multiply(exchangeRate)
-                    .setScale(2, RoundingMode.HALF_UP);
+                    .divide(exchangeRate, 2, RoundingMode.HALF_UP);
             transaction.setConvertedAmount(convertedAmount);
         } else {
             throw new TransactionException("EXCHANGE_RATE_OR_AMOUNT_REQUIRED", "Either exchange rate or converted amount must be provided");
@@ -481,7 +480,7 @@ public class AccountTransactionService {
     }
 
     @Transactional
-    public Transaction updateTransaction(Long transactionId, Long categoryId, String description, BigDecimal newAmount, BigDecimal newExchangeRate, BigDecimal newCommission, BigDecimal newConvertedAmount) {
+    public Transaction updateTransaction(Long transactionId, Long categoryId, String description, BigDecimal newAmount, BigDecimal newExchangeRate, BigDecimal newCommission, BigDecimal newConvertedAmount, Long counterpartyId) {
         Transaction transaction = transactionRepository.findById(transactionId)
                 .orElseThrow(() -> new TransactionException(
                         String.format("Transaction with ID %d not found", transactionId)));
@@ -492,7 +491,6 @@ public class AccountTransactionService {
         BigDecimal oldConvertedAmount = transaction.getConvertedAmount();
         TransactionType type = transaction.getType();
 
-        // Update category if provided
         if (categoryId != null) {
             transactionCategoryRepository.findById(categoryId)
                     .orElseThrow(() -> new TransactionCategoryNotFoundException(
@@ -500,9 +498,16 @@ public class AccountTransactionService {
             transaction.setCategoryId(categoryId);
         }
 
-        // Update description if provided
         if (description != null) {
             transaction.setDescription(description);
+        }
+
+        if (counterpartyId != null) {
+            transaction.setCounterpartyId(counterpartyId);
+        } else if (counterpartyId == null && transaction.getCounterpartyId() != null) {
+            if (type == TransactionType.EXTERNAL_INCOME || type == TransactionType.EXTERNAL_EXPENSE) {
+                transaction.setCounterpartyId(null);
+            }
         }
 
         // Update commission if provided (only for internal transfer)
@@ -606,30 +611,26 @@ public class AccountTransactionService {
                 BigDecimal currentAmount = amountChanged ? newAmount : oldAmount;
                 
                 if (newConvertedAmount != null && newConvertedAmount.compareTo(BigDecimal.ZERO) > 0) {
-                    // User explicitly set converted amount - recalculate exchange rate
                     newConvertedAmountValue = newConvertedAmount;
                     if (currentAmount != null && currentAmount.compareTo(BigDecimal.ZERO) > 0) {
-                        finalExchangeRate = newConvertedAmountValue.divide(currentAmount, 6, RoundingMode.HALF_UP);
+                        finalExchangeRate = currentAmount.divide(newConvertedAmountValue, 6, RoundingMode.HALF_UP);
                     }
                     transaction.setConvertedAmount(newConvertedAmountValue);
                     transaction.setExchangeRate(finalExchangeRate);
                 } else if (amountChanged && !exchangeRateChanged) {
-                    // Amount changed, but exchange rate stays the same - recalculate converted amount
                     if (oldExchangeRate != null && oldExchangeRate.compareTo(BigDecimal.ZERO) > 0) {
-                        newConvertedAmountValue = newAmount.multiply(oldExchangeRate).setScale(6, RoundingMode.HALF_UP);
+                        newConvertedAmountValue = newAmount.divide(oldExchangeRate, 6, RoundingMode.HALF_UP);
                         transaction.setConvertedAmount(newConvertedAmountValue);
                     }
                 } else if (exchangeRateChanged && !amountChanged) {
-                    // Exchange rate changed, but amount stays the same - recalculate converted amount
                     if (newExchangeRate != null && newExchangeRate.compareTo(BigDecimal.ZERO) > 0) {
-                        newConvertedAmountValue = oldAmount.multiply(newExchangeRate).setScale(6, RoundingMode.HALF_UP);
+                        newConvertedAmountValue = oldAmount.divide(newExchangeRate, 6, RoundingMode.HALF_UP);
                         transaction.setConvertedAmount(newConvertedAmountValue);
                         transaction.setExchangeRate(newExchangeRate);
                     }
                 } else if (amountChanged && exchangeRateChanged) {
-                    // Both changed - recalculate converted amount
                     if (newExchangeRate != null && newExchangeRate.compareTo(BigDecimal.ZERO) > 0) {
-                        newConvertedAmountValue = newAmount.multiply(newExchangeRate).setScale(6, RoundingMode.HALF_UP);
+                        newConvertedAmountValue = newAmount.divide(newExchangeRate, 6, RoundingMode.HALF_UP);
                         transaction.setConvertedAmount(newConvertedAmountValue);
                         transaction.setExchangeRate(newExchangeRate);
                     }
@@ -654,8 +655,7 @@ public class AccountTransactionService {
                 BigDecimal currentAmount = amountChanged ? newAmount : oldAmount;
                 BigDecimal currentExchangeRate = exchangeRateChanged ? newExchangeRate : oldExchangeRate;
                 if (currentExchangeRate != null) {
-                    BigDecimal calculatedConvertedAmount = currentAmount.multiply(currentExchangeRate)
-                            .setScale(2, RoundingMode.HALF_UP);
+                    BigDecimal calculatedConvertedAmount = currentAmount.divide(currentExchangeRate, 2, RoundingMode.HALF_UP);
                     transaction.setConvertedAmount(calculatedConvertedAmount);
                     accountBalanceService.subtractAmount(transaction.getFromAccountId(), transaction.getCurrency(), currentAmount);
                     accountBalanceService.addAmount(transaction.getFromAccountId(), transaction.getConvertedCurrency(), calculatedConvertedAmount);

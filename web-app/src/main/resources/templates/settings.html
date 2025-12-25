@@ -104,6 +104,7 @@
 
     <div class="tabs">
         <button class="tab-btn active" data-tab="finance-categories">Категорії фінансів</button>
+        <button class="tab-btn" data-tab="counterparties">Контрагенти</button>
         <button class="tab-btn" data-tab="branches">Філії</button>
         <button class="tab-btn" data-tab="accounts">Рахунки</button>
     </div>
@@ -135,6 +136,32 @@
                 </tr>
                 </thead>
                 <tbody id="categories-body"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Counterparties Tab -->
+    <div id="counterparties-tab" class="tab-content">
+        <div class="filter-section">
+            <label for="counterparty-type-filter">Тип контрагента:</label>
+            <select id="counterparty-type-filter">
+                <option value="">Всі типи</option>
+                <option value="INCOME">Для доходів</option>
+                <option value="EXPENSE">Для витрат</option>
+            </select>
+            <button id="create-counterparty-btn" class="btn-primary">Створити контрагента</button>
+        </div>
+        <div class="table-container">
+            <table id="counterparties-table" class="data-table">
+                <thead>
+                <tr>
+                    <th>Тип</th>
+                    <th>Назва</th>
+                    <th>Опис</th>
+                    <th>Дії</th>
+                </tr>
+                </thead>
+                <tbody id="counterparties-body"></tbody>
             </table>
         </div>
     </div>
@@ -252,6 +279,34 @@
                 <textarea id="branch-description" rows="3"></textarea>
             </div>
             <button type="submit" class="btn-primary" id="branch-submit-btn">Створити</button>
+        </form>
+    </div>
+</div>
+
+<!-- Create/Edit Counterparty Modal -->
+<div id="create-counterparty-modal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2 id="counterparty-modal-title">Створити контрагента</h2>
+        <form id="counterparty-form">
+            <input type="hidden" id="counterparty-id">
+            <div class="form-group">
+                <label for="counterparty-type">Тип:</label>
+                <select id="counterparty-type" required>
+                    <option value="">Виберіть тип</option>
+                    <option value="INCOME">Для доходів</option>
+                    <option value="EXPENSE">Для витрат</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="counterparty-name">Назва:</label>
+                <input type="text" id="counterparty-name" required>
+            </div>
+            <div class="form-group">
+                <label for="counterparty-description">Опис:</label>
+                <textarea id="counterparty-description" rows="3"></textarea>
+            </div>
+            <button type="submit" class="btn-primary" id="counterparty-submit-btn">Створити</button>
         </form>
     </div>
 </div>

@@ -40,6 +40,8 @@ function initializeTabs() {
             // Load data for active tab
             if (targetTab === 'finance-categories') {
                 loadCategories();
+            } else if (targetTab === 'counterparties') {
+                loadCounterparties();
             } else if (targetTab === 'branches') {
                 loadBranches();
             } else if (targetTab === 'accounts') {
@@ -69,18 +71,22 @@ function initializeModals() {
 }
 
 function setupEventListeners() {
-    // Create category button
     document.getElementById('create-category-btn').addEventListener('click', () => {
         openCreateCategoryModal();
     });
 
-    // Category form
     document.getElementById('category-form').addEventListener('submit', handleCreateCategory);
 
-    // Category type filter
     document.getElementById('category-type-filter').addEventListener('change', loadCategories);
 
-    // Branch and Account buttons
+    document.getElementById('create-counterparty-btn').addEventListener('click', () => {
+        openCreateCounterpartyModal();
+    });
+
+    document.getElementById('counterparty-form').addEventListener('submit', handleCreateCounterparty);
+
+    document.getElementById('counterparty-type-filter').addEventListener('change', loadCounterparties);
+
     document.getElementById('create-branch-btn').addEventListener('click', () => {
         openCreateBranchModal();
     });
@@ -88,12 +94,151 @@ function setupEventListeners() {
         openCreateAccountModal();
     });
 
-    // Field form
     document.getElementById('field-form').addEventListener('submit', handleCreateField);
     
-    // Branch and Account forms
     document.getElementById('branch-form').addEventListener('submit', handleCreateBranch);
     document.getElementById('account-form').addEventListener('submit', handleCreateAccount);
+}
+
+// ========== COUNTERPARTIES ==========
+
+async function loadCounterparties() {
+    try {
+        const typeFilter = document.getElementById('counterparty-type-filter').value;
+        const tbody = document.getElementById('counterparties-body');
+        if (!tbody) return;
+        
+        tbody.textContent = '';
+        
+        const types = typeFilter ? [typeFilter] : ['INCOME', 'EXPENSE'];
+        const allCounterparties = [];
+        
+        for (const type of types) {
+            const response = await fetch(`${API_BASE}/counterparties/type/${type}`);
+            if (response.ok) {
+                const counterparties = await response.json();
+                allCounterparties.push(...counterparties);
+            }
+        }
+        
+        if (allCounterparties.length === 0) {
+            const row = document.createElement('tr');
+            row.innerHTML = '<td colspan="4" style="text-align: center;">Контрагентів не знайдено</td>';
+            tbody.appendChild(row);
+            return;
+        }
+        
+        allCounterparties.forEach(cp => {
+            const row = document.createElement('tr');
+            const typeText = cp.type === 'INCOME' ? 'Для доходів' : 'Для витрат';
+            row.innerHTML = `
+                <td>${escapeHtml(typeText)}</td>
+                <td>${escapeHtml(cp.name || '')}</td>
+                <td>${escapeHtml(cp.description || '')}</td>
+                <td>
+                    <button onclick="editCounterparty(${cp.id})" class="btn-edit">Редагувати</button>
+                    <button onclick="deleteCounterparty(${cp.id})" class="btn-delete">Видалити</button>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+    } catch (error) {
+        console.error('Error loading counterparties:', error);
+        showSettingsMessage('Помилка завантаження контрагентів', 'error');
+    }
+}
+
+function openCreateCounterpartyModal() {
+    document.getElementById('counterparty-id').value = '';
+    document.getElementById('counterparty-type').value = '';
+    document.getElementById('counterparty-name').value = '';
+    document.getElementById('counterparty-description').value = '';
+    document.getElementById('counterparty-modal-title').textContent = 'Створити контрагента';
+    document.getElementById('counterparty-submit-btn').textContent = 'Створити';
+    document.getElementById('create-counterparty-modal').style.display = 'block';
+}
+
+async function handleCreateCounterparty(e) {
+    e.preventDefault();
+    const id = document.getElementById('counterparty-id').value;
+    const type = document.getElementById('counterparty-type').value;
+    const name = document.getElementById('counterparty-name').value.trim();
+    const description = document.getElementById('counterparty-description').value.trim();
+    
+    if (!type || !name) {
+        showSettingsMessage('Заповніть всі обов\'язкові поля', 'error');
+        return;
+    }
+    
+    try {
+        const data = { type, name, description };
+        const url = `${API_BASE}/counterparties${id ? `/${id}` : ''}`;
+        const method = id ? 'PUT' : 'POST';
+        
+        const response = await fetch(url, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to save counterparty');
+        }
+        
+        showSettingsMessage(`Контрагента ${id ? 'оновлено' : 'створено'} успішно`, 'success');
+        document.getElementById('create-counterparty-modal').style.display = 'none';
+        loadCounterparties();
+    } catch (error) {
+        console.error('Error saving counterparty:', error);
+        showSettingsMessage(error.message || 'Помилка збереження контрагента', 'error');
+    }
+}
+
+async function editCounterparty(id) {
+    try {
+        const response = await fetch(`${API_BASE}/counterparties/${id}`);
+        if (!response.ok) throw new Error('Failed to load counterparty');
+        
+        const cp = await response.json();
+        
+        document.getElementById('counterparty-id').value = cp.id;
+        document.getElementById('counterparty-type').value = cp.type;
+        document.getElementById('counterparty-name').value = cp.name || '';
+        document.getElementById('counterparty-description').value = cp.description || '';
+        document.getElementById('counterparty-modal-title').textContent = 'Редагувати контрагента';
+        document.getElementById('counterparty-submit-btn').textContent = 'Зберегти';
+        
+        document.getElementById('create-counterparty-modal').style.display = 'block';
+    } catch (error) {
+        console.error('Error loading counterparty:', error);
+        showSettingsMessage('Помилка завантаження контрагента', 'error');
+    }
+}
+
+async function deleteCounterparty(id) {
+    if (!confirm('Ви впевнені, що хочете видалити цього контрагента? Ця дія незворотна.')) return;
+    
+    try {
+        const response = await fetch(`${API_BASE}/counterparties/${id}`, {
+            method: 'DELETE'
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to delete counterparty');
+        }
+        showSettingsMessage('Контрагента успішно видалено', 'success');
+        loadCounterparties();
+    } catch (error) {
+        console.error('Error deleting counterparty:', error);
+        showSettingsMessage(error.message || 'Помилка видалення контрагента', 'error');
+    }
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
 // ========== CATEGORIES ==========

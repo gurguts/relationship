@@ -12,5 +12,6 @@ public class TransactionUpdateDTO {
     private BigDecimal exchangeRate;
     private BigDecimal commission;
     private BigDecimal convertedAmount;
+    private Long counterpartyId;
 }
 

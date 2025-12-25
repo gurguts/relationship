@@ -95,6 +95,13 @@ const detailVehicleDateInput = document.getElementById('detail-vehicle-date');
 const detailVehicleVehicleInput = document.getElementById('detail-vehicle-vehicle-number');
 const detailVehicleInvoiceUaInput = document.getElementById('detail-vehicle-invoice-ua');
 const detailVehicleInvoiceEuInput = document.getElementById('detail-vehicle-invoice-eu');
+const detailVehicleInvoiceUaDateInput = document.getElementById('detail-vehicle-invoice-ua-date');
+const detailVehicleInvoiceUaPricePerTonInput = document.getElementById('detail-vehicle-invoice-ua-price-per-ton');
+const detailVehicleInvoiceUaTotalPriceInput = document.getElementById('detail-vehicle-invoice-ua-total-price');
+const detailVehicleInvoiceEuDateInput = document.getElementById('detail-vehicle-invoice-eu-date');
+const detailVehicleInvoiceEuPricePerTonInput = document.getElementById('detail-vehicle-invoice-eu-price-per-ton');
+const detailVehicleInvoiceEuTotalPriceInput = document.getElementById('detail-vehicle-invoice-eu-total-price');
+const detailVehicleReclamationInput = document.getElementById('detail-vehicle-reclamation');
 const detailVehicleDescriptionInput = document.getElementById('detail-vehicle-description');
 const detailVehicleSenderInput = document.getElementById('detail-vehicle-sender');
 const detailVehicleReceiverInput = document.getElementById('detail-vehicle-receiver');
@@ -129,6 +136,13 @@ const vehiclesSearchInput = document.getElementById('vehicles-search-input');
 const vehicleVehicleNumber = document.getElementById('vehicle-vehicle-number');
 const vehicleInvoiceUa = document.getElementById('vehicle-invoice-ua');
 const vehicleInvoiceEu = document.getElementById('vehicle-invoice-eu');
+const vehicleInvoiceUaDate = document.getElementById('vehicle-invoice-ua-date');
+const vehicleInvoiceUaPricePerTon = document.getElementById('vehicle-invoice-ua-price-per-ton');
+const vehicleInvoiceUaTotalPrice = document.getElementById('vehicle-invoice-ua-total-price');
+const vehicleInvoiceEuDate = document.getElementById('vehicle-invoice-eu-date');
+const vehicleInvoiceEuPricePerTon = document.getElementById('vehicle-invoice-eu-price-per-ton');
+const vehicleInvoiceEuTotalPrice = document.getElementById('vehicle-invoice-eu-total-price');
+const vehicleReclamation = document.getElementById('vehicle-reclamation');
 const vehicleDescription = document.getElementById('vehicle-description');
 const vehicleSender = document.getElementById('vehicle-sender');
 const vehicleReceiver = document.getElementById('vehicle-receiver');
@@ -159,6 +173,9 @@ const vehiclesIsOurVehicleFilter = document.getElementById('vehicles-is-our-vehi
 
 const vehicleItemsTbody = document.getElementById('vehicle-items-tbody');
 const vehicleTotalCost = document.getElementById('vehicle-total-cost');
+const vehicleTotalExpenses = document.getElementById('vehicle-total-expenses');
+const vehicleTotalIncome = document.getElementById('vehicle-total-income');
+const vehicleMargin = document.getElementById('vehicle-margin');
 
 const carrierForm = document.getElementById('carrier-form');
 const carrierId = document.getElementById('carrier-id');
@@ -210,6 +227,13 @@ function populateVehicleForm(vehicle) {
         if (detailVehicleCustomsClearanceDateInput) detailVehicleCustomsClearanceDateInput.value = '';
         if (detailVehicleUnloadingDateInput) detailVehicleUnloadingDateInput.value = '';
         if (detailVehicleCarrierSelect) detailVehicleCarrierSelect.value = '';
+        if (detailVehicleInvoiceUaDateInput) detailVehicleInvoiceUaDateInput.value = '';
+        if (detailVehicleInvoiceUaPricePerTonInput) detailVehicleInvoiceUaPricePerTonInput.value = '';
+        if (detailVehicleInvoiceUaTotalPriceInput) detailVehicleInvoiceUaTotalPriceInput.value = '';
+        if (detailVehicleInvoiceEuDateInput) detailVehicleInvoiceEuDateInput.value = '';
+        if (detailVehicleInvoiceEuPricePerTonInput) detailVehicleInvoiceEuPricePerTonInput.value = '';
+        if (detailVehicleInvoiceEuTotalPriceInput) detailVehicleInvoiceEuTotalPriceInput.value = '';
+        if (detailVehicleReclamationInput) detailVehicleReclamationInput.value = '';
         return;
     }
 
@@ -234,6 +258,13 @@ function populateVehicleForm(vehicle) {
     if (detailVehicleCustomsClearanceDateInput) detailVehicleCustomsClearanceDateInput.value = vehicle.customsClearanceDate || '';
     if (detailVehicleUnloadingDateInput) detailVehicleUnloadingDateInput.value = vehicle.unloadingDate || '';
     if (detailVehicleCarrierSelect) detailVehicleCarrierSelect.value = vehicle.carrier?.id || '';
+    if (detailVehicleInvoiceUaDateInput) detailVehicleInvoiceUaDateInput.value = vehicle.invoiceUaDate || '';
+    if (detailVehicleInvoiceUaPricePerTonInput) detailVehicleInvoiceUaPricePerTonInput.value = vehicle.invoiceUaPricePerTon || '';
+    if (detailVehicleInvoiceUaTotalPriceInput) detailVehicleInvoiceUaTotalPriceInput.value = vehicle.invoiceUaTotalPrice || '';
+    if (detailVehicleInvoiceEuDateInput) detailVehicleInvoiceEuDateInput.value = vehicle.invoiceEuDate || '';
+    if (detailVehicleInvoiceEuPricePerTonInput) detailVehicleInvoiceEuPricePerTonInput.value = vehicle.invoiceEuPricePerTon || '';
+    if (detailVehicleInvoiceEuTotalPriceInput) detailVehicleInvoiceEuTotalPriceInput.value = vehicle.invoiceEuTotalPrice || '';
+    if (detailVehicleReclamationInput) detailVehicleReclamationInput.value = vehicle.reclamation || '';
 }
 
 function setVehicleFormEditable(isEditable) {
@@ -242,6 +273,11 @@ function setVehicleFormEditable(isEditable) {
         detailVehicleVehicleInput,
         detailVehicleInvoiceUaInput,
         detailVehicleInvoiceEuInput,
+        detailVehicleInvoiceUaDateInput,
+        detailVehicleInvoiceUaPricePerTonInput,
+        detailVehicleInvoiceEuDateInput,
+        detailVehicleInvoiceEuPricePerTonInput,
+        detailVehicleReclamationInput,
         detailVehicleDescriptionInput,
         detailVehicleSenderInput,
         detailVehicleReceiverInput,
@@ -311,6 +347,11 @@ if (createVehicleForm) {
             vehicleNumber: vehicleVehicleNumber?.value || '',
             invoiceUa: vehicleInvoiceUa?.value || '',
             invoiceEu: vehicleInvoiceEu?.value || '',
+            invoiceUaDate: vehicleInvoiceUaDate?.value || null,
+            invoiceUaPricePerTon: vehicleInvoiceUaPricePerTon?.value ? parseFloat(vehicleInvoiceUaPricePerTon.value) : null,
+            invoiceEuDate: vehicleInvoiceEuDate?.value || null,
+            invoiceEuPricePerTon: vehicleInvoiceEuPricePerTon?.value ? parseFloat(vehicleInvoiceEuPricePerTon.value) : null,
+            reclamation: vehicleReclamation?.value ? parseFloat(vehicleReclamation.value) : null,
             description: vehicleDescription?.value || '',
             sender: vehicleSender?.value || '',
             receiver: vehicleReceiver?.value || '',
@@ -700,6 +741,25 @@ async function viewVehicleDetails(vehicleId) {
         
         await loadVehicleExpenses(vehicleId);
         
+        const expensesTotal = parseFloat(await getVehicleExpensesTotal()) || 0;
+        const totalCostEur = vehicle.totalCostEur || 0;
+        const totalExpenses = totalCostEur + expensesTotal;
+        
+        const invoiceEuTotalPrice = vehicle.invoiceEuTotalPrice || 0;
+        const reclamation = vehicle.reclamation || 0;
+        const totalIncome = invoiceEuTotalPrice - reclamation;
+        const margin = totalIncome - totalExpenses;
+        
+        if (vehicleTotalExpenses) {
+            vehicleTotalExpenses.textContent = formatNumber(totalExpenses, 2);
+        }
+        if (vehicleTotalIncome) {
+            vehicleTotalIncome.textContent = formatNumber(totalIncome, 2);
+        }
+        if (vehicleMargin) {
+            vehicleMargin.textContent = formatNumber(margin, 2);
+        }
+        
         openModal('vehicle-details-modal');
     } catch (error) {
         showMessage('Помилка завантаження деталей машини', 'error');
@@ -762,9 +822,100 @@ function renderVehicleDetails(vehicle) {
         });
     }
     
-    if (vehicleTotalCost) {
-        vehicleTotalCost.textContent = formatNumber(vehicle.totalCostEur, 2);
+}
+
+async function getVehicleExpensesTotal() {
+    if (!currentVehicleId) return 0;
+    try {
+        const response = await fetch(`/api/v1/transaction/vehicle/${currentVehicleId}`);
+        if (!response.ok) return 0;
+        const transactions = await response.json();
+        return transactions.reduce((sum, t) => sum + (parseFloat(t.convertedAmount) || 0), 0);
+    } catch (error) {
+        return 0;
     }
+}
+
+function calculateInvoiceUaTotalPrice() {
+    const quantity = parseFloat(vehicleProductQuantity?.value?.replace(',', '.') || '0');
+    const pricePerTon = parseFloat(vehicleInvoiceUaPricePerTon?.value || '0');
+    if (quantity > 0 && pricePerTon > 0) {
+        const total = quantity * pricePerTon;
+        if (vehicleInvoiceUaTotalPrice) {
+            vehicleInvoiceUaTotalPrice.value = total.toFixed(6);
+        }
+    } else if (vehicleInvoiceUaTotalPrice) {
+        vehicleInvoiceUaTotalPrice.value = '';
+    }
+}
+
+function calculateInvoiceEuTotalPrice() {
+    const quantity = parseFloat(vehicleProductQuantity?.value?.replace(',', '.') || '0');
+    const pricePerTon = parseFloat(vehicleInvoiceEuPricePerTon?.value || '0');
+    if (quantity > 0 && pricePerTon > 0) {
+        const total = quantity * pricePerTon;
+        if (vehicleInvoiceEuTotalPrice) {
+            vehicleInvoiceEuTotalPrice.value = total.toFixed(6);
+        }
+    } else if (vehicleInvoiceEuTotalPrice) {
+        vehicleInvoiceEuTotalPrice.value = '';
+    }
+}
+
+function calculateDetailInvoiceUaTotalPrice() {
+    const quantity = parseFloat(detailVehicleProductQuantityInput?.value?.replace(',', '.') || '0');
+    const pricePerTon = parseFloat(detailVehicleInvoiceUaPricePerTonInput?.value || '0');
+    if (quantity > 0 && pricePerTon > 0) {
+        const total = quantity * pricePerTon;
+        if (detailVehicleInvoiceUaTotalPriceInput) {
+            detailVehicleInvoiceUaTotalPriceInput.value = total.toFixed(6);
+        }
+    } else if (detailVehicleInvoiceUaTotalPriceInput) {
+        detailVehicleInvoiceUaTotalPriceInput.value = '';
+    }
+}
+
+function calculateDetailInvoiceEuTotalPrice() {
+    const quantity = parseFloat(detailVehicleProductQuantityInput?.value?.replace(',', '.') || '0');
+    const pricePerTon = parseFloat(detailVehicleInvoiceEuPricePerTonInput?.value || '0');
+    if (quantity > 0 && pricePerTon > 0) {
+        const total = quantity * pricePerTon;
+        if (detailVehicleInvoiceEuTotalPriceInput) {
+            detailVehicleInvoiceEuTotalPriceInput.value = total.toFixed(6);
+        }
+    } else if (detailVehicleInvoiceEuTotalPriceInput) {
+        detailVehicleInvoiceEuTotalPriceInput.value = '';
+    }
+}
+
+if (vehicleProductQuantity) {
+    vehicleProductQuantity.addEventListener('input', () => {
+        calculateInvoiceUaTotalPrice();
+        calculateInvoiceEuTotalPrice();
+    });
+}
+
+if (vehicleInvoiceUaPricePerTon) {
+    vehicleInvoiceUaPricePerTon.addEventListener('input', calculateInvoiceUaTotalPrice);
+}
+
+if (vehicleInvoiceEuPricePerTon) {
+    vehicleInvoiceEuPricePerTon.addEventListener('input', calculateInvoiceEuTotalPrice);
+}
+
+if (detailVehicleProductQuantityInput) {
+    detailVehicleProductQuantityInput.addEventListener('input', () => {
+        calculateDetailInvoiceUaTotalPrice();
+        calculateDetailInvoiceEuTotalPrice();
+    });
+}
+
+if (detailVehicleInvoiceUaPricePerTonInput) {
+    detailVehicleInvoiceUaPricePerTonInput.addEventListener('input', calculateDetailInvoiceUaTotalPrice);
+}
+
+if (detailVehicleInvoiceEuPricePerTonInput) {
+    detailVehicleInvoiceEuPricePerTonInput.addEventListener('input', calculateDetailInvoiceEuTotalPrice);
 }
 
 
@@ -854,6 +1005,11 @@ if (updateVehicleForm) {
             vehicleNumber: detailVehicleVehicleInput?.value ?? null,
             invoiceUa: detailVehicleInvoiceUaInput?.value ?? null,
             invoiceEu: detailVehicleInvoiceEuInput?.value ?? null,
+            invoiceUaDate: detailVehicleInvoiceUaDateInput?.value || null,
+            invoiceUaPricePerTon: detailVehicleInvoiceUaPricePerTonInput?.value ? parseFloat(detailVehicleInvoiceUaPricePerTonInput.value) : null,
+            invoiceEuDate: detailVehicleInvoiceEuDateInput?.value || null,
+            invoiceEuPricePerTon: detailVehicleInvoiceEuPricePerTonInput?.value ? parseFloat(detailVehicleInvoiceEuPricePerTonInput.value) : null,
+            reclamation: detailVehicleReclamationInput?.value ? parseFloat(detailVehicleReclamationInput.value) : null,
             description: detailVehicleDescriptionInput?.value ?? null,
             sender: detailVehicleSenderInput?.value ?? null,
             receiver: detailVehicleReceiverInput?.value ?? null,
@@ -898,8 +1054,29 @@ if (updateVehicleForm) {
             }
             
             const updatedVehicle = await response.json();
-            showMessage('Дані машини оновлено', 'success');
+            currentVehicleDetails = updatedVehicle;
             renderVehicleDetails(updatedVehicle);
+            
+            const expensesTotal = parseFloat(await getVehicleExpensesTotal()) || 0;
+            const totalCostEur = updatedVehicle.totalCostEur || 0;
+            const totalExpenses = totalCostEur + expensesTotal;
+            
+            const invoiceEuTotalPrice = updatedVehicle.invoiceEuTotalPrice || 0;
+            const reclamation = updatedVehicle.reclamation || 0;
+            const totalIncome = invoiceEuTotalPrice - reclamation;
+            const margin = totalIncome - totalExpenses;
+            
+            if (vehicleTotalExpenses) {
+                vehicleTotalExpenses.textContent = formatNumber(totalExpenses, 2);
+            }
+            if (vehicleTotalIncome) {
+                vehicleTotalIncome.textContent = formatNumber(totalIncome, 2);
+            }
+            if (vehicleMargin) {
+                vehicleMargin.textContent = formatNumber(margin, 2);
+            }
+            
+            showMessage('Дані машини оновлено', 'success');
             await loadVehicles(0);
         } catch (error) {
             showMessage(error.message || 'Помилка при оновленні машини', 'error');
@@ -1044,8 +1221,29 @@ if (editVehicleItemForm) {
             }
 
             const updatedVehicle = await response.json();
-            showMessage('Дані товару у машині оновлено', 'success');
+            currentVehicleDetails = updatedVehicle;
             renderVehicleDetails(updatedVehicle);
+            
+            const expensesTotal = parseFloat(await getVehicleExpensesTotal()) || 0;
+            const totalCostEur = updatedVehicle.totalCostEur || 0;
+            const totalExpenses = totalCostEur + expensesTotal;
+            
+            const invoiceEuTotalPrice = updatedVehicle.invoiceEuTotalPrice || 0;
+            const reclamation = updatedVehicle.reclamation || 0;
+            const totalIncome = invoiceEuTotalPrice - reclamation;
+            const margin = totalIncome - totalExpenses;
+            
+            if (vehicleTotalExpenses) {
+                vehicleTotalExpenses.textContent = formatNumber(totalExpenses, 2);
+            }
+            if (vehicleTotalIncome) {
+                vehicleTotalIncome.textContent = formatNumber(totalIncome, 2);
+            }
+            if (vehicleMargin) {
+                vehicleMargin.textContent = formatNumber(margin, 2);
+            }
+            
+            showMessage('Дані товару у машині оновлено', 'success');
             await loadVehicles(0);
             closeModal('edit-vehicle-item-modal');
         } catch (error) {
@@ -1676,6 +1874,27 @@ if (createVehicleExpenseForm) {
             createVehicleExpenseForm.reset();
             
             await loadVehicleExpenses(currentVehicleId);
+            
+            if (currentVehicleDetails) {
+                const expensesTotal = parseFloat(await getVehicleExpensesTotal()) || 0;
+                const totalCostEur = currentVehicleDetails.totalCostEur || 0;
+                const totalExpenses = totalCostEur + expensesTotal;
+                
+                const invoiceEuTotalPrice = currentVehicleDetails.invoiceEuTotalPrice || 0;
+                const reclamation = currentVehicleDetails.reclamation || 0;
+                const totalIncome = invoiceEuTotalPrice - reclamation;
+                const margin = totalIncome - totalExpenses;
+                
+                if (vehicleTotalExpenses) {
+                    vehicleTotalExpenses.textContent = formatNumber(totalExpenses, 2);
+                }
+                if (vehicleTotalIncome) {
+                    vehicleTotalIncome.textContent = formatNumber(totalIncome, 2);
+                }
+                if (vehicleMargin) {
+                    vehicleMargin.textContent = formatNumber(margin, 2);
+                }
+            }
         } catch (error) {
             showMessage(error.message || 'Помилка при створенні витрати', 'error');
         }

@@ -109,10 +109,8 @@ public class TransactionCrudService implements ITransactionCrudService {
                         // Recalculate converted amount based on new amount
                         BigDecimal exchangeRate = transaction.getExchangeRate();
                         if (exchangeRate != null && exchangeRate.compareTo(BigDecimal.ZERO) > 0) {
-                            BigDecimal newConvertedAmount = newAmount.multiply(exchangeRate)
-                                    .setScale(2, java.math.RoundingMode.HALF_UP);
-                            BigDecimal oldConvertedAmount = oldAmount.multiply(exchangeRate)
-                                    .setScale(2, java.math.RoundingMode.HALF_UP);
+                            BigDecimal newConvertedAmount = newAmount.divide(exchangeRate, 2, java.math.RoundingMode.HALF_UP);
+                            BigDecimal oldConvertedAmount = oldAmount.divide(exchangeRate, 2, java.math.RoundingMode.HALF_UP);
                             BigDecimal convertedDifference = newConvertedAmount.subtract(oldConvertedAmount);
                             
                             if (difference.compareTo(BigDecimal.ZERO) > 0) {

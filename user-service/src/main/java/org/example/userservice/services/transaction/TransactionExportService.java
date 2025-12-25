@@ -10,6 +10,7 @@ import org.example.userservice.models.account.Account;
 import org.example.userservice.models.transaction.Transaction;
 import org.example.userservice.models.transaction.TransactionCategory;
 import org.example.userservice.repositories.AccountRepository;
+import org.example.userservice.repositories.CounterpartyRepository;
 import org.example.userservice.repositories.TransactionCategoryRepository;
 import org.example.userservice.repositories.TransactionRepository;
 import org.example.userservice.spec.TransactionSpecification;
@@ -37,6 +38,7 @@ public class TransactionExportService {
     private final VehicleApiClient vehicleApiClient;
     private final AccountRepository accountRepository;
     private final TransactionCategoryRepository transactionCategoryRepository;
+    private final CounterpartyRepository counterpartyRepository;
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
 
@@ -108,6 +110,19 @@ public class TransactionExportService {
                 : StreamSupport.stream(transactionCategoryRepository.findAllById(categoryIds).spliterator(), false)
                 .collect(Collectors.toMap(TransactionCategory::getId, TransactionCategory::getName));
 
+        Set<Long> counterpartyIds = transactions.stream()
+                .map(Transaction::getCounterpartyId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        Map<Long, String> counterpartyNameMap = counterpartyIds.isEmpty()
+                ? Collections.emptyMap()
+                : StreamSupport.stream(counterpartyRepository.findAllById(counterpartyIds).spliterator(), false)
+                .collect(Collectors.toMap(
+                        org.example.userservice.models.transaction.Counterparty::getId,
+                        org.example.userservice.models.transaction.Counterparty::getName
+                ));
+
         List<Long> vehicleIds = transactions.stream()
                 .map(Transaction::getVehicleId)
                 .filter(Objects::nonNull)
@@ -170,7 +185,7 @@ public class TransactionExportService {
                     "Дата", "Тип", "Машина", "Категорія", "З рахунку", "На рахунок",
                     "Сума списання", "Валюта", "Комісія", "Сума переказу/зачислення",
                     "Курс конвертації", "У валюту", "Конвертована сума",
-                    "Клієнт", "Опис"
+                    "Клієнт", "Контрагент", "Опис"
             };
 
             for (int i = 0; i < headers.length; i++) {
@@ -322,8 +337,16 @@ public class TransactionExportService {
                 clientCell.setCellValue(clientCompany);
                 clientCell.setCellStyle(dataStyle);
 
+                // Counterparty
+                Cell counterpartyCell = row.createCell(14);
+                String counterpartyName = transaction.getCounterpartyId() != null
+                        ? counterpartyNameMap.getOrDefault(transaction.getCounterpartyId(), "")
+                        : "";
+                counterpartyCell.setCellValue(counterpartyName);
+                counterpartyCell.setCellStyle(dataStyle);
+
                 // Description
-                Cell descriptionCell = row.createCell(14);
+                Cell descriptionCell = row.createCell(15);
                 descriptionCell.setCellValue(transaction.getDescription() != null ? transaction.getDescription() : "");
                 descriptionCell.setCellStyle(dataStyle);
             }

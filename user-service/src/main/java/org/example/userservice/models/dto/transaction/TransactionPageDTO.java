@@ -28,4 +28,6 @@ public class TransactionPageDTO {
     private BigDecimal commission;
     private Long vehicleId;
     private String vehicleNumber;
+    private Long counterpartyId;
+    private String counterpartyName;
 }

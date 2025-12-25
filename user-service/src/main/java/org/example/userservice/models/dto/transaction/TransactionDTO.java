@@ -24,4 +24,5 @@ public class TransactionDTO {
     private BigDecimal convertedAmount;
     private BigDecimal commission;
     private Long vehicleId;
+    private Long counterpartyId;
 }

@@ -73,7 +73,8 @@ public class TransactionCrudController {
                 updateDTO.getAmount(),
                 updateDTO.getExchangeRate(),
                 updateDTO.getCommission(),
-                updateDTO.getConvertedAmount()
+                updateDTO.getConvertedAmount(),
+                updateDTO.getCounterpartyId()
         );
         TransactionDTO response = transactionMapper.transactionToTransactionDTO(updated);
         return ResponseEntity.ok(response);

@@ -3,6 +3,7 @@ package org.example.purchaseservice.models.dto.balance;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Data
@@ -48,6 +49,16 @@ public class VehicleCreateDTO {
     private LocalDate customsClearanceDate;
     
     private LocalDate unloadingDate;
+    
+    private LocalDate invoiceUaDate;
+    
+    private BigDecimal invoiceUaPricePerTon;
+    
+    private LocalDate invoiceEuDate;
+    
+    private BigDecimal invoiceEuPricePerTon;
+    
+    private BigDecimal reclamation;
     
     private Long carrierId;
 }

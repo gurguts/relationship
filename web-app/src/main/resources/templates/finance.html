@@ -159,6 +159,7 @@
                     <th>Сума</th>
                     <th>Валюта</th>
                     <th>Клієнт</th>
+                    <th>Контрагент</th>
                     <th>Опис</th>
                     <th>Дії</th>
                 </tr>
@@ -276,6 +277,13 @@
                     <input type="hidden" id="transaction-client-id">
                     <div id="client-autocomplete-dropdown" class="client-autocomplete-dropdown"></div>
                 </div>
+            </div>
+
+            <div class="form-group" id="counterparty-group" style="display: none;">
+                <label for="transaction-counterparty">Контрагент:</label>
+                <select id="transaction-counterparty">
+                    <option value="">Без контрагента</option>
+                </select>
             </div>
 
             <div class="form-group">

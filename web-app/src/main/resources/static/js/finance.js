@@ -821,6 +821,11 @@ function renderTransactions(transactions) {
         clientCell.textContent = client;
         row.appendChild(clientCell);
 
+        const counterpartyCell = document.createElement('td');
+        counterpartyCell.setAttribute('data-label', 'Контрагент');
+        counterpartyCell.textContent = transaction.counterpartyName || '—';
+        row.appendChild(counterpartyCell);
+
         const descriptionCell = document.createElement('td');
         descriptionCell.setAttribute('data-label', 'Опис');
         descriptionCell.textContent = description;
@@ -1061,6 +1066,34 @@ async function handleUpdateTransaction(e) {
     }
 }
 
+async function loadCounterparties(type) {
+    try {
+        const response = await fetch(`${API_BASE}/counterparties/type/${type}`);
+        if (!response.ok) {
+            throw new Error('Failed to load counterparties');
+        }
+        const counterparties = await response.json();
+        const select = document.getElementById('transaction-counterparty');
+        if (select) {
+            select.textContent = '';
+            const defaultOption = document.createElement('option');
+            defaultOption.value = '';
+            defaultOption.textContent = 'Без контрагента';
+            select.appendChild(defaultOption);
+            if (Array.isArray(counterparties)) {
+                counterparties.forEach(cp => {
+                    const option = document.createElement('option');
+                    option.value = cp.id;
+                    option.textContent = cp.name || '';
+                    select.appendChild(option);
+                });
+            }
+        }
+    } catch (error) {
+        console.error('Error loading counterparties:', error);
+    }
+}
+
 async function loadCategoriesForType(type) {
     if (!type) return [];
     try {
@@ -1266,13 +1299,13 @@ function handleTransactionTypeChange() {
     const conversionReceivedAmountGroup = document.getElementById('conversion-received-amount-group');
     const conversionExchangeRateDisplayGroup = document.getElementById('conversion-exchange-rate-display-group');
     const clientGroup = document.getElementById('client-group');
+    const counterpartyGroup = document.getElementById('counterparty-group');
     const currencyGroup = document.getElementById('currency-group');
     const amountGroup = document.getElementById('amount-group');
     const receivedAmountGroup = document.getElementById('received-amount-group');
     const commissionDisplayGroup = document.getElementById('commission-display-group');
     const amountLabel = document.getElementById('transaction-amount-label');
 
-    // Reset visibility
     fromAccountGroup.style.display = 'none';
     toAccountGroup.style.display = 'none';
     conversionAccountGroup.style.display = 'none';
@@ -1280,6 +1313,7 @@ function handleTransactionTypeChange() {
     conversionReceivedAmountGroup.style.display = 'none';
     conversionExchangeRateDisplayGroup.style.display = 'none';
     clientGroup.style.display = 'none';
+    counterpartyGroup.style.display = 'none';
     receivedAmountGroup.style.display = 'none';
     commissionDisplayGroup.style.display = 'none';
     
@@ -1329,12 +1363,16 @@ function handleTransactionTypeChange() {
         updateCommissionDisplay();
     } else if (type === 'EXTERNAL_INCOME') {
         toAccountGroup.style.display = 'block';
+        counterpartyGroup.style.display = 'block';
         currencyGroup.style.display = 'block';
         amountGroup.style.display = 'block';
+        loadCounterparties('INCOME');
     } else if (type === 'EXTERNAL_EXPENSE') {
         fromAccountGroup.style.display = 'block';
+        counterpartyGroup.style.display = 'block';
         currencyGroup.style.display = 'block';
         amountGroup.style.display = 'block';
+        loadCounterparties('EXPENSE');
     } else if (type === 'CLIENT_PAYMENT') {
         fromAccountGroup.style.display = 'block';
         clientGroup.style.display = 'block';
@@ -1431,7 +1469,7 @@ function updateConversionExchangeRateDisplay() {
     const receivedAmount = parseFloat(receivedAmountInput.value) || 0;
     
     if (amount > 0 && receivedAmount > 0) {
-        const exchangeRate = receivedAmount / amount;
+        const exchangeRate = amount / receivedAmount;
         exchangeRateDisplay.textContent = exchangeRate.toFixed(6);
         exchangeRateDisplay.style.color = '#1976d2';
     } else {
@@ -1485,8 +1523,16 @@ async function handleCreateTransaction(e) {
         }
     } else if (type === 'EXTERNAL_INCOME') {
         formData.toAccountId = parseInt(document.getElementById('to-account').value);
+        const counterpartyId = document.getElementById('transaction-counterparty').value;
+        if (counterpartyId && counterpartyId.trim() !== '') {
+            formData.counterpartyId = parseInt(counterpartyId);
+        }
     } else if (type === 'EXTERNAL_EXPENSE') {
         formData.fromAccountId = parseInt(document.getElementById('from-account').value);
+        const counterpartyId = document.getElementById('transaction-counterparty').value;
+        if (counterpartyId && counterpartyId.trim() !== '') {
+            formData.counterpartyId = parseInt(counterpartyId);
+        }
     } else if (type === 'CLIENT_PAYMENT') {
         formData.fromAccountId = parseInt(document.getElementById('from-account').value);
         const clientId = document.getElementById('transaction-client-id').value;
@@ -1526,7 +1572,7 @@ async function handleCreateTransaction(e) {
             return;
         }
         
-        const exchangeRate = receivedAmount / amount;
+        const exchangeRate = amount / receivedAmount;
         formData.exchangeRate = exchangeRate;
         formData.convertedAmount = receivedAmount;
     }
