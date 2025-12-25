@@ -7,12 +7,16 @@ import org.example.purchaseservice.models.PageResponse;
 import org.example.purchaseservice.models.balance.Carrier;
 import org.example.purchaseservice.models.balance.Vehicle;
 import org.example.purchaseservice.models.balance.VehicleProduct;
+import org.example.purchaseservice.models.balance.VehicleReceiver;
+import org.example.purchaseservice.models.balance.VehicleSender;
 import org.example.purchaseservice.models.dto.balance.CarrierDetailsDTO;
 import org.example.purchaseservice.models.dto.balance.VehicleDetailsDTO;
 import org.example.purchaseservice.models.dto.balance.VehicleUpdateDTO;
 import org.example.purchaseservice.clients.TransactionApiClient;
 import org.example.purchaseservice.repositories.CarrierRepository;
+import org.example.purchaseservice.repositories.VehicleReceiverRepository;
 import org.example.purchaseservice.repositories.VehicleRepository;
+import org.example.purchaseservice.repositories.VehicleSenderRepository;
 import org.example.purchaseservice.repositories.VehicleProductRepository;
 import org.example.purchaseservice.spec.VehicleSpecification;
 import org.springframework.data.domain.Page;
@@ -36,13 +40,15 @@ public class VehicleService {
     private final VehicleProductRepository vehicleProductRepository;
     private final WarehouseProductBalanceService warehouseProductBalanceService;
     private final CarrierRepository carrierRepository;
+    private final VehicleSenderRepository vehicleSenderRepository;
+    private final VehicleReceiverRepository vehicleReceiverRepository;
     private final TransactionApiClient transactionApiClient;
 
     @Transactional
     public Vehicle createVehicle(LocalDate shipmentDate, String vehicleNumber,
                                     String invoiceUa, String invoiceEu,
                                     String description, Long userId, Boolean isOurVehicle,
-                                    String sender, String receiver, String destinationCountry,
+                                    Long senderId, Long receiverId, String destinationCountry,
                                     String destinationPlace, String product, String productQuantity,
                                     String declarationNumber, String terminal, String driverFullName,
                                     Boolean eur1, Boolean fito, LocalDate customsDate,
@@ -62,8 +68,21 @@ public class VehicleService {
         vehicle.setUserId(userId);
         vehicle.setIsOurVehicle(isOurVehicle != null ? isOurVehicle : false);
         vehicle.setTotalCostEur(BigDecimal.ZERO);
-        vehicle.setSender(normalizeString(sender));
-        vehicle.setReceiver(normalizeString(receiver));
+        
+        if (senderId != null) {
+            VehicleSender sender = vehicleSenderRepository.findById(senderId)
+                    .orElseThrow(() -> new PurchaseException("VEHICLE_SENDER_NOT_FOUND",
+                            String.format("Vehicle sender not found: id=%d", senderId)));
+            vehicle.setSender(sender);
+        }
+        
+        if (receiverId != null) {
+            VehicleReceiver receiver = vehicleReceiverRepository.findById(receiverId)
+                    .orElseThrow(() -> new PurchaseException("VEHICLE_RECEIVER_NOT_FOUND",
+                            String.format("Vehicle receiver not found: id=%d", receiverId)));
+            vehicle.setReceiver(receiver);
+        }
+        
         vehicle.setDestinationCountry(normalizeString(destinationCountry));
         vehicle.setDestinationPlace(normalizeString(destinationPlace));
         vehicle.setProduct(normalizeString(product));
@@ -320,8 +339,25 @@ public class VehicleService {
         vehicle.setInvoiceUa(normalizeString(dto.getInvoiceUa()));
         vehicle.setInvoiceEu(normalizeString(dto.getInvoiceEu()));
         vehicle.setDescription(normalizeString(dto.getDescription()));
-        vehicle.setSender(normalizeString(dto.getSender()));
-        vehicle.setReceiver(normalizeString(dto.getReceiver()));
+        
+        if (dto.getSenderId() != null) {
+            VehicleSender sender = vehicleSenderRepository.findById(dto.getSenderId())
+                    .orElseThrow(() -> new PurchaseException("VEHICLE_SENDER_NOT_FOUND",
+                            String.format("Vehicle sender not found: id=%d", dto.getSenderId())));
+            vehicle.setSender(sender);
+        } else {
+            vehicle.setSender(null);
+        }
+        
+        if (dto.getReceiverId() != null) {
+            VehicleReceiver receiver = vehicleReceiverRepository.findById(dto.getReceiverId())
+                    .orElseThrow(() -> new PurchaseException("VEHICLE_RECEIVER_NOT_FOUND",
+                            String.format("Vehicle receiver not found: id=%d", dto.getReceiverId())));
+            vehicle.setReceiver(receiver);
+        } else {
+            vehicle.setReceiver(null);
+        }
+        
         vehicle.setDestinationCountry(normalizeString(dto.getDestinationCountry()));
         vehicle.setDestinationPlace(normalizeString(dto.getDestinationPlace()));
         vehicle.setProduct(normalizeString(dto.getProduct()));
@@ -594,8 +630,10 @@ public class VehicleService {
                 .totalCostEur(vehicle.getTotalCostEur())
                 .userId(vehicle.getUserId())
                 .createdAt(vehicle.getCreatedAt())
-                .sender(vehicle.getSender())
-                .receiver(vehicle.getReceiver())
+                .senderId(vehicle.getSender() != null ? vehicle.getSender().getId() : null)
+                .senderName(vehicle.getSender() != null ? vehicle.getSender().getName() : null)
+                .receiverId(vehicle.getReceiver() != null ? vehicle.getReceiver().getId() : null)
+                .receiverName(vehicle.getReceiver() != null ? vehicle.getReceiver().getName() : null)
                 .destinationCountry(vehicle.getDestinationCountry())
                 .destinationPlace(vehicle.getDestinationPlace())
                 .product(vehicle.getProduct())
@@ -616,9 +654,29 @@ public class VehicleService {
                 .invoiceEuPricePerTon(vehicle.getInvoiceEuPricePerTon())
                 .invoiceEuTotalPrice(vehicle.getInvoiceEuTotalPrice())
                 .reclamation(vehicle.getReclamation())
+                .totalExpenses(calculateTotalExpenses(vehicle, BigDecimal.ZERO))
+                .totalIncome(calculateTotalIncome(vehicle))
+                .margin(calculateMargin(vehicle, BigDecimal.ZERO))
                 .carrier(carrierDTO)
                 .items(items)
                 .build();
+    }
+    
+    public BigDecimal calculateTotalExpenses(Vehicle vehicle, BigDecimal expensesTotal) {
+        BigDecimal totalCostEur = vehicle.getTotalCostEur() != null ? vehicle.getTotalCostEur() : BigDecimal.ZERO;
+        return totalCostEur.add(expensesTotal);
+    }
+    
+    public BigDecimal calculateTotalIncome(Vehicle vehicle) {
+        BigDecimal invoiceEuTotalPrice = vehicle.getInvoiceEuTotalPrice() != null ? vehicle.getInvoiceEuTotalPrice() : BigDecimal.ZERO;
+        BigDecimal reclamation = vehicle.getReclamation() != null ? vehicle.getReclamation() : BigDecimal.ZERO;
+        return invoiceEuTotalPrice.subtract(reclamation);
+    }
+    
+    public BigDecimal calculateMargin(Vehicle vehicle, BigDecimal expensesTotal) {
+        BigDecimal totalExpenses = calculateTotalExpenses(vehicle, expensesTotal);
+        BigDecimal totalIncome = calculateTotalIncome(vehicle);
+        return totalIncome.subtract(totalExpenses);
     }
     
     private static class AggregatedProduct {

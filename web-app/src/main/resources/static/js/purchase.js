@@ -201,17 +201,17 @@ function renderPurchase(purchases) {
         }
 
         if (!isReceived) {
-            editButton.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                showEditModal(purchase);
-            });
+                editButton.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    showEditModal(purchase);
+                });
 
-            deleteButton.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                deletePurchase(purchase.id, purchase.isReceived);
-            });
+                deleteButton.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    deletePurchase(purchase.id, purchase.isReceived);
+                });
         }
     });
 
@@ -1679,10 +1679,10 @@ async function showClientModal(client) {
         }
         const handleClose = () => {
             if (!editing) {
-                modal.classList.remove('open');
-                setTimeout(() => {
-                    closeModal();
-                });
+        modal.classList.remove('open');
+        setTimeout(() => {
+            closeModal();
+        });
             } else {
                 showMessage('Збережіть або відмініть зміни', 'error');
             }
@@ -1919,7 +1919,7 @@ function attachPurchasesButtonHandler() {
             const productMapToUse = currentProductMap;
 
             data.forEach(purchase => {
-                const row = document.createElement('tr');
+            const row = document.createElement('tr');
                 
                 const userCell = document.createElement('td');
                 userCell.setAttribute('data-label', 'Водій');
@@ -1968,7 +1968,7 @@ function attachPurchasesButtonHandler() {
                 
                 tableBody.appendChild(row);
             });
-        } catch (error) {
+    } catch (error) {
             console.error('Error loading purchases:', error);
             tableBody.textContent = '';
             const errorRow = document.createElement('tr');
@@ -2093,11 +2093,11 @@ function attachContainersButtonHandler() {
 
         try {
             const response = await fetch(`/api/v1/containers/client/${clientId}`);
-            
+
             if (!response.ok) {
                 throw new Error(`Failed to load containers: ${response.status} ${response.statusText}`);
             }
-            
+
             const data = await response.json();
             tableBody.textContent = '';
 
@@ -2220,8 +2220,8 @@ const performSearch = async () => {
 const debouncedSearch = debounce(performSearch, 400);
 
 if (searchInput) {
-    searchInput.addEventListener('keypress', async (event) => {
-        if (event.key === 'Enter') {
+searchInput.addEventListener('keypress', async (event) => {
+    if (event.key === 'Enter') {
             event.preventDefault();
             performSearch();
         } else {
@@ -2501,7 +2501,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const savedSearchTerm = localStorage.getItem('searchTerm');
     if (savedSearchTerm && searchInput) {
-        searchInput.value = savedSearchTerm;
+            searchInput.value = savedSearchTerm;
     }
 
     await loadEntitiesAndApplyFilters();

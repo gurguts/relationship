@@ -8,6 +8,8 @@ function escapeHtml(text) {
 let productMap = new Map();
 let warehouseMap = new Map();
 let carrierMap = new Map();
+let vehicleSenderMap = new Map();
+let vehicleReceiverMap = new Map();
 
 function formatNumber(value, maxDecimals = 6) {
     if (value === null || value === undefined || value === '') return '0';
@@ -72,6 +74,42 @@ async function fetchCarriers() {
     }
 }
 
+async function fetchVehicleSenders() {
+    try {
+        const response = await fetch('/api/v1/vehicle-senders');
+        if (!response.ok) {
+            const errorData = await response.json();
+            handleError(new Error(errorData.message || 'Failed to fetch vehicle senders'));
+            return;
+        }
+        const senders = await response.json();
+        vehicleSenderMap = new Map(senders.map(sender => [sender.id, sender]));
+        return senders;
+    } catch (error) {
+        console.error('Error fetching vehicle senders:', error);
+        handleError(error);
+        return [];
+    }
+}
+
+async function fetchVehicleReceivers() {
+    try {
+        const response = await fetch('/api/v1/vehicle-receivers');
+        if (!response.ok) {
+            const errorData = await response.json();
+            handleError(new Error(errorData.message || 'Failed to fetch vehicle receivers'));
+            return;
+        }
+        const receivers = await response.json();
+        vehicleReceiverMap = new Map(receivers.map(receiver => [receiver.id, receiver]));
+        return receivers;
+    } catch (error) {
+        console.error('Error fetching vehicle receivers:', error);
+        handleError(error);
+        return [];
+    }
+}
+
 function populateCarriers(selectId) {
     const select = document.getElementById(selectId);
     if (!select) return;
@@ -84,6 +122,38 @@ function populateCarriers(selectId) {
         const option = document.createElement('option');
         option.value = id;
         option.textContent = carrier.companyName;
+        select.appendChild(option);
+    }
+}
+
+function populateVehicleSenders(selectId) {
+    const select = document.getElementById(selectId);
+    if (!select) return;
+    select.textContent = '';
+    const defaultOption = document.createElement('option');
+    defaultOption.value = '';
+    defaultOption.textContent = 'Оберіть відправника';
+    select.appendChild(defaultOption);
+    for (const [id, sender] of vehicleSenderMap.entries()) {
+        const option = document.createElement('option');
+        option.value = id;
+        option.textContent = sender.name;
+        select.appendChild(option);
+    }
+}
+
+function populateVehicleReceivers(selectId) {
+    const select = document.getElementById(selectId);
+    if (!select) return;
+    select.textContent = '';
+    const defaultOption = document.createElement('option');
+    defaultOption.value = '';
+    defaultOption.textContent = 'Оберіть отримувача';
+    select.appendChild(defaultOption);
+    for (const [id, receiver] of vehicleReceiverMap.entries()) {
+        const option = document.createElement('option');
+        option.value = id;
+        option.textContent = receiver.name;
         select.appendChild(option);
     }
 }
@@ -103,8 +173,6 @@ const detailVehicleInvoiceEuPricePerTonInput = document.getElementById('detail-v
 const detailVehicleInvoiceEuTotalPriceInput = document.getElementById('detail-vehicle-invoice-eu-total-price');
 const detailVehicleReclamationInput = document.getElementById('detail-vehicle-reclamation');
 const detailVehicleDescriptionInput = document.getElementById('detail-vehicle-description');
-const detailVehicleSenderInput = document.getElementById('detail-vehicle-sender');
-const detailVehicleReceiverInput = document.getElementById('detail-vehicle-receiver');
 const detailVehicleDestinationCountryInput = document.getElementById('detail-vehicle-destination-country');
 const detailVehicleDestinationPlaceInput = document.getElementById('detail-vehicle-destination-place');
 const detailVehicleProductInput = document.getElementById('detail-vehicle-product');
@@ -119,6 +187,8 @@ const detailVehicleCustomsDateInput = document.getElementById('detail-vehicle-cu
 const detailVehicleCustomsClearanceDateInput = document.getElementById('detail-vehicle-customs-clearance-date');
 const detailVehicleUnloadingDateInput = document.getElementById('detail-vehicle-unloading-date');
 const detailVehicleCarrierSelect = document.getElementById('detail-vehicle-carrier-id');
+const detailVehicleSenderSelect = document.getElementById('detail-vehicle-sender');
+const detailVehicleReceiverSelect = document.getElementById('detail-vehicle-receiver');
 const editVehicleBtn = document.getElementById('edit-vehicle-btn');
 const saveVehicleBtn = document.getElementById('save-vehicle-btn');
 const editVehicleItemModal = document.getElementById('edit-vehicle-item-modal');
@@ -144,8 +214,8 @@ const vehicleInvoiceEuPricePerTon = document.getElementById('vehicle-invoice-eu-
 const vehicleInvoiceEuTotalPrice = document.getElementById('vehicle-invoice-eu-total-price');
 const vehicleReclamation = document.getElementById('vehicle-reclamation');
 const vehicleDescription = document.getElementById('vehicle-description');
-const vehicleSender = document.getElementById('vehicle-sender');
-const vehicleReceiver = document.getElementById('vehicle-receiver');
+const vehicleSenderSelect = document.getElementById('vehicle-sender');
+const vehicleReceiverSelect = document.getElementById('vehicle-receiver');
 const vehicleDestinationCountry = document.getElementById('vehicle-destination-country');
 const vehicleDestinationPlace = document.getElementById('vehicle-destination-place');
 const vehicleProduct = document.getElementById('vehicle-product');
@@ -211,8 +281,8 @@ function populateVehicleForm(vehicle) {
         if (detailVehicleInvoiceUaInput) detailVehicleInvoiceUaInput.value = '';
         if (detailVehicleInvoiceEuInput) detailVehicleInvoiceEuInput.value = '';
         if (detailVehicleDescriptionInput) detailVehicleDescriptionInput.value = '';
-        if (detailVehicleSenderInput) detailVehicleSenderInput.value = '';
-        if (detailVehicleReceiverInput) detailVehicleReceiverInput.value = '';
+        if (detailVehicleSenderSelect) detailVehicleSenderSelect.value = '';
+        if (detailVehicleReceiverSelect) detailVehicleReceiverSelect.value = '';
         if (detailVehicleDestinationCountryInput) detailVehicleDestinationCountryInput.value = '';
         if (detailVehicleDestinationPlaceInput) detailVehicleDestinationPlaceInput.value = '';
         if (detailVehicleProductInput) detailVehicleProductInput.value = '';
@@ -242,8 +312,8 @@ function populateVehicleForm(vehicle) {
     if (detailVehicleInvoiceUaInput) detailVehicleInvoiceUaInput.value = vehicle.invoiceUa || '';
     if (detailVehicleInvoiceEuInput) detailVehicleInvoiceEuInput.value = vehicle.invoiceEu || '';
     if (detailVehicleDescriptionInput) detailVehicleDescriptionInput.value = vehicle.description || '';
-    if (detailVehicleSenderInput) detailVehicleSenderInput.value = vehicle.sender || '';
-    if (detailVehicleReceiverInput) detailVehicleReceiverInput.value = vehicle.receiver || '';
+    if (detailVehicleSenderSelect) detailVehicleSenderSelect.value = vehicle.senderId || '';
+    if (detailVehicleReceiverSelect) detailVehicleReceiverSelect.value = vehicle.receiverId || '';
     if (detailVehicleDestinationCountryInput) detailVehicleDestinationCountryInput.value = vehicle.destinationCountry || '';
     if (detailVehicleDestinationPlaceInput) detailVehicleDestinationPlaceInput.value = vehicle.destinationPlace || '';
     if (detailVehicleProductInput) detailVehicleProductInput.value = vehicle.product || '';
@@ -279,8 +349,8 @@ function setVehicleFormEditable(isEditable) {
         detailVehicleInvoiceEuPricePerTonInput,
         detailVehicleReclamationInput,
         detailVehicleDescriptionInput,
-        detailVehicleSenderInput,
-        detailVehicleReceiverInput,
+        detailVehicleSenderSelect,
+        detailVehicleReceiverSelect,
         detailVehicleDestinationCountryInput,
         detailVehicleDestinationPlaceInput,
         detailVehicleProductInput,
@@ -334,6 +404,8 @@ if (editVehicleBtn) {
 if (createVehicleBtn) {
     createVehicleBtn.addEventListener('click', () => {
         populateCarriers('vehicle-carrier-id');
+        populateVehicleSenders('vehicle-sender');
+        populateVehicleReceivers('vehicle-receiver');
         openModal('create-vehicle-modal');
     });
 }
@@ -353,8 +425,8 @@ if (createVehicleForm) {
             invoiceEuPricePerTon: vehicleInvoiceEuPricePerTon?.value ? parseFloat(vehicleInvoiceEuPricePerTon.value) : null,
             reclamation: vehicleReclamation?.value ? parseFloat(vehicleReclamation.value) : null,
             description: vehicleDescription?.value || '',
-            sender: vehicleSender?.value || '',
-            receiver: vehicleReceiver?.value || '',
+            senderId: vehicleSenderSelect?.value ? parseInt(vehicleSenderSelect.value) : null,
+            receiverId: vehicleReceiverSelect?.value ? parseInt(vehicleReceiverSelect.value) : null,
             destinationCountry: vehicleDestinationCountry?.value || '',
             destinationPlace: vehicleDestinationPlace?.value || '',
             product: vehicleProduct?.value || '',
@@ -483,11 +555,11 @@ async function loadVehicles(page = 0) {
             vehiclesTbody.textContent = '';
             const row = document.createElement('tr');
             row.className = 'loading-row';
-            const cell = document.createElement('td');
-            cell.colSpan = 21;
-            cell.style.textAlign = 'center';
-            cell.style.color = 'var(--text-muted)';
-            cell.textContent = 'Помилка завантаження даних';
+        const cell = document.createElement('td');
+        cell.colSpan = 24;
+        cell.style.textAlign = 'center';
+        cell.style.color = 'var(--text-muted)';
+        cell.textContent = 'Помилка завантаження даних';
             row.appendChild(cell);
             vehiclesTbody.appendChild(row);
         }
@@ -632,7 +704,7 @@ function renderVehicles(vehicles) {
         const row = document.createElement('tr');
         row.className = 'loading-row';
         const cell = document.createElement('td');
-        cell.colSpan = 21;
+        cell.colSpan = 24;
         cell.style.textAlign = 'center';
         cell.style.color = 'var(--text-muted)';
         cell.textContent = 'Немає даних';
@@ -658,14 +730,17 @@ function renderVehicles(vehicles) {
             return cell;
         };
         
-        row.appendChild(createCell(`${formatNumber(vehicle.totalCostEur, 2)} EUR`, 'Загальна вартість', { fontWeight: '600', color: 'var(--primary)' }));
-        row.appendChild(createCell(formatDate(vehicle.shipmentDate), 'Дата відвантаження'));
         row.appendChild(createCell(vehicle.vehicleNumber || '-', 'Номер машини'));
+        row.appendChild(createCell(`${formatNumber(vehicle.totalExpenses, 2)} EUR`, 'Загальні витрати', { fontWeight: '600', color: 'var(--primary)' }));
+        row.appendChild(createCell(`${formatNumber(vehicle.totalIncome, 2)} EUR`, 'Загальний дохід', { fontWeight: '600', color: 'var(--success)' }));
+        const marginValue = vehicle.margin != null ? parseFloat(vehicle.margin) : 0;
+        row.appendChild(createCell(`${formatNumber(vehicle.margin, 2)} EUR`, 'Маржа', { fontWeight: '600', color: marginValue >= 0 ? 'var(--success)' : 'var(--danger)' }));
+        row.appendChild(createCell(formatDate(vehicle.shipmentDate), 'Дата відвантаження'));
         row.appendChild(createCell(vehicle.invoiceUa || '-', 'Інвойс УА'));
         row.appendChild(createCell(vehicle.invoiceEu || '-', 'Інвойс ЄС'));
         row.appendChild(createCell(formatBoolean(vehicle.isOurVehicle), 'Наше завантаження'));
-        row.appendChild(createCell(vehicle.sender || '-', 'Відправник'));
-        row.appendChild(createCell(vehicle.receiver || '-', 'Отримувач'));
+        row.appendChild(createCell(vehicle.senderName || '-', 'Відправник'));
+        row.appendChild(createCell(vehicle.receiverName || '-', 'Отримувач'));
         row.appendChild(createCell(vehicle.destinationCountry || '-', 'Країна призначення'));
         row.appendChild(createCell(vehicle.destinationPlace || '-', 'Місце призначення'));
         row.appendChild(createCell(vehicle.product || '-', 'Товар'));
@@ -729,6 +804,8 @@ async function viewVehicleDetails(vehicleId) {
         
         const vehicle = await response.json();
         populateCarriers('detail-vehicle-carrier-id');
+        populateVehicleSenders('detail-vehicle-sender');
+        populateVehicleReceivers('detail-vehicle-receiver');
         renderVehicleDetails(vehicle);
         
         document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
@@ -930,21 +1007,21 @@ function deleteVehicle() {
     }
     
     (async () => {
-        try {
-            const response = await fetch(`/api/v1/vehicles/${currentVehicleId}`, {
-                method: 'DELETE'
-            });
-            
-            if (!response.ok) {
-                throw new Error('Failed to delete vehicle');
-            }
-            
-            showMessage('Машину успішно видалено', 'success');
-            closeModal('vehicle-details-modal');
-            await loadVehicles(0);
-        } catch (error) {
-            showMessage('Помилка при видаленні машини', 'error');
+    try {
+        const response = await fetch(`/api/v1/vehicles/${currentVehicleId}`, {
+            method: 'DELETE'
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to delete vehicle');
         }
+        
+        showMessage('Машину успішно видалено', 'success');
+        closeModal('vehicle-details-modal');
+            await loadVehicles(0);
+    } catch (error) {
+        showMessage('Помилка при видаленні машини', 'error');
+    }
     })();
 }
 
@@ -1011,8 +1088,8 @@ if (updateVehicleForm) {
             invoiceEuPricePerTon: detailVehicleInvoiceEuPricePerTonInput?.value ? parseFloat(detailVehicleInvoiceEuPricePerTonInput.value) : null,
             reclamation: detailVehicleReclamationInput?.value ? parseFloat(detailVehicleReclamationInput.value) : null,
             description: detailVehicleDescriptionInput?.value ?? null,
-            sender: detailVehicleSenderInput?.value ?? null,
-            receiver: detailVehicleReceiverInput?.value ?? null,
+            senderId: detailVehicleSenderSelect?.value ? parseInt(detailVehicleSenderSelect.value) : null,
+            receiverId: detailVehicleReceiverSelect?.value ? parseInt(detailVehicleReceiverSelect.value) : null,
             destinationCountry: detailVehicleDestinationCountryInput?.value ?? null,
             destinationPlace: detailVehicleDestinationPlaceInput?.value ?? null,
             product: detailVehicleProductInput?.value ?? null,
@@ -1269,7 +1346,7 @@ function closeModal(modalId) {
     modal.classList.remove('open');
     document.body.classList.remove('modal-open');
     
-        if (modalId === 'create-vehicle-modal') {
+    if (modalId === 'create-vehicle-modal') {
         createVehicleForm?.reset();
     } else if (modalId === 'vehicle-details-modal') {
         resetVehicleFormState();
@@ -1476,8 +1553,14 @@ async function deleteCarrier(carrierId) {
         showMessage('Перевізника успішно видалено', 'success');
         await loadCarriers();
         await fetchCarriers();
+        await fetchVehicleSenders();
+        await fetchVehicleReceivers();
         populateCarriers('vehicle-carrier-id');
         populateCarriers('detail-vehicle-carrier-id');
+        populateVehicleSenders('vehicle-sender');
+        populateVehicleSenders('detail-vehicle-sender');
+        populateVehicleReceivers('vehicle-receiver');
+        populateVehicleReceivers('detail-vehicle-receiver');
     } catch (error) {
         showMessage('Помилка при видаленні перевізника', 'error');
     }
@@ -1631,8 +1714,14 @@ async function initialize() {
     await fetchProducts();
     await fetchWarehouses();
     await fetchCarriers();
+    await fetchVehicleSenders();
+    await fetchVehicleReceivers();
     populateCarriers('vehicle-carrier-id');
     populateCarriers('detail-vehicle-carrier-id');
+    populateVehicleSenders('vehicle-sender');
+    populateVehicleSenders('detail-vehicle-sender');
+    populateVehicleReceivers('vehicle-receiver');
+    populateVehicleReceivers('detail-vehicle-receiver');
     await loadAccounts();
     setDefaultVehicleDates();
     await loadVehicles(0);

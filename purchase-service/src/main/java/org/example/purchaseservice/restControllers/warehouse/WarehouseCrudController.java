@@ -42,7 +42,7 @@ public class WarehouseCrudController {
         return ResponseEntity.ok(dtos);
     }
 
-    @PreAuthorize("hasAuthority('settings:edit')")
+    @PreAuthorize("hasAuthority('system:admin')")
     @PostMapping
     public ResponseEntity<WarehouseDTO> createWarehouse(@RequestBody @Valid WarehouseCreateDTO warehouseCreateDTO) {
         Warehouse warehouse = warehouseMapper.warehouseCreateDTOToWarehouse(warehouseCreateDTO);
@@ -55,7 +55,7 @@ public class WarehouseCrudController {
         return ResponseEntity.created(location).body(createdWarehouse);
     }
 
-    @PreAuthorize("hasAuthority('settings:edit')")
+    @PreAuthorize("hasAuthority('system:admin')")
     @PutMapping("/{id}")
     public ResponseEntity<WarehouseDTO> updateWarehouse(@PathVariable Long id,
                                                       @RequestBody @Valid WarehouseUpdateDTO businessUpdateDTO) {
@@ -64,7 +64,7 @@ public class WarehouseCrudController {
         return ResponseEntity.ok(warehouseMapper.warehouseToWarehouseDTO(updatedBusiness));
     }
 
-    @PreAuthorize("hasAuthority('settings:edit')")
+    @PreAuthorize("hasAuthority('system:admin')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteWarehouse(@PathVariable Long id) {
         warehouseService.deleteWarehouse(id);

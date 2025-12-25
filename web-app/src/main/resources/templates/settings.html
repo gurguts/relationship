@@ -107,6 +107,8 @@
         <button class="tab-btn" data-tab="counterparties">Контрагенти</button>
         <button class="tab-btn" data-tab="branches">Філії</button>
         <button class="tab-btn" data-tab="accounts">Рахунки</button>
+        <button class="tab-btn" data-tab="vehicle-senders">Відправники машин</button>
+        <button class="tab-btn" data-tab="vehicle-receivers">Отримувачі машин</button>
     </div>
 
     <!-- Finance Categories Tab -->
@@ -203,6 +205,42 @@
                 </tr>
                 </thead>
                 <tbody id="accounts-body"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Vehicle Senders Tab -->
+    <div id="vehicle-senders-tab" class="tab-content">
+        <div class="filter-section">
+            <button id="create-vehicle-sender-btn" class="btn-primary">Створити відправника</button>
+        </div>
+        <div class="table-container">
+            <table id="vehicle-senders-table" class="data-table">
+                <thead>
+                <tr>
+                    <th>Назва</th>
+                    <th>Дії</th>
+                </tr>
+                </thead>
+                <tbody id="vehicle-senders-body"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Vehicle Receivers Tab -->
+    <div id="vehicle-receivers-tab" class="tab-content">
+        <div class="filter-section">
+            <button id="create-vehicle-receiver-btn" class="btn-primary">Створити отримувача</button>
+        </div>
+        <div class="table-container">
+            <table id="vehicle-receivers-table" class="data-table">
+                <thead>
+                <tr>
+                    <th>Назва</th>
+                    <th>Дії</th>
+                </tr>
+                </thead>
+                <tbody id="vehicle-receivers-body"></tbody>
             </table>
         </div>
     </div>
@@ -347,6 +385,38 @@
                 </div>
             </div>
             <button type="submit" class="btn-primary" id="account-submit-btn">Створити</button>
+        </form>
+    </div>
+</div>
+
+<!-- Create/Edit Vehicle Sender Modal -->
+<div id="create-vehicle-sender-modal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2 id="vehicle-sender-modal-title">Створити відправника</h2>
+        <form id="vehicle-sender-form">
+            <input type="hidden" id="vehicle-sender-id">
+            <div class="form-group">
+                <label for="vehicle-sender-name">Назва:</label>
+                <input type="text" id="vehicle-sender-name" required>
+            </div>
+            <button type="submit" class="btn-primary" id="vehicle-sender-submit-btn">Створити</button>
+        </form>
+    </div>
+</div>
+
+<!-- Create/Edit Vehicle Receiver Modal -->
+<div id="create-vehicle-receiver-modal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2 id="vehicle-receiver-modal-title">Створити отримувача</h2>
+        <form id="vehicle-receiver-form">
+            <input type="hidden" id="vehicle-receiver-id">
+            <div class="form-group">
+                <label for="vehicle-receiver-name">Назва:</label>
+                <input type="text" id="vehicle-receiver-name" required>
+            </div>
+            <button type="submit" class="btn-primary" id="vehicle-receiver-submit-btn">Створити</button>
         </form>
     </div>
 </div>

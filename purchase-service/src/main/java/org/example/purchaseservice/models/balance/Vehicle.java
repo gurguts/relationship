@@ -44,11 +44,13 @@ public class Vehicle {
     @Column(name = "is_our_vehicle", nullable = false)
     private Boolean isOurVehicle = true;
     
-    @Column(name = "sender", length = 255)
-    private String sender;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "sender_id")
+    private VehicleSender sender;
     
-    @Column(name = "receiver", length = 255)
-    private String receiver;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "receiver_id")
+    private VehicleReceiver receiver;
     
     @Column(name = "destination_country", length = 100)
     private String destinationCountry;

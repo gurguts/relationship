@@ -22,9 +22,9 @@ public class VehicleCreateDTO {
     
     private Boolean isOurVehicle;
     
-    private String sender;
+    private Long senderId;
     
-    private String receiver;
+    private Long receiverId;
     
     private String destinationCountry;
     

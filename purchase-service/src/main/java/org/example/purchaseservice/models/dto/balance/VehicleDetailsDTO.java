@@ -20,8 +20,10 @@ public class VehicleDetailsDTO {
     private BigDecimal totalCostEur;
     private Long userId;
     private LocalDateTime createdAt;
-    private String sender;
-    private String receiver;
+    private Long senderId;
+    private String senderName;
+    private Long receiverId;
+    private String receiverName;
     private String destinationCountry;
     private String destinationPlace;
     private String product;
@@ -42,6 +44,9 @@ public class VehicleDetailsDTO {
     private BigDecimal invoiceEuPricePerTon;
     private BigDecimal invoiceEuTotalPrice;
     private BigDecimal reclamation;
+    private BigDecimal totalExpenses;
+    private BigDecimal totalIncome;
+    private BigDecimal margin;
     private CarrierDetailsDTO carrier;
     private List<VehicleItemDTO> items;
     

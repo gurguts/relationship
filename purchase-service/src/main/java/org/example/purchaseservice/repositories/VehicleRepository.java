@@ -17,32 +17,40 @@ import java.util.List;
 @Repository
 public interface VehicleRepository extends JpaRepository<Vehicle, Long>, JpaSpecificationExecutor<Vehicle> {
 
-    @EntityGraph(attributePaths = {"carrier"})
+    @EntityGraph(attributePaths = {"carrier", "sender", "receiver"})
+    @Override
+    java.util.Optional<Vehicle> findById(Long id);
+
+    @EntityGraph(attributePaths = {"carrier", "sender", "receiver"})
+    @Override
+    java.util.List<Vehicle> findAllById(java.lang.Iterable<Long> ids);
+
+    @EntityGraph(attributePaths = {"carrier", "sender", "receiver"})
     @Override
     Page<Vehicle> findAll(Specification<Vehicle> spec, Pageable pageable);
 
-    @EntityGraph(attributePaths = {"carrier"})
+    @EntityGraph(attributePaths = {"carrier", "sender", "receiver"})
     List<Vehicle> findByShipmentDate(LocalDate shipmentDate);
 
-    @EntityGraph(attributePaths = {"carrier"})
+    @EntityGraph(attributePaths = {"carrier", "sender", "receiver"})
     List<Vehicle> findByUserId(Long userId);
 
-    @EntityGraph(attributePaths = {"carrier"})
+    @EntityGraph(attributePaths = {"carrier", "sender", "receiver"})
     @Query("SELECT v FROM Vehicle v WHERE v.shipmentDate BETWEEN :fromDate AND :toDate ORDER BY v.shipmentDate DESC")
     List<Vehicle> findByDateRange(@Param("fromDate") LocalDate fromDate, @Param("toDate") LocalDate toDate);
 
-    @EntityGraph(attributePaths = {"carrier"})
+    @EntityGraph(attributePaths = {"carrier", "sender", "receiver"})
     List<Vehicle> findByVehicleNumberContainingIgnoreCase(String vehicleNumber);
     
-    @EntityGraph(attributePaths = {"carrier"})
+    @EntityGraph(attributePaths = {"carrier", "sender", "receiver"})
     @Query("SELECT v FROM Vehicle v WHERE v.shipmentDate BETWEEN :fromDate AND :toDate AND v.isOurVehicle = true ORDER BY v.shipmentDate DESC")
     List<Vehicle> findOurVehiclesByDateRange(@Param("fromDate") LocalDate fromDate, @Param("toDate") LocalDate toDate);
     
-    @EntityGraph(attributePaths = {"carrier"})
+    @EntityGraph(attributePaths = {"carrier", "sender", "receiver"})
     @Query("SELECT v FROM Vehicle v WHERE v.shipmentDate BETWEEN :fromDate AND :toDate ORDER BY v.shipmentDate DESC")
     List<Vehicle> findAllVehiclesByDateRange(@Param("fromDate") LocalDate fromDate, @Param("toDate") LocalDate toDate);
 
-    @EntityGraph(attributePaths = {"carrier"})
+    @EntityGraph(attributePaths = {"carrier", "sender", "receiver"})
     @Override
     List<Vehicle> findAll(org.springframework.data.jpa.domain.Specification<Vehicle> spec, org.springframework.data.domain.Sort sort);
 }

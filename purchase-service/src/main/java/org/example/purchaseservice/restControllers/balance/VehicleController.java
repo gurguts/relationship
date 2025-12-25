@@ -59,8 +59,8 @@ public class VehicleController {
                 dto.getDescription(),
                 userId,
                 dto.getIsOurVehicle(),
-                dto.getSender(),
-                dto.getReceiver(),
+                dto.getSenderId(),
+                dto.getReceiverId(),
                 dto.getDestinationCountry(),
                 dto.getDestinationPlace(),
                 dto.getProduct(),
@@ -325,8 +325,10 @@ public class VehicleController {
                 .totalCostEur(vehicle.getTotalCostEur())
                 .userId(vehicle.getUserId())
                 .createdAt(vehicle.getCreatedAt())
-                .sender(vehicle.getSender())
-                .receiver(vehicle.getReceiver())
+                .senderId(vehicle.getSender() != null ? vehicle.getSender().getId() : null)
+                .senderName(vehicle.getSender() != null ? vehicle.getSender().getName() : null)
+                .receiverId(vehicle.getReceiver() != null ? vehicle.getReceiver().getId() : null)
+                .receiverName(vehicle.getReceiver() != null ? vehicle.getReceiver().getName() : null)
                 .destinationCountry(vehicle.getDestinationCountry())
                 .destinationPlace(vehicle.getDestinationPlace())
                 .product(vehicle.getProduct())
@@ -347,6 +349,9 @@ public class VehicleController {
                 .invoiceEuPricePerTon(vehicle.getInvoiceEuPricePerTon())
                 .invoiceEuTotalPrice(vehicle.getInvoiceEuTotalPrice())
                 .reclamation(vehicle.getReclamation())
+                .totalExpenses(vehicleService.calculateTotalExpenses(vehicle, java.math.BigDecimal.ZERO))
+                .totalIncome(vehicleService.calculateTotalIncome(vehicle))
+                .margin(vehicleService.calculateMargin(vehicle, java.math.BigDecimal.ZERO))
                 .carrier(carrierDTO)
                 .items(items)
                 .build();

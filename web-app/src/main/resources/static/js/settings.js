@@ -46,6 +46,10 @@ function initializeTabs() {
                 loadBranches();
             } else if (targetTab === 'accounts') {
                 loadAccounts();
+            } else if (targetTab === 'vehicle-senders') {
+                loadVehicleSenders();
+            } else if (targetTab === 'vehicle-receivers') {
+                loadVehicleReceivers();
             }
         });
     });
@@ -98,6 +102,16 @@ function setupEventListeners() {
     
     document.getElementById('branch-form').addEventListener('submit', handleCreateBranch);
     document.getElementById('account-form').addEventListener('submit', handleCreateAccount);
+
+    document.getElementById('create-vehicle-sender-btn').addEventListener('click', () => {
+        openCreateVehicleSenderModal();
+    });
+    document.getElementById('vehicle-sender-form').addEventListener('submit', handleCreateVehicleSender);
+
+    document.getElementById('create-vehicle-receiver-btn').addEventListener('click', () => {
+        openCreateVehicleReceiverModal();
+    });
+    document.getElementById('vehicle-receiver-form').addEventListener('submit', handleCreateVehicleReceiver);
 }
 
 // ========== COUNTERPARTIES ==========
@@ -870,7 +884,239 @@ async function loadUsers() {
     }
 }
 
-// ========== HELPER FUNCTIONS ==========
+// ========== VEHICLE SENDERS ==========
+
+async function loadVehicleSenders() {
+    try {
+        const response = await fetch(`${API_BASE}/vehicle-senders`);
+        if (!response.ok) throw new Error('Failed to load vehicle senders');
+        const senders = await response.json();
+
+        const tbody = document.getElementById('vehicle-senders-body');
+        if (!tbody) return;
+        tbody.textContent = '';
+
+        if (senders.length === 0) {
+            const row = document.createElement('tr');
+            const cell = document.createElement('td');
+            cell.colSpan = 2;
+            cell.textContent = 'Відправників не знайдено.';
+            cell.style.textAlign = 'center';
+            row.appendChild(cell);
+            tbody.appendChild(row);
+            return;
+        }
+
+        senders.forEach(sender => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td data-label="Назва">${escapeHtml(sender.name)}</td>
+                <td data-label="Дії">
+                    <div class="action-buttons-table">
+                        <button onclick="editVehicleSender(${sender.id})" class="btn-edit">Редагувати</button>
+                        <button onclick="deleteVehicleSender(${sender.id})" class="btn-delete">Видалити</button>
+                    </div>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+    } catch (error) {
+        console.error('Error loading vehicle senders:', error);
+        showSettingsMessage(error.message || 'Помилка завантаження відправників', 'error');
+    }
+}
+
+function openCreateVehicleSenderModal() {
+    document.getElementById('vehicle-sender-id').value = '';
+    document.getElementById('vehicle-sender-name').value = '';
+    document.getElementById('vehicle-sender-modal-title').textContent = 'Створити відправника';
+    document.getElementById('vehicle-sender-submit-btn').textContent = 'Створити';
+    document.getElementById('create-vehicle-sender-modal').style.display = 'block';
+}
+
+async function handleCreateVehicleSender(e) {
+    e.preventDefault();
+    const id = document.getElementById('vehicle-sender-id').value;
+    const name = document.getElementById('vehicle-sender-name').value.trim();
+
+    if (!name) {
+        showSettingsMessage('Назва відправника не може бути порожньою', 'error');
+        return;
+    }
+
+    const method = id ? 'PUT' : 'POST';
+    const url = id ? `${API_BASE}/vehicle-senders/${id}` : `${API_BASE}/vehicle-senders`;
+
+    try {
+        const response = await fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name })
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to save vehicle sender');
+        }
+        showSettingsMessage(`Відправника успішно ${id ? 'оновлено' : 'створено'}`, 'success');
+        document.getElementById('create-vehicle-sender-modal').style.display = 'none';
+        loadVehicleSenders();
+    } catch (error) {
+        console.error('Error saving vehicle sender:', error);
+        showSettingsMessage(error.message || `Помилка ${id ? 'оновлення' : 'створення'} відправника`, 'error');
+    }
+}
+
+async function editVehicleSender(id) {
+    try {
+        const response = await fetch(`${API_BASE}/vehicle-senders/${id}`);
+        if (!response.ok) throw new Error('Failed to load vehicle sender');
+        const sender = await response.json();
+
+        document.getElementById('vehicle-sender-id').value = sender.id;
+        document.getElementById('vehicle-sender-name').value = sender.name || '';
+        document.getElementById('vehicle-sender-modal-title').textContent = 'Редагувати відправника';
+        document.getElementById('vehicle-sender-submit-btn').textContent = 'Зберегти';
+        document.getElementById('create-vehicle-sender-modal').style.display = 'block';
+    } catch (error) {
+        console.error('Error loading vehicle sender:', error);
+        showSettingsMessage('Помилка завантаження відправника', 'error');
+    }
+}
+
+async function deleteVehicleSender(id) {
+    if (!confirm('Ви впевнені, що хочете видалити цього відправника? Ця дія незворотна.')) return;
+    try {
+        const response = await fetch(`${API_BASE}/vehicle-senders/${id}`, {
+            method: 'DELETE'
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to delete vehicle sender');
+        }
+        showSettingsMessage('Відправника успішно видалено', 'success');
+        loadVehicleSenders();
+    } catch (error) {
+        console.error('Error deleting vehicle sender:', error);
+        showSettingsMessage(error.message || 'Помилка видалення відправника', 'error');
+    }
+}
+
+// ========== VEHICLE RECEIVERS ==========
+
+async function loadVehicleReceivers() {
+    try {
+        const response = await fetch(`${API_BASE}/vehicle-receivers`);
+        if (!response.ok) throw new Error('Failed to load vehicle receivers');
+        const receivers = await response.json();
+
+        const tbody = document.getElementById('vehicle-receivers-body');
+        if (!tbody) return;
+        tbody.textContent = '';
+
+        if (receivers.length === 0) {
+            const row = document.createElement('tr');
+            const cell = document.createElement('td');
+            cell.colSpan = 2;
+            cell.textContent = 'Отримувачів не знайдено.';
+            cell.style.textAlign = 'center';
+            row.appendChild(cell);
+            tbody.appendChild(row);
+            return;
+        }
+
+        receivers.forEach(receiver => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td data-label="Назва">${escapeHtml(receiver.name)}</td>
+                <td data-label="Дії">
+                    <div class="action-buttons-table">
+                        <button onclick="editVehicleReceiver(${receiver.id})" class="btn-edit">Редагувати</button>
+                        <button onclick="deleteVehicleReceiver(${receiver.id})" class="btn-delete">Видалити</button>
+                    </div>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+    } catch (error) {
+        console.error('Error loading vehicle receivers:', error);
+        showSettingsMessage(error.message || 'Помилка завантаження отримувачів', 'error');
+    }
+}
+
+function openCreateVehicleReceiverModal() {
+    document.getElementById('vehicle-receiver-id').value = '';
+    document.getElementById('vehicle-receiver-name').value = '';
+    document.getElementById('vehicle-receiver-modal-title').textContent = 'Створити отримувача';
+    document.getElementById('vehicle-receiver-submit-btn').textContent = 'Створити';
+    document.getElementById('create-vehicle-receiver-modal').style.display = 'block';
+}
+
+async function handleCreateVehicleReceiver(e) {
+    e.preventDefault();
+    const id = document.getElementById('vehicle-receiver-id').value;
+    const name = document.getElementById('vehicle-receiver-name').value.trim();
+
+    if (!name) {
+        showSettingsMessage('Назва отримувача не може бути порожньою', 'error');
+        return;
+    }
+
+    const method = id ? 'PUT' : 'POST';
+    const url = id ? `${API_BASE}/vehicle-receivers/${id}` : `${API_BASE}/vehicle-receivers`;
+
+    try {
+        const response = await fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name })
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to save vehicle receiver');
+        }
+        showSettingsMessage(`Отримувача успішно ${id ? 'оновлено' : 'створено'}`, 'success');
+        document.getElementById('create-vehicle-receiver-modal').style.display = 'none';
+        loadVehicleReceivers();
+    } catch (error) {
+        console.error('Error saving vehicle receiver:', error);
+        showSettingsMessage(error.message || `Помилка ${id ? 'оновлення' : 'створення'} отримувача`, 'error');
+    }
+}
+
+async function editVehicleReceiver(id) {
+    try {
+        const response = await fetch(`${API_BASE}/vehicle-receivers/${id}`);
+        if (!response.ok) throw new Error('Failed to load vehicle receiver');
+        const receiver = await response.json();
+
+        document.getElementById('vehicle-receiver-id').value = receiver.id;
+        document.getElementById('vehicle-receiver-name').value = receiver.name || '';
+        document.getElementById('vehicle-receiver-modal-title').textContent = 'Редагувати отримувача';
+        document.getElementById('vehicle-receiver-submit-btn').textContent = 'Зберегти';
+        document.getElementById('create-vehicle-receiver-modal').style.display = 'block';
+    } catch (error) {
+        console.error('Error loading vehicle receiver:', error);
+        showSettingsMessage('Помилка завантаження отримувача', 'error');
+    }
+}
+
+async function deleteVehicleReceiver(id) {
+    if (!confirm('Ви впевнені, що хочете видалити цього отримувача? Ця дія незворотна.')) return;
+    try {
+        const response = await fetch(`${API_BASE}/vehicle-receivers/${id}`, {
+            method: 'DELETE'
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to delete vehicle receiver');
+        }
+        showSettingsMessage('Отримувача успішно видалено', 'success');
+        loadVehicleReceivers();
+    } catch (error) {
+        console.error('Error deleting vehicle receiver:', error);
+        showSettingsMessage(error.message || 'Помилка видалення отримувача', 'error');
+    }
+}
 
 // ========== HELPER FUNCTIONS ==========
 

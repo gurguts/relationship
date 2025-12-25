@@ -90,12 +90,17 @@ public class VehicleExportService {
 
             Row headerRow = sheet.createRow(0);
             String[] headers = {
-                    "ID", "Дата відвантаження", "Номер машини", "Наше завантаження",
-                    "Відправник", "Отримувач", "Країна призначення", "Місце призначення",
-                    "Товар", "Кількість товару", "Номер декларації", "Термінал",
-                    "Водій (ПІБ)", "EUR1", "FITO", "Дата митниці", "Дата розмитнення",
-                    "Дата вивантаження", "Перевізник (назва)", "Перевізник (адреса)", "Перевізник (телефон)", 
-                    "Перевізник (код)", "Перевізник (рахунок)", "Товари зі складу", "Витрати на машину", "Загальна вартість (EUR)"
+                    "Товари зі складу", "Сума товарів зі складу (EUR)",
+                    "Витрати на машину", "Сума витрат на машину (EUR)",
+                    "Товар", "Кількість товару",
+                    "Інвойс UA", "Дата інвойсу UA", "Ціна за тонну інвойсу UA", "Повна ціна інвойсу UA",
+                    "Інвойс EU", "Дата інвойсу EU", "Ціна за тонну інвойсу EU", "Повна ціна інвойсу EU", "Рекламація",
+                    "Загальні витрати (EUR)", "Загальний дохід (EUR)", "Маржа",
+                    "ID", "Дата відвантаження", "Номер машини", "Опис",
+                    "Наше завантаження", "Відправник", "Отримувач", "Країна призначення", "Місце призначення",
+                    "Номер декларації", "Термінал", "Водій (ПІБ)", "EUR1", "FITO",
+                    "Дата митниці", "Дата розмитнення", "Дата вивантаження",
+                    "Перевізник (назва)", "Перевізник (адреса)", "Перевізник (телефон)", "Перевізник (код)", "Перевізник (рахунок)"
             };
 
             for (int i = 0; i < headers.length; i++) {
@@ -131,44 +136,16 @@ public class VehicleExportService {
 
                 Row mainRow = sheet.createRow(rowNum++);
 
-                setCellValue(mainRow, 0, vehicleDTO.getId(), dataStyle);
-                setCellValue(mainRow, 1, vehicleDTO.getShipmentDate(), dateStyle);
-                setCellValue(mainRow, 2, vehicleDTO.getVehicleNumber(), dataStyle);
-                setCellValue(mainRow, 3, vehicleDTO.getIsOurVehicle() != null && vehicleDTO.getIsOurVehicle() ? "Так" : "Ні", dataStyle);
-                setCellValue(mainRow, 4, vehicleDTO.getSender(), dataStyle);
-                setCellValue(mainRow, 5, vehicleDTO.getReceiver(), dataStyle);
-                setCellValue(mainRow, 6, vehicleDTO.getDestinationCountry(), dataStyle);
-                setCellValue(mainRow, 7, vehicleDTO.getDestinationPlace(), dataStyle);
-                setCellValue(mainRow, 8, vehicleDTO.getProduct(), dataStyle);
-                setCellValue(mainRow, 9, vehicleDTO.getProductQuantity(), dataStyle);
-                setCellValue(mainRow, 10, vehicleDTO.getDeclarationNumber(), dataStyle);
-                setCellValue(mainRow, 11, vehicleDTO.getTerminal(), dataStyle);
-                setCellValue(mainRow, 12, vehicleDTO.getDriverFullName(), dataStyle);
-                setCellValue(mainRow, 13, vehicleDTO.getEur1() != null && vehicleDTO.getEur1() ? "Так" : "Ні", dataStyle);
-                setCellValue(mainRow, 14, vehicleDTO.getFito() != null && vehicleDTO.getFito() ? "Так" : "Ні", dataStyle);
-                setCellValue(mainRow, 15, vehicleDTO.getCustomsDate(), dateStyle);
-                setCellValue(mainRow, 16, vehicleDTO.getCustomsClearanceDate(), dateStyle);
-                setCellValue(mainRow, 17, vehicleDTO.getUnloadingDate(), dateStyle);
-                
-                if (vehicleDTO.getCarrier() != null) {
-                    setCellValue(mainRow, 18, vehicleDTO.getCarrier().getCompanyName(), dataStyle);
-                    setCellValue(mainRow, 19, vehicleDTO.getCarrier().getRegistrationAddress(), dataStyle);
-                    setCellValue(mainRow, 20, vehicleDTO.getCarrier().getPhoneNumber(), dataStyle);
-                    setCellValue(mainRow, 21, vehicleDTO.getCarrier().getCode(), dataStyle);
-                    setCellValue(mainRow, 22, vehicleDTO.getCarrier().getAccount(), dataStyle);
-                } else {
-                    setCellValue(mainRow, 18, "", dataStyle);
-                    setCellValue(mainRow, 19, "", dataStyle);
-                    setCellValue(mainRow, 20, "", dataStyle);
-                    setCellValue(mainRow, 21, "", dataStyle);
-                    setCellValue(mainRow, 22, "", dataStyle);
-                }
+                int col = 0;
 
                 StringBuilder productsText = new StringBuilder();
+                BigDecimal productsTotalCost = BigDecimal.ZERO;
                 if (vehicleDTO.getItems() != null && !vehicleDTO.getItems().isEmpty()) {
                     for (VehicleDetailsDTO.VehicleItemDTO item : vehicleDTO.getItems()) {
                         if (productsText.length() > 0) productsText.append("\n");
                         String productName = getProductName(item.getProductId(), productMap);
+                        BigDecimal itemTotalCost = item.getTotalCostEur() != null ? item.getTotalCostEur() : BigDecimal.ZERO;
+                        productsTotalCost = productsTotalCost.add(itemTotalCost);
                         productsText.append(String.format("%s, Кількість: %s кг, Ціна: %s EUR, Сума: %s EUR",
                                 productName,
                                 formatNumber(item.getQuantity()),
@@ -176,10 +153,11 @@ public class VehicleExportService {
                                 formatNumber(item.getTotalCostEur())));
                     }
                 }
-                setCellValue(mainRow, 23, productsText.toString(), dataStyle);
+                setCellValue(mainRow, col++, productsText.toString(), dataStyle);
+                setCellValue(mainRow, col++, productsTotalCost, numberStyle);
 
                 StringBuilder expensesText = new StringBuilder();
-                BigDecimal totalExpenses = BigDecimal.ZERO;
+                BigDecimal expensesTotal = BigDecimal.ZERO;
                 if (transactions != null && !transactions.isEmpty()) {
                     for (Map<String, Object> transaction : transactions) {
                         if (expensesText.length() > 0) expensesText.append("\n");
@@ -189,7 +167,7 @@ public class VehicleExportService {
                         BigDecimal convertedAmount = getBigDecimal(transaction.get("convertedAmount"));
                         String description = (String) transaction.get("description");
                         if (convertedAmount != null) {
-                            totalExpenses = totalExpenses.add(convertedAmount);
+                            expensesTotal = expensesTotal.add(convertedAmount);
                         }
                         expensesText.append(String.format("%s %s (курс: %s) = %s EUR%s",
                                 formatNumber(amount),
@@ -199,8 +177,64 @@ public class VehicleExportService {
                                 description != null && !description.isEmpty() ? " - " + description : ""));
                     }
                 }
-                setCellValue(mainRow, 24, expensesText.toString(), dataStyle);
-                setCellValue(mainRow, 25, vehicleDTO.getTotalCostEur(), numberStyle);
+                setCellValue(mainRow, col++, expensesText.toString(), dataStyle);
+                setCellValue(mainRow, col++, expensesTotal, numberStyle);
+
+                setCellValue(mainRow, col++, vehicleDTO.getProduct(), dataStyle);
+                setCellValue(mainRow, col++, vehicleDTO.getProductQuantity(), dataStyle);
+
+                setCellValue(mainRow, col++, vehicleDTO.getInvoiceUa(), dataStyle);
+                setCellValue(mainRow, col++, vehicleDTO.getInvoiceUaDate(), dateStyle);
+                setCellValue(mainRow, col++, vehicleDTO.getInvoiceUaPricePerTon(), numberStyle);
+                setCellValue(mainRow, col++, vehicleDTO.getInvoiceUaTotalPrice(), numberStyle);
+
+                setCellValue(mainRow, col++, vehicleDTO.getInvoiceEu(), dataStyle);
+                setCellValue(mainRow, col++, vehicleDTO.getInvoiceEuDate(), dateStyle);
+                setCellValue(mainRow, col++, vehicleDTO.getInvoiceEuPricePerTon(), numberStyle);
+                setCellValue(mainRow, col++, vehicleDTO.getInvoiceEuTotalPrice(), numberStyle);
+                setCellValue(mainRow, col++, vehicleDTO.getReclamation(), numberStyle);
+
+                BigDecimal totalExpenses = productsTotalCost.add(expensesTotal);
+                BigDecimal invoiceEuTotalPrice = vehicleDTO.getInvoiceEuTotalPrice() != null ? vehicleDTO.getInvoiceEuTotalPrice() : BigDecimal.ZERO;
+                BigDecimal reclamation = vehicleDTO.getReclamation() != null ? vehicleDTO.getReclamation() : BigDecimal.ZERO;
+                BigDecimal totalIncome = invoiceEuTotalPrice.subtract(reclamation);
+                BigDecimal margin = totalIncome.subtract(totalExpenses);
+
+                setCellValue(mainRow, col++, totalExpenses, numberStyle);
+                setCellValue(mainRow, col++, totalIncome, numberStyle);
+                setCellValue(mainRow, col++, margin, numberStyle);
+
+                setCellValue(mainRow, col++, vehicleDTO.getId(), dataStyle);
+                setCellValue(mainRow, col++, vehicleDTO.getShipmentDate(), dateStyle);
+                setCellValue(mainRow, col++, vehicleDTO.getVehicleNumber(), dataStyle);
+                setCellValue(mainRow, col++, vehicleDTO.getDescription(), dataStyle);
+                setCellValue(mainRow, col++, vehicleDTO.getIsOurVehicle() != null && vehicleDTO.getIsOurVehicle() ? "Так" : "Ні", dataStyle);
+                setCellValue(mainRow, col++, vehicleDTO.getSenderName(), dataStyle);
+                setCellValue(mainRow, col++, vehicleDTO.getReceiverName(), dataStyle);
+                setCellValue(mainRow, col++, vehicleDTO.getDestinationCountry(), dataStyle);
+                setCellValue(mainRow, col++, vehicleDTO.getDestinationPlace(), dataStyle);
+                setCellValue(mainRow, col++, vehicleDTO.getDeclarationNumber(), dataStyle);
+                setCellValue(mainRow, col++, vehicleDTO.getTerminal(), dataStyle);
+                setCellValue(mainRow, col++, vehicleDTO.getDriverFullName(), dataStyle);
+                setCellValue(mainRow, col++, vehicleDTO.getEur1() != null && vehicleDTO.getEur1() ? "Так" : "Ні", dataStyle);
+                setCellValue(mainRow, col++, vehicleDTO.getFito() != null && vehicleDTO.getFito() ? "Так" : "Ні", dataStyle);
+                setCellValue(mainRow, col++, vehicleDTO.getCustomsDate(), dateStyle);
+                setCellValue(mainRow, col++, vehicleDTO.getCustomsClearanceDate(), dateStyle);
+                setCellValue(mainRow, col++, vehicleDTO.getUnloadingDate(), dateStyle);
+                
+                if (vehicleDTO.getCarrier() != null) {
+                    setCellValue(mainRow, col++, vehicleDTO.getCarrier().getCompanyName(), dataStyle);
+                    setCellValue(mainRow, col++, vehicleDTO.getCarrier().getRegistrationAddress(), dataStyle);
+                    setCellValue(mainRow, col++, vehicleDTO.getCarrier().getPhoneNumber(), dataStyle);
+                    setCellValue(mainRow, col++, vehicleDTO.getCarrier().getCode(), dataStyle);
+                    setCellValue(mainRow, col++, vehicleDTO.getCarrier().getAccount(), dataStyle);
+                } else {
+                    setCellValue(mainRow, col++, "", dataStyle);
+                    setCellValue(mainRow, col++, "", dataStyle);
+                    setCellValue(mainRow, col++, "", dataStyle);
+                    setCellValue(mainRow, col++, "", dataStyle);
+                    setCellValue(mainRow, col++, "", dataStyle);
+                }
             }
 
             for (int i = 0; i < headers.length; i++) {

@@ -117,7 +117,7 @@ spring:
         - id: purchase-service
           uri: http://localhost:8093
           predicates:
-            - Path=/api/v1/purchase/**,/api/v1/product/**,/api/v1/warehouse/**,/api/v1/withdrawal-reason/**,/api/v1/driver/**,/api/v1/vehicles/**,/api/v1/carriers/**,/api/v1/exchange-rates/**
+            - Path=/api/v1/purchase/**,/api/v1/product/**,/api/v1/warehouse/**,/api/v1/withdrawal-reason/**,/api/v1/driver/**,/api/v1/vehicles/**,/api/v1/carriers/**,/api/v1/vehicle-senders/**,/api/v1/vehicle-receivers/**,/api/v1/exchange-rates/**
           filters:
             - CustomTokenRelayFilterFactory
 

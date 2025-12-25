@@ -9,6 +9,8 @@ import jakarta.persistence.criteria.Root;
 import lombok.NonNull;
 import org.example.purchaseservice.models.balance.Vehicle;
 import org.example.purchaseservice.models.balance.Carrier;
+import org.example.purchaseservice.models.balance.VehicleSender;
+import org.example.purchaseservice.models.balance.VehicleReceiver;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.util.StringUtils;
@@ -51,11 +53,13 @@ public class VehicleSpecification implements Specification<Vehicle> {
             searchPredicates.add(criteriaBuilder.like(
                     criteriaBuilder.lower(root.get("invoiceEu")), searchTerm));
 
+            Join<Vehicle, VehicleSender> senderJoin = root.join("sender", JoinType.LEFT);
             searchPredicates.add(criteriaBuilder.like(
-                    criteriaBuilder.lower(root.get("sender")), searchTerm));
+                    criteriaBuilder.lower(senderJoin.get("name")), searchTerm));
 
+            Join<Vehicle, VehicleReceiver> receiverJoin = root.join("receiver", JoinType.LEFT);
             searchPredicates.add(criteriaBuilder.like(
-                    criteriaBuilder.lower(root.get("receiver")), searchTerm));
+                    criteriaBuilder.lower(receiverJoin.get("name")), searchTerm));
 
             searchPredicates.add(criteriaBuilder.like(
                     criteriaBuilder.lower(root.get("destinationCountry")), searchTerm));

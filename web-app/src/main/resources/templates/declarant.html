@@ -34,7 +34,7 @@
         <ul>
             <li id="nav-clients" class="dropdown">
                 <a href="#">
-                    Клієнти
+                Клієнти
                     <span class="dropdown-arrow">▼</span>
                 </a>
                 <ul id="client-types-dropdown" class="dropdown-menu" style="display: none;">
@@ -42,7 +42,7 @@
             </li>
             <li id="nav-routes" class="dropdown">
                 <a href="#">
-                    Маршрути
+                Маршрути
                     <span class="dropdown-arrow">▼</span>
                 </a>
                 <ul id="route-types-dropdown" class="dropdown-menu" style="display: none;">
@@ -50,7 +50,7 @@
             </li>
             <li id="nav-purchase" class="dropdown">
                 <a href="#">
-                    Закупівлі
+                Закупівлі
                     <span class="dropdown-arrow">▼</span>
                 </a>
                 <ul id="purchase-types-dropdown" class="dropdown-menu" style="display: none;">
@@ -117,7 +117,7 @@
             </button>
         </div>
     </div>
-
+    
     <div class="content-container">
         <div class="table-card">
             <div class="table-header">
@@ -137,11 +137,13 @@
             </div>
             <div class="table-wrapper">
                 <table class="modern-table resizable-table" id="vehicles-table">
-                    <thead>
-                        <tr>
-                            <th data-column="totalCostEur" class="resizable-header">Загальна вартість</th>
-                            <th data-column="date" class="resizable-header">Дата відвантаження</th>
+        <thead>
+            <tr>
                             <th data-column="vehicleNumber" class="resizable-header">Номер машини</th>
+                            <th data-column="totalExpenses" class="resizable-header">Загальні витрати</th>
+                            <th data-column="totalIncome" class="resizable-header">Загальний дохід</th>
+                            <th data-column="margin" class="resizable-header">Маржа</th>
+                            <th data-column="date" class="resizable-header">Дата відвантаження</th>
                             <th data-column="invoiceUa" class="resizable-header">Інвойс УА</th>
                             <th data-column="invoiceEu" class="resizable-header">Інвойс ЄС</th>
                             <th data-column="isOurVehicle" class="resizable-header">Наше завантаження</th>
@@ -161,14 +163,14 @@
                             <th data-column="unloadingDate" class="resizable-header">Дата вивантаження</th>
                             <th data-column="carrier" class="resizable-header">Перевізник</th>
                             <th data-column="description" class="resizable-header">Коментар</th>
-                        </tr>
-                    </thead>
-                    <tbody id="vehicles-tbody">
+            </tr>
+        </thead>
+        <tbody id="vehicles-tbody">
                         <tr class="loading-row">
-                            <td colspan="21">Завантаження...</td>
+                            <td colspan="24">Завантаження...</td>
                         </tr>
-                    </tbody>
-                </table>
+        </tbody>
+    </table>
             </div>
             <div id="vehicles-pagination" style="padding: 1rem 2rem; border-top: 1px solid var(--border-color); background: var(--bg-secondary);"></div>
         </div>
@@ -183,16 +185,16 @@
             <button class="modal-close" id="vehicles-filter-modal-close">×</button>
         </div>
         <div class="modal-body">
-            <form id="vehicles-filter-form">
+        <form id="vehicles-filter-form">
                 <div class="form-section">
                     <h4 class="section-title">Дата відвантаження</h4>
                     <div class="form-grid">
                         <div class="form-group">
-                            <label for="vehicles-date-from-filter">Дата від:</label>
+                        <label for="vehicles-date-from-filter">Дата від:</label>
                             <input type="date" id="vehicles-date-from-filter" name="date_from" class="form-input">
-                        </div>
+                    </div>
                         <div class="form-group">
-                            <label for="vehicles-date-to-filter">Дата до:</label>
+                        <label for="vehicles-date-to-filter">Дата до:</label>
                             <input type="date" id="vehicles-date-to-filter" name="date_to" class="form-input">
                         </div>
                     </div>
@@ -249,9 +251,9 @@
                                 <span>Наше завантаження</span>
                             </label>
                         </div>
-                    </div>
                 </div>
-            </form>
+            </div>
+        </form>
         </div>
         <div class="modal-footer">
             <button type="button" id="clear-vehicles-filters" class="btn btn-secondary">Очистити</button>
@@ -264,11 +266,11 @@
 <div class="modal-overlay" id="create-vehicle-modal">
     <div class="modal-container modal-large">
         <div class="modal-header">
-            <h3>Створити машину</h3>
+        <h3>Створити машину</h3>
             <button class="modal-close">×</button>
         </div>
         <div class="modal-body">
-            <form id="create-vehicle-form">
+        <form id="create-vehicle-form">
                 <div class="form-section">
                     <h4 class="section-title">Основна інформація</h4>
                     <div class="form-vertical">
@@ -296,14 +298,18 @@
                 <div class="form-section">
                     <h4 class="section-title">Відправка та отримання</h4>
                     <div class="form-vertical">
-                        <div class="form-group">
-                            <label for="vehicle-sender">Відправник</label>
-                            <input type="text" id="vehicle-sender" class="form-input">
-                        </div>
-                        <div class="form-group">
-                            <label for="vehicle-receiver">Отримувач</label>
-                            <input type="text" id="vehicle-receiver" class="form-input">
-                        </div>
+                                    <div class="form-group">
+                                        <label for="vehicle-sender">Відправник</label>
+                                        <select id="vehicle-sender" class="form-input">
+                                            <option value="">Оберіть відправника</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="vehicle-receiver">Отримувач</label>
+                                        <select id="vehicle-receiver" class="form-input">
+                                            <option value="">Оберіть отримувача</option>
+                                        </select>
+                                    </div>
                         <div class="form-group">
                             <label for="vehicle-destination-country">Країна призначення</label>
                             <input type="text" id="vehicle-destination-country" class="form-input">
@@ -439,7 +445,7 @@
 <div class="modal-overlay" id="vehicle-details-modal">
     <div class="modal-container modal-extra-large">
         <div class="modal-header">
-            <h3>Деталі машини</h3>
+        <h3>Деталі машини</h3>
             <button class="modal-close">×</button>
         </div>
         <div class="modal-body">
@@ -476,14 +482,18 @@
                     <div class="form-section">
                         <h4 class="section-title">Відправка та отримання</h4>
                         <div class="form-grid">
-                            <div class="form-group">
-                                <label for="detail-vehicle-sender">Відправник</label>
-                                <input type="text" id="detail-vehicle-sender" class="form-input" disabled>
-                            </div>
-                            <div class="form-group">
-                                <label for="detail-vehicle-receiver">Отримувач</label>
-                                <input type="text" id="detail-vehicle-receiver" class="form-input" disabled>
-                            </div>
+                                <div class="form-group">
+                                    <label for="detail-vehicle-sender">Відправник</label>
+                                    <select id="detail-vehicle-sender" class="form-input" disabled>
+                                        <option value="">Оберіть відправника</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="detail-vehicle-receiver">Отримувач</label>
+                                    <select id="detail-vehicle-receiver" class="form-input" disabled>
+                                        <option value="">Оберіть отримувача</option>
+                                    </select>
+                                </div>
                             <div class="form-group">
                                 <label for="detail-vehicle-destination-country">Країна призначення</label>
                                 <input type="text" id="detail-vehicle-destination-country" class="form-input" disabled>
@@ -629,55 +639,55 @@
                                     <span id="vehicle-total-income">0</span>
                                     <span class="currency">EUR</span>
                                 </div>
-                            </div>
+                </div>
                             <div>
                                 <span class="total-label">Маржа:</span>
                                 <div class="total-value">
                                     <span id="vehicle-margin">0</span>
                                     <span class="currency">EUR</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                </div>
+                </div>
+                </div>
+                </div>
 
-                    <div class="form-actions">
+                <div class="form-actions">
                         <button type="button" class="btn btn-danger" id="delete-vehicle-from-details-btn">🗑️ Видалити машину</button>
                         <button type="button" class="btn btn-secondary" id="edit-vehicle-btn">✏️ Редагувати</button>
                         <button type="submit" class="btn btn-primary" id="save-vehicle-btn" style="display: none;">💾 Зберегти зміни</button>
-                    </div>
-                </form>
-            </div>
+                </div>
+            </form>
+        </div>
 
             <div class="tab-content" id="tab-products">
                 <div class="products-section">
                     <div class="products-header">
-                        <h4>Товари в машині</h4>
+        <h4>Товари в машині</h4>
                     </div>
                     <div class="table-wrapper">
                         <table class="modern-table">
-                            <thead>
-                                <tr>
-                                    <th>Товар</th>
-                                    <th>Склад</th>
-                                    <th>Кількість</th>
-                                    <th>Ціна за кг</th>
-                                    <th>Загальна вартість</th>
-                                    <th>Дата списання</th>
-                                </tr>
-                            </thead>
-                            <tbody id="vehicle-items-tbody">
+            <thead>
+                <tr>
+                    <th>Товар</th>
+                    <th>Склад</th>
+                    <th>Кількість</th>
+                    <th>Ціна за кг</th>
+                    <th>Загальна вартість</th>
+                    <th>Дата списання</th>
+                </tr>
+            </thead>
+            <tbody id="vehicle-items-tbody">
                                 <tr class="loading-row">
                                     <td colspan="6">Завантаження...</td>
                                 </tr>
-                            </tbody>
-                        </table>
+            </tbody>
+        </table>
                     </div>
                     <div class="products-actions">
                         <button class="btn btn-danger" id="delete-vehicle-btn">🗑️ Видалити машину</button>
                     </div>
                 </div>
-            </div>
-
+        </div>
+        
             <div class="tab-content" id="tab-expenses">
                 <div class="expenses-section">
                     <div class="expenses-header">
@@ -706,8 +716,8 @@
                         </table>
                     </div>
                 </div>
-            </div>
         </div>
+            </div>
     </div>
 </div>
 
@@ -730,7 +740,7 @@
                     <label for="expense-category">Категорія *</label>
                     <select id="expense-category" class="form-input" required>
                         <option value="">Оберіть категорію</option>
-                    </select>
+            </select>
                 </div>
                 <div class="form-group">
                     <label for="expense-amount">Сума *</label>
@@ -740,13 +750,13 @@
                     <label for="expense-currency">Валюта *</label>
                     <select id="expense-currency" class="form-input" required>
                         <option value="">Оберіть валюту</option>
-                    </select>
+            </select>
                 </div>
                 <div class="form-group">
                     <label for="expense-description">Опис</label>
                     <textarea id="expense-description" rows="3" class="form-input" placeholder="Опис витрати"></textarea>
                 </div>
-            </form>
+        </form>
         </div>
         <div class="modal-footer">
             <button type="button" class="btn btn-secondary" id="cancel-create-vehicle-expense-btn">Скасувати</button>
@@ -763,17 +773,17 @@
             <button class="modal-close">×</button>
         </div>
         <div class="modal-body">
-            <form id="edit-vehicle-item-form">
+        <form id="edit-vehicle-item-form">
                 <div class="edit-mode-selector">
                     <label class="radio-label">
-                        <input type="radio" name="edit-vehicle-item-mode" value="quantity" checked>
+                    <input type="radio" name="edit-vehicle-item-mode" value="quantity" checked>
                         <span>Змінити кількість</span>
-                    </label>
+                </label>
                     <label class="radio-label">
-                        <input type="radio" name="edit-vehicle-item-mode" value="totalCost">
+                    <input type="radio" name="edit-vehicle-item-mode" value="totalCost">
                         <span>Змінити загальну вартість</span>
-                    </label>
-                </div>
+                </label>
+            </div>
                 <div class="form-group">
                     <label for="edit-vehicle-item-quantity">Нова кількість (кг)</label>
                     <input type="number" id="edit-vehicle-item-quantity" step="0.01" min="0" class="form-input" disabled>
@@ -789,7 +799,7 @@
             <button type="submit" form="edit-vehicle-item-form" class="btn btn-primary">Зберегти</button>
         </div>
     </div>
-</div>
+            </div>
 
 <!-- Manage Carriers Modal -->
 <div class="modal-overlay" id="manage-carriers-modal">
@@ -823,7 +833,7 @@
             </div>
         </div>
     </div>
-</div>
+            </div>
 
 <!-- Create/Edit Carrier Modal -->
 <div class="modal-overlay" id="carrier-form-modal">
@@ -854,8 +864,8 @@
                 <div class="form-group">
                     <label for="carrier-account">Рахунок</label>
                     <input type="text" id="carrier-account" class="form-input">
-                </div>
-            </form>
+            </div>
+        </form>
         </div>
         <div class="modal-footer">
             <button type="button" class="btn btn-secondary" id="cancel-carrier-btn">Скасувати</button>

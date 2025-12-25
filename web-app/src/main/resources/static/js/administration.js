@@ -674,7 +674,9 @@ document.addEventListener('DOMContentLoaded', function () {
     async function loadStorages() {
         try {
             const response = await fetch('/api/v1/warehouse');
-            if (!response.ok) new Error('Error fetching storages');
+            if (!response.ok) {
+                throw new Error('Error fetching storages');
+            }
             const storages = await response.json();
             const storageList = document.getElementById('storageList');
             storageList.innerHTML = '';
@@ -723,7 +725,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 body: JSON.stringify({id, name, description})
             });
 
-            if (!response.ok) new Error('Error updating storage');
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || 'Error updating storage');
+            }
             alert('Склад оновлено!');
             loadStorages();
         } catch (error) {
@@ -737,7 +742,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 method: 'DELETE'
             });
 
-            if (!response.ok) new Error('Error deleting storage');
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || 'Error deleting storage');
+            }
             alert('Склад видалено!');
             loadStorages();
         } catch (error) {
@@ -764,14 +772,21 @@ document.addEventListener('DOMContentLoaded', function () {
                 body: JSON.stringify({name, description})
             });
 
-            if (!response.ok) new Error('Error creating storage');
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                const errorMessage = errorData.message || `Помилка створення складу (${response.status})`;
+                alert(errorMessage);
+                throw new Error(errorMessage);
+            }
             alert('Склад створено!');
             document.getElementById('newStorageName').value = '';
             document.getElementById('newStorageDescription').value = '';
-            /*document.getElementById('newRouteId').value = '';*/
             loadStorages();
         } catch (error) {
             console.error('Error creating storage:', error);
+            if (!error.message.includes('Помилка')) {
+                alert('Помилка створення складу: ' + error.message);
+            }
         }
     });
 
