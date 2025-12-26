@@ -1379,20 +1379,8 @@ function initializeModalClickHandlers() {
 
         if (modal._modalClickHandler) {
             modal.removeEventListener('click', modal._modalClickHandler);
+            modal._modalClickHandler = null;
         }
-
-        modal._modalClickHandler = (e) => {
-            if (e.target === modal) {
-                if (modal.id === 'vehicles-filter-modal') {
-                    modal.classList.remove('open');
-                    document.body.classList.remove('modal-open');
-                } else {
-                    closeModal(modal.id);
-                }
-            }
-        };
-
-        modal.addEventListener('click', modal._modalClickHandler);
     });
 
     document.querySelectorAll('.modal-close').forEach(btn => {

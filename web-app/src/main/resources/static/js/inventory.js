@@ -144,14 +144,8 @@ function initBalanceOperationModal() {
     if (balanceOperationModal) {
         if (balanceOperationModal._modalClickHandler) {
             balanceOperationModal.removeEventListener('click', balanceOperationModal._modalClickHandler);
+            balanceOperationModal._modalClickHandler = null;
         }
-        const handleModalClick = (event) => {
-            if (event.target === balanceOperationModal) {
-                closeBalanceOperationModal();
-            }
-        };
-        balanceOperationModal._modalClickHandler = handleModalClick;
-        balanceOperationModal.addEventListener('click', handleModalClick);
     }
 
     if (balanceOperationForm) {

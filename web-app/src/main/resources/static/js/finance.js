@@ -60,26 +60,19 @@ function initializeTabs() {
 }
 
 function initializeModals() {
-    const modals = [
+    const modalsWithoutClickOutside = [
         document.getElementById('create-transaction-modal'),
-        document.getElementById('view-balances-modal'),
         document.getElementById('edit-transaction-modal'),
         document.getElementById('edit-exchange-rate-modal')
     ];
 
-    modals.forEach(modal => {
+    modalsWithoutClickOutside.forEach(modal => {
         if (!modal) return;
 
         if (modal._modalClickHandler) {
             modal.removeEventListener('click', modal._modalClickHandler);
+            modal._modalClickHandler = null;
         }
-        const handleModalClick = (e) => {
-            if (e.target === modal) {
-                modal.style.display = 'none';
-            }
-        };
-        modal._modalClickHandler = handleModalClick;
-        modal.addEventListener('click', handleModalClick);
     });
 
     document.querySelectorAll('.close').forEach(closeBtn => {
@@ -459,46 +452,6 @@ async function createAccountRow(account, isInBranch) {
     row.appendChild(accountActions);
     
     return row;
-}
-
-async function viewAccountBalances(accountId, accountName) {
-    try {
-        const response = await fetch(`${API_BASE}/accounts/${accountId}/balances`);
-        if (!response.ok) throw new Error('Failed to load balances');
-        const balances = await response.json();
-
-        const balancesAccountName = document.getElementById('balances-account-name');
-        if (balancesAccountName) {
-            balancesAccountName.textContent = `Баланси рахунку: ${accountName || ''}`;
-        }
-        
-        const tbody = document.getElementById('balances-body');
-        if (!tbody) return;
-        tbody.textContent = '';
-
-        balances.forEach(balance => {
-            const row = document.createElement('tr');
-            
-            const currencyCell = document.createElement('td');
-            currencyCell.textContent = balance.currency || '';
-            row.appendChild(currencyCell);
-            
-            const amountCell = document.createElement('td');
-            amountCell.className = 'balance-value';
-            amountCell.textContent = formatNumber(balance.amount);
-            row.appendChild(amountCell);
-            
-            tbody.appendChild(row);
-        });
-
-        const viewBalancesModal = document.getElementById('view-balances-modal');
-        if (viewBalancesModal) {
-            viewBalancesModal.style.display = 'block';
-        }
-    } catch (error) {
-        console.error('Error loading balances:', error);
-        showFinanceMessage('Помилка завантаження балансів', 'error');
-    }
 }
 
 // ========== BRANCHES ==========
