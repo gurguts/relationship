@@ -11,8 +11,7 @@ const transactionTypeMap = {
     'EXTERNAL_EXPENSE': 'Зовнішня витрата',
     'CLIENT_PAYMENT': 'Оплата клієнту',
     'CURRENCY_CONVERSION': 'Конвертація валют',
-    'PURCHASE': 'Закупівля',
-    'VEHICLE_EXPENSE': 'Витрати на машину'
+    'PURCHASE': 'Закупівля'
 };
 
 function escapeHtml(text) {
@@ -1086,7 +1085,7 @@ async function populateTransactionFilters() {
 
     // Load all categories for filter
     try {
-        const types = ['INTERNAL_TRANSFER', 'EXTERNAL_INCOME', 'EXTERNAL_EXPENSE', 'CLIENT_PAYMENT', 'CURRENCY_CONVERSION', 'VEHICLE_EXPENSE'];
+        const types = ['INTERNAL_TRANSFER', 'EXTERNAL_INCOME', 'EXTERNAL_EXPENSE', 'CLIENT_PAYMENT', 'CURRENCY_CONVERSION'];
         const promises = types.map(type => 
             fetch(`${API_BASE}/transaction-categories/type/${type}`)
                 .then(r => r.ok ? r.json() : [])
@@ -1351,10 +1350,6 @@ function handleTransactionTypeChange() {
             conversionReceivedAmountInput.required = true;
         }
         updateConversionExchangeRateDisplay();
-    } else if (type === 'VEHICLE_EXPENSE') {
-        fromAccountGroup.style.display = 'block';
-        currencyGroup.style.display = 'block';
-        amountGroup.style.display = 'block';
     }
     
     // Remove required attribute from received amount for non-transfer types
@@ -1494,12 +1489,6 @@ async function handleCreateTransaction(e) {
             return;
         }
         formData.clientId = parseInt(clientId);
-    } else if (type === 'VEHICLE_EXPENSE') {
-        formData.fromAccountId = parseInt(document.getElementById('from-account').value);
-        const vehicleId = document.getElementById('transaction-vehicle-id')?.value;
-        if (vehicleId) {
-            formData.vehicleId = parseInt(vehicleId);
-        }
     } else if (type === 'CURRENCY_CONVERSION') {
         const accountId = parseInt(document.getElementById('conversion-account').value);
         formData.fromAccountId = accountId;

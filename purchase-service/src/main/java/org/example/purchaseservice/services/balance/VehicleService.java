@@ -43,6 +43,7 @@ public class VehicleService {
     private final VehicleSenderRepository vehicleSenderRepository;
     private final VehicleReceiverRepository vehicleReceiverRepository;
     private final TransactionApiClient transactionApiClient;
+    private final org.example.purchaseservice.services.balance.VehicleExpenseService vehicleExpenseService;
 
     @Transactional
     public Vehicle createVehicle(LocalDate shipmentDate, String vehicleNumber,
@@ -571,8 +572,26 @@ public class VehicleService {
                 vehicleProductRepository.findByVehicleIdIn(vehicleIds).stream()
                         .collect(Collectors.groupingBy(VehicleProduct::getVehicleId));
         
+        // Get expenses for all vehicles in batch
+        Map<Long, List<org.example.purchaseservice.models.balance.VehicleExpense>> expensesMap = vehicleIds.isEmpty() ?
+                Collections.emptyMap() :
+                vehicleExpenseService.getExpensesByVehicleIds(vehicleIds);
+        
+        // Calculate expenses total for each vehicle
+        Map<Long, BigDecimal> expensesTotalMap = expensesMap.entrySet().stream()
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        entry -> entry.getValue().stream()
+                                .filter(e -> e.getConvertedAmount() != null)
+                                .map(org.example.purchaseservice.models.balance.VehicleExpense::getConvertedAmount)
+                                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                ));
+        
         List<VehicleDetailsDTO> dtos = vehicles.stream()
-                .map(vehicle -> mapToDetailsDTO(vehicle, vehicleProductsMap.getOrDefault(vehicle.getId(), Collections.emptyList())))
+                .map(vehicle -> {
+                    BigDecimal expensesTotal = expensesTotalMap.getOrDefault(vehicle.getId(), BigDecimal.ZERO);
+                    return mapToDetailsDTO(vehicle, vehicleProductsMap.getOrDefault(vehicle.getId(), Collections.emptyList()), expensesTotal);
+                })
                 .collect(Collectors.toList());
         
         return new PageResponse<>(
@@ -587,10 +606,20 @@ public class VehicleService {
     @Transactional(readOnly = true)
     public VehicleDetailsDTO mapToDetailsDTO(Vehicle vehicle) {
         List<VehicleProduct> products = vehicleProductRepository.findByVehicleId(vehicle.getId());
-        return mapToDetailsDTO(vehicle, products);
+        // Calculate expenses total from VehicleExpense
+        BigDecimal expensesTotal = BigDecimal.ZERO;
+        List<org.example.purchaseservice.models.balance.VehicleExpense> expenses = vehicleExpenseService.getExpensesByVehicleId(vehicle.getId());
+        if (expenses != null && !expenses.isEmpty()) {
+            for (org.example.purchaseservice.models.balance.VehicleExpense expense : expenses) {
+                if (expense.getConvertedAmount() != null) {
+                    expensesTotal = expensesTotal.add(expense.getConvertedAmount());
+                }
+            }
+        }
+        return mapToDetailsDTO(vehicle, products, expensesTotal);
     }
     
-    private VehicleDetailsDTO mapToDetailsDTO(Vehicle vehicle, List<VehicleProduct> products) {
+    private VehicleDetailsDTO mapToDetailsDTO(Vehicle vehicle, List<VehicleProduct> products, BigDecimal expensesTotal) {
         
         List<VehicleDetailsDTO.VehicleItemDTO> items = products.stream()
                 .map(p -> VehicleDetailsDTO.VehicleItemDTO.builder()
@@ -654,23 +683,64 @@ public class VehicleService {
                 .invoiceEuPricePerTon(vehicle.getInvoiceEuPricePerTon())
                 .invoiceEuTotalPrice(vehicle.getInvoiceEuTotalPrice())
                 .reclamation(vehicle.getReclamation())
-                .totalExpenses(calculateTotalExpenses(vehicle, BigDecimal.ZERO))
+                .totalExpenses(calculateTotalExpensesFromItems(items, expensesTotal))
                 .totalIncome(calculateTotalIncome(vehicle))
-                .margin(calculateMargin(vehicle, BigDecimal.ZERO))
+                .margin(calculateMargin(vehicle, expensesTotal))
                 .carrier(carrierDTO)
                 .items(items)
                 .build();
     }
     
     public BigDecimal calculateTotalExpenses(Vehicle vehicle, BigDecimal expensesTotal) {
-        BigDecimal totalCostEur = vehicle.getTotalCostEur() != null ? vehicle.getTotalCostEur() : BigDecimal.ZERO;
+        // Get products from repository
+        List<VehicleProduct> products = vehicleProductRepository.findByVehicleId(vehicle.getId());
+        BigDecimal totalCostEur = BigDecimal.ZERO;
+        if (products != null && !products.isEmpty()) {
+            for (VehicleProduct product : products) {
+                if (product.getTotalCostEur() != null) {
+                    totalCostEur = totalCostEur.add(product.getTotalCostEur());
+                }
+            }
+        }
+        return totalCostEur.add(expensesTotal);
+    }
+    
+    public BigDecimal calculateTotalExpensesFromItems(List<VehicleDetailsDTO.VehicleItemDTO> items, BigDecimal expensesTotal) {
+        BigDecimal totalCostEur = BigDecimal.ZERO;
+        if (items != null && !items.isEmpty()) {
+            for (VehicleDetailsDTO.VehicleItemDTO item : items) {
+                if (item.getTotalCostEur() != null) {
+                    totalCostEur = totalCostEur.add(item.getTotalCostEur());
+                }
+            }
+        }
         return totalCostEur.add(expensesTotal);
     }
     
     public BigDecimal calculateTotalIncome(Vehicle vehicle) {
         BigDecimal invoiceEuTotalPrice = vehicle.getInvoiceEuTotalPrice() != null ? vehicle.getInvoiceEuTotalPrice() : BigDecimal.ZERO;
-        BigDecimal reclamation = vehicle.getReclamation() != null ? vehicle.getReclamation() : BigDecimal.ZERO;
-        return invoiceEuTotalPrice.subtract(reclamation);
+        BigDecimal fullReclamation = calculateFullReclamation(vehicle);
+        return invoiceEuTotalPrice.subtract(fullReclamation);
+    }
+    
+    public BigDecimal calculateFullReclamation(Vehicle vehicle) {
+        BigDecimal reclamationPerTon = vehicle.getReclamation() != null ? vehicle.getReclamation() : BigDecimal.ZERO;
+        if (reclamationPerTon.compareTo(BigDecimal.ZERO) == 0) {
+            return BigDecimal.ZERO;
+        }
+        
+        String productQuantityStr = vehicle.getProductQuantity();
+        if (productQuantityStr == null || productQuantityStr.trim().isEmpty()) {
+            return BigDecimal.ZERO;
+        }
+        
+        try {
+            BigDecimal quantityInTons = new BigDecimal(productQuantityStr.replace(",", "."));
+            return reclamationPerTon.multiply(quantityInTons).setScale(6, java.math.RoundingMode.HALF_UP);
+        } catch (NumberFormatException e) {
+            log.warn("Failed to parse productQuantity: {}", productQuantityStr, e);
+            return BigDecimal.ZERO;
+        }
     }
     
     public BigDecimal calculateMargin(Vehicle vehicle, BigDecimal expensesTotal) {

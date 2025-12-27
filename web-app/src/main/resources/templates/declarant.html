@@ -330,7 +330,7 @@
                         </div>
                         <div class="form-group">
                             <label for="vehicle-product-quantity">Кількість товару (в тоннах)</label>
-                            <input type="text" id="vehicle-product-quantity" class="form-input">
+                            <input type="number" id="vehicle-product-quantity" class="form-input" step="0.000001" min="0">
                         </div>
                     </div>
                 </div>
@@ -377,7 +377,7 @@
                             <input type="number" id="vehicle-invoice-eu-total-price" step="0.000001" min="0" class="form-input" readonly>
                         </div>
                         <div class="form-group">
-                            <label for="vehicle-reclamation">Рекламація (EUR)</label>
+                            <label for="vehicle-reclamation">Рекламація за т (EUR)</label>
                             <input type="number" id="vehicle-reclamation" step="0.000001" min="0" class="form-input">
                         </div>
                     </div>
@@ -514,7 +514,7 @@
                             </div>
                             <div class="form-group">
                                 <label for="detail-vehicle-product-quantity">Кількість товару (в тоннах)</label>
-                                <input type="text" id="detail-vehicle-product-quantity" class="form-input" disabled>
+                                <input type="number" id="detail-vehicle-product-quantity" class="form-input" step="0.000001" min="0" disabled>
                             </div>
                         </div>
                     </div>
@@ -561,8 +561,12 @@
                                 <input type="number" id="detail-vehicle-invoice-eu-total-price" step="0.000001" min="0" class="form-input" readonly disabled>
                             </div>
                             <div class="form-group">
-                                <label for="detail-vehicle-reclamation">Рекламація (EUR)</label>
+                                <label for="detail-vehicle-reclamation">Рекламація за т (EUR)</label>
                                 <input type="number" id="detail-vehicle-reclamation" step="0.000001" min="0" class="form-input" disabled>
+                            </div>
+                            <div class="form-group">
+                                <label for="detail-vehicle-full-reclamation">Повна рекламація (EUR)</label>
+                                <input type="number" id="detail-vehicle-full-reclamation" step="0.000001" min="0" class="form-input" readonly disabled>
                             </div>
                         </div>
                     </div>
@@ -706,6 +710,7 @@
                                     <th>Категорія</th>
                                     <th>Рахунок</th>
                                     <th>Опис</th>
+                                    <th>Дії</th>
                                 </tr>
                             </thead>
                             <tbody id="vehicle-expenses-tbody">
@@ -729,6 +734,17 @@
             <button class="modal-close">×</button>
         </div>
         <div class="modal-body">
+            <div id="vehicle-expense-exchange-rate-warning" style="display: none; background-color: #fff3cd; border: 2px solid #ffc107; border-radius: 8px; padding: 15px; margin-bottom: 20px; color: #856404;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink: 0;">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" fill="#856404"/>
+                    </svg>
+                    <div>
+                        <strong style="font-size: 16px; display: block; margin-bottom: 5px;">⚠️ УВАГА: Курс валют не актуальний!</strong>
+                        <div style="font-size: 14px;">Курс валют не оновлювався сьогодні. Будь ласка, попросіть бухгалтера оновити курс валют перед створенням витрати на машину.</div>
+                    </div>
+                </div>
+            </div>
             <form id="create-vehicle-expense-form">
                 <div class="form-group">
                     <label for="expense-from-account">З рахунку *</label>
@@ -761,6 +777,61 @@
         <div class="modal-footer">
             <button type="button" class="btn btn-secondary" id="cancel-create-vehicle-expense-btn">Скасувати</button>
             <button type="submit" form="create-vehicle-expense-form" class="btn btn-primary">Створити</button>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Vehicle Expense Modal -->
+<div class="modal-overlay" id="edit-vehicle-expense-modal">
+    <div class="modal-container">
+        <div class="modal-header">
+            <h3>Редагувати витрату на машину</h3>
+            <button class="modal-close">×</button>
+        </div>
+        <div class="modal-body">
+            <div id="edit-vehicle-expense-exchange-rate-warning" style="display: none; background-color: #fff3cd; border: 2px solid #ffc107; border-radius: 8px; padding: 15px; margin-bottom: 20px; color: #856404;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink: 0;">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" fill="#856404"/>
+                    </svg>
+                    <div>
+                        <strong style="font-size: 16px; display: block; margin-bottom: 5px;">⚠️ УВАГА: Курс валют не актуальний!</strong>
+                        <div style="font-size: 14px;">Курс валют не оновлювався сьогодні. Будь ласка, попросіть бухгалтера оновити курс валют перед редагуванням витрати на машину.</div>
+                    </div>
+                </div>
+            </div>
+            <form id="edit-vehicle-expense-form">
+                <div class="form-group">
+                    <label for="edit-expense-from-account">З рахунку *</label>
+                    <select id="edit-expense-from-account" class="form-input" required>
+                        <option value="">Оберіть рахунок</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="edit-expense-category">Категорія *</label>
+                    <select id="edit-expense-category" class="form-input" required>
+                        <option value="">Оберіть категорію</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="edit-expense-amount">Сума *</label>
+                    <input type="number" id="edit-expense-amount" step="0.01" min="0.01" class="form-input" placeholder="Сума" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-expense-currency">Валюта *</label>
+                    <select id="edit-expense-currency" class="form-input" required>
+                        <option value="">Оберіть валюту</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="edit-expense-description">Опис</label>
+                    <textarea id="edit-expense-description" rows="3" class="form-input" placeholder="Опис витрати"></textarea>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" id="cancel-edit-vehicle-expense-btn">Скасувати</button>
+            <button type="submit" form="edit-vehicle-expense-form" class="btn btn-primary">Зберегти</button>
         </div>
     </div>
 </div>

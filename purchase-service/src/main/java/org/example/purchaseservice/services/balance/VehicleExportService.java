@@ -1,11 +1,9 @@
 package org.example.purchaseservice.services.balance;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import org.example.purchaseservice.clients.TransactionApiClient;
 import org.example.purchaseservice.models.Product;
 import org.example.purchaseservice.models.balance.Vehicle;
 import org.example.purchaseservice.models.dto.balance.VehicleDetailsDTO;
@@ -20,10 +18,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.format.DateTimeFormatter;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -32,10 +27,11 @@ import java.util.stream.Collectors;
 public class VehicleExportService {
     private final VehicleRepository vehicleRepository;
     private final VehicleService vehicleService;
-    private final TransactionApiClient transactionApiClient;
-    private final ObjectMapper objectMapper;
+    private final org.example.purchaseservice.services.balance.VehicleExpenseService vehicleExpenseService;
     private final ProductRepository productRepository;
     private final VehicleProductRepository vehicleProductRepository;
+    private final org.example.purchaseservice.clients.TransactionCategoryClient transactionCategoryClient;
+    private final org.example.purchaseservice.clients.AccountClient accountClient;
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy");
 
@@ -89,25 +85,6 @@ public class VehicleExportService {
             numberStyle.setDataFormat(createHelper.createDataFormat().getFormat("#,##0.00"));
 
             Row headerRow = sheet.createRow(0);
-            String[] headers = {
-                    "Товари зі складу", "Сума товарів зі складу (EUR)",
-                    "Витрати на машину", "Сума витрат на машину (EUR)",
-                    "Товар", "Кількість товару",
-                    "Інвойс UA", "Дата інвойсу UA", "Ціна за тонну інвойсу UA", "Повна ціна інвойсу UA",
-                    "Інвойс EU", "Дата інвойсу EU", "Ціна за тонну інвойсу EU", "Повна ціна інвойсу EU", "Рекламація",
-                    "Загальні витрати (EUR)", "Загальний дохід (EUR)", "Маржа",
-                    "ID", "Дата відвантаження", "Номер машини", "Опис",
-                    "Наше завантаження", "Відправник", "Отримувач", "Країна призначення", "Місце призначення",
-                    "Номер декларації", "Термінал", "Водій (ПІБ)", "EUR1", "FITO",
-                    "Дата митниці", "Дата розмитнення", "Дата вивантаження",
-                    "Перевізник (назва)", "Перевізник (адреса)", "Перевізник (телефон)", "Перевізник (код)", "Перевізник (рахунок)"
-            };
-
-            for (int i = 0; i < headers.length; i++) {
-                Cell cell = headerRow.createCell(i);
-                cell.setCellValue(headers[i]);
-                cell.setCellStyle(headerStyle);
-            }
 
             List<Long> vehicleIds = vehicles.stream()
                     .map(Vehicle::getId)
@@ -127,12 +104,115 @@ public class VehicleExportService {
                     ((List<Product>) productRepository.findAllById(productIds)).stream()
                             .collect(Collectors.toMap(Product::getId, product -> product));
             
-            Map<Long, List<Map<String, Object>>> transactionsMap = getVehicleTransactionsBatch(vehicleIds);
+            Map<Long, List<org.example.purchaseservice.models.balance.VehicleExpense>> expensesMap = vehicleExpenseService.getExpensesByVehicleIds(vehicleIds);
+            
+            Set<Long> categoryIds = expensesMap.values().stream()
+                    .filter(Objects::nonNull)
+                    .flatMap(List::stream)
+                    .map(org.example.purchaseservice.models.balance.VehicleExpense::getCategoryId)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toSet());
+            
+            Set<Long> accountIds = expensesMap.values().stream()
+                    .filter(Objects::nonNull)
+                    .flatMap(List::stream)
+                    .map(org.example.purchaseservice.models.balance.VehicleExpense::getFromAccountId)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toSet());
+            
+            Map<Long, String> accountNameMap = new HashMap<>();
+            if (!accountIds.isEmpty()) {
+                try {
+                    List<org.example.purchaseservice.models.dto.account.AccountDTO> accounts = accountClient.getAllAccounts();
+                    for (org.example.purchaseservice.models.dto.account.AccountDTO account : accounts) {
+                        if (accountIds.contains(account.getId())) {
+                            accountNameMap.put(account.getId(), account.getName());
+                        }
+                    }
+                } catch (Exception e) {
+                    log.warn("Failed to get account names: {}", e.getMessage());
+                }
+            }
+            
+            Map<Long, String> categoryNameMap = new HashMap<>();
+            for (Long categoryId : categoryIds) {
+                try {
+                    Map<String, Object> category = transactionCategoryClient.getCategoryById(categoryId);
+                    if (category != null && category.containsKey("name")) {
+                        categoryNameMap.put(categoryId, (String) category.get("name"));
+                    } else {
+                        categoryNameMap.put(categoryId, "Категорія #" + categoryId);
+                    }
+                } catch (Exception e) {
+                    log.warn("Failed to get category name for categoryId {}: {}", categoryId, e.getMessage());
+                    categoryNameMap.put(categoryId, "Категорія #" + categoryId);
+                }
+            }
+            
+            List<Long> sortedCategoryIds = categoryIds.stream()
+                    .sorted((id1, id2) -> {
+                        String name1 = categoryNameMap.getOrDefault(id1, "");
+                        String name2 = categoryNameMap.getOrDefault(id2, "");
+                        return name1.compareToIgnoreCase(name2);
+                    })
+                    .collect(Collectors.toList());
+            
+            List<String> headerList = new ArrayList<>();
+            headerList.add("Сума товарів зі складу (EUR)");
+            headerList.add("Сума витрат на машину (EUR)");
+            headerList.add("Товар");
+            headerList.add("Кількість товару");
+            headerList.add("Інвойс UA");
+            headerList.add("Дата інвойсу UA");
+            headerList.add("Ціна за тонну інвойсу UA");
+            headerList.add("Повна ціна інвойсу UA");
+            headerList.add("Інвойс EU");
+            headerList.add("Дата інвойсу EU");
+            headerList.add("Ціна за тонну інвойсу EU");
+            headerList.add("Повна ціна інвойсу EU");
+            headerList.add("Рекламація за т");
+            headerList.add("Повна рекламація");
+            headerList.add("Загальні витрати (EUR)");
+            headerList.add("Загальний дохід (EUR)");
+            headerList.add("Маржа");
+            headerList.add("Товари зі складу");
+            for (Long categoryId : sortedCategoryIds) {
+                String categoryName = categoryNameMap.get(categoryId);
+                headerList.add("Витрата: " + categoryName);
+            }
+            headerList.add("ID");
+            headerList.add("Дата відвантаження");
+            headerList.add("Номер машини");
+            headerList.add("Опис");
+            headerList.add("Наше завантаження");
+            headerList.add("Відправник");
+            headerList.add("Отримувач");
+            headerList.add("Країна призначення");
+            headerList.add("Місце призначення");
+            headerList.add("Номер декларації");
+            headerList.add("Термінал");
+            headerList.add("Водій (ПІБ)");
+            headerList.add("EUR1");
+            headerList.add("FITO");
+            headerList.add("Дата митниці");
+            headerList.add("Дата розмитнення");
+            headerList.add("Дата вивантаження");
+            headerList.add("Перевізник (назва)");
+            headerList.add("Перевізник (адреса)");
+            headerList.add("Перевізник (телефон)");
+            headerList.add("Перевізник (код)");
+            headerList.add("Перевізник (рахунок)");
+            
+            for (int i = 0; i < headerList.size(); i++) {
+                Cell cell = headerRow.createCell(i);
+                cell.setCellValue(headerList.get(i));
+                cell.setCellStyle(headerStyle);
+            }
             
             int rowNum = 1;
             for (Vehicle vehicle : vehicles) {
                 VehicleDetailsDTO vehicleDTO = vehicleService.mapToDetailsDTO(vehicle);
-                List<Map<String, Object>> transactions = transactionsMap.getOrDefault(vehicle.getId(), Collections.emptyList());
+                List<org.example.purchaseservice.models.balance.VehicleExpense> expenses = expensesMap.getOrDefault(vehicle.getId(), Collections.emptyList());
 
                 Row mainRow = sheet.createRow(rowNum++);
 
@@ -153,31 +233,17 @@ public class VehicleExportService {
                                 formatNumber(item.getTotalCostEur())));
                     }
                 }
-                setCellValue(mainRow, col++, productsText.toString(), dataStyle);
-                setCellValue(mainRow, col++, productsTotalCost, numberStyle);
-
-                StringBuilder expensesText = new StringBuilder();
                 BigDecimal expensesTotal = BigDecimal.ZERO;
-                if (transactions != null && !transactions.isEmpty()) {
-                    for (Map<String, Object> transaction : transactions) {
-                        if (expensesText.length() > 0) expensesText.append("\n");
-                        BigDecimal amount = getBigDecimal(transaction.get("amount"));
-                        String currency = (String) transaction.get("currency");
-                        BigDecimal exchangeRate = getBigDecimal(transaction.get("exchangeRate"));
-                        BigDecimal convertedAmount = getBigDecimal(transaction.get("convertedAmount"));
-                        String description = (String) transaction.get("description");
+                if (expenses != null && !expenses.isEmpty()) {
+                    for (org.example.purchaseservice.models.balance.VehicleExpense expense : expenses) {
+                        BigDecimal convertedAmount = expense.getConvertedAmount();
                         if (convertedAmount != null) {
                             expensesTotal = expensesTotal.add(convertedAmount);
                         }
-                        expensesText.append(String.format("%s %s (курс: %s) = %s EUR%s",
-                                formatNumber(amount),
-                                currency != null ? currency : "",
-                                exchangeRate != null ? formatNumber(exchangeRate) : "",
-                                convertedAmount != null ? formatNumber(convertedAmount) : "",
-                                description != null && !description.isEmpty() ? " - " + description : ""));
                     }
                 }
-                setCellValue(mainRow, col++, expensesText.toString(), dataStyle);
+                
+                setCellValue(mainRow, col++, productsTotalCost, numberStyle);
                 setCellValue(mainRow, col++, expensesTotal, numberStyle);
 
                 setCellValue(mainRow, col++, vehicleDTO.getProduct(), dataStyle);
@@ -192,17 +258,70 @@ public class VehicleExportService {
                 setCellValue(mainRow, col++, vehicleDTO.getInvoiceEuDate(), dateStyle);
                 setCellValue(mainRow, col++, vehicleDTO.getInvoiceEuPricePerTon(), numberStyle);
                 setCellValue(mainRow, col++, vehicleDTO.getInvoiceEuTotalPrice(), numberStyle);
-                setCellValue(mainRow, col++, vehicleDTO.getReclamation(), numberStyle);
+                BigDecimal reclamationPerTon = vehicleDTO.getReclamation() != null ? vehicleDTO.getReclamation() : BigDecimal.ZERO;
+                BigDecimal fullReclamation = BigDecimal.ZERO;
+                if (reclamationPerTon.compareTo(BigDecimal.ZERO) > 0 && vehicleDTO.getProductQuantity() != null && !vehicleDTO.getProductQuantity().trim().isEmpty()) {
+                    try {
+                        BigDecimal quantityInTons = new BigDecimal(vehicleDTO.getProductQuantity().replace(",", "."));
+                        fullReclamation = reclamationPerTon.multiply(quantityInTons).setScale(6, java.math.RoundingMode.HALF_UP);
+                    } catch (NumberFormatException e) {
+                        log.warn("Failed to parse productQuantity for reclamation calculation: {}", vehicleDTO.getProductQuantity(), e);
+                    }
+                }
+                setCellValue(mainRow, col++, reclamationPerTon, numberStyle);
+                setCellValue(mainRow, col++, fullReclamation, numberStyle);
 
                 BigDecimal totalExpenses = productsTotalCost.add(expensesTotal);
                 BigDecimal invoiceEuTotalPrice = vehicleDTO.getInvoiceEuTotalPrice() != null ? vehicleDTO.getInvoiceEuTotalPrice() : BigDecimal.ZERO;
-                BigDecimal reclamation = vehicleDTO.getReclamation() != null ? vehicleDTO.getReclamation() : BigDecimal.ZERO;
-                BigDecimal totalIncome = invoiceEuTotalPrice.subtract(reclamation);
+                BigDecimal totalIncome = invoiceEuTotalPrice.subtract(fullReclamation);
                 BigDecimal margin = totalIncome.subtract(totalExpenses);
 
                 setCellValue(mainRow, col++, totalExpenses, numberStyle);
                 setCellValue(mainRow, col++, totalIncome, numberStyle);
                 setCellValue(mainRow, col++, margin, numberStyle);
+
+                setCellValue(mainRow, col++, productsText.toString(), dataStyle);
+                
+                Map<Long, List<org.example.purchaseservice.models.balance.VehicleExpense>> expensesByCategoryMap = new HashMap<>();
+                if (expenses != null && !expenses.isEmpty()) {
+                    for (org.example.purchaseservice.models.balance.VehicleExpense expense : expenses) {
+                        Long categoryId = expense.getCategoryId();
+                        if (categoryId != null) {
+                            expensesByCategoryMap.computeIfAbsent(categoryId, k -> new ArrayList<>()).add(expense);
+                        }
+                    }
+                }
+                
+                for (Long categoryId : sortedCategoryIds) {
+                    List<org.example.purchaseservice.models.balance.VehicleExpense> categoryExpenses = expensesByCategoryMap.getOrDefault(categoryId, Collections.emptyList());
+                    StringBuilder expenseDetails = new StringBuilder();
+                    if (!categoryExpenses.isEmpty()) {
+                        for (org.example.purchaseservice.models.balance.VehicleExpense expense : categoryExpenses) {
+                            if (expenseDetails.length() > 0) expenseDetails.append("\n");
+                            
+                            String accountName = "";
+                            if (expense.getFromAccountId() != null) {
+                                accountName = accountNameMap.getOrDefault(expense.getFromAccountId(), "Рахунок #" + expense.getFromAccountId());
+                            }
+                            
+                            String currency = expense.getCurrency() != null ? expense.getCurrency() : "";
+                            String exchangeRate = expense.getExchangeRate() != null ? formatNumber(expense.getExchangeRate()) : "";
+                            String description = expense.getDescription() != null && !expense.getDescription().isEmpty() ? expense.getDescription() : "";
+                            String amountEur = expense.getConvertedAmount() != null ? formatNumber(expense.getConvertedAmount()) + " EUR" : "";
+                            String originalAmount = expense.getAmount() != null ? formatNumber(expense.getAmount()) : "";
+                            
+                            expenseDetails.append(String.format("%s %s (курс: %s) = %s", 
+                                    originalAmount, currency, exchangeRate, amountEur));
+                            if (!accountName.isEmpty()) {
+                                expenseDetails.append(", Рахунок: ").append(accountName);
+                            }
+                            if (!description.isEmpty()) {
+                                expenseDetails.append(", Опис: ").append(description);
+                            }
+                        }
+                    }
+                    setCellValue(mainRow, col++, expenseDetails.toString(), dataStyle);
+                }
 
                 setCellValue(mainRow, col++, vehicleDTO.getId(), dataStyle);
                 setCellValue(mainRow, col++, vehicleDTO.getShipmentDate(), dateStyle);
@@ -237,34 +356,13 @@ public class VehicleExportService {
                 }
             }
 
-            for (int i = 0; i < headers.length; i++) {
+            for (int i = 0; i < headerList.size(); i++) {
                 sheet.autoSizeColumn(i);
             }
 
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
             workbook.write(outputStream);
             return outputStream.toByteArray();
-        }
-    }
-
-    @SuppressWarnings("unchecked")
-    private Map<Long, List<Map<String, Object>>> getVehicleTransactionsBatch(List<Long> vehicleIds) {
-        if (vehicleIds == null || vehicleIds.isEmpty()) {
-            return Collections.emptyMap();
-        }
-        try {
-            Map<Long, List<?>> transactionsMap = transactionApiClient.getTransactionsByVehicleIds(vehicleIds);
-            return transactionsMap.entrySet().stream()
-                    .collect(Collectors.toMap(
-                            Map.Entry::getKey,
-                            e -> e.getValue().stream()
-                                    .map(t -> objectMapper.convertValue(t, Map.class))
-                                    .map(m -> (Map<String, Object>) m)
-                                    .toList()
-                    ));
-        } catch (Exception e) {
-            log.warn("Failed to get transactions batch for vehicles: {}", e.getMessage());
-            return Collections.emptyMap();
         }
     }
 
@@ -287,17 +385,6 @@ public class VehicleExportService {
     private String formatNumber(BigDecimal value) {
         if (value == null) return "";
         return String.format("%.2f", value);
-    }
-
-    private BigDecimal getBigDecimal(Object value) {
-        if (value == null) return null;
-        if (value instanceof BigDecimal) return (BigDecimal) value;
-        if (value instanceof Number) return BigDecimal.valueOf(((Number) value).doubleValue());
-        try {
-            return new BigDecimal(value.toString());
-        } catch (Exception e) {
-            return null;
-        }
     }
 
     private String getProductName(Long productId, Map<Long, Product> productMap) {

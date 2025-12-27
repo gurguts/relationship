@@ -179,7 +179,8 @@ public class AccountTransactionService {
             case CURRENCY_CONVERSION:
                 return createCurrencyConversion(transaction);
             case VEHICLE_EXPENSE:
-                return createVehicleExpense(transaction);
+                throw new TransactionException("VEHICLE_EXPENSE_NOT_SUPPORTED", 
+                        "Vehicle expenses should be created through the vehicle expense endpoint, not as financial transactions");
             default:
                 throw new TransactionException("UNSUPPORTED_TRANSACTION_TYPE", String.format("Unsupported transaction type: %s", type));
         }

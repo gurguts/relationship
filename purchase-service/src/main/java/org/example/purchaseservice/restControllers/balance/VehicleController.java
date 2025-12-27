@@ -13,8 +13,11 @@ import org.example.purchaseservice.models.dto.balance.AddProductToVehicleDTO;
 import org.example.purchaseservice.models.dto.balance.CarrierDetailsDTO;
 import org.example.purchaseservice.models.dto.balance.VehicleCreateDTO;
 import org.example.purchaseservice.models.dto.balance.VehicleDetailsDTO;
+import org.example.purchaseservice.models.dto.balance.VehicleExpenseCreateDTO;
+import org.example.purchaseservice.models.dto.balance.VehicleExpenseUpdateDTO;
 import org.example.purchaseservice.models.dto.balance.VehicleProductUpdateDTO;
 import org.example.purchaseservice.models.dto.balance.VehicleUpdateDTO;
+import org.example.purchaseservice.models.balance.VehicleExpense;
 import org.example.purchaseservice.services.balance.VehicleService;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -44,6 +47,7 @@ public class VehicleController {
     private final VehicleService vehicleService;
     private final ObjectMapper objectMapper;
     private final org.example.purchaseservice.services.balance.VehicleExportService vehicleExportService;
+    private final org.example.purchaseservice.services.balance.VehicleExpenseService vehicleExpenseService;
     
     @PreAuthorize("hasAuthority('warehouse:create') or hasAuthority('declarant:create')")
     @PostMapping
@@ -300,6 +304,17 @@ public class VehicleController {
                         .build())
                 .collect(Collectors.toList());
         
+        // Calculate expenses total from VehicleExpense
+        java.math.BigDecimal expensesTotal = java.math.BigDecimal.ZERO;
+        List<VehicleExpense> expenses = vehicleExpenseService.getExpensesByVehicleId(vehicle.getId());
+        if (expenses != null && !expenses.isEmpty()) {
+            for (VehicleExpense expense : expenses) {
+                if (expense.getConvertedAmount() != null) {
+                    expensesTotal = expensesTotal.add(expense.getConvertedAmount());
+                }
+            }
+        }
+        
         CarrierDetailsDTO carrierDTO = null;
         if (vehicle.getCarrier() != null) {
             Carrier carrier = vehicle.getCarrier();
@@ -349,12 +364,39 @@ public class VehicleController {
                 .invoiceEuPricePerTon(vehicle.getInvoiceEuPricePerTon())
                 .invoiceEuTotalPrice(vehicle.getInvoiceEuTotalPrice())
                 .reclamation(vehicle.getReclamation())
-                .totalExpenses(vehicleService.calculateTotalExpenses(vehicle, java.math.BigDecimal.ZERO))
+                .totalExpenses(vehicleService.calculateTotalExpenses(vehicle, expensesTotal))
                 .totalIncome(vehicleService.calculateTotalIncome(vehicle))
-                .margin(vehicleService.calculateMargin(vehicle, java.math.BigDecimal.ZERO))
+                .margin(vehicleService.calculateMargin(vehicle, expensesTotal))
                 .carrier(carrierDTO)
                 .items(items)
                 .build();
+    }
+    
+    @PreAuthorize("hasAuthority('declarant:view')")
+    @PostMapping("/{vehicleId}/expenses")
+    public ResponseEntity<VehicleExpense> createVehicleExpense(
+            @PathVariable Long vehicleId,
+            @Valid @RequestBody VehicleExpenseCreateDTO dto) {
+        dto.setVehicleId(vehicleId);
+        VehicleExpense expense = vehicleExpenseService.createVehicleExpense(dto);
+        return ResponseEntity.ok(expense);
+    }
+    
+    @PreAuthorize("hasAuthority('declarant:view')")
+    @GetMapping("/{vehicleId}/expenses")
+    public ResponseEntity<List<VehicleExpense>> getVehicleExpenses(@PathVariable Long vehicleId) {
+        List<VehicleExpense> expenses = vehicleExpenseService.getExpensesByVehicleId(vehicleId);
+        return ResponseEntity.ok(expenses);
+    }
+    
+    @PreAuthorize("hasAuthority('declarant:create')")
+    @PutMapping("/{vehicleId}/expenses/{expenseId}")
+    public ResponseEntity<VehicleExpense> updateVehicleExpense(
+            @PathVariable Long vehicleId,
+            @PathVariable Long expenseId,
+            @Valid @RequestBody VehicleExpenseUpdateDTO dto) {
+        VehicleExpense expense = vehicleExpenseService.updateVehicleExpense(expenseId, dto);
+        return ResponseEntity.ok(expense);
     }
 }
 
