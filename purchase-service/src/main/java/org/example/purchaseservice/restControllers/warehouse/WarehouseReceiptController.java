@@ -79,8 +79,7 @@ public class WarehouseReceiptController {
 
         return ResponseEntity.ok(balanceWarehouseDTO);
     }
-    
-    // Keep old endpoint /entries for backward compatibility (will be deprecated)
+
     @Deprecated
     @PreAuthorize("hasAuthority('warehouse:view')")
     @GetMapping("/entries")

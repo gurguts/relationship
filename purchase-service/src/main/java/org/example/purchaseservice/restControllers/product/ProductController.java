@@ -26,7 +26,7 @@ public class ProductController {
     private final IProductService productService;
     private final ProductMapper productMapper;
 
-    @PreAuthorize("hasAuthority('settings:edit')")
+    @PreAuthorize("hasAuthority('settings_product:create')")
     @PostMapping
     public ResponseEntity<ProductDTO> createProduct(@Valid @RequestBody ProductCreateDTO productCreateDTO) {
         Product product = productMapper.productCreateDTOToProduct(productCreateDTO);
@@ -39,7 +39,7 @@ public class ProductController {
         return ResponseEntity.created(location).body(createdProductDTO);
     }
 
-    @PreAuthorize("hasAuthority('settings:edit')")
+    @PreAuthorize("hasAuthority('settings_product:create')")
     @PutMapping("/{id}")
     public ResponseEntity<ProductDTO> updateProduct(@PathVariable Long id,
                                                     @Valid @RequestBody ProductUpdateDTO productUpdateDTO) {
@@ -49,7 +49,7 @@ public class ProductController {
         return ResponseEntity.ok(updatedProductDTO);
     }
 
-    @PreAuthorize("hasAuthority('settings:edit')")
+    @PreAuthorize("hasAuthority('settings_product:delete')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteProduct(@PathVariable Long id) {
         productService.deleteProduct(id);

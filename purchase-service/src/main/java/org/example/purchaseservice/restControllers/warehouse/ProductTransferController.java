@@ -34,22 +34,8 @@ public class ProductTransferController {
     private final org.example.purchaseservice.repositories.ProductRepository productRepository;
     private final org.example.purchaseservice.repositories.WarehouseRepository warehouseRepository;
     private final org.example.purchaseservice.repositories.WithdrawalReasonRepository withdrawalReasonRepository;
-    
-    /**
-     * Transfer product from one product to another within the same warehouse
-     * Price is automatically taken from the source product's average price
-     * 
-     * POST /api/v1/warehouse/transfer
-     * Body: {
-     *   "warehouseId": 1,
-     *   "fromProductId": 5,
-     *   "toProductId": 7,
-     *   "quantity": 10.5,
-     *   "transferDate": "2025-11-10",
-     *   "withdrawalReasonId": 2,
-     *   "description": "Converting product type"
-     * }
-     */
+
+
     @PreAuthorize("hasAuthority('warehouse:withdraw')")
     @PostMapping("/transfer")
     public ResponseEntity<?> transferProduct(@RequestBody ProductTransferDTO transferDTO) {
@@ -75,10 +61,7 @@ public class ProductTransferController {
             ));
         }
     }
-    
-    /**
-     * Get all product transfers with filtering, sorting and pagination
-     */
+
     @GetMapping("/transfers")
     @PreAuthorize("hasAuthority('warehouse:view')")
     public ResponseEntity<PageResponse<ProductTransferResponseDTO>> getTransfers(
@@ -114,10 +97,7 @@ public class ProductTransferController {
         }
         return ResponseEntity.ok(updated);
     }
-    
-    /**
-     * Export transfers to Excel
-     */
+
     @GetMapping("/transfers/export")
     @PreAuthorize("hasAuthority('warehouse:view')")
     public ResponseEntity<byte[]> exportToExcel(
@@ -155,8 +135,7 @@ public class ProductTransferController {
     private byte[] generateExcel(List<ProductTransferResponseDTO> transfers) throws Exception {
         try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             Sheet sheet = workbook.createSheet("Переміщення");
-            
-            // Header style
+
             CellStyle headerStyle = workbook.createCellStyle();
             Font headerFont = workbook.createFont();
             headerFont.setBold(true);
@@ -169,15 +148,13 @@ public class ProductTransferController {
             headerStyle.setBorderRight(BorderStyle.THIN);
             headerStyle.setBorderLeft(BorderStyle.THIN);
             headerStyle.setAlignment(HorizontalAlignment.CENTER);
-            
-            // Data style
+
             CellStyle dataStyle = workbook.createCellStyle();
             dataStyle.setBorderBottom(BorderStyle.THIN);
             dataStyle.setBorderTop(BorderStyle.THIN);
             dataStyle.setBorderRight(BorderStyle.THIN);
             dataStyle.setBorderLeft(BorderStyle.THIN);
-            
-            // Header row
+
             Row headerRow = sheet.createRow(0);
             String[] headers = {"№", "Дата", "Склад", "З товару", "До товару", 
                                "Кількість (кг)", "Ціна за кг (грн)", "Загальна вартість (грн)", 
@@ -188,15 +165,13 @@ public class ProductTransferController {
                 cell.setCellValue(headers[i]);
                 cell.setCellStyle(headerStyle);
             }
-            
-            // Data rows
+
             DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy");
             int rowNum = 1;
             
             for (ProductTransferResponseDTO transfer : transfers) {
                 Row row = sheet.createRow(rowNum);
-                
-                // Get entity names
+
                 String warehouseName = warehouseRepository.findById(transfer.getWarehouseId())
                         .map(w -> w.getName())
                         .orElse("Невідомо");
@@ -211,66 +186,54 @@ public class ProductTransferController {
                                 .map(r -> r.getName())
                                 .orElse("Не вказано")
                         : "Не вказано";
-                
-                // Column 0: Row number
+
                 Cell cell0 = row.createCell(0);
                 cell0.setCellValue(rowNum);
                 cell0.setCellStyle(dataStyle);
-                
-                // Column 1: Date
+
                 Cell cell1 = row.createCell(1);
                 cell1.setCellValue(transfer.getTransferDate().format(dateFormatter));
                 cell1.setCellStyle(dataStyle);
-                
-                // Column 2: Warehouse name
+
                 Cell cell2 = row.createCell(2);
                 cell2.setCellValue(warehouseName);
                 cell2.setCellStyle(dataStyle);
-                
-                // Column 3: From product name
+
                 Cell cell3 = row.createCell(3);
                 cell3.setCellValue(fromProductName);
                 cell3.setCellStyle(dataStyle);
-                
-                // Column 4: To product name
+
                 Cell cell4 = row.createCell(4);
                 cell4.setCellValue(toProductName);
                 cell4.setCellStyle(dataStyle);
-                
-                // Column 5: Quantity
+
                 Cell cell5 = row.createCell(5);
                 cell5.setCellValue(transfer.getQuantity().doubleValue());
                 cell5.setCellStyle(dataStyle);
-                
-                // Column 6: Unit price
+
                 Cell cell6 = row.createCell(6);
                 cell6.setCellValue(transfer.getUnitPriceEur().doubleValue());
                 cell6.setCellStyle(dataStyle);
-                
-                // Column 7: Total cost
+
                 Cell cell7 = row.createCell(7);
                 cell7.setCellValue(transfer.getTotalCostEur().doubleValue());
                 cell7.setCellStyle(dataStyle);
-                
-                // Column 8: User ID
+
                 Cell cell8 = row.createCell(8);
                 cell8.setCellValue(transfer.getUserId());
                 cell8.setCellStyle(dataStyle);
-                
-                // Column 9: Reason name
+
                 Cell cell9 = row.createCell(9);
                 cell9.setCellValue(reasonName);
                 cell9.setCellStyle(dataStyle);
-                
-                // Column 10: Description
+
                 Cell cell10 = row.createCell(10);
                 cell10.setCellValue(transfer.getDescription() != null ? transfer.getDescription() : "");
                 cell10.setCellStyle(dataStyle);
                 
                 rowNum++;
             }
-            
-            // Auto-size columns
+
             for (int i = 0; i < headers.length; i++) {
                 sheet.autoSizeColumn(i);
             }

@@ -27,6 +27,7 @@ public class TransactionCrudController {
     private final AccountTransactionService accountTransactionService;
     private final TransactionMapper transactionMapper;
 
+    @PreAuthorize("hasAuthority('finance:view')")
     @PatchMapping("/{transactionId}/amount")
     public ResponseEntity<Void> updateTransactionAmount(
             @PathVariable("transactionId") Long transactionId,

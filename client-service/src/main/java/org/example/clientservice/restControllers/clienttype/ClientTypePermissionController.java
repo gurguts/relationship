@@ -28,7 +28,7 @@ import java.util.stream.Collectors;
 public class ClientTypePermissionController {
     private final IClientTypePermissionService permissionService;
 
-    @PreAuthorize("hasAuthority('administration:view')")
+    @PreAuthorize("hasAuthority('administration:edit')")
     @PostMapping("/{clientTypeId}/permission")
     public ResponseEntity<ClientTypePermissionDTO> createPermission(
             @PathVariable Long clientTypeId,
@@ -52,7 +52,7 @@ public class ClientTypePermissionController {
         return ResponseEntity.ok(response);
     }
 
-    @PreAuthorize("hasAuthority('administration:view')")
+    @PreAuthorize("hasAuthority('administration:edit')")
     @PutMapping("/{clientTypeId}/permission/{userId}")
     public ResponseEntity<ClientTypePermissionDTO> updatePermission(
             @PathVariable Long clientTypeId,
@@ -63,7 +63,7 @@ public class ClientTypePermissionController {
         return ResponseEntity.ok(response);
     }
 
-    @PreAuthorize("hasAuthority('administration:view')")
+    @PreAuthorize("hasAuthority('administration:edit')")
     @DeleteMapping("/{clientTypeId}/permission/{userId}")
     public ResponseEntity<Void> deletePermission(
             @PathVariable Long clientTypeId,

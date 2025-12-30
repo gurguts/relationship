@@ -77,6 +77,10 @@ const allPermissions = [
     'settings_finance:edit',
     'settings_exchange:edit',
     'settings_finance:delete',
+    'settings_product:create',
+    'settings_product:delete',
+    'settings_declarant:create',
+    'settings_declarant:delete',
 
     'administration:view',
     'administration:edit'
@@ -192,6 +196,10 @@ function formatPermissionName(permission) {
         'settings_finance:edit': 'Разрешение изменять поля для финансов',
         'settings_exchange:edit': 'Разрешение изменять курс валют',
         'settings_finance:delete': 'Разрешение удалять поля для финансов',
+        'settings_product:create': 'Создание и редактирования товара закупки и склада',
+        'settings_product:delete': 'Удаление закупки и склада',
+        'settings_declarant:create': 'Создание и редактирования полей машины декларанта',
+        'settings_declarant:delete': 'Удаление полей машины декларанта',
 
         'administration:view': 'Отображение администраторской',
         'administration:edit': 'Редактирование в администраторской'

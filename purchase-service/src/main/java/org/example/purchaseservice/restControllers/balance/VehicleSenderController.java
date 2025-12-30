@@ -24,7 +24,7 @@ public class VehicleSenderController {
     
     private final VehicleSenderService vehicleSenderService;
     
-    @PreAuthorize("hasAuthority('settings_finance:create')")
+    @PreAuthorize("hasAuthority('settings_declarant:create')")
     @PostMapping
     public ResponseEntity<VehicleSenderDTO> createVehicleSender(@Valid @RequestBody VehicleSenderCreateDTO dto) {
         VehicleSender sender = vehicleSenderService.createVehicleSender(dto);
@@ -38,6 +38,7 @@ public class VehicleSenderController {
         return ResponseEntity.created(location).body(detailsDTO);
     }
 
+    @PreAuthorize("hasAuthority('declarant:view')")
     @GetMapping("/{senderId}")
     public ResponseEntity<VehicleSenderDTO> getVehicleSenderDetails(@PathVariable Long senderId) {
         VehicleSender sender = vehicleSenderService.getVehicleSender(senderId);
@@ -45,6 +46,7 @@ public class VehicleSenderController {
         return ResponseEntity.ok(detailsDTO);
     }
 
+    @PreAuthorize("hasAuthority('declarant:view')")
     @GetMapping
     public ResponseEntity<List<VehicleSenderDTO>> getAllVehicleSenders() {
         List<VehicleSender> senders = vehicleSenderService.getAllVehicleSenders();
@@ -54,7 +56,7 @@ public class VehicleSenderController {
         return ResponseEntity.ok(dtos);
     }
     
-    @PreAuthorize("hasAuthority('settings_finance:create')")
+    @PreAuthorize("hasAuthority('settings_declarant:create')")
     @PutMapping("/{senderId}")
     public ResponseEntity<VehicleSenderDTO> updateVehicleSender(
             @PathVariable Long senderId,
@@ -63,7 +65,7 @@ public class VehicleSenderController {
         return ResponseEntity.ok(mapToDTO(updated));
     }
     
-    @PreAuthorize("hasAuthority('settings_finance:delete')")
+    @PreAuthorize("hasAuthority('settings_declarant:delete')")
     @DeleteMapping("/{senderId}")
     public ResponseEntity<Void> deleteVehicleSender(@PathVariable Long senderId) {
         vehicleSenderService.deleteVehicleSender(senderId);

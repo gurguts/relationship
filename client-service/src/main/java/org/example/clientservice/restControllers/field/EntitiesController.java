@@ -8,6 +8,7 @@ import org.example.clientservice.mappers.field.SourceMapper;
 import org.example.clientservice.models.dto.fields.EntitiesDTO;
 import org.example.clientservice.services.field.SourceService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -25,6 +26,7 @@ public class EntitiesController {
 
     private final SourceMapper sourceMapper;
 
+    @PreAuthorize("hasAuthority('client:view')")
     @GetMapping
     public ResponseEntity<EntitiesDTO> getAllEntities() {
         EntitiesDTO entities = new EntitiesDTO();

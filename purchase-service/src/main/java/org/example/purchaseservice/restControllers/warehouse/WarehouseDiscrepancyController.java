@@ -36,11 +36,8 @@ public class WarehouseDiscrepancyController {
     
     private final WarehouseDiscrepancyRepository discrepancyRepository;
     private final WarehouseDiscrepancyService discrepancyService;
-    
-    /**
-     * Get all discrepancies with pagination, filtering and sorting
-     */
-    @PreAuthorize("hasAuthority('purchase:view')")
+
+    @PreAuthorize("hasAuthority('warehouse:view')")
     @GetMapping
     public ResponseEntity<PageResponse<WarehouseDiscrepancyDTO>> getDiscrepancies(
             @RequestParam(defaultValue = "0") int page,
@@ -106,29 +103,23 @@ public class WarehouseDiscrepancyController {
         
         return ResponseEntity.ok(response);
     }
-    
-    /**
-     * Get discrepancy statistics with optional filters
-     */
-    @PreAuthorize("hasAuthority('purchase:view')")
+
+    @PreAuthorize("hasAuthority('warehouse:view')")
     @GetMapping("/statistics")
     public ResponseEntity<DiscrepancyStatistics> getStatistics(
             @RequestParam(required = false) String type,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo) {
-        
-        // Build specification for filtering
+
         Specification<WarehouseDiscrepancy> spec = buildSpecification(type, dateFrom, dateTo);
-        
-        // Get filtered discrepancies
+
         List<WarehouseDiscrepancy> filteredDiscrepancies = discrepancyRepository.findAll(spec);
-        
-        // Calculate statistics from filtered data
+
         BigDecimal totalLosses = filteredDiscrepancies.stream()
                 .filter(d -> d.getType() == WarehouseDiscrepancy.DiscrepancyType.LOSS)
                 .map(WarehouseDiscrepancy::getDiscrepancyValueEur)
                 .reduce(BigDecimal.ZERO, BigDecimal::add)
-                .abs(); // Make positive for display
+                .abs();
         
         BigDecimal totalGains = filteredDiscrepancies.stream()
                 .filter(d -> d.getType() == WarehouseDiscrepancy.DiscrepancyType.GAIN)
@@ -148,14 +139,11 @@ public class WarehouseDiscrepancyController {
         stats.setTotalGainsValue(totalGains);
         stats.setLossCount(lossCount);
         stats.setGainCount(gainCount);
-        stats.setNetValue(totalGains.add(totalLosses.negate())); // totalLosses is positive, so subtract it
+        stats.setNetValue(totalGains.add(totalLosses.negate()));
         
         return ResponseEntity.ok(stats);
     }
-    
-    /**
-     * Build specification for filtering discrepancies
-     */
+
     private Specification<WarehouseDiscrepancy> buildSpecification(String type, LocalDate dateFrom, LocalDate dateTo) {
         return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
@@ -166,7 +154,6 @@ public class WarehouseDiscrepancyController {
                             WarehouseDiscrepancy.DiscrepancyType.valueOf(type.toUpperCase());
                     predicates.add(cb.equal(root.get("type"), discrepancyType));
                 } catch (IllegalArgumentException e) {
-                    // Invalid type, ignore
                 }
             }
             
@@ -181,11 +168,8 @@ public class WarehouseDiscrepancyController {
             return cb.and(predicates.toArray(new Predicate[0]));
         };
     }
-    
-    /**
-     * Get discrepancy by ID
-     */
-    @PreAuthorize("hasAuthority('purchase:view')")
+
+    @PreAuthorize("hasAuthority('warehouse:view')")
     @GetMapping("/{id}")
     public ResponseEntity<WarehouseDiscrepancyDTO> getDiscrepancy(@PathVariable Long id) {
         return discrepancyRepository.findById(id)
@@ -193,11 +177,8 @@ public class WarehouseDiscrepancyController {
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
-    
-    /**
-     * Export discrepancies to Excel with filters
-     */
-    @PreAuthorize("hasAuthority('purchase:view')")
+
+    @PreAuthorize("hasAuthority('warehouse:view')")
     @GetMapping("/export")
     public ResponseEntity<byte[]> exportToExcel(
             @RequestParam(required = false) Long driverId,

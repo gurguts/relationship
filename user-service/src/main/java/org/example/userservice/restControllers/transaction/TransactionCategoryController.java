@@ -67,7 +67,7 @@ public class TransactionCategoryController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAuthority('settings_finance:delete')")
+    @PreAuthorize("hasAuthority('settings_finance:create')")
     public ResponseEntity<Void> deleteCategory(@PathVariable Long id) {
         categoryService.deleteCategory(id);
         return ResponseEntity.noContent().build();

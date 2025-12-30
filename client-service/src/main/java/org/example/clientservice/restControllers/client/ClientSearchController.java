@@ -87,6 +87,7 @@ public class ClientSearchController {
         }
     }
 
+    @PreAuthorize("hasAuthority('client:view')")
     @PostMapping("/search")
     public List<ClientListDTO> searchClientsForPurchase(@RequestBody ClientSearchRequest request) {
         List<Client> clients = clientService.searchClientsForPurchase(request.query(), request.filterParams(), request.clientTypeId());
@@ -100,6 +101,7 @@ public class ClientSearchController {
                 .collect(Collectors.toList());
     }
 
+    @PreAuthorize("hasAuthority('client:view')")
     @PostMapping("/ids")
     public ResponseEntity<List<Map<Long, String>>> getIdsForClient(@RequestBody List<Long> ids) {
         List<Map<Long, String>> clients = clientService.searchIdsClient(ids);

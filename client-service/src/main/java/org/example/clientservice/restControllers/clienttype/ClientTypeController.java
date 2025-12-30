@@ -68,6 +68,7 @@ public class ClientTypeController {
         return ResponseEntity.ok(response);
     }
 
+    @PreAuthorize("hasAuthority('client:view')")
     @GetMapping("/active")
     public ResponseEntity<List<ClientTypeDTO>> getAllActiveClientTypes() {
         List<ClientType> clientTypes = clientTypeService.getAllActiveClientTypes();

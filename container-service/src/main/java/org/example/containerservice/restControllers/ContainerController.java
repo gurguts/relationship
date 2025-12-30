@@ -40,7 +40,7 @@ public class ContainerController {
         return ResponseEntity.ok(containerDTOS);
     }
 
-    @PreAuthorize("hasAuthority('settings:edit')")
+    @PreAuthorize("hasAuthority('administration:edit')")
     @PostMapping
     public ResponseEntity<ContainerDTO> create(@RequestBody @Valid ContainerCreateDTO containerCreateDTO) {
         Container barrelType = containerMapper.containerCreateDTOToContainer(containerCreateDTO);
@@ -53,7 +53,7 @@ public class ContainerController {
         return ResponseEntity.created(location).body(createdContainer);
     }
 
-    @PreAuthorize("hasAuthority('settings:edit')")
+    @PreAuthorize("hasAuthority('administration:edit')")
     @PutMapping("/{id}")
     public ResponseEntity<ContainerDTO> update(@PathVariable Long id,
                                                @RequestBody @Valid ContainerUpdateDTO containerUpdateDTO) {
@@ -62,7 +62,7 @@ public class ContainerController {
         return ResponseEntity.ok(containerMapper.containerToContainerDTO(response));
     }
 
-    @PreAuthorize("hasAuthority('settings:edit')")
+    @PreAuthorize("hasAuthority('administration:edit')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         containerService.deleteContainer(id);

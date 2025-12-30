@@ -27,12 +27,14 @@ public class WarehouseCrudController {
     private final WarehouseMapper warehouseMapper;
     private final IWarehouseService warehouseService;
 
+    @PreAuthorize("hasAuthority('warehouse:view')")
     @GetMapping("/{id}")
     public ResponseEntity<WarehouseDTO> getWarehouse(@PathVariable Long id) {
         WarehouseDTO warehouseDTO = warehouseMapper.warehouseToWarehouseDTO(warehouseService.getWarehouse(id));
         return ResponseEntity.ok(warehouseDTO);
     }
 
+    @PreAuthorize("hasAuthority('warehouse:view')")
     @GetMapping
     public ResponseEntity<List<WarehouseDTO>> getWarehouses() {
         List<Warehouse> warehouses = warehouseService.getAllWarehouses();

@@ -24,7 +24,7 @@ public class VehicleReceiverController {
     
     private final VehicleReceiverService vehicleReceiverService;
     
-    @PreAuthorize("hasAuthority('settings_finance:create')")
+    @PreAuthorize("hasAuthority('settings_declarant:create')")
     @PostMapping
     public ResponseEntity<VehicleReceiverDTO> createVehicleReceiver(@Valid @RequestBody VehicleReceiverCreateDTO dto) {
         VehicleReceiver receiver = vehicleReceiverService.createVehicleReceiver(dto);
@@ -56,7 +56,7 @@ public class VehicleReceiverController {
         return ResponseEntity.ok(dtos);
     }
     
-    @PreAuthorize("hasAuthority('settings_finance:create')")
+    @PreAuthorize("hasAuthority('settings_declarant:create')")
     @PutMapping("/{receiverId}")
     public ResponseEntity<VehicleReceiverDTO> updateVehicleReceiver(
             @PathVariable Long receiverId,
@@ -65,7 +65,7 @@ public class VehicleReceiverController {
         return ResponseEntity.ok(mapToDTO(updated));
     }
     
-    @PreAuthorize("hasAuthority('settings_finance:delete')")
+    @PreAuthorize("hasAuthority('settings_declarant:delete')")
     @DeleteMapping("/{receiverId}")
     public ResponseEntity<Void> deleteVehicleReceiver(@PathVariable Long receiverId) {
         vehicleReceiverService.deleteVehicleReceiver(receiverId);

@@ -120,7 +120,7 @@ public class VehicleController {
         return ResponseEntity.ok(result);
     }
     
-    @PreAuthorize("hasAuthority('warehouse:view') or hasAuthority('declarant:view')")
+    @PreAuthorize("hasAuthority('declarant:excel')")
     @GetMapping("/export")
     public ResponseEntity<byte[]> exportVehiclesToExcel(
             @RequestParam(name = "q", required = false) String query,
@@ -186,7 +186,7 @@ public class VehicleController {
         return ResponseEntity.ok(dtos);
     }
     
-    @PreAuthorize("hasAuthority('warehouse:create') or hasAuthority('declarant:create')")
+    @PreAuthorize("hasAuthority('warehouse:edit') or hasAuthority('declarant:edit')")
     @PutMapping("/{vehicleId}")
     public ResponseEntity<VehicleDetailsDTO> updateVehicle(
             @PathVariable Long vehicleId,
@@ -218,7 +218,7 @@ public class VehicleController {
         return ResponseEntity.ok(detailsDTO);
     }
     
-    @PreAuthorize("hasAuthority('warehouse:create') or hasAuthority('declarant:create')")
+    @PreAuthorize("hasAuthority('warehouse:edit') or hasAuthority('declarant:edit')")
     @PutMapping("/{vehicleId}/products/{vehicleProductId}")
     public ResponseEntity<VehicleDetailsDTO> updateVehicleProduct(
             @PathVariable Long vehicleId,
@@ -241,7 +241,7 @@ public class VehicleController {
         return ResponseEntity.noContent().build();
     }
     
-    @PreAuthorize("hasAuthority('warehouse:create') or hasAuthority('declarant:create')")
+    @PreAuthorize("hasAuthority('declarant:create')")
     @PostMapping("/{vehicleId}/cost")
     public ResponseEntity<Void> updateVehicleCost(
             @PathVariable Long vehicleId,
@@ -372,7 +372,7 @@ public class VehicleController {
                 .build();
     }
     
-    @PreAuthorize("hasAuthority('declarant:view')")
+    @PreAuthorize("hasAuthority('declarant:create')")
     @PostMapping("/{vehicleId}/expenses")
     public ResponseEntity<VehicleExpense> createVehicleExpense(
             @PathVariable Long vehicleId,

@@ -19,31 +19,23 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/v1/driver/balances")
 @RequiredArgsConstructor
 public class DriverBalanceController {
-    
+
     private final DriverProductBalanceService driverProductBalanceService;
-    
-    /**
-     * Get balance for specific product of a driver
-     */
-    @PreAuthorize("hasAuthority('purchase:view')")
+
     @GetMapping("/{driverId}/product/{productId}")
     public ResponseEntity<DriverProductBalanceDTO> getProductBalance(
             @PathVariable Long driverId,
             @PathVariable Long productId) {
-        
+
         DriverProductBalance balance = driverProductBalanceService.getBalance(driverId, productId);
-        
+
         if (balance == null) {
             return ResponseEntity.notFound().build();
         }
-        
+
         return ResponseEntity.ok(mapToDTO(balance));
     }
-    
-    /**
-     * Get all balances for specific driver
-     */
-    @PreAuthorize("hasAuthority('purchase:view')")
+
     @GetMapping("/{driverId}")
     public ResponseEntity<List<DriverProductBalanceDTO>> getDriverBalances(
             @PathVariable Long driverId) {
@@ -56,11 +48,7 @@ public class DriverBalanceController {
         
         return ResponseEntity.ok(dtos);
     }
-    
-    /**
-     * Get all active balances (quantity > 0) for all drivers
-     */
-    @PreAuthorize("hasAuthority('purchase:view')")
+
     @GetMapping("/active")
     public ResponseEntity<List<DriverProductBalanceDTO>> getAllActiveBalances() {
         List<DriverProductBalance> balances = driverProductBalanceService.getAllActiveBalances();
@@ -71,11 +59,7 @@ public class DriverBalanceController {
         
         return ResponseEntity.ok(dtos);
     }
-    
-    /**
-     * Get balances for specific product across all drivers
-     */
-    @PreAuthorize("hasAuthority('purchase:view')")
+
     @GetMapping("/product/{productId}")
     public ResponseEntity<List<DriverProductBalanceDTO>> getProductBalances(
             @PathVariable Long productId) {

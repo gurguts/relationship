@@ -73,6 +73,10 @@ public enum Permission {
     SETTINGS_FINANCE_EDIT("settings_finance:edit"),
     SETTINGS_EXCHANGE_EDIT("settings_exchange:edit"),
     SETTINGS_FINANCE_DELETE("settings_finance:delete"),
+    SETTINGS_DECLARANT_CREATE("settings_declarant:create"),
+    SETTINGS_DECLARANT_DELETE("settings_declarant:delete"),
+    SETTINGS_PRODUCT_CREATE("settings_product:create"),
+    SETTINGS_PRODUCT_DELETE("settings_product:delete"),
 
     SETTINGS_EDIT("settings:edit"),
 

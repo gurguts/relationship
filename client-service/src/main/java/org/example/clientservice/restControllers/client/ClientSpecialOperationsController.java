@@ -90,7 +90,7 @@ public class ClientSpecialOperationsController {
         String clientTypeName = "клієнти";
         if (filters != null && filters.containsKey("clientTypeId") && !filters.get("clientTypeId").isEmpty()) {
             try {
-                Long clientTypeId = Long.parseLong(filters.get("clientTypeId").get(0));
+                Long clientTypeId = Long.parseLong(filters.get("clientTypeId").getFirst());
                 var clientType = clientTypeService.getClientTypeById(clientTypeId);
                 if (clientType != null && clientType.getName() != null) {
                     clientTypeName = sanitizeFilename(clientType.getName());

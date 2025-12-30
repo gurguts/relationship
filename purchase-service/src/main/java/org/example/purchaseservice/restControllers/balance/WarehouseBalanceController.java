@@ -26,11 +26,7 @@ import java.util.stream.Collectors;
 public class WarehouseBalanceController {
     
     private final WarehouseProductBalanceService warehouseProductBalanceService;
-    
-    /**
-     * Set initial warehouse balance for a product
-     * Use this to set starting balance when implementing the system
-     */
+
     @PreAuthorize("hasAuthority('warehouse:create')")
     @PostMapping("/initialize")
     public ResponseEntity<WarehouseProductBalanceDTO> setInitialBalance(
@@ -49,10 +45,7 @@ public class WarehouseBalanceController {
         WarehouseProductBalanceDTO responseDTO = mapToDTO(balance);
         return ResponseEntity.ok(responseDTO);
     }
-    
-    /**
-     * Get balance for specific product on warehouse
-     */
+
     @PreAuthorize("hasAuthority('warehouse:view')")
     @GetMapping("/{warehouseId}/product/{productId}")
     public ResponseEntity<WarehouseProductBalanceDTO> getProductBalance(
@@ -67,10 +60,7 @@ public class WarehouseBalanceController {
         
         return ResponseEntity.ok(mapToDTO(balance));
     }
-    
-    /**
-     * Update warehouse balance for specific product
-     */
+
     @PreAuthorize("hasAuthority('warehouse:create')")
     @PutMapping("/{warehouseId}/product/{productId}")
     public ResponseEntity<WarehouseProductBalanceDTO> updateProductBalance(
@@ -95,10 +85,7 @@ public class WarehouseBalanceController {
 
         return ResponseEntity.ok(mapToDTO(updatedBalance));
     }
-    
-    /**
-     * Get all balances for specific warehouse
-     */
+
     @PreAuthorize("hasAuthority('warehouse:view')")
     @GetMapping("/{warehouseId}")
     public ResponseEntity<List<WarehouseProductBalanceDTO>> getWarehouseBalances(
@@ -112,10 +99,7 @@ public class WarehouseBalanceController {
         
         return ResponseEntity.ok(dtos);
     }
-    
-    /**
-     * Get balance adjustment history
-     */
+
     @PreAuthorize("hasAuthority('warehouse:view')")
     @GetMapping("/{warehouseId}/product/{productId}/history")
     public ResponseEntity<List<WarehouseBalanceAdjustmentDTO>> getBalanceHistory(
@@ -131,10 +115,7 @@ public class WarehouseBalanceController {
 
         return ResponseEntity.ok(dtos);
     }
-    
-    /**
-     * Get all active balances (quantity > 0)
-     */
+
     @PreAuthorize("hasAuthority('warehouse:view')")
     @GetMapping("/active")
     public ResponseEntity<List<WarehouseProductBalanceDTO>> getAllActiveBalances() {

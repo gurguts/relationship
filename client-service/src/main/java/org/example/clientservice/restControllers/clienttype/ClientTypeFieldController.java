@@ -58,6 +58,7 @@ public class ClientTypeFieldController {
         return ResponseEntity.ok(response);
     }
 
+    @PreAuthorize("hasAuthority('client:view')")
     @GetMapping("/{clientTypeId}/field/visible")
     public ResponseEntity<List<ClientTypeFieldDTO>> getVisibleFields(@PathVariable Long clientTypeId) {
         List<ClientTypeField> fields = fieldService.getVisibleFieldsByClientTypeId(clientTypeId);
@@ -81,6 +82,7 @@ public class ClientTypeFieldController {
         return ResponseEntity.ok(response);
     }
 
+    @PreAuthorize("hasAuthority('client:view')")
     @GetMapping("/{clientTypeId}/field/searchable")
     public ResponseEntity<List<ClientTypeFieldDTO>> getSearchableFields(@PathVariable Long clientTypeId) {
         List<ClientTypeField> fields = fieldService.getSearchableFieldsByClientTypeId(clientTypeId);
@@ -90,6 +92,7 @@ public class ClientTypeFieldController {
         return ResponseEntity.ok(response);
     }
 
+    @PreAuthorize("hasAuthority('client:view')")
     @GetMapping("/{clientTypeId}/field/filterable")
     public ResponseEntity<List<ClientTypeFieldDTO>> getFilterableFields(@PathVariable Long clientTypeId) {
         List<ClientTypeField> fields = fieldService.getFilterableFieldsByClientTypeId(clientTypeId);

@@ -1,4 +1,4 @@
-package org.example.purchaseservice.restControllers;
+package org.example.purchaseservice.restControllers.exchange;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -21,8 +21,7 @@ import java.util.stream.Collectors;
 public class ExchangeRateController {
     
     private final ExchangeRateService exchangeRateService;
-    
-    @PreAuthorize("hasAuthority('purchase:view')")
+
     @GetMapping
     public ResponseEntity<List<ExchangeRateDTO>> getAllExchangeRates() {
         List<ExchangeRate> rates = exchangeRateService.getAllExchangeRates();
@@ -31,8 +30,7 @@ public class ExchangeRateController {
                 .collect(Collectors.toList());
         return ResponseEntity.ok(dtos);
     }
-    
-    @PreAuthorize("hasAuthority('purchase:view')")
+
     @GetMapping("/{currency}/rate")
     public ResponseEntity<java.math.BigDecimal> getExchangeRateToEur(@PathVariable String currency) {
         java.math.BigDecimal rate = exchangeRateService.getExchangeRateToEur(currency);

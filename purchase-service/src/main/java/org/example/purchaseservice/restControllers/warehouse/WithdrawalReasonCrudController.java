@@ -27,12 +27,14 @@ public class WithdrawalReasonCrudController {
     private final WithdrawalReasonMapper withdrawalReasonMapper;
     private final IWithdrawalReasonService withdrawalReasonService;
 
+    @PreAuthorize("hasAuthority('warehouse:view')")
     @GetMapping("/{id}")
     public ResponseEntity<WithdrawalReasonDTO> getWithdrawalReason(@PathVariable Long id) {
         WithdrawalReasonDTO withdrawalReasonDTO = withdrawalReasonMapper.withdrawalReasonToWithdrawalReasonDTO(withdrawalReasonService.getWithdrawalReason(id));
         return ResponseEntity.ok(withdrawalReasonDTO);
     }
 
+    @PreAuthorize("hasAuthority('warehouse:view')")
     @GetMapping
     public ResponseEntity<List<WithdrawalReasonDTO>> getWithdrawalReasons() {
         List<WithdrawalReason> withdrawalReasons = withdrawalReasonService.getAllWithdrawalReasons();
@@ -42,7 +44,7 @@ public class WithdrawalReasonCrudController {
         return ResponseEntity.ok(dtos);
     }
 
-    @PreAuthorize("hasAuthority('settings:edit')")
+    @PreAuthorize("hasAuthority('administration:edit')")
     @PostMapping
     public ResponseEntity<WithdrawalReasonDTO> createWithdrawalReason(@RequestBody @Valid WithdrawalReasonCreateDTO withdrawalReasonCreateDTO) {
         WithdrawalReason withdrawalReason = withdrawalReasonMapper.withdrawalReasonCreateDTOToWithdrawalReason(withdrawalReasonCreateDTO);
@@ -55,7 +57,7 @@ public class WithdrawalReasonCrudController {
         return ResponseEntity.created(location).body(createdWithdrawalReason);
     }
 
-    @PreAuthorize("hasAuthority('settings:edit')")
+    @PreAuthorize("hasAuthority('administration:edit')")
     @PutMapping("/{id}")
     public ResponseEntity<WithdrawalReasonDTO> updateWithdrawalReason(@PathVariable Long id,
                                                                     @RequestBody @Valid WithdrawalReasonUpdateDTO withdrawalReasonUpdateDTO) {
@@ -64,7 +66,7 @@ public class WithdrawalReasonCrudController {
         return ResponseEntity.ok(withdrawalReasonMapper.withdrawalReasonToWithdrawalReasonDTO(updatedWithdrawalReason));
     }
 
-    @PreAuthorize("hasAuthority('settings:edit')")
+    @PreAuthorize("hasAuthority('administration:edit')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteWithdrawalReason(@PathVariable Long id) {
         withdrawalReasonService.deleteWithdrawalReason(id);
