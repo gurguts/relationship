@@ -5,27 +5,24 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.apigateway.config.SecurityConstants;
 import org.example.apigateway.models.dto.UserDTO;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpResponse;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.ReactiveSecurityContextHolder;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Component;
 import org.springframework.util.AntPathMatcher;
-import org.springframework.util.StringUtils;
 import org.springframework.web.reactive.resource.NoResourceFoundException;
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.WebFilter;
 import org.springframework.web.server.WebFilterChain;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import reactor.core.publisher.Mono;
-import org.springframework.http.HttpCookie;
 
 import java.net.URI;
-import java.nio.file.AccessDeniedException;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -48,13 +45,13 @@ public class JwtReactiveFilter implements WebFilter {
 
         String token = exchange.getAttribute(SecurityConstants.TOKEN_ATTRIBUTE);
         if (token == null) {
-            token = extractTokenFromExchange(exchange);
+            token = TokenExtractor.extractFromExchange(exchange);
             if (token != null) {
                 exchange.getAttributes().put(SecurityConstants.TOKEN_ATTRIBUTE, token);
             }
         }
 
-        if (token == null || token.isEmpty()) {
+        if (!TokenExtractor.isValidTokenFormat(token)) {
             return redirectToLogin(exchange);
         }
 
@@ -75,7 +72,7 @@ public class JwtReactiveFilter implements WebFilter {
                 });
     }
 
-    private boolean isPublicPath(String path) {
+    private boolean isPublicPath(@NonNull String path) {
         for (String pattern : SecurityConstants.PUBLIC_PATH_PATTERNS) {
             if (pathMatcher.match(pattern, path)) {
                 return true;
@@ -84,7 +81,7 @@ public class JwtReactiveFilter implements WebFilter {
         return false;
     }
 
-    private Mono<Void> redirectToLogin(ServerWebExchange exchange) {
+    private Mono<Void> redirectToLogin(@NonNull ServerWebExchange exchange) {
         ServerHttpResponse response = exchange.getResponse();
         if (!response.isCommitted()) {
             response.setStatusCode(HttpStatus.FOUND);
@@ -93,26 +90,12 @@ public class JwtReactiveFilter implements WebFilter {
         return response.setComplete();
     }
 
-    private String extractTokenFromExchange(ServerWebExchange exchange) {
-        String authHeader = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
-        if (authHeader != null && authHeader.startsWith(SecurityConstants.BEARER_PREFIX)) {
-            return authHeader.substring(SecurityConstants.BEARER_PREFIX.length());
-        }
-
-        HttpCookie cookie = exchange.getRequest().getCookies().getFirst(SecurityConstants.AUTH_TOKEN_COOKIE);
-        if (cookie != null && StringUtils.hasText(cookie.getValue())) {
-            return cookie.getValue();
-        }
-
-        return null;
-    }
-
-    private Mono<Authentication> validateAndAuthenticateToken(String token) {
+    private Mono<Authentication> validateAndAuthenticateToken(@NonNull String token) {
         return reactiveJwtTokenProvider.validateToken(token)
                 .flatMap(this::createAuthentication);
     }
 
-    private Mono<Authentication> createAuthentication(UserDTO userDto) {
+    private Mono<Authentication> createAuthentication(@NonNull UserDTO userDto) {
         List<GrantedAuthority> authorities = userDto.authorities().stream()
                 .map(SimpleGrantedAuthority::new)
                 .collect(Collectors.toList());
@@ -124,17 +107,17 @@ public class JwtReactiveFilter implements WebFilter {
         return Mono.just(authentication);
     }
 
-    private Mono<Void> handleAuthenticationException(ServerWebExchange exchange) {
+    private Mono<Void> handleAuthenticationException(@NonNull ServerWebExchange exchange) {
         exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
         return redirectToLogin(exchange);
     }
 
-    private Mono<Void> handleResourceNotFound(ServerWebExchange exchange) {
+    private Mono<Void> handleResourceNotFound(@NonNull ServerWebExchange exchange) {
         exchange.getResponse().setStatusCode(HttpStatus.NOT_FOUND);
         return exchange.getResponse().setComplete();
     }
 
-    private Mono<Void> handleAccessDenied(ServerWebExchange exchange) {
+    private Mono<Void> handleAccessDenied(@NonNull ServerWebExchange exchange) {
         exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
         return exchange.getResponse().setComplete();
     }

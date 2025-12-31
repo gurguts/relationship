@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 
 import java.util.List;
 
-@FeignClient(name = "route-service", url = "http://localhost:8084/api/v1/route")
+@FeignClient(name = "route-service", url = "${client.service.url}/api/v1/route")
 public interface RouteClient {
     @GetMapping
     List<RouteDTO> getAllRoute();

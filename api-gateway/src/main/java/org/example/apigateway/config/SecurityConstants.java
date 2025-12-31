@@ -20,6 +20,10 @@ public final class SecurityConstants {
 
     public static final String AUTH_TOKEN_COOKIE = "authToken";
 
+    public static final String JSON_INVALID_REQUEST = "{\"code\":\"INVALID_REQUEST\",\"message\":\"Request contains invalid characters\"}";
+
+    public static final String JSON_NOT_FOUND = "{\"code\":\"NOT_FOUND\",\"message\":\"Resource not found\"}";
+
     private SecurityConstants() {
     }
 }

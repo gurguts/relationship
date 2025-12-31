@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 
 import java.util.List;
 
-@FeignClient(name = "region-service", url = "http://localhost:8084/api/v1/region")
+@FeignClient(name = "region-service", url = "${client.service.url}/api/v1/region")
 public interface RegionClient {
     @GetMapping
     List<RegionDTO> getAllRegion();

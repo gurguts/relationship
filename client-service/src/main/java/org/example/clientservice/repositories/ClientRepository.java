@@ -13,11 +13,11 @@ import java.util.List;
 public interface ClientRepository extends JpaRepository<Client, Long>, JpaSpecificationExecutor<Client> {
     @Modifying
     @Query("UPDATE Client c SET c.isActive = false WHERE c.id = :clientId")
-    void deactivateClientById(@Param("clientId") Long clientId);
+    void deactivateClientById(@NonNull @Param("clientId") Long clientId);
 
     @Modifying
     @Query("UPDATE Client c SET c.isActive = true WHERE c.id = :clientId")
-    void activateClientById(@Param("clientId") Long clientId);
+    void activateClientById(@NonNull @Param("clientId") Long clientId);
 
     @EntityGraph(attributePaths = {"clientType"})
     @NonNull
@@ -25,12 +25,12 @@ public interface ClientRepository extends JpaRepository<Client, Long>, JpaSpecif
 
     @EntityGraph(attributePaths = {"fieldValues", "fieldValues.field", "fieldValues.field.listValues", "fieldValues.valueList", "clientType"})
     @NonNull
-    List<Client> findAll(@NonNull Specification<Client> spec);
+    List<Client> findAll(Specification<Client> spec);
 
     @EntityGraph(attributePaths = {"clientType", "fieldValues", "fieldValues.field", "fieldValues.field.listValues", "fieldValues.valueList"})
     @NonNull
     java.util.Optional<Client> findById(@NonNull Long id);
 
-    long countByClientTypeId(Long clientTypeId);
+    long countByClientTypeId(@NonNull Long clientTypeId);
 
 }

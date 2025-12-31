@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import java.util.List;
 import java.util.Map;
 
-@FeignClient(name = "purchase-service", contextId = "vehicleApiClient", url = "http://localhost:8093/api/v1/vehicles", configuration = FeignConfig.class)
+@FeignClient(name = "purchase-service", contextId = "vehicleApiClient", url = "${purchase.service.url}/api/v1/vehicles", configuration = FeignConfig.class)
 public interface VehicleApiClient {
     @PostMapping("/ids")
     List<Map<Long, String>> getVehicles(@RequestBody List<Long> ids);

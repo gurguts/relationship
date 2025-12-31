@@ -1,5 +1,6 @@
 package org.example.clientservice.config;
 
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.example.clientservice.security.JwtTokenFilter;
 import org.springframework.context.annotation.Bean;
@@ -23,25 +24,25 @@ public class WebSecurityConfig {
     private final JwtTokenFilter jwtTokenFilter;
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http
+    @NonNull
+    public SecurityFilterChain securityFilterChain(@NonNull HttpSecurity http) throws Exception {
+        return http
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
                         .anyRequest().authenticated()
                 )
-                .addFilterBefore(jwtTokenFilter, UsernamePasswordAuthenticationFilter.class);
-
-        return http.build();
+                .addFilterBefore(jwtTokenFilter, UsernamePasswordAuthenticationFilter.class)
+                .build();
     }
 
     @Bean
+    @NonNull
     public UserDetailsService userDetailsService() {
         return _ -> {
             throw new UsernameNotFoundException("UserDetailsService is not used in the client service");
         };
     }
-
 }
 

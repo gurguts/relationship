@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 
 import java.util.List;
 
-@FeignClient(name = "business-service", url = "http://localhost:8084/api/v1/business")
+@FeignClient(name = "business-service", url = "${client.service.url}/api/v1/business")
 public interface BusinessClient {
     @GetMapping()
     List<BusinessDTO> getAllBusiness();

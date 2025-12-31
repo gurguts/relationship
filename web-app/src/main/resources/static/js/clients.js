@@ -2122,7 +2122,7 @@ document.getElementById('client-form').addEventListener('submit',
                         }
                     });
                 }
-            } else if (fieldValue) {
+            } else if (fieldValue && !(field.fieldType === 'LIST' && field.allowMultiple)) {
                 const fieldValueData = {
                     fieldId: field.id,
                     displayOrder: 0

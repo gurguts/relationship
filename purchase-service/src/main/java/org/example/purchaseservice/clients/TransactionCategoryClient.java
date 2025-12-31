@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 
 import java.util.Map;
 
-@FeignClient(name = "transaction-category-client", url = "http://localhost:8082/api/v1/transaction-categories",
+@FeignClient(name = "transaction-category-client", url = "${user.service.url}/api/v1/transaction-categories",
         configuration = FeignConfig.class)
 public interface TransactionCategoryClient {
 

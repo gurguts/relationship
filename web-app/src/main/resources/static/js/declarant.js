@@ -954,7 +954,7 @@ function calculateFullReclamation(vehicle) {
     try {
         const quantityInTons = parseFloat(productQuantityStr.replace(',', '.')) || 0;
         return reclamationPerTon * quantityInTons;
-    } catch (error) {
+        } catch (error) {
         console.warn('Failed to parse productQuantity for reclamation calculation:', productQuantityStr, error);
         return 0;
     }

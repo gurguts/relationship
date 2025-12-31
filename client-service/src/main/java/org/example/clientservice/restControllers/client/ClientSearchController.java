@@ -1,44 +1,31 @@
 package org.example.clientservice.restControllers.client;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.example.clientservice.exceptions.client.ClientException;
-import org.example.clientservice.mappers.ClientMapper;
-import org.example.clientservice.models.client.Client;
 import org.example.clientservice.models.client.PageResponse;
 import org.example.clientservice.models.dto.client.ClientDTO;
+import org.example.clientservice.models.dto.client.ClientIdsRequest;
 import org.example.clientservice.models.dto.client.ClientListDTO;
 import org.example.clientservice.models.dto.client.ClientSearchRequest;
-import org.example.clientservice.models.dto.client.ExternalClientDataCache;
-import org.example.clientservice.services.impl.*;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
+import org.example.clientservice.services.impl.IClientSearchService;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/client")
 @RequiredArgsConstructor
-@Slf4j
+@Validated
 public class ClientSearchController {
     private final IClientSearchService clientService;
-    private final ClientMapper clientMapper;
-    private final ObjectMapper objectMapper;
-    private final ISourceService sourceService;
 
     @PreAuthorize("hasAuthority('client:view')")
     @GetMapping("/search")
@@ -49,62 +36,25 @@ public class ClientSearchController {
             @RequestParam(name = "sort", defaultValue = "updatedAt") String sortProperty,
             @RequestParam(name = "direction", defaultValue = "DESC") Sort.Direction sortDirection,
             @RequestParam(name = "filters", required = false) String filtersJson,
-            @RequestParam(name = "clientTypeId", required = false) Long clientTypeId
-    ) {
-
-        if (query != null) {
-            query = query.trim();
-        }
-
-        Map<String, List<String>> filters = parseFilters(filtersJson);
-        
-        String actualSortProperty = sortProperty;
-        Sort.Direction actualSortDirection = sortDirection;
-        
-        if (sortProperty == null || (!sortProperty.equals("company") && !sortProperty.equals("source") && !sortProperty.equals("createdAt") && !sortProperty.equals("updatedAt"))) {
-            actualSortProperty = "updatedAt";
-            actualSortDirection = Sort.Direction.DESC;
-        }
-        
-        Pageable pageable = PageRequest.of(page, size, Sort.by(actualSortDirection, actualSortProperty));
-
-        Page<ClientDTO> clients = clientService.searchClients(query, pageable, filters, clientTypeId)
-                .map(clientMapper::clientToClientDTO);
-
-        PageResponse<ClientDTO> response = new PageResponse<>(clients);
+            @RequestParam(name = "clientTypeId", required = false) @Positive Long clientTypeId) {
+        PageResponse<ClientDTO> response = clientService.searchClients(
+                query, size, page, sortProperty, sortDirection, filtersJson, clientTypeId);
         return ResponseEntity.ok(response);
-    }
-
-    private Map<String, List<String>> parseFilters(String filtersJson) {
-        if (filtersJson == null || filtersJson.trim().isEmpty()) {
-            return new HashMap<>();
-        }
-        try {
-            return objectMapper.readValue(filtersJson, new TypeReference<>() {
-            });
-        } catch (JsonProcessingException e) {
-            throw new ClientException("INVALID_JSON", "Invalid JSON format for filters");
-        }
     }
 
     @PreAuthorize("hasAuthority('client:view')")
     @PostMapping("/search")
-    public List<ClientListDTO> searchClientsForPurchase(@RequestBody ClientSearchRequest request) {
-        List<Client> clients = clientService.searchClientsForPurchase(request.query(), request.filterParams(), request.clientTypeId());
-
-        ExternalClientDataCache cache = new ExternalClientDataCache(
-                sourceService.getAllSources()
-        );
-
-        return clients.stream()
-                .map(client -> clientMapper.clientToClientListDTO(client, cache))
-                .collect(Collectors.toList());
+    public ResponseEntity<List<ClientListDTO>> searchClientsForPurchase(
+            @RequestBody @Valid ClientSearchRequest request) {
+        List<ClientListDTO> result = clientService.searchClientsForPurchase(request);
+        return ResponseEntity.ok(result);
     }
 
     @PreAuthorize("hasAuthority('client:view')")
     @PostMapping("/ids")
-    public ResponseEntity<List<Map<Long, String>>> getIdsForClient(@RequestBody List<Long> ids) {
-        List<Map<Long, String>> clients = clientService.searchIdsClient(ids);
-        return ResponseEntity.ok(clients);
+    public ResponseEntity<List<Map<Long, String>>> getIdsForClient(
+            @RequestBody @Valid ClientIdsRequest request) {
+        List<Map<Long, String>> result = clientService.searchIdsClient(request.clientIds());
+        return ResponseEntity.ok(result);
     }
 }

@@ -1,6 +1,6 @@
 package org.example.apigateway.config;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.example.apigateway.security.InvalidRequestFilter;
 import org.example.apigateway.security.JwtReactiveFilter;
@@ -21,7 +21,7 @@ public class WebSecurityConfig {
     private final InvalidRequestFilter invalidRequestFilter;
 
     @Bean
-    public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
+    public SecurityWebFilterChain securityWebFilterChain(@NonNull ServerHttpSecurity http) {
         return http
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .formLogin(ServerHttpSecurity.FormLoginSpec::disable)
@@ -34,10 +34,5 @@ public class WebSecurityConfig {
                 .addFilterBefore(invalidRequestFilter, SecurityWebFiltersOrder.FIRST)
                 .addFilterBefore(jwtReactiveFilter, SecurityWebFiltersOrder.AUTHENTICATION)
                 .build();
-    }
-
-    @Bean
-    public ObjectMapper objectMapper() {
-        return new ObjectMapper();
     }
 }

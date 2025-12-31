@@ -9,7 +9,7 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
-@FeignClient(name = "transaction-service", url = "http://localhost:8082/api/v1/transaction",
+@FeignClient(name = "transaction-service", url = "${user.service.url}/api/v1/transaction",
         configuration = FeignConfig.class)
 public interface TransactionApiClient {
 

@@ -1,21 +1,17 @@
 package org.example.clientservice.restControllers.clienttype;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Positive;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.example.clientservice.mappers.clienttype.ClientTypeMapper;
 import org.example.clientservice.models.client.PageResponse;
 import org.example.clientservice.models.clienttype.ClientType;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.example.clientservice.models.dto.clienttype.ClientTypeCreateDTO;
 import org.example.clientservice.models.dto.clienttype.ClientTypeDTO;
 import org.example.clientservice.models.dto.clienttype.ClientTypeUpdateDTO;
 import org.example.clientservice.models.dto.clienttype.StaticFieldsConfig;
-import org.example.clientservice.repositories.clienttype.ClientTypeRepository;
-import org.example.clientservice.services.clienttype.StaticFieldsHelper;
 import org.example.clientservice.services.impl.IClientTypeService;
-import org.example.clientservice.exceptions.client.ClientException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -32,17 +28,14 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/v1/client-type")
 @RequiredArgsConstructor
-@Slf4j
 @Validated
 public class ClientTypeController {
     private final IClientTypeService clientTypeService;
     private final ClientTypeMapper clientTypeMapper;
-    private final ObjectMapper objectMapper;
-    private final ClientTypeRepository clientTypeRepository;
 
     @PreAuthorize("hasAuthority('administration:edit')")
     @PostMapping
-    public ResponseEntity<ClientTypeDTO> createClientType(@RequestBody @Valid ClientTypeCreateDTO dto) {
+    public ResponseEntity<ClientTypeDTO> createClientType(@RequestBody @Valid @NonNull ClientTypeCreateDTO dto) {
         ClientType clientType = clientTypeService.createClientType(dto);
         ClientTypeDTO response = clientTypeMapper.clientTypeToDTO(clientType);
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
@@ -55,7 +48,7 @@ public class ClientTypeController {
     @PreAuthorize("hasAuthority('client:view')")
     @GetMapping
     public ResponseEntity<PageResponse<ClientTypeDTO>> getAllClientTypes(
-            @PageableDefault(size = 20) Pageable pageable,
+            @PageableDefault(size = 20) @NonNull Pageable pageable,
             @RequestParam(required = false) Boolean activeOnly) {
         Page<ClientType> clientTypes;
         if (Boolean.TRUE.equals(activeOnly)) {
@@ -80,7 +73,7 @@ public class ClientTypeController {
 
     @PreAuthorize("hasAuthority('client:view')")
     @GetMapping("/{id}")
-    public ResponseEntity<ClientTypeDTO> getClientTypeById(@PathVariable Long id) {
+    public ResponseEntity<ClientTypeDTO> getClientTypeById(@PathVariable @Positive Long id) {
         ClientType clientType = clientTypeService.getClientTypeByIdWithFields(id);
         ClientTypeDTO response = clientTypeMapper.clientTypeToDTO(clientType);
         return ResponseEntity.ok(response);
@@ -89,8 +82,8 @@ public class ClientTypeController {
     @PreAuthorize("hasAuthority('administration:edit')")
     @PutMapping("/{id}")
     public ResponseEntity<ClientTypeDTO> updateClientType(
-            @PathVariable Long id,
-            @RequestBody @Valid ClientTypeUpdateDTO dto) {
+            @PathVariable @Positive Long id,
+            @RequestBody @Valid @NonNull ClientTypeUpdateDTO dto) {
         ClientType clientType = clientTypeService.updateClientType(id, dto);
         ClientTypeDTO response = clientTypeMapper.clientTypeToDTO(clientType);
         return ResponseEntity.ok(response);
@@ -98,37 +91,25 @@ public class ClientTypeController {
 
     @PreAuthorize("hasAuthority('administration:edit')")
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteClientType(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteClientType(@PathVariable @Positive Long id) {
         clientTypeService.deleteClientType(id);
         return ResponseEntity.noContent().build();
     }
 
     @PreAuthorize("hasAuthority('administration:edit')")
     @GetMapping("/{id}/static-fields-config")
-    public ResponseEntity<StaticFieldsConfig> getStaticFieldsConfig(@PathVariable Long id) {
-        ClientType clientType = clientTypeService.getClientTypeById(id);
-        StaticFieldsConfig config = StaticFieldsHelper.parseStaticFieldsConfig(clientType);
-        if (config == null) {
-            config = new StaticFieldsConfig();
-        }
+    public ResponseEntity<StaticFieldsConfig> getStaticFieldsConfig(@PathVariable @Positive Long id) {
+        StaticFieldsConfig config = clientTypeService.getStaticFieldsConfig(id);
         return ResponseEntity.ok(config);
     }
 
     @PreAuthorize("hasAuthority('administration:edit')")
     @PutMapping("/{id}/static-fields-config")
     public ResponseEntity<StaticFieldsConfig> updateStaticFieldsConfig(
-            @PathVariable Long id,
-            @RequestBody StaticFieldsConfig config) {
-        ClientType clientType = clientTypeService.getClientTypeById(id);
-        try {
-            String configJson = objectMapper.writeValueAsString(config);
-            clientType.setStaticFieldsConfig(configJson);
-            clientTypeRepository.save(clientType);
-            return ResponseEntity.ok(config);
-        } catch (JsonProcessingException e) {
-            throw new ClientException("SERIALIZATION_ERROR", 
-                String.format("Failed to serialize static fields config: %s", e.getMessage()));
-        }
+            @PathVariable @Positive Long id,
+            @RequestBody @Valid @NonNull StaticFieldsConfig config) {
+        StaticFieldsConfig updatedConfig = clientTypeService.updateStaticFieldsConfig(id, config);
+        return ResponseEntity.ok(updatedConfig);
     }
 }
 

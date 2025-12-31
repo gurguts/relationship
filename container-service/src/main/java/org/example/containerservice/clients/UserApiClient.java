@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 
 import java.util.List;
 
-@FeignClient(name = "user-service", url = "http://localhost:8082/api/v1/user", configuration = FeignConfig.class)
+@FeignClient(name = "user-service", url = "${user.service.url}/api/v1/user", configuration = FeignConfig.class)
 public interface UserApiClient {
     @GetMapping()
     List<UserDTO> getAllUsers();

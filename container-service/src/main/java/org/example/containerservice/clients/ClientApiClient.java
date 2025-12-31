@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import java.util.List;
 import java.util.Map;
 
-@FeignClient(name = "client-service", url = "http://localhost:8084/api/v1/client", configuration = FeignConfig.class, contextId = "clientApiClient")
+@FeignClient(name = "client-service", url = "${client.service.url}/api/v1/client", configuration = FeignConfig.class, contextId = "clientApiClient")
 public interface ClientApiClient {
 
     @PostMapping("/search")

@@ -515,7 +515,7 @@ async function showClientModal(client) {
             if (values.length === 0) {
                 valueSpan.classList.add('empty-value');
                 valueSpan.textContent = '—';
-            } else {
+    } else {
                 if (field.allowMultiple) {
                     const fragment = document.createDocumentFragment();
                     values.forEach((v, index) => {
@@ -633,10 +633,10 @@ async function showClientModal(client) {
         }
         const closeModalHandler = () => {
             if (!editing) {
-                modal.classList.remove('open');
-                setTimeout(() => {
-                    closeModal();
-                });
+        modal.classList.remove('open');
+        setTimeout(() => {
+            closeModal();
+        });
             } else {
                 showMessage('Збережіть або відмініть зміни', 'error');
             }
@@ -677,25 +677,25 @@ async function showClientModal(client) {
                 return;
             }
             
-            loaderBackdrop.style.display = 'flex';
-            try {
+        loaderBackdrop.style.display = 'flex';
+        try {
                 const response = await fetch(`${API_URL}/${client.id}`, {method: 'DELETE'});
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    handleError(new ErrorResponse(errorData.error, errorData.message, errorData.details));
-                    return;
-                }
+            if (!response.ok) {
+                const errorData = await response.json();
+                handleError(new ErrorResponse(errorData.error, errorData.message, errorData.details));
+                return;
+            }
                 showMessage('Клієнт повністю видалений з бази даних', 'info');
-                modal.style.display = 'none';
+            modal.style.display = 'none';
 
-                loadDataWithSort(currentPage, pageSize, currentSort, currentDirection);
-            } catch (error) {
-                console.error('Помилка видалення клієнта:', error);
-                handleError(error);
+            loadDataWithSort(currentPage, pageSize, currentSort, currentDirection);
+        } catch (error) {
+            console.error('Помилка видалення клієнта:', error);
+            handleError(error);
             } finally {
                 loaderBackdrop.style.display = 'none';
-            }
-        };
+        }
+    };
         fullDeleteButton._fullDeleteHandler = fullDeleteHandler;
         fullDeleteButton.addEventListener('click', fullDeleteHandler);
     }
@@ -729,21 +729,21 @@ async function showClientModal(client) {
                 return;
             }
             
-            loaderBackdrop.style.display = 'flex';
-            try {
+        loaderBackdrop.style.display = 'flex';
+        try {
                 const response = await fetch(`${API_URL}/active/${client.id}`, {method: 'DELETE'});
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    handleError(new ErrorResponse(errorData.error, errorData.message, errorData.details));
-                    return;
-                }
+            if (!response.ok) {
+                const errorData = await response.json();
+                handleError(new ErrorResponse(errorData.error, errorData.message, errorData.details));
+                return;
+            }
                 showMessage('Клієнт деактивовано (isActive = false)', 'info');
-                modal.style.display = 'none';
+            modal.style.display = 'none';
 
-                loadDataWithSort(currentPage, pageSize, currentSort, currentDirection);
-            } catch (error) {
+            loadDataWithSort(currentPage, pageSize, currentSort, currentDirection);
+        } catch (error) {
                 console.error('Помилка деактивації клієнта:', error);
-                handleError(error);
+            handleError(error);
             } finally {
                 loaderBackdrop.style.display = 'none';
             }
@@ -764,20 +764,20 @@ async function showClientModal(client) {
             loaderBackdrop.style.display = 'flex';
             try {
                 const response = await fetch(`${API_URL}/active/${client.id}`, {method: 'PATCH'});
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    handleError(new ErrorResponse(errorData.error, errorData.message, errorData.details));
-                    return;
-                }
+        if (!response.ok) {
+            const errorData = await response.json();
+            handleError(new ErrorResponse(errorData.error, errorData.message, errorData.details));
+            return;
+        }
                 showMessage('Клієнт відновлено (isActive = true)', 'info');
                 modal.style.display = 'none';
 
-                loadDataWithSort(currentPage, pageSize, currentSort, currentDirection);
-            } catch (error) {
+        loadDataWithSort(currentPage, pageSize, currentSort, currentDirection);
+    } catch (error) {
                 console.error('Помилка відновлення клієнта:', error);
-                handleError(error);
-            } finally {
-                loaderBackdrop.style.display = 'none';
+        handleError(error);
+    } finally {
+        loaderBackdrop.style.display = 'none';
             }
         };
         restoreButton._restoreHandler = restoreHandler;
@@ -887,8 +887,8 @@ const performSearch = async () => {
 const debouncedSearch = debounce(performSearch, 400);
 
 if (searchInput) {
-    searchInput.addEventListener('keypress', async (event) => {
-        if (event.key === 'Enter') {
+searchInput.addEventListener('keypress', async (event) => {
+    if (event.key === 'Enter') {
             clearTimeout(searchDebounceTimer);
             performSearch();
         } else {
@@ -1554,7 +1554,7 @@ function clearFilters() {
     }
 
     if (searchInput) {
-        searchInput.value = '';
+    searchInput.value = '';
     }
 
     localStorage.removeItem('selectedFilters');

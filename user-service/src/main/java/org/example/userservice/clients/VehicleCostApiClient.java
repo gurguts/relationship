@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import java.math.BigDecimal;
 
-@FeignClient(name = "purchase-service", contextId = "vehicleCostApiClient", url = "http://localhost:8093/api/v1/vehicles", configuration = FeignConfig.class)
+@FeignClient(name = "purchase-service", contextId = "vehicleCostApiClient", url = "${purchase.service.url}/api/v1/vehicles", configuration = FeignConfig.class)
 public interface VehicleCostApiClient {
     @PostMapping("/{vehicleId}/cost")
     void updateVehicleCost(

@@ -1,5 +1,6 @@
 package org.example.clientservice.mappers.clienttype;
 
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.example.clientservice.models.clienttype.ClientTypeField;
 import org.example.clientservice.models.clienttype.ClientTypeFieldListValue;
@@ -18,18 +19,27 @@ import java.util.stream.Collectors;
 @Component
 @RequiredArgsConstructor
 public class ClientTypeFieldMapper {
+    
+    private static final boolean DEFAULT_IS_REQUIRED = false;
+    private static final boolean DEFAULT_IS_SEARCHABLE = true;
+    private static final boolean DEFAULT_IS_FILTERABLE = false;
+    private static final boolean DEFAULT_IS_VISIBLE_IN_TABLE = true;
+    private static final boolean DEFAULT_IS_VISIBLE_IN_CREATE = true;
+    private static final int DEFAULT_DISPLAY_ORDER = 0;
+    private static final boolean DEFAULT_ALLOW_MULTIPLE = false;
+    
     private final ClientTypeFieldListValueRepository listValueRepository;
 
-    public static ClientTypeFieldDTO toDTO(ClientTypeField field) {
-        if (field == null) {
-            return null;
-        }
-
+    public static ClientTypeFieldDTO toDTO(@NonNull ClientTypeField field) {
         ClientTypeFieldDTO dto = new ClientTypeFieldDTO();
         dto.setId(field.getId());
         dto.setFieldName(field.getFieldName());
         dto.setFieldLabel(field.getFieldLabel());
-        dto.setFieldType(field.getFieldType().name());
+        
+        if (field.getFieldType() != null) {
+            dto.setFieldType(field.getFieldType().name());
+        }
+        
         dto.setIsRequired(field.getIsRequired());
         dto.setIsSearchable(field.getIsSearchable());
         dto.setIsFilterable(field.getIsFilterable());
@@ -49,54 +59,51 @@ public class ClientTypeFieldMapper {
         return dto;
     }
 
-    public ClientTypeField createDTOToField(ClientTypeFieldCreateDTO dto, org.example.clientservice.models.clienttype.ClientType clientType) {
-        if (dto == null) {
-            return null;
-        }
-
+    public ClientTypeField createDTOToField(@NonNull ClientTypeFieldCreateDTO dto, 
+                                            @NonNull org.example.clientservice.models.clienttype.ClientType clientType) {
         ClientTypeField field = new ClientTypeField();
         field.setClientType(clientType);
         field.setFieldName(dto.getFieldName());
         field.setFieldLabel(dto.getFieldLabel());
         field.setFieldType(FieldType.valueOf(dto.getFieldType()));
-        field.setIsRequired(dto.getIsRequired() != null ? dto.getIsRequired() : false);
-        field.setIsSearchable(dto.getIsSearchable() != null ? dto.getIsSearchable() : true);
-        field.setIsFilterable(dto.getIsFilterable() != null ? dto.getIsFilterable() : false);
-        field.setIsVisibleInTable(dto.getIsVisibleInTable() != null ? dto.getIsVisibleInTable() : true);
-        field.setIsVisibleInCreate(dto.getIsVisibleInCreate() != null ? dto.getIsVisibleInCreate() : true);
-        field.setDisplayOrder(dto.getDisplayOrder() != null ? dto.getDisplayOrder() : 0);
+        field.setIsRequired(dto.getIsRequired() != null ? dto.getIsRequired() : DEFAULT_IS_REQUIRED);
+        field.setIsSearchable(dto.getIsSearchable() != null ? dto.getIsSearchable() : DEFAULT_IS_SEARCHABLE);
+        field.setIsFilterable(dto.getIsFilterable() != null ? dto.getIsFilterable() : DEFAULT_IS_FILTERABLE);
+        field.setIsVisibleInTable(dto.getIsVisibleInTable() != null ? dto.getIsVisibleInTable() : DEFAULT_IS_VISIBLE_IN_TABLE);
+        field.setIsVisibleInCreate(dto.getIsVisibleInCreate() != null ? dto.getIsVisibleInCreate() : DEFAULT_IS_VISIBLE_IN_CREATE);
+        field.setDisplayOrder(dto.getDisplayOrder() != null ? dto.getDisplayOrder() : DEFAULT_DISPLAY_ORDER);
         field.setColumnWidth(dto.getColumnWidth());
         field.setValidationPattern(dto.getValidationPattern());
-        field.setAllowMultiple(dto.getAllowMultiple() != null ? dto.getAllowMultiple() : false);
+        field.setAllowMultiple(dto.getAllowMultiple() != null ? dto.getAllowMultiple() : DEFAULT_ALLOW_MULTIPLE);
 
         if (dto.getListValues() != null && !dto.getListValues().isEmpty()) {
-            List<ClientTypeFieldListValue> listValues = new ArrayList<>();
-            List<String> seenValues = new ArrayList<>();
-            int order = 0;
-            for (String value : dto.getListValues()) {
-                if (value != null && !value.trim().isEmpty()) {
-                    String trimmedValue = value.trim();
-                    if (!seenValues.contains(trimmedValue)) {
-                        ClientTypeFieldListValue listValue = new ClientTypeFieldListValue();
-                        listValue.setField(field);
-                        listValue.setValue(trimmedValue);
-                        listValue.setDisplayOrder(order++);
-                        listValues.add(listValue);
-                        seenValues.add(trimmedValue);
-                    }
-                }
-            }
-            field.setListValues(listValues);
+            field.setListValues(processListValues(dto.getListValues(), field));
         }
 
         return field;
     }
-
-    public void updateFieldFromDTO(ClientTypeField field, ClientTypeFieldUpdateDTO dto) {
-        if (dto == null || field == null) {
-            return;
+    
+    private List<ClientTypeFieldListValue> processListValues(@NonNull List<String> values, @NonNull ClientTypeField field) {
+        List<ClientTypeFieldListValue> listValues = new ArrayList<>();
+        List<String> seenValues = new ArrayList<>();
+        int order = 0;
+        for (String value : values) {
+            if (value != null && !value.trim().isEmpty()) {
+                String trimmedValue = value.trim();
+                if (!seenValues.contains(trimmedValue)) {
+                    ClientTypeFieldListValue listValue = new ClientTypeFieldListValue();
+                    listValue.setField(field);
+                    listValue.setValue(trimmedValue);
+                    listValue.setDisplayOrder(order++);
+                    listValues.add(listValue);
+                    seenValues.add(trimmedValue);
+                }
+            }
         }
+        return listValues;
+    }
 
+    public void updateFieldFromDTO(@NonNull ClientTypeField field, @NonNull ClientTypeFieldUpdateDTO dto) {
         if (dto.getFieldLabel() != null) {
             field.setFieldLabel(dto.getFieldLabel());
         }
@@ -129,39 +136,47 @@ public class ClientTypeFieldMapper {
         }
 
         if (dto.getListValues() != null) {
-            List<String> newValues = dto.getListValues().stream()
-                    .filter(v -> v != null && !v.trim().isEmpty())
-                    .map(String::trim)
-                    .distinct()
-                    .collect(Collectors.toList());
-            
-            Map<String, ClientTypeFieldListValue> existingValuesMap = field.getListValues().stream()
-                    .collect(Collectors.toMap(ClientTypeFieldListValue::getValue, lv -> lv, (lv1, lv2) -> lv1));
-            
-            List<ClientTypeFieldListValue> valuesToRemove = new ArrayList<>();
-            for (ClientTypeFieldListValue existingValue : field.getListValues()) {
-                if (!newValues.contains(existingValue.getValue())) {
-                    valuesToRemove.add(existingValue);
-                }
+            updateListValues(field, dto.getListValues());
+        }
+    }
+    
+    private void updateListValues(@NonNull ClientTypeField field, @NonNull List<String> newValuesList) {
+        List<String> newValues = newValuesList.stream()
+                .filter(v -> v != null && !v.trim().isEmpty())
+                .map(String::trim)
+                .distinct()
+                .toList();
+        
+        if (field.getListValues() == null) {
+            field.setListValues(new ArrayList<>());
+        }
+        
+        Map<String, ClientTypeFieldListValue> existingValuesMap = field.getListValues().stream()
+                .collect(Collectors.toMap(ClientTypeFieldListValue::getValue, lv -> lv, (lv1, _) -> lv1));
+        
+        List<ClientTypeFieldListValue> valuesToRemove = new ArrayList<>();
+        for (ClientTypeFieldListValue existingValue : field.getListValues()) {
+            if (!newValues.contains(existingValue.getValue())) {
+                valuesToRemove.add(existingValue);
             }
-            field.getListValues().removeAll(valuesToRemove);
-            
-            int order = 0;
-            for (String newValue : newValues) {
-                ClientTypeFieldListValue listValue = existingValuesMap.get(newValue);
+        }
+        field.getListValues().removeAll(valuesToRemove);
+        
+        int order = 0;
+        for (String newValue : newValues) {
+            ClientTypeFieldListValue listValue = existingValuesMap.get(newValue);
+            if (listValue == null) {
+                listValue = listValueRepository.findByFieldIdAndValue(field.getId(), newValue);
                 if (listValue == null) {
-                    listValue = listValueRepository.findByFieldIdAndValue(field.getId(), newValue);
-                    if (listValue == null) {
-                        listValue = new ClientTypeFieldListValue();
-                        listValue.setField(field);
-                        listValue.setValue(newValue);
-                        field.getListValues().add(listValue);
-                    } else {
-                        field.getListValues().add(listValue);
-                    }
+                    listValue = new ClientTypeFieldListValue();
+                    listValue.setField(field);
+                    listValue.setValue(newValue);
+                    field.getListValues().add(listValue);
+                } else {
+                    field.getListValues().add(listValue);
                 }
-                listValue.setDisplayOrder(order++);
             }
+            listValue.setDisplayOrder(order++);
         }
     }
 }

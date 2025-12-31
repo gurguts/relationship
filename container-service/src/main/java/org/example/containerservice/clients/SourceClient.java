@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 
 import java.util.List;
 
-@FeignClient(name = "source-service", url = "http://localhost:8084/api/v1/source", configuration = FeignConfig.class)
+@FeignClient(name = "source-service", url = "${client.service.url}/api/v1/source", configuration = FeignConfig.class)
 public interface SourceClient {
     @GetMapping
     List<SourceDTO> getAllSource();

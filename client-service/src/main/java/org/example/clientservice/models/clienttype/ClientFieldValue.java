@@ -3,6 +3,7 @@ package org.example.clientservice.models.clienttype;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.Getter;
+import lombok.NonNull;
 import lombok.Setter;
 import org.example.clientservice.models.client.Client;
 import org.hibernate.annotations.CreationTimestamp;
@@ -17,15 +18,20 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "client_field_values")
 public class ClientFieldValue {
+    
+    private static final int DEFAULT_DISPLAY_ORDER = 0;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @JsonBackReference
+    @NonNull
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "client_id", nullable = false)
     private Client client;
 
+    @NonNull
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "field_id", nullable = false)
     private ClientTypeField field;
@@ -47,7 +53,7 @@ public class ClientFieldValue {
     private ClientTypeFieldListValue valueList;
 
     @Column(name = "display_order")
-    private Integer displayOrder = 0;
+    private Integer displayOrder = DEFAULT_DISPLAY_ORDER;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

@@ -1,29 +1,34 @@
 package org.example.clientservice.repositories.clienttype;
 
+import lombok.NonNull;
 import org.example.clientservice.models.clienttype.ClientTypeField;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
-import org.springframework.stereotype.Repository;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
 
-@Repository
 public interface ClientTypeFieldRepository extends JpaRepository<ClientTypeField, Long> {
-    List<ClientTypeField> findByClientTypeIdOrderByDisplayOrderAsc(Long clientTypeId);
+    @NonNull
+    List<ClientTypeField> findByClientTypeIdOrderByDisplayOrderAsc(@NonNull Long clientTypeId);
     
-    Optional<ClientTypeField> findByClientTypeIdAndFieldName(Long clientTypeId, String fieldName);
+    Optional<ClientTypeField> findByClientTypeIdAndFieldName(@NonNull Long clientTypeId, @NonNull String fieldName);
     
     @Query("SELECT f FROM ClientTypeField f WHERE f.clientType.id = :clientTypeId AND f.isVisibleInTable = true ORDER BY f.displayOrder ASC")
-    List<ClientTypeField> findVisibleFieldsByClientTypeId(Long clientTypeId);
+    @NonNull
+    List<ClientTypeField> findVisibleFieldsByClientTypeId(@NonNull @Param("clientTypeId") Long clientTypeId);
     
     @Query("SELECT f FROM ClientTypeField f WHERE f.clientType.id = :clientTypeId AND f.isSearchable = true ORDER BY f.displayOrder ASC")
-    List<ClientTypeField> findSearchableFieldsByClientTypeId(Long clientTypeId);
+    @NonNull
+    List<ClientTypeField> findSearchableFieldsByClientTypeId(@NonNull @Param("clientTypeId") Long clientTypeId);
     
     @Query("SELECT f FROM ClientTypeField f WHERE f.clientType.id = :clientTypeId AND f.isFilterable = true ORDER BY f.displayOrder ASC")
-    List<ClientTypeField> findFilterableFieldsByClientTypeId(Long clientTypeId);
+    @NonNull
+    List<ClientTypeField> findFilterableFieldsByClientTypeId(@NonNull @Param("clientTypeId") Long clientTypeId);
     
     @Query("SELECT f FROM ClientTypeField f WHERE f.clientType.id = :clientTypeId AND f.isVisibleInCreate = true ORDER BY f.displayOrder ASC")
-    List<ClientTypeField> findVisibleInCreateFieldsByClientTypeId(Long clientTypeId);
+    @NonNull
+    List<ClientTypeField> findVisibleInCreateFieldsByClientTypeId(@NonNull @Param("clientTypeId") Long clientTypeId);
 }
 

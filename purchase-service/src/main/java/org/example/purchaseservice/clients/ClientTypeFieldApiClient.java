@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 
 import java.util.List;
 
-@FeignClient(name = "client-service", url = "http://localhost:8084/api/v1/client-type", configuration = FeignConfig.class, contextId = "clientTypeFieldApiClient")
+@FeignClient(name = "client-service", url = "${client.service.url}/api/v1/client-type", configuration = FeignConfig.class, contextId = "clientTypeFieldApiClient")
 public interface ClientTypeFieldApiClient {
 
     @GetMapping("/field/{fieldId}")

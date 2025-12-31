@@ -1,32 +1,40 @@
 package org.example.clientservice.services.impl;
 
+import lombok.NonNull;
 import org.example.clientservice.models.clienttype.ClientTypePermission;
 import org.example.clientservice.models.dto.clienttype.ClientTypePermissionCreateDTO;
+import org.example.clientservice.models.dto.clienttype.ClientTypePermissionDTO;
 import org.example.clientservice.models.dto.clienttype.ClientTypePermissionUpdateDTO;
 
 import java.util.List;
 
 public interface IClientTypePermissionService {
-    ClientTypePermission createPermission(Long clientTypeId, ClientTypePermissionCreateDTO dto);
+    @NonNull
+    ClientTypePermission createPermission(@NonNull Long clientTypeId, @NonNull ClientTypePermissionCreateDTO dto);
     
-    ClientTypePermission updatePermission(Long clientTypeId, Long userId, ClientTypePermissionUpdateDTO dto);
+    @NonNull
+    ClientTypePermission updatePermission(@NonNull Long clientTypeId, @NonNull Long userId, @NonNull ClientTypePermissionUpdateDTO dto);
     
-    ClientTypePermission getPermission(Long clientTypeId, Long userId);
+    @NonNull
+    ClientTypePermission getPermission(@NonNull Long clientTypeId, @NonNull Long userId);
     
-    List<ClientTypePermission> getPermissionsByClientTypeId(Long clientTypeId);
+    @NonNull
+    List<ClientTypePermission> getPermissionsByClientTypeId(@NonNull Long clientTypeId);
     
-    List<ClientTypePermission> getPermissionsByUserId(Long userId);
+    @NonNull
+    List<ClientTypePermission> getPermissionsByUserId(@NonNull Long userId);
     
-    boolean canUserView(Long userId, Long clientTypeId);
+    @NonNull
+    List<ClientTypePermissionDTO> getMyPermissions();
     
-    boolean canUserCreate(Long userId, Long clientTypeId);
+    boolean canUserView(@NonNull Long userId, @NonNull Long clientTypeId);
     
-    boolean canUserEdit(Long userId, Long clientTypeId);
+    boolean canUserCreate(@NonNull Long userId, @NonNull Long clientTypeId);
     
-    boolean canUserDelete(Long userId, Long clientTypeId);
+    boolean canUserEdit(@NonNull Long userId, @NonNull Long clientTypeId);
+
+    ClientTypePermission getUserPermissions(@NonNull Long userId, @NonNull Long clientTypeId);
     
-    ClientTypePermission getUserPermissions(Long userId, Long clientTypeId);
-    
-    void deletePermission(Long clientTypeId, Long userId);
+    void deletePermission(@NonNull Long clientTypeId, @NonNull Long userId);
 }
 

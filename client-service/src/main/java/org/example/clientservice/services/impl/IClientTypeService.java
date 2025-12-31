@@ -1,32 +1,43 @@
 package org.example.clientservice.services.impl;
 
+import lombok.NonNull;
 import org.example.clientservice.models.clienttype.ClientType;
 import org.example.clientservice.models.dto.clienttype.ClientTypeCreateDTO;
 import org.example.clientservice.models.dto.clienttype.ClientTypeUpdateDTO;
+import org.example.clientservice.models.dto.clienttype.StaticFieldsConfig;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 
 public interface IClientTypeService {
-    ClientType createClientType(ClientTypeCreateDTO dto);
+    @NonNull
+    ClientType createClientType(@NonNull ClientTypeCreateDTO dto);
     
-    ClientType updateClientType(Long id, ClientTypeUpdateDTO dto);
+    @NonNull
+    ClientType updateClientType(@NonNull Long id, @NonNull ClientTypeUpdateDTO dto);
     
-    ClientType getClientTypeById(Long id);
+    @NonNull
+    ClientType getClientTypeById(@NonNull Long id);
     
-    ClientType getClientTypeByIdWithFields(Long id);
-    
-    List<ClientType> getAllClientTypes();
-    
+    @NonNull
+    ClientType getClientTypeByIdWithFields(@NonNull Long id);
+
+    @NonNull
     List<ClientType> getAllActiveClientTypes();
     
-    Page<ClientType> getAllClientTypes(Pageable pageable);
+    @NonNull
+    Page<ClientType> getAllClientTypes(@NonNull Pageable pageable);
     
-    Page<ClientType> getAllActiveClientTypes(Pageable pageable);
+    @NonNull
+    Page<ClientType> getAllActiveClientTypes(@NonNull Pageable pageable);
     
-    void deleteClientType(Long id);
+    void deleteClientType(@NonNull Long id);
+
+    @NonNull
+    StaticFieldsConfig getStaticFieldsConfig(@NonNull Long id);
     
-    boolean existsByName(String name);
+    @NonNull
+    StaticFieldsConfig updateStaticFieldsConfig(@NonNull Long id, @NonNull StaticFieldsConfig config);
 }
 

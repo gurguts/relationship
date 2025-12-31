@@ -19,139 +19,51 @@ spring:
 
         # 📌 Web App (Frontend)
         - id: web-app
-          uri: http://localhost:8081
+          uri: ${WEB_APP_URL:http://localhost:8081}
           predicates:
             - Path=/login,/clients,/routes,/purchase,/sale,/settings,/administration,/containers,/inventory,/warehouse,/finance,/stock,/analytics,/profile,/declarant,/static/**,/css/**,/js/**,/favicon/**,/img/**
           filters:
             - CustomTokenRelayFilterFactory
 
-        # 📌 User, Auth, Balance, Transaction Service
         - id: user-service
-          uri: http://localhost:8082
+          uri: ${USER_SERVICE_URL:http://localhost:8082}
           predicates:
             - Path=/api/v1/user/**,/api/v1/auth/**,/api/v1/transaction/**,/api/v1/accounts/**,/api/v1/branches/**,/api/v1/transaction-categories/**,/api/v1/branch-permissions/**,/api/v1/counterparties/**
           filters:
             - CustomTokenRelayFilterFactory
 
-        #        # 📌 Auth Service
-        #        - id: auth-service
-        #          uri: http://localhost:8083
-        #          predicates:
-        #            - Path=/api/v1/auth/**
-        #          filters:
-        #            - CustomTokenRelayFilterFactory
 
-        # 📌 Client, Fields Service
         - id: client-service
-          uri: http://localhost:8084
+          uri: ${CLIENT_SERVICE_URL:http://localhost:8084}
           predicates:
             - Path=/api/v1/client/**,/api/v1/business/**,/api/v1/region/**,/api/v1/route/**,/api/v1/source/**,/api/v1/status/**,/api/v1/entities/**,/api/v1/clientProduct/**,/api/v1/client-type/**
           filters:
             - CustomTokenRelayFilterFactory
 
-        #        # 📌 Balance Service
-        #        - id: balance-service
-        #          uri: http://localhost:8085
-        #          predicates:
-        #            - Path=/api/v1/balance/**
-        #          filters:
-        #            - CustomTokenRelayFilterFactory
 
-        #        # 📌 KeepinCrm Service
-        #        - id: keepincrm-service
-        #          uri: http://localhost:8086
-        #          predicates:
-        #            - Path=/api/v1/keepincrm/**
-        #          filters:
-        #            - CustomTokenRelayFilterFactory
-
-        #        # 📌 Business Service
-        #        - id: business-service
-        #          uri: http://localhost:8087
-        #          predicates:
-        #            - Path=/api/v1/business/**
-        #          filters:
-        #            - CustomTokenRelayFilterFactory
-
-        #        # 📌 Region Service
-        #        - id: region-service
-        #          uri: http://localhost:8088
-        #          predicates:
-        #            - Path=/api/v1/region/**
-        #          filters:
-        #            - CustomTokenRelayFilterFactory
-
-        #        # 📌 Route Service
-        #        - id: route-service
-        #          uri: http://localhost:8089
-        #          predicates:
-        #            - Path=/api/v1/route/**
-        #          filters:
-        #            - CustomTokenRelayFilterFactory
-
-        #        # 📌 Source Service
-        #        - id: source-service
-        #          uri: http://localhost:8090
-        #          predicates:
-        #            - Path=/api/v1/source/**
-        #          filters:
-        #            - CustomTokenRelayFilterFactory
-
-        #        # 📌 Status client Service
-        #        - id: status-client-service
-        #          uri: http://localhost:8091
-        #          predicates:
-        #            - Path=/api/v1/status/**
-        #          filters:
-        #            - CustomTokenRelayFilterFactory
-
-        #        # 📌 Product Service
-        #        - id: product-service
-        #          uri: http://localhost:8092
-        #          predicates:
-        #            - Path=/api/v1/product/**
-        #          filters:
-        #            - CustomTokenRelayFilterFactory
-
-        # 📌 Purchase, Warehouse, Product, Driver Balance, Vehicles Service
         - id: purchase-service
-          uri: http://localhost:8093
+          uri: ${PURCHASE_SERVICE_URL:http://localhost:8093}
           predicates:
             - Path=/api/v1/purchase/**,/api/v1/product/**,/api/v1/warehouse/**,/api/v1/withdrawal-reason/**,/api/v1/driver/**,/api/v1/vehicles/**,/api/v1/carriers/**,/api/v1/vehicle-senders/**,/api/v1/vehicle-receivers/**,/api/v1/exchange-rates/**
           filters:
             - CustomTokenRelayFilterFactory
 
-        #        # 📌 Transaction Service
-        #        - id: transaction-service
-        #          uri: http://localhost:8094
-        #          predicates:
-        #            - Path=/api/v1/transaction/**
-        #          filters:
-        #            - CustomTokenRelayFilterFactory
 
-        # 📌 Container Service
         - id: container-service
-          uri: http://localhost:8095
+          uri: ${CONTAINER_SERVICE_URL:http://localhost:8095}
           predicates:
             - Path=/api/v1/container/**,/api/v1/containers/**
           filters:
             - CustomTokenRelayFilterFactory
 
-        # 📌 Sale Service
+
         - id: sale-service
-          uri: http://localhost:8096
+          uri: ${SALE_SERVICE_URL:http://localhost:8096}
           predicates:
             - Path=/api/v1/sale/**
           filters:
             - CustomTokenRelayFilterFactory
 
-        #        # 📌 Warehouse Service
-        #        - id: warehouse-service
-        #          uri: http://localhost:8097
-        #          predicates:
-        #            - Path=/api/v1/warehouse/**
-        #          filters:
-        #            - CustomTokenRelayFilterFactory
 
         - id: fallback
           uri: no://op

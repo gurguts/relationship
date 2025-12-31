@@ -2,6 +2,7 @@ package org.example.clientservice.spec;
 
 import jakarta.persistence.criteria.*;
 import lombok.NonNull;
+import lombok.extern.slf4j.Slf4j;
 import org.example.clientservice.exceptions.client.ClientException;
 import org.example.clientservice.models.client.Client;
 import org.example.clientservice.models.clienttype.ClientFieldValue;
@@ -9,18 +10,57 @@ import org.example.clientservice.models.clienttype.ClientTypeField;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.util.StringUtils;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+@Slf4j
 public class ClientSpecification implements Specification<Client> {
+    private static final String FIELD_PREFIX = "field_";
+    private static final String SUFFIX_FROM = "From";
+    private static final String SUFFIX_TO = "To";
+    private static final int FIELD_PREFIX_LENGTH = 6;
+    
+    private static final String FIELD_CLIENT_TYPE = "clientType";
+    private static final String FIELD_IS_ACTIVE = "isActive";
+    private static final String FIELD_ID = "id";
+    private static final String FIELD_COMPANY = "company";
+    private static final String FIELD_SOURCE_ID = "sourceId";
+    private static final String FIELD_CLIENT = "client";
+    private static final String FIELD_FIELD = "field";
+    private static final String FIELD_FIELD_NAME = "fieldName";
+    private static final String FIELD_IS_SEARCHABLE = "isSearchable";
+    private static final String FIELD_VALUE_TEXT = "valueText";
+    private static final String FIELD_VALUE_BOOLEAN = "valueBoolean";
+    private static final String FIELD_VALUE_DATE = "valueDate";
+    private static final String FIELD_VALUE_NUMBER = "valueNumber";
+    private static final String FIELD_VALUE_LIST = "valueList";
+    private static final String FIELD_VALUE = "value";
+    private static final String FIELD_CREATED_AT = "createdAt";
+    private static final String FIELD_UPDATED_AT = "updatedAt";
+    
+    private static final String FILTER_SHOW_INACTIVE = "showInactive";
+    private static final String FILTER_SOURCE = "source";
+    private static final String FILTER_CLIENT_TYPE_ID = "clientTypeId";
+    private static final String FILTER_CREATED_AT_FROM = "createdAtFrom";
+    private static final String FILTER_CREATED_AT_TO = "createdAtTo";
+    private static final String FILTER_UPDATED_AT_FROM = "updatedAtFrom";
+    private static final String FILTER_UPDATED_AT_TO = "updatedAtTo";
+    
+    private static final String VALUE_TRUE = "true";
+    private static final String VALUE_FALSE = "false";
+    private static final String LIKE_PATTERN = "%%%s%%";
+    
     private static final Set<String> VALID_FILTER_KEYS = Set.of(
-            "createdAtFrom", "createdAtTo", "updatedAtFrom", "updatedAtTo", "source", "showInactive");
+            FILTER_CREATED_AT_FROM, FILTER_CREATED_AT_TO, FILTER_UPDATED_AT_FROM, FILTER_UPDATED_AT_TO, 
+            FILTER_SOURCE, FILTER_SHOW_INACTIVE);
 
     private final String query;
     private final Map<String, List<String>> filterParams;
@@ -49,71 +89,97 @@ public class ClientSpecification implements Specification<Client> {
     public Predicate toPredicate(@NonNull Root<Client> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
         Predicate predicate = criteriaBuilder.conjunction();
 
-        if (StringUtils.hasText(this.query)) {
-            predicate = criteriaBuilder.and(predicate, createKeywordPredicate(root, query, criteriaBuilder));
-        }
-
-        boolean showInactive = filterParams != null && filterParams.containsKey("showInactive") 
-                && filterParams.get("showInactive") != null 
-                && !filterParams.get("showInactive").isEmpty()
-                && "true".equals(filterParams.get("showInactive").get(0));
-        
-        if (showInactive) {
-            predicate = criteriaBuilder.and(predicate, criteriaBuilder.isFalse(root.get("isActive")));
-        } else {
-            predicate = criteriaBuilder.and(predicate, criteriaBuilder.isTrue(root.get("isActive")));
-        }
-
-        Path<?> clientTypePath = null;
-        Join<?, ?> existingJoin = null;
-        
-        for (Join<?, ?> join : root.getJoins()) {
-            if ("clientType".equals(join.getAttribute().getName())) {
-                existingJoin = join;
-                break;
-            }
-        }
-        
-        if (existingJoin != null) {
-            clientTypePath = existingJoin;
-        } else {
-            boolean hasFetch = false;
-            for (Fetch<?, ?> fetch : root.getFetches()) {
-                if ("clientType".equals(fetch.getAttribute().getName())) {
-                    hasFetch = true;
-                    break;
-                }
-            }
-            if (hasFetch) {
-                clientTypePath = root.get("clientType");
-            } else {
-                Join<?, ?> newJoin = root.join("clientType", JoinType.LEFT);
-                clientTypePath = newJoin;
-            }
-        }
-
-        if (allowedClientTypeIds != null && !allowedClientTypeIds.isEmpty()) {
-            predicate = criteriaBuilder.and(predicate, 
-                clientTypePath.get("id").in(allowedClientTypeIds));
-        }
-
-        if (clientTypeId != null) {
-            predicate = criteriaBuilder.and(predicate, 
-                criteriaBuilder.equal(clientTypePath.get("id"), clientTypeId));
-        }
-
+        predicate = applyQueryFilter(predicate, root, query, criteriaBuilder);
+        predicate = applyActiveFilter(predicate, root, criteriaBuilder);
+        predicate = applyClientTypeFilters(predicate, root, criteriaBuilder);
         predicate = applyFilters(predicate, root, query, criteriaBuilder);
 
         return predicate;
     }
 
+    private Predicate applyQueryFilter(Predicate predicate, Root<Client> root, CriteriaQuery<?> query,
+                                      CriteriaBuilder criteriaBuilder) {
+        if (StringUtils.hasText(this.query)) {
+            predicate = criteriaBuilder.and(predicate, createKeywordPredicate(root, query, criteriaBuilder));
+        }
+        return predicate;
+    }
+
+    private Predicate applyActiveFilter(Predicate predicate, Root<Client> root, CriteriaBuilder criteriaBuilder) {
+        if (isShowInactive()) {
+            predicate = criteriaBuilder.and(predicate, criteriaBuilder.isFalse(root.get(FIELD_IS_ACTIVE)));
+        } else {
+            predicate = criteriaBuilder.and(predicate, criteriaBuilder.isTrue(root.get(FIELD_IS_ACTIVE)));
+        }
+        return predicate;
+    }
+
+    private Predicate applyClientTypeFilters(Predicate predicate, Root<Client> root, CriteriaBuilder criteriaBuilder) {
+        Path<?> clientTypePath = getClientTypePath(root);
+
+        if (allowedClientTypeIds != null && !allowedClientTypeIds.isEmpty()) {
+            predicate = criteriaBuilder.and(predicate, 
+                clientTypePath.get(FIELD_ID).in(allowedClientTypeIds));
+        }
+
+        if (clientTypeId != null) {
+            predicate = criteriaBuilder.and(predicate, 
+                criteriaBuilder.equal(clientTypePath.get(FIELD_ID), clientTypeId));
+        }
+
+        return predicate;
+    }
+
+    private boolean isShowInactive() {
+        if (filterParams == null) {
+            return false;
+        }
+        List<String> showInactiveValues = filterParams.get(FILTER_SHOW_INACTIVE);
+        return showInactiveValues != null && !showInactiveValues.isEmpty() 
+                && VALUE_TRUE.equals(showInactiveValues.getFirst());
+    }
+
+    private Path<?> getClientTypePath(Root<Client> root) {
+        Join<?, ?> existingJoin = findExistingJoin(root);
+        if (existingJoin != null) {
+            return existingJoin;
+        }
+
+        if (hasFetch(root)) {
+            return root.get(FIELD_CLIENT_TYPE);
+        }
+
+        return root.join(FIELD_CLIENT_TYPE, JoinType.LEFT);
+    }
+
+    private Join<?, ?> findExistingJoin(Root<Client> root) {
+        for (Join<?, ?> join : root.getJoins()) {
+            if (ClientSpecification.FIELD_CLIENT_TYPE.equals(join.getAttribute().getName())) {
+                return join;
+            }
+        }
+        return null;
+    }
+
+    private boolean hasFetch(Root<Client> root) {
+        for (Fetch<?, ?> fetch : root.getFetches()) {
+            if (ClientSpecification.FIELD_CLIENT_TYPE.equals(fetch.getAttribute().getName())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private Predicate createKeywordPredicate(Root<Client> root, CriteriaQuery<?> query,
                                              CriteriaBuilder criteriaBuilder) {
+        String escapedQuery = escapeQuery(this.query);
+        String searchPattern = String.format(LIKE_PATTERN, escapedQuery);
+        
         Predicate keywordPredicate = criteriaBuilder.or(
                 criteriaBuilder.like(
-                        criteriaBuilder.toString(root.get("id")), String.format("%%%s%%", escapeQuery(this.query))),
+                        criteriaBuilder.toString(root.get(FIELD_ID)), searchPattern),
                 criteriaBuilder.like(
-                        criteriaBuilder.lower(root.get("company")), String.format("%%%s%%", escapeQuery(this.query)))
+                        criteriaBuilder.lower(root.get(FIELD_COMPANY)), searchPattern)
         );
 
         keywordPredicate = addJoinPredicates(root, criteriaBuilder, keywordPredicate);
@@ -128,57 +194,55 @@ public class ClientSpecification implements Specification<Client> {
 
     private Predicate addJoinPredicates(Root<Client> root, CriteriaBuilder criteriaBuilder,
                                         Predicate keywordPredicate) {
+        if (sourceIds == null || sourceIds.isEmpty()) {
+            return keywordPredicate;
+        }
         return criteriaBuilder.or(
                 keywordPredicate,
-                sourceIds != null ? root.get("source").in(sourceIds) : criteriaBuilder.conjunction()
+                root.get(FIELD_SOURCE_ID).in(sourceIds)
         );
     }
 
-    private Predicate addDynamicFieldSearchPredicate(Root<Client> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder,
+    private Predicate addDynamicFieldSearchPredicate(Root<Client> root, CriteriaQuery<?> query, 
+                                                     CriteriaBuilder criteriaBuilder,
                                                      Predicate keywordPredicate) {
+        SubqueryContext subqueryContext = createFieldValueSubquery(query);
         
-        Subquery<Long> fieldValueSubquery = query.subquery(Long.class);
-        Root<ClientFieldValue> fieldValueRoot = fieldValueSubquery.from(ClientFieldValue.class);
-        Join<ClientFieldValue, ClientTypeField> fieldJoin = fieldValueRoot.join("field");
-        Join<ClientTypeField, ?> clientTypeJoin = fieldJoin.join("clientType");
-        
-        fieldValueSubquery.select(fieldValueRoot.get("client").get("id"));
-
-        List<Predicate> basePredicates = new java.util.ArrayList<>();
-        basePredicates.add(criteriaBuilder.equal(fieldValueRoot.get("client"), root));
+        List<Predicate> basePredicates = new ArrayList<>();
+        basePredicates.add(criteriaBuilder.equal(subqueryContext.fieldValueRoot.get(FIELD_CLIENT), root));
         if (clientTypeId != null) {
-            basePredicates.add(criteriaBuilder.equal(clientTypeJoin.get("id"), clientTypeId));
+            basePredicates.add(criteriaBuilder.equal(subqueryContext.clientTypeJoin.get(FIELD_ID), clientTypeId));
         }
-
-        basePredicates.add(criteriaBuilder.isTrue(fieldJoin.get("isSearchable")));
+        basePredicates.add(criteriaBuilder.isTrue(subqueryContext.fieldJoin.get(FIELD_IS_SEARCHABLE)));
         
         String escapedQuery = escapeQuery(this.query);
-        String searchPattern = String.format("%%%s%%", escapedQuery);
+        String searchPattern = String.format(LIKE_PATTERN, escapedQuery);
 
         Predicate textSearchPredicate = criteriaBuilder.like(
-                criteriaBuilder.lower(fieldValueRoot.get("valueText")),
+                criteriaBuilder.lower(subqueryContext.fieldValueRoot.get(FIELD_VALUE_TEXT)),
                 searchPattern
         );
 
-        Join<ClientFieldValue, ?> valueListJoin = fieldValueRoot.join("valueList", jakarta.persistence.criteria.JoinType.LEFT);
+        Join<ClientFieldValue, ?> valueListJoin = subqueryContext.fieldValueRoot.join(
+                FIELD_VALUE_LIST, jakarta.persistence.criteria.JoinType.LEFT);
         Predicate listValueSearchPredicate = criteriaBuilder.like(
-                criteriaBuilder.lower(valueListJoin.get("value")),
+                criteriaBuilder.lower(valueListJoin.get(FIELD_VALUE)),
                 searchPattern
         );
 
         Predicate dynamicFieldPredicate = criteriaBuilder.or(textSearchPredicate, listValueSearchPredicate);
-        
         basePredicates.add(dynamicFieldPredicate);
         
-        fieldValueSubquery.where(criteriaBuilder.and(basePredicates.toArray(new Predicate[0])));
+        subqueryContext.subquery.where(criteriaBuilder.and(basePredicates.toArray(new Predicate[0])));
         
         return criteriaBuilder.or(
                 keywordPredicate,
-                criteriaBuilder.exists(fieldValueSubquery)
+                criteriaBuilder.exists(subqueryContext.subquery)
         );
     }
 
-    private Predicate applyFilters(Predicate predicate, Root<Client> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
+    private Predicate applyFilters(Predicate predicate, Root<Client> root, CriteriaQuery<?> query, 
+                                  CriteriaBuilder criteriaBuilder) {
         if (filterParams == null || filterParams.isEmpty()) {
             return predicate;
         }
@@ -188,43 +252,10 @@ public class ClientSpecification implements Specification<Client> {
             List<String> values = entry.getValue();
 
             if (VALID_FILTER_KEYS.contains(key)) {
-                switch (key) {
-                    case "createdAtFrom" -> predicate =
-                            addDateFilter(predicate, root, criteriaBuilder, values, "createdAt", true);
-                    case "createdAtTo" -> predicate =
-                            addDateFilter(predicate, root, criteriaBuilder, values, "createdAt", false);
-                    case "updatedAtFrom" -> predicate =
-                            addDateFilter(predicate, root, criteriaBuilder, values, "updatedAt", true);
-                    case "updatedAtTo" -> predicate =
-                            addDateFilter(predicate, root, criteriaBuilder, values, "updatedAt", false);
-                    case "source" -> predicate = addIdFilter(predicate, root, criteriaBuilder, values, "source");
-                    case "showInactive" -> {
-                    }
-                }
-            } else if (key.startsWith("field_")) {
-                if (key.endsWith("From")) {
-                    String fieldIdStr = key.substring(6, key.length() - 4);
-                    try {
-                        Long fieldId = Long.parseLong(fieldIdStr);
-                        predicate = addDynamicFieldRangeFilter(predicate, root, query, criteriaBuilder, fieldId, values, clientTypeId, true);
-                    } catch (NumberFormatException e) {
-                    }
-                } else if (key.endsWith("To")) {
-                    String fieldIdStr = key.substring(6, key.length() - 2);
-                    try {
-                        Long fieldId = Long.parseLong(fieldIdStr);
-                        predicate = addDynamicFieldRangeFilter(predicate, root, query, criteriaBuilder, fieldId, values, clientTypeId, false);
-                    } catch (NumberFormatException e) {
-                    }
-                } else {
-                    String fieldIdStr = key.substring(6);
-                    try {
-                        Long fieldId = Long.parseLong(fieldIdStr);
-                        predicate = addDynamicFieldFilterById(predicate, root, query, criteriaBuilder, fieldId, values, clientTypeId);
-                    } catch (NumberFormatException e) {
-                    }
-                }
-            } else if (!key.endsWith("From") && !key.endsWith("To") && !key.equals("showInactive") && !key.equals("clientTypeId")) {
+                predicate = applyValidFilter(predicate, root, criteriaBuilder, key, values);
+            } else if (key.startsWith(FIELD_PREFIX)) {
+                predicate = applyDynamicFieldFilter(predicate, root, query, criteriaBuilder, key, values);
+            } else if (isDynamicFieldKey(key)) {
                 predicate = addDynamicFieldFilter(predicate, root, query, criteriaBuilder, key, values, clientTypeId);
             }
         }
@@ -232,8 +263,57 @@ public class ClientSpecification implements Specification<Client> {
         return predicate;
     }
 
-    private Predicate addIdFilter(Predicate predicate, Root<Client> root, CriteriaBuilder criteriaBuilder,
-                                  List<String> values, String field) {
+    private Predicate applyValidFilter(Predicate predicate, Root<Client> root, CriteriaBuilder criteriaBuilder,
+                                      String key, List<String> values) {
+        return switch (key) {
+            case FILTER_CREATED_AT_FROM -> addDateFilter(predicate, root, criteriaBuilder, values, FIELD_CREATED_AT, true);
+            case FILTER_CREATED_AT_TO -> addDateFilter(predicate, root, criteriaBuilder, values, FIELD_CREATED_AT, false);
+            case FILTER_UPDATED_AT_FROM -> addDateFilter(predicate, root, criteriaBuilder, values, FIELD_UPDATED_AT, true);
+            case FILTER_UPDATED_AT_TO -> addDateFilter(predicate, root, criteriaBuilder, values, FIELD_UPDATED_AT, false);
+            case FILTER_SOURCE -> addSourceIdFilter(predicate, root, criteriaBuilder, values);
+            default -> predicate;
+        };
+    }
+
+    private boolean isDynamicFieldKey(String key) {
+        return !key.endsWith(SUFFIX_FROM) && !key.endsWith(SUFFIX_TO) 
+                && !key.equals(FILTER_SHOW_INACTIVE) && !key.equals(FILTER_CLIENT_TYPE_ID);
+    }
+
+    private Predicate applyDynamicFieldFilter(Predicate predicate, Root<Client> root, CriteriaQuery<?> query,
+                                             CriteriaBuilder criteriaBuilder, String key, List<String> values) {
+        if (key.endsWith(SUFFIX_FROM)) {
+            Long fieldId = extractFieldIdFromKey(key, SUFFIX_FROM.length());
+            if (fieldId != null) {
+                return addDynamicFieldRangeFilter(predicate, root, query, criteriaBuilder, fieldId, values, clientTypeId, true);
+            }
+        } else if (key.endsWith(SUFFIX_TO)) {
+            Long fieldId = extractFieldIdFromKey(key, SUFFIX_TO.length());
+            if (fieldId != null) {
+                return addDynamicFieldRangeFilter(predicate, root, query, criteriaBuilder, fieldId, values, clientTypeId, false);
+            }
+        } else {
+            Long fieldId = extractFieldIdFromKey(key, 0);
+            if (fieldId != null) {
+                return addDynamicFieldFilterById(predicate, root, query, criteriaBuilder, fieldId, values, clientTypeId);
+            }
+        }
+        return predicate;
+    }
+
+    private Long extractFieldIdFromKey(String key, int suffixLength) {
+        try {
+            int endIndex = suffixLength > 0 ? key.length() - suffixLength : key.length();
+            String fieldIdStr = key.substring(FIELD_PREFIX_LENGTH, endIndex);
+            return Long.parseLong(fieldIdStr);
+        } catch (NumberFormatException | StringIndexOutOfBoundsException e) {
+            log.warn("Invalid field ID format in key: {}", key);
+            return null;
+        }
+    }
+
+    private Predicate addSourceIdFilter(Predicate predicate, Root<Client> root, CriteriaBuilder criteriaBuilder,
+                                       List<String> values) {
         if (values == null || values.isEmpty()) {
             return predicate;
         }
@@ -242,10 +322,10 @@ public class ClientSpecification implements Specification<Client> {
                     .map(String::trim)
                     .map(Long::parseLong)
                     .collect(Collectors.toList());
-            predicate = criteriaBuilder.and(predicate, root.get(field).in(ids));
+            predicate = criteriaBuilder.and(predicate, root.get(FIELD_SOURCE_ID).in(ids));
         } catch (NumberFormatException e) {
             throw new ClientException("INVALID_FILTER", 
-                String.format("Incorrect ID format in filter %s: %s", field, values));
+                String.format("Incorrect ID format in filter %s: %s", FILTER_SOURCE, values));
         }
         return predicate;
     }
@@ -269,88 +349,94 @@ public class ClientSpecification implements Specification<Client> {
     }
 
     private Predicate addDynamicFieldFilter(Predicate predicate, Root<Client> root, CriteriaQuery<?> query,
-                                            CriteriaBuilder criteriaBuilder, String fieldName, List<String> values, Long clientTypeId) {
+                                            CriteriaBuilder criteriaBuilder, String fieldName, List<String> values, 
+                                            Long clientTypeId) {
         if (values == null || values.isEmpty()) {
             return predicate;
         }
         
-        Subquery<Long> fieldValueSubquery = query.subquery(Long.class);
-        Root<ClientFieldValue> fieldValueRoot = fieldValueSubquery.from(ClientFieldValue.class);
-        Join<ClientFieldValue, ClientTypeField> fieldJoin = fieldValueRoot.join("field");
-        Join<ClientTypeField, ?> clientTypeJoin = fieldJoin.join("clientType");
-        
-        fieldValueSubquery.select(fieldValueRoot.get("client").get("id"));
+        SubqueryContext subqueryContext = createFieldValueSubquery(query);
 
         Predicate fieldNamePredicate = criteriaBuilder.equal(
-            criteriaBuilder.lower(fieldJoin.get("fieldName")), 
+            criteriaBuilder.lower(subqueryContext.fieldJoin.get(FIELD_FIELD_NAME)), 
             fieldName.toLowerCase()
         );
 
-        List<Predicate> basePredicates = new java.util.ArrayList<>();
+        List<Predicate> basePredicates = new ArrayList<>();
         basePredicates.add(fieldNamePredicate);
         if (clientTypeId != null) {
-            basePredicates.add(criteriaBuilder.equal(clientTypeJoin.get("id"), clientTypeId));
+            basePredicates.add(criteriaBuilder.equal(subqueryContext.clientTypeJoin.get(FIELD_ID), clientTypeId));
         }
 
-        return applyValueFilterPredicate(predicate, root, criteriaBuilder, fieldValueSubquery, fieldValueRoot, basePredicates, values);
+        return applyValueFilterPredicate(predicate, root, criteriaBuilder, subqueryContext, basePredicates, values);
     }
 
     private Predicate addDynamicFieldFilterById(Predicate predicate, Root<Client> root, CriteriaQuery<?> query,
-                                                CriteriaBuilder criteriaBuilder, Long fieldId, List<String> values, Long clientTypeId) {
+                                                CriteriaBuilder criteriaBuilder, Long fieldId, List<String> values, 
+                                                Long clientTypeId) {
         if (values == null || values.isEmpty()) {
             return predicate;
         }
         
-        Subquery<Long> fieldValueSubquery = query.subquery(Long.class);
-        Root<ClientFieldValue> fieldValueRoot = fieldValueSubquery.from(ClientFieldValue.class);
-        Join<ClientFieldValue, ClientTypeField> fieldJoin = fieldValueRoot.join("field");
-        Join<ClientTypeField, ?> clientTypeJoin = fieldJoin.join("clientType");
-        
-        fieldValueSubquery.select(fieldValueRoot.get("client").get("id"));
+        SubqueryContext subqueryContext = createFieldValueSubquery(query);
 
-        Predicate fieldIdPredicate = criteriaBuilder.equal(fieldJoin.get("id"), fieldId);
+        Predicate fieldIdPredicate = criteriaBuilder.equal(subqueryContext.fieldJoin.get(FIELD_ID), fieldId);
 
-        List<Predicate> basePredicates = new java.util.ArrayList<>();
+        List<Predicate> basePredicates = new ArrayList<>();
         basePredicates.add(fieldIdPredicate);
         if (clientTypeId != null) {
-            basePredicates.add(criteriaBuilder.equal(clientTypeJoin.get("id"), clientTypeId));
+            basePredicates.add(criteriaBuilder.equal(subqueryContext.clientTypeJoin.get(FIELD_ID), clientTypeId));
         }
 
-        return applyValueFilterPredicate(predicate, root, criteriaBuilder, fieldValueSubquery, fieldValueRoot, basePredicates, values);
+        return applyValueFilterPredicate(predicate, root, criteriaBuilder, subqueryContext, basePredicates, values);
+    }
+
+    private SubqueryContext createFieldValueSubquery(CriteriaQuery<?> query) {
+        Subquery<Long> fieldValueSubquery = query.subquery(Long.class);
+        Root<ClientFieldValue> fieldValueRoot = fieldValueSubquery.from(ClientFieldValue.class);
+        Join<ClientFieldValue, ClientTypeField> fieldJoin = fieldValueRoot.join(FIELD_FIELD);
+        Join<ClientTypeField, ?> clientTypeJoin = fieldJoin.join(FIELD_CLIENT_TYPE);
+        
+        fieldValueSubquery.select(fieldValueRoot.get(FIELD_CLIENT).get(FIELD_ID));
+        
+        return new SubqueryContext(fieldValueSubquery, fieldValueRoot, fieldJoin, clientTypeJoin);
     }
 
     private Predicate applyValueFilterPredicate(Predicate predicate, Root<Client> root, CriteriaBuilder criteriaBuilder,
-                                                Subquery<Long> fieldValueSubquery, Root<ClientFieldValue> fieldValueRoot,
-                                                List<Predicate> basePredicates, List<String> values) {
-        boolean isBooleanField = false;
-        List<Boolean> booleanValues = new java.util.ArrayList<>();
+                                                SubqueryContext subqueryContext, List<Predicate> basePredicates, 
+                                                List<String> values) {
+        FieldType fieldType = determineFieldType(values);
+        
+        return switch (fieldType) {
+            case BOOLEAN -> applyBooleanFilter(predicate, root, criteriaBuilder, subqueryContext, basePredicates, values);
+            case LIST -> applyListFilter(predicate, root, criteriaBuilder, subqueryContext, basePredicates, values);
+            case TEXT -> applyTextFilter(predicate, root, criteriaBuilder, subqueryContext, basePredicates, values);
+            case UNKNOWN -> predicate;
+        };
+    }
+
+    private FieldType determineFieldType(List<String> values) {
+        if (values == null || values.isEmpty()) {
+            return FieldType.UNKNOWN;
+        }
+        
+        boolean allBoolean = true;
         for (String value : values) {
             if (value != null && !value.trim().isEmpty()) {
                 String trimmedValue = value.trim().toLowerCase();
-                if ("true".equals(trimmedValue) || "false".equals(trimmedValue)) {
-                    isBooleanField = true;
-                    booleanValues.add("true".equals(trimmedValue));
-                } else {
-                    isBooleanField = false;
+                if (!VALUE_TRUE.equals(trimmedValue) && !VALUE_FALSE.equals(trimmedValue)) {
+                    allBoolean = false;
                     break;
                 }
             }
         }
         
-        if (isBooleanField && !booleanValues.isEmpty()) {
-            Predicate booleanPredicate = fieldValueRoot.get("valueBoolean").in(booleanValues);
-            
-            List<Predicate> wherePredicates = new java.util.ArrayList<>(basePredicates);
-            wherePredicates.add(criteriaBuilder.equal(fieldValueRoot.get("client"), root));
-            wherePredicates.add(booleanPredicate);
-            
-            fieldValueSubquery.where(criteriaBuilder.and(wherePredicates.toArray(new Predicate[0])));
-            
-            return criteriaBuilder.and(predicate, criteriaBuilder.exists(fieldValueSubquery));
+        if (allBoolean && hasNonEmptyValues(values)) {
+            return FieldType.BOOLEAN;
         }
         
-        boolean isListField = true;
-        List<Long> listValueIds = new java.util.ArrayList<>();
+        boolean allNumeric = true;
+        List<Long> listValueIds = new ArrayList<>();
         try {
             for (String value : values) {
                 if (value != null && !value.trim().isEmpty()) {
@@ -358,50 +444,109 @@ public class ClientSpecification implements Specification<Client> {
                 }
             }
             if (listValueIds.isEmpty()) {
-                isListField = false;
+                allNumeric = false;
             }
         } catch (NumberFormatException e) {
-            isListField = false;
+            allNumeric = false;
         }
         
-        if (isListField && !listValueIds.isEmpty()) {
-            Join<ClientFieldValue, ?> valueListJoin = fieldValueRoot.join("valueList", jakarta.persistence.criteria.JoinType.LEFT);
-            Predicate valuePredicate = valueListJoin.get("id").in(listValueIds);
-            
-            List<Predicate> wherePredicates = new java.util.ArrayList<>(basePredicates);
-            wherePredicates.add(criteriaBuilder.equal(fieldValueRoot.get("client"), root));
-            wherePredicates.add(valuePredicate);
-            
-            fieldValueSubquery.where(criteriaBuilder.and(wherePredicates.toArray(new Predicate[0])));
-            
-            return criteriaBuilder.and(predicate, criteriaBuilder.exists(fieldValueSubquery));
+        if (allNumeric) {
+            return FieldType.LIST;
         }
         
-        List<Predicate> textPredicates = new java.util.ArrayList<>();
+        return FieldType.TEXT;
+    }
+
+    private boolean hasNonEmptyValues(List<String> values) {
+        return values.stream().anyMatch(v -> v != null && !v.trim().isEmpty());
+    }
+
+    private Predicate applyBooleanFilter(Predicate predicate, Root<Client> root, CriteriaBuilder criteriaBuilder,
+                                        SubqueryContext subqueryContext, List<Predicate> basePredicates, 
+                                        List<String> values) {
+        List<Boolean> booleanValues = values.stream()
+                .filter(v -> v != null && !v.trim().isEmpty())
+                .map(v -> VALUE_TRUE.equalsIgnoreCase(v.trim()))
+                .collect(Collectors.toList());
+        
+        if (booleanValues.isEmpty()) {
+            return predicate;
+        }
+        
+        Predicate booleanPredicate = subqueryContext.fieldValueRoot.get(FIELD_VALUE_BOOLEAN).in(booleanValues);
+        List<Predicate> wherePredicates = buildWherePredicates(basePredicates, subqueryContext.fieldValueRoot, root, 
+                criteriaBuilder, booleanPredicate);
+        
+        subqueryContext.subquery.where(criteriaBuilder.and(wherePredicates.toArray(new Predicate[0])));
+        return criteriaBuilder.and(predicate, criteriaBuilder.exists(subqueryContext.subquery));
+    }
+
+    private Predicate applyListFilter(Predicate predicate, Root<Client> root, CriteriaBuilder criteriaBuilder,
+                                     SubqueryContext subqueryContext, List<Predicate> basePredicates, 
+                                     List<String> values) {
+        List<Long> listValueIds = new ArrayList<>();
+        try {
+            for (String value : values) {
+                if (value != null && !value.trim().isEmpty()) {
+                    listValueIds.add(Long.parseLong(value.trim()));
+                }
+            }
+        } catch (NumberFormatException e) {
+            log.warn("Invalid list value ID format: {}", values);
+            return predicate;
+        }
+        
+        if (listValueIds.isEmpty()) {
+            return predicate;
+        }
+        
+        Join<ClientFieldValue, ?> valueListJoin = subqueryContext.fieldValueRoot.join(
+                FIELD_VALUE_LIST, jakarta.persistence.criteria.JoinType.LEFT);
+        Predicate valuePredicate = valueListJoin.get(FIELD_ID).in(listValueIds);
+        
+        List<Predicate> wherePredicates = buildWherePredicates(basePredicates, subqueryContext.fieldValueRoot, root, 
+                criteriaBuilder, valuePredicate);
+        
+        subqueryContext.subquery.where(criteriaBuilder.and(wherePredicates.toArray(new Predicate[0])));
+        return criteriaBuilder.and(predicate, criteriaBuilder.exists(subqueryContext.subquery));
+    }
+
+    private Predicate applyTextFilter(Predicate predicate, Root<Client> root, CriteriaBuilder criteriaBuilder,
+                                     SubqueryContext subqueryContext, List<Predicate> basePredicates, 
+                                     List<String> values) {
+        List<Predicate> textPredicates = new ArrayList<>();
         for (String value : values) {
             if (value != null && !value.trim().isEmpty()) {
+                String escapedValue = escapeQuery(value);
+                String searchPattern = String.format(LIKE_PATTERN, escapedValue);
                 textPredicates.add(
                         criteriaBuilder.like(
-                                criteriaBuilder.lower(fieldValueRoot.get("valueText")),
-                                String.format("%%%s%%", value.trim().toLowerCase().replace("%", "\\%").replace("_", "\\_"))
+                                criteriaBuilder.lower(subqueryContext.fieldValueRoot.get(FIELD_VALUE_TEXT)),
+                                searchPattern
                         )
                 );
             }
         }
         
-        if (!textPredicates.isEmpty()) {
-            Predicate textPredicate = criteriaBuilder.or(textPredicates.toArray(new Predicate[0]));
-            
-            List<Predicate> wherePredicates = new java.util.ArrayList<>(basePredicates);
-            wherePredicates.add(criteriaBuilder.equal(fieldValueRoot.get("client"), root));
-            wherePredicates.add(textPredicate);
-            
-            fieldValueSubquery.where(criteriaBuilder.and(wherePredicates.toArray(new Predicate[0])));
-            
-            return criteriaBuilder.and(predicate, criteriaBuilder.exists(fieldValueSubquery));
+        if (textPredicates.isEmpty()) {
+            return predicate;
         }
         
-        return predicate;
+        Predicate textPredicate = criteriaBuilder.or(textPredicates.toArray(new Predicate[0]));
+        List<Predicate> wherePredicates = buildWherePredicates(basePredicates, subqueryContext.fieldValueRoot, root, 
+                criteriaBuilder, textPredicate);
+        
+        subqueryContext.subquery.where(criteriaBuilder.and(wherePredicates.toArray(new Predicate[0])));
+        return criteriaBuilder.and(predicate, criteriaBuilder.exists(subqueryContext.subquery));
+    }
+
+    private List<Predicate> buildWherePredicates(List<Predicate> basePredicates, Root<ClientFieldValue> fieldValueRoot,
+                                                Root<Client> root, CriteriaBuilder criteriaBuilder, 
+                                                Predicate valuePredicate) {
+        List<Predicate> wherePredicates = new ArrayList<>(basePredicates);
+        wherePredicates.add(criteriaBuilder.equal(fieldValueRoot.get(FIELD_CLIENT), root));
+        wherePredicates.add(valuePredicate);
+        return wherePredicates;
     }
 
     private Predicate addDynamicFieldRangeFilter(Predicate predicate, Root<Client> root, CriteriaQuery<?> query,
@@ -411,51 +556,62 @@ public class ClientSpecification implements Specification<Client> {
             return predicate;
         }
         
-        Subquery<Long> fieldValueSubquery = query.subquery(Long.class);
-        Root<ClientFieldValue> fieldValueRoot = fieldValueSubquery.from(ClientFieldValue.class);
-        Join<ClientFieldValue, ClientTypeField> fieldJoin = fieldValueRoot.join("field");
-        Join<ClientTypeField, ?> clientTypeJoin = fieldJoin.join("clientType");
+        SubqueryContext subqueryContext = createFieldValueSubquery(query);
         
-        fieldValueSubquery.select(fieldValueRoot.get("client").get("id"));
-        
-        List<Predicate> basePredicates = new java.util.ArrayList<>();
-        basePredicates.add(criteriaBuilder.equal(fieldJoin.get("id"), fieldId));
+        List<Predicate> basePredicates = new ArrayList<>();
+        basePredicates.add(criteriaBuilder.equal(subqueryContext.fieldJoin.get(FIELD_ID), fieldId));
         if (clientTypeId != null) {
-            basePredicates.add(criteriaBuilder.equal(clientTypeJoin.get("id"), clientTypeId));
+            basePredicates.add(criteriaBuilder.equal(subqueryContext.clientTypeJoin.get(FIELD_ID), clientTypeId));
         }
         
         try {
             LocalDate date = LocalDate.parse(values.getFirst().trim());
             Predicate rangePredicate = isFrom ?
-                    criteriaBuilder.greaterThanOrEqualTo(fieldValueRoot.get("valueDate"), date) :
-                    criteriaBuilder.lessThanOrEqualTo(fieldValueRoot.get("valueDate"), date);
+                    criteriaBuilder.greaterThanOrEqualTo(subqueryContext.fieldValueRoot.get(FIELD_VALUE_DATE), date) :
+                    criteriaBuilder.lessThanOrEqualTo(subqueryContext.fieldValueRoot.get(FIELD_VALUE_DATE), date);
             
-            List<Predicate> wherePredicates = new java.util.ArrayList<>(basePredicates);
-            wherePredicates.add(criteriaBuilder.equal(fieldValueRoot.get("client"), root));
-            wherePredicates.add(rangePredicate);
+            List<Predicate> wherePredicates = buildWherePredicates(basePredicates, subqueryContext.fieldValueRoot, root, 
+                    criteriaBuilder, rangePredicate);
             
-            fieldValueSubquery.where(criteriaBuilder.and(wherePredicates.toArray(new Predicate[0])));
-            
-            predicate = criteriaBuilder.and(predicate, criteriaBuilder.exists(fieldValueSubquery));
+            subqueryContext.subquery.where(criteriaBuilder.and(wherePredicates.toArray(new Predicate[0])));
+            predicate = criteriaBuilder.and(predicate, criteriaBuilder.exists(subqueryContext.subquery));
         } catch (DateTimeParseException e) {
             try {
-                java.math.BigDecimal number = new java.math.BigDecimal(values.getFirst().trim());
+                BigDecimal number = new BigDecimal(values.getFirst().trim());
                 Predicate rangePredicate = isFrom ?
-                        criteriaBuilder.greaterThanOrEqualTo(fieldValueRoot.get("valueNumber"), number) :
-                        criteriaBuilder.lessThanOrEqualTo(fieldValueRoot.get("valueNumber"), number);
+                        criteriaBuilder.greaterThanOrEqualTo(subqueryContext.fieldValueRoot.get(FIELD_VALUE_NUMBER), number) :
+                        criteriaBuilder.lessThanOrEqualTo(subqueryContext.fieldValueRoot.get(FIELD_VALUE_NUMBER), number);
                 
-                List<Predicate> wherePredicates = new java.util.ArrayList<>(basePredicates);
-                wherePredicates.add(criteriaBuilder.equal(fieldValueRoot.get("client"), root));
-                wherePredicates.add(rangePredicate);
+                List<Predicate> wherePredicates = buildWherePredicates(basePredicates, subqueryContext.fieldValueRoot, root, 
+                        criteriaBuilder, rangePredicate);
                 
-                fieldValueSubquery.where(criteriaBuilder.and(wherePredicates.toArray(new Predicate[0])));
-                
-                predicate = criteriaBuilder.and(predicate, criteriaBuilder.exists(fieldValueSubquery));
+                subqueryContext.subquery.where(criteriaBuilder.and(wherePredicates.toArray(new Predicate[0])));
+                predicate = criteriaBuilder.and(predicate, criteriaBuilder.exists(subqueryContext.subquery));
             } catch (NumberFormatException ex) {
+                log.warn("Invalid range filter value format for field {}: {}", fieldId, values);
             }
         }
         
         return predicate;
     }
 
+    private static class SubqueryContext {
+        final Subquery<Long> subquery;
+        final Root<ClientFieldValue> fieldValueRoot;
+        final Join<ClientFieldValue, ClientTypeField> fieldJoin;
+        final Join<ClientTypeField, ?> clientTypeJoin;
+
+        SubqueryContext(Subquery<Long> subquery, Root<ClientFieldValue> fieldValueRoot,
+                       Join<ClientFieldValue, ClientTypeField> fieldJoin,
+                       Join<ClientTypeField, ?> clientTypeJoin) {
+            this.subquery = subquery;
+            this.fieldValueRoot = fieldValueRoot;
+            this.fieldJoin = fieldJoin;
+            this.clientTypeJoin = clientTypeJoin;
+        }
+    }
+
+    private enum FieldType {
+        BOOLEAN, LIST, TEXT, UNKNOWN
+    }
 }

@@ -2,6 +2,7 @@ package org.example.apigateway.security;
 
 import io.jsonwebtoken.*;
 import jakarta.annotation.PostConstruct;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.example.apigateway.exceptions.JwtAuthenticationException;
 import org.example.apigateway.models.dto.UserDTO;
@@ -10,8 +11,9 @@ import reactor.core.publisher.Mono;
 
 import javax.crypto.SecretKey;
 import java.util.Collections;
-import java.util.Date;
 import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
@@ -26,25 +28,21 @@ public class ReactiveJwtTokenProvider {
                 .build();
     }
 
-    public Mono<UserDTO> validateToken(String token) {
+    public Mono<UserDTO> validateToken(@NonNull String token) {
+        if (token.trim().isEmpty()) {
+            return Mono.error(new JwtAuthenticationException("Token cannot be empty"));
+        }
+
         try {
             Jws<Claims> claimsJws = jwtParser.parseSignedClaims(token);
             Claims claims = claimsJws.getPayload();
-
-            Date expiration = claims.getExpiration();
-            if (expiration != null && expiration.before(new Date())) {
-                return Mono.error(new JwtAuthenticationException("Token has expired"));
-            }
 
             String username = claims.getSubject();
             if (username == null || username.isEmpty()) {
                 return Mono.error(new JwtAuthenticationException("Token subject is missing"));
             }
 
-            List<?> rawAuthorities = claims.get("authorities", List.class);
-            List<String> authorities = rawAuthorities != null
-                    ? rawAuthorities.stream().map(Object::toString).toList()
-                    : Collections.emptyList();
+            List<String> authorities = extractAuthorities(claims);
 
             return Mono.just(new UserDTO(username, authorities));
         } catch (ExpiredJwtException e) {
@@ -52,5 +50,21 @@ public class ReactiveJwtTokenProvider {
         } catch (JwtException e) {
             return Mono.error(new JwtAuthenticationException("Invalid token: " + e.getMessage()));
         }
+    }
+
+    private List<String> extractAuthorities(Claims claims) {
+        Object rawAuthorities = claims.get("authorities");
+        if (rawAuthorities == null) {
+            return Collections.emptyList();
+        }
+
+        if (rawAuthorities instanceof List<?> list) {
+            return list.stream()
+                    .filter(Objects::nonNull)
+                    .map(Object::toString)
+                    .collect(Collectors.toList());
+        }
+
+        return Collections.emptyList();
     }
 }

@@ -1,17 +1,15 @@
 package org.example.clientservice.mappers.clienttype;
 
+import lombok.NonNull;
 import org.example.clientservice.models.clienttype.ClientTypeFieldListValue;
 import org.example.clientservice.models.dto.clienttype.ClientTypeFieldListValueDTO;
-import org.springframework.stereotype.Component;
 
-@Component
-public class ClientTypeFieldListValueMapper {
+public final class ClientTypeFieldListValueMapper {
 
-    public static ClientTypeFieldListValueDTO toDTO(ClientTypeFieldListValue listValue) {
-        if (listValue == null) {
-            return null;
-        }
+    private ClientTypeFieldListValueMapper() {
+    }
 
+    public static ClientTypeFieldListValueDTO toDTO(@NonNull ClientTypeFieldListValue listValue) {
         ClientTypeFieldListValueDTO dto = new ClientTypeFieldListValueDTO();
         dto.setId(listValue.getId());
         dto.setValue(listValue.getValue());

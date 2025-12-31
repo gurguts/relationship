@@ -1,21 +1,21 @@
 package org.example.clientservice.mappers.clienttype;
 
+import lombok.NonNull;
 import org.example.clientservice.models.clienttype.ClientType;
 import org.example.clientservice.models.dto.clienttype.ClientTypeCreateDTO;
 import org.example.clientservice.models.dto.clienttype.ClientTypeDTO;
 import org.example.clientservice.models.dto.clienttype.ClientTypeUpdateDTO;
 import org.springframework.stereotype.Component;
 
+import java.util.Collections;
 import java.util.stream.Collectors;
 
 @Component
 public class ClientTypeMapper {
 
-    public ClientTypeDTO clientTypeToDTO(ClientType clientType) {
-        if (clientType == null) {
-            return null;
-        }
+    private static final String DEFAULT_NAME_FIELD_LABEL = "Компанія";
 
+    public ClientTypeDTO clientTypeToDTO(@NonNull ClientType clientType) {
         ClientTypeDTO dto = new ClientTypeDTO();
         dto.setId(clientType.getId());
         dto.setName(clientType.getName());
@@ -24,31 +24,25 @@ public class ClientTypeMapper {
         dto.setCreatedAt(clientType.getCreatedAt());
         dto.setUpdatedAt(clientType.getUpdatedAt());
         
-        if (clientType.getFields() != null) {
+        if (clientType.getFields() != null && !clientType.getFields().isEmpty()) {
             dto.setFields(clientType.getFields().stream()
                     .map(ClientTypeFieldMapper::toDTO)
                     .collect(Collectors.toList()));
+        } else {
+            dto.setFields(Collections.emptyList());
         }
 
         return dto;
     }
 
-    public ClientType createDTOToClientType(ClientTypeCreateDTO dto) {
-        if (dto == null) {
-            return null;
-        }
-
+    public ClientType createDTOToClientType(@NonNull ClientTypeCreateDTO dto) {
         ClientType clientType = new ClientType();
         clientType.setName(dto.getName());
-        clientType.setNameFieldLabel(dto.getNameFieldLabel() != null ? dto.getNameFieldLabel() : "Компанія");
+        clientType.setNameFieldLabel(dto.getNameFieldLabel() != null ? dto.getNameFieldLabel() : DEFAULT_NAME_FIELD_LABEL);
         return clientType;
     }
 
-    public void updateClientTypeFromDTO(ClientType clientType, ClientTypeUpdateDTO dto) {
-        if (dto == null || clientType == null) {
-            return;
-        }
-
+    public void updateClientTypeFromDTO(@NonNull ClientType clientType, @NonNull ClientTypeUpdateDTO dto) {
         if (dto.getName() != null) {
             clientType.setName(dto.getName());
         }

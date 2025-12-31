@@ -1,8 +1,10 @@
 package org.example.clientservice.restControllers.clienttype;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Positive;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.example.clientservice.mappers.clienttype.ClientTypePermissionMapper;
 import org.example.clientservice.models.clienttype.ClientTypePermission;
 import org.example.clientservice.models.dto.clienttype.ClientTypePermissionCreateDTO;
 import org.example.clientservice.models.dto.clienttype.ClientTypePermissionDTO;
@@ -10,8 +12,6 @@ import org.example.clientservice.models.dto.clienttype.ClientTypePermissionUpdat
 import org.example.clientservice.services.impl.IClientTypePermissionService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
@@ -23,18 +23,18 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/v1/client-type")
 @RequiredArgsConstructor
-@Slf4j
 @Validated
 public class ClientTypePermissionController {
     private final IClientTypePermissionService permissionService;
+    private final ClientTypePermissionMapper permissionMapper;
 
     @PreAuthorize("hasAuthority('administration:edit')")
     @PostMapping("/{clientTypeId}/permission")
     public ResponseEntity<ClientTypePermissionDTO> createPermission(
-            @PathVariable Long clientTypeId,
-            @RequestBody @Valid ClientTypePermissionCreateDTO dto) {
+            @PathVariable @Positive Long clientTypeId,
+            @RequestBody @Valid @NonNull ClientTypePermissionCreateDTO dto) {
         ClientTypePermission permission = permissionService.createPermission(clientTypeId, dto);
-        ClientTypePermissionDTO response = permissionToDTO(permission);
+        ClientTypePermissionDTO response = permissionMapper.toDTO(permission);
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
                 .path("/../permission/{userId}")
                 .buildAndExpand(dto.getUserId())
@@ -44,10 +44,10 @@ public class ClientTypePermissionController {
 
     @PreAuthorize("hasAuthority('administration:view')")
     @GetMapping("/{clientTypeId}/permission")
-    public ResponseEntity<List<ClientTypePermissionDTO>> getPermissionsByClientTypeId(@PathVariable Long clientTypeId) {
+    public ResponseEntity<List<ClientTypePermissionDTO>> getPermissionsByClientTypeId(@PathVariable @Positive Long clientTypeId) {
         List<ClientTypePermission> permissions = permissionService.getPermissionsByClientTypeId(clientTypeId);
         List<ClientTypePermissionDTO> response = permissions.stream()
-                .map(this::permissionToDTO)
+                .map(permissionMapper::toDTO)
                 .collect(Collectors.toList());
         return ResponseEntity.ok(response);
     }
@@ -55,67 +55,37 @@ public class ClientTypePermissionController {
     @PreAuthorize("hasAuthority('administration:edit')")
     @PutMapping("/{clientTypeId}/permission/{userId}")
     public ResponseEntity<ClientTypePermissionDTO> updatePermission(
-            @PathVariable Long clientTypeId,
-            @PathVariable Long userId,
-            @RequestBody @Valid ClientTypePermissionUpdateDTO dto) {
+            @PathVariable @Positive Long clientTypeId,
+            @PathVariable @Positive Long userId,
+            @RequestBody @Valid @NonNull ClientTypePermissionUpdateDTO dto) {
         ClientTypePermission permission = permissionService.updatePermission(clientTypeId, userId, dto);
-        ClientTypePermissionDTO response = permissionToDTO(permission);
+        ClientTypePermissionDTO response = permissionMapper.toDTO(permission);
         return ResponseEntity.ok(response);
     }
 
     @PreAuthorize("hasAuthority('administration:edit')")
     @DeleteMapping("/{clientTypeId}/permission/{userId}")
     public ResponseEntity<Void> deletePermission(
-            @PathVariable Long clientTypeId,
-            @PathVariable Long userId) {
+            @PathVariable @Positive Long clientTypeId,
+            @PathVariable @Positive Long userId) {
         permissionService.deletePermission(clientTypeId, userId);
         return ResponseEntity.noContent().build();
     }
 
     @PreAuthorize("hasAuthority('administration:view')")
     @GetMapping("/permission/user/{userId}")
-    public ResponseEntity<List<ClientTypePermissionDTO>> getPermissionsByUserId(@PathVariable Long userId) {
+    public ResponseEntity<List<ClientTypePermissionDTO>> getPermissionsByUserId(@PathVariable @Positive Long userId) {
         List<ClientTypePermission> permissions = permissionService.getPermissionsByUserId(userId);
         List<ClientTypePermissionDTO> response = permissions.stream()
-                .map(this::permissionToDTO)
+                .map(permissionMapper::toDTO)
                 .collect(Collectors.toList());
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/permission/me")
     public ResponseEntity<List<ClientTypePermissionDTO>> getMyPermissions() {
-        Long userId = getCurrentUserId();
-        if (userId == null) {
-            return ResponseEntity.badRequest().build();
-        }
-        List<ClientTypePermission> permissions = permissionService.getPermissionsByUserId(userId);
-        List<ClientTypePermissionDTO> response = permissions.stream()
-                .map(this::permissionToDTO)
-                .collect(Collectors.toList());
+        List<ClientTypePermissionDTO> response = permissionService.getMyPermissions();
         return ResponseEntity.ok(response);
-    }
-    
-    private Long getCurrentUserId() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || authentication.getDetails() == null) {
-            return null;
-        }
-        return authentication.getDetails() instanceof Long ? 
-                (Long) authentication.getDetails() : null;
-    }
-
-    private ClientTypePermissionDTO permissionToDTO(ClientTypePermission permission) {
-        ClientTypePermissionDTO dto = new ClientTypePermissionDTO();
-        dto.setId(permission.getId());
-        dto.setUserId(permission.getUserId());
-        dto.setClientTypeId(permission.getClientType().getId());
-        dto.setClientTypeName(permission.getClientType().getName());
-        dto.setCanView(permission.getCanView());
-        dto.setCanCreate(permission.getCanCreate());
-        dto.setCanEdit(permission.getCanEdit());
-        dto.setCanDelete(permission.getCanDelete());
-        dto.setCreatedAt(permission.getCreatedAt());
-        return dto;
     }
 }
 

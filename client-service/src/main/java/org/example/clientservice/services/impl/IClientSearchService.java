@@ -1,16 +1,20 @@
 package org.example.clientservice.services.impl;
 
-import org.example.clientservice.models.client.Client;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+import lombok.NonNull;
+import org.example.clientservice.models.client.PageResponse;
+import org.example.clientservice.models.dto.client.ClientDTO;
+import org.example.clientservice.models.dto.client.ClientListDTO;
+import org.example.clientservice.models.dto.client.ClientSearchRequest;
+import org.springframework.data.domain.Sort;
 
 import java.util.List;
 import java.util.Map;
 
 public interface IClientSearchService {
-    Page<Client> searchClients(String query, Pageable pageable, Map<String, List<String>> filterParams, Long clientTypeId);
+    PageResponse<ClientDTO> searchClients(String query, int size, int page, String sortProperty,
+                                          Sort.Direction sortDirection, String filtersJson, Long clientTypeId);
 
-    List<Client> searchClientsForPurchase(String query, Map<String, List<String>> filterParams, Long clientTypeId);
+    List<ClientListDTO> searchClientsForPurchase(@NonNull ClientSearchRequest request);
 
-    List<Map<Long, String>> searchIdsClient(List<Long> ids);
+    List<Map<Long, String>> searchIdsClient(@NonNull List<Long> ids);
 }

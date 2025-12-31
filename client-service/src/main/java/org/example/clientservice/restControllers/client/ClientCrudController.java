@@ -1,8 +1,9 @@
 package org.example.clientservice.restControllers.client;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Positive;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.example.clientservice.mappers.ClientMapper;
 import org.example.clientservice.models.client.Client;
 import org.example.clientservice.models.dto.client.ClientCreateDTO;
@@ -20,7 +21,6 @@ import java.net.URI;
 @RestController
 @RequestMapping("/api/v1/client")
 @RequiredArgsConstructor
-@Slf4j
 @Validated
 public class ClientCrudController {
     private final IClientCrudService clientService;
@@ -28,7 +28,7 @@ public class ClientCrudController {
 
     @PreAuthorize("hasAuthority('client:create')")
     @PostMapping
-    public ResponseEntity<ClientDTO> createClient(@RequestBody @Valid ClientCreateDTO clientCreateDTO) {
+    public ResponseEntity<ClientDTO> createClient(@RequestBody @Valid @NonNull ClientCreateDTO clientCreateDTO) {
         Client client = clientMapper.clientCreateDTOToClient(clientCreateDTO);
         Client createdClient = clientService.createClient(client);
         ClientDTO createdClientDTO = clientMapper.clientToClientDTO(createdClient);
@@ -41,42 +41,39 @@ public class ClientCrudController {
 
     @PreAuthorize("hasAuthority('client:edit')")
     @PatchMapping("/{clientId}")
-    public ResponseEntity<ClientDTO> updateClient(@RequestBody @Valid ClientUpdateDTO clientUpdateDTO,
-                                                  @PathVariable Long clientId) {
+    public ResponseEntity<ClientDTO> updateClient(@PathVariable @Positive Long clientId,
+                                                  @RequestBody @Valid @NonNull ClientUpdateDTO clientUpdateDTO) {
         Client updateClient = clientMapper.clientUpdateDTOtoClient(clientUpdateDTO);
         Client updatedClient = clientService.updateClient(updateClient, clientId);
         ClientDTO updatedClientDTO = clientMapper.clientToClientDTO(updatedClient);
         return ResponseEntity.ok(updatedClientDTO);
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<ClientDTO> getClientById(@PathVariable Long id) {
-        Client client = clientService.getClient(id);
+    @GetMapping("/{clientId}")
+    public ResponseEntity<ClientDTO> getClientById(@PathVariable @Positive Long clientId) {
+        Client client = clientService.getClient(clientId);
         ClientDTO clientDTO = clientMapper.clientToClientDTO(client);
         return ResponseEntity.ok(clientDTO);
     }
 
     @PreAuthorize("hasAuthority('client:delete')")
-    @DeleteMapping("/active/{id}")
-    public ResponseEntity<Void> deleteClientById(@PathVariable Long id) {
-        log.info("Deactivating client with ID: {}", id);
-        clientService.deleteClient(id);
+    @DeleteMapping("/active/{clientId}")
+    public ResponseEntity<Void> deleteClientById(@PathVariable @Positive Long clientId) {
+        clientService.deleteClient(clientId);
         return ResponseEntity.noContent().build();
     }
 
     @PreAuthorize("hasAuthority('client:full_delete')")
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> fullDeleteClientById(@PathVariable Long id) {
-        log.info("Fully deleting client with ID: {}", id);
-        clientService.fullDeleteClient(id);
+    @DeleteMapping("/{clientId}")
+    public ResponseEntity<Void> fullDeleteClientById(@PathVariable @Positive Long clientId) {
+        clientService.fullDeleteClient(clientId);
         return ResponseEntity.noContent().build();
     }
 
     @PreAuthorize("hasAuthority('client:edit')")
-    @PatchMapping("/active/{id}")
-    public ResponseEntity<Void> activateClientById(@PathVariable Long id) {
-        log.info("Activating client with ID: {}", id);
-        clientService.activateClient(id);
+    @PatchMapping("/active/{clientId}")
+    public ResponseEntity<Void> activateClientById(@PathVariable @Positive Long clientId) {
+        clientService.activateClient(clientId);
         return ResponseEntity.noContent().build();
     }
 }

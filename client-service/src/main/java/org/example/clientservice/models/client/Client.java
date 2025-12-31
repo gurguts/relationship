@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
+import lombok.NonNull;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -20,6 +21,9 @@ import java.util.List;
 @Entity
 @Table(name = "clients")
 public class Client {
+    
+    private static final boolean DEFAULT_IS_ACTIVE = true;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -28,13 +32,14 @@ public class Client {
     @JoinColumn(name = "client_type_id")
     private ClientType clientType;
 
+    @NonNull
     @Column(nullable = false, name = "company")
     private String company;
 
     @JsonManagedReference
     @EqualsAndHashCode.Exclude
     @OneToMany(mappedBy = "client", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<ClientFieldValue> fieldValues = new ArrayList<>();
+    private List<ClientFieldValue> fieldValues;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
@@ -45,8 +50,12 @@ public class Client {
     private LocalDateTime updatedAt;
 
     @Column(name = "is_active")
-    private Boolean isActive = true;
+    private Boolean isActive = DEFAULT_IS_ACTIVE;
 
     @Column(name = "source_id")
-    private Long source;
+    private Long sourceId;
+
+    public Client() {
+        this.fieldValues = new ArrayList<>();
+    }
 }

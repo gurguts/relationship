@@ -2,103 +2,91 @@ package org.example.clientservice.services.clienttype;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectReader;
+import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.example.clientservice.models.clienttype.ClientType;
 import org.example.clientservice.models.dto.clienttype.ClientTypeFieldDTO;
 import org.example.clientservice.models.dto.clienttype.StaticFieldConfig;
 import org.example.clientservice.models.dto.clienttype.StaticFieldsConfig;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
+import java.util.stream.Stream;
 
 @Slf4j
 public class StaticFieldsHelper {
+    private static final int DEFAULT_DISPLAY_ORDER = 999;
+    
     private static final ObjectMapper objectMapper = new ObjectMapper();
+    private static final ObjectReader configReader = objectMapper.readerFor(StaticFieldsConfig.class);
 
     public static StaticFieldsConfig parseStaticFieldsConfig(ClientType clientType) {
-        if (clientType == null || clientType.getStaticFieldsConfig() == null || clientType.getStaticFieldsConfig().trim().isEmpty()) {
+        if (clientType == null) {
+            log.warn("ClientType is null, cannot parse static fields config");
+            return null;
+        }
+        
+        String configJson = clientType.getStaticFieldsConfig();
+        if (configJson == null || configJson.trim().isEmpty()) {
             return null;
         }
 
         try {
-            return objectMapper.readValue(clientType.getStaticFieldsConfig(), StaticFieldsConfig.class);
+            return configReader.readValue(configJson);
         } catch (JsonProcessingException e) {
-            log.warn("Failed to parse static fields config for client type {}: {}", clientType.getId(), e.getMessage());
+            log.error("Failed to parse static fields config for client type {}: {}", 
+                    clientType.getId(), e.getMessage(), e);
+            return null;
+        } catch (Exception e) {
+            log.error("Unexpected error parsing static fields config for client type {}: {}", 
+                    clientType.getId(), e.getMessage(), e);
             return null;
         }
     }
 
-    public static List<ClientTypeFieldDTO> createStaticFieldDTOs(StaticFieldsConfig config) {
-        List<ClientTypeFieldDTO> staticFields = new ArrayList<>();
+    public static List<ClientTypeFieldDTO> createStaticFieldDTOs(@NonNull StaticFieldsConfig config) {
 
-        if (config.getCompany() != null && Boolean.TRUE.equals(config.getCompany().getIsVisible())) {
-            staticFields.add(createStaticFieldDTO("company", config.getCompany()));
-        }
-
-        if (config.getSource() != null && Boolean.TRUE.equals(config.getSource().getIsVisible())) {
-            staticFields.add(createStaticFieldDTO("source", config.getSource()));
-        }
-
-        if (config.getCreatedAt() != null && Boolean.TRUE.equals(config.getCreatedAt().getIsVisible())) {
-            staticFields.add(createStaticFieldDTO("createdAt", config.getCreatedAt()));
-        }
-
-        if (config.getUpdatedAt() != null && Boolean.TRUE.equals(config.getUpdatedAt().getIsVisible())) {
-            staticFields.add(createStaticFieldDTO("updatedAt", config.getUpdatedAt()));
-        }
-
-        return staticFields;
+        return Stream.of(
+                createFieldIfVisible(StaticField.COMPANY, config.getCompany()),
+                createFieldIfVisible(StaticField.SOURCE, config.getSource()),
+                createFieldIfVisible(StaticField.CREATED_AT, config.getCreatedAt()),
+                createFieldIfVisible(StaticField.UPDATED_AT, config.getUpdatedAt())
+        )
+        .filter(Objects::nonNull)
+        .toList();
     }
 
-    private static ClientTypeFieldDTO createStaticFieldDTO(String staticFieldName, StaticFieldConfig config) {
-        if (config == null) {
-            throw new IllegalArgumentException("StaticFieldConfig cannot be null for field: " + staticFieldName);
+    private static ClientTypeFieldDTO createFieldIfVisible(StaticField staticField, StaticFieldConfig config) {
+        if (config == null || !Boolean.TRUE.equals(config.getIsVisible())) {
+            return null;
         }
-        
+        return createStaticFieldDTO(staticField, config);
+    }
+
+    private static ClientTypeFieldDTO createStaticFieldDTO(@NonNull StaticField staticField, 
+                                                          @NonNull StaticFieldConfig config) {
         ClientTypeFieldDTO dto = new ClientTypeFieldDTO();
-        dto.setId((long) -getStaticFieldId(staticFieldName));
-        dto.setFieldName(staticFieldName);
-        dto.setFieldLabel(config.getFieldLabel() != null && !config.getFieldLabel().trim().isEmpty() 
-                ? config.getFieldLabel() 
-                : getDefaultLabel(staticFieldName));
-        dto.setFieldType(getFieldType(staticFieldName));
+        dto.setId((long) -staticField.getFieldId());
+        dto.setFieldName(staticField.getFieldName());
+        dto.setFieldLabel(getFieldLabel(config, staticField));
+        dto.setFieldType(staticField.getFieldType());
         dto.setIsVisibleInTable(true);
         dto.setIsVisibleInCreate(false);
         dto.setIsSearchable(false);
         dto.setIsFilterable(false);
-        dto.setDisplayOrder(config.getDisplayOrder() != null ? config.getDisplayOrder() : 999);
+        dto.setDisplayOrder(config.getDisplayOrder() != null ? config.getDisplayOrder() : DEFAULT_DISPLAY_ORDER);
         dto.setColumnWidth(config.getColumnWidth());
         dto.setIsStatic(true);
-        dto.setStaticFieldName(staticFieldName);
+        dto.setStaticFieldName(staticField.getFieldName());
         return dto;
     }
-
-    private static int getStaticFieldId(String staticFieldName) {
-        return switch (staticFieldName) {
-            case "company" -> 1;
-            case "source" -> 2;
-            case "createdAt" -> 3;
-            case "updatedAt" -> 4;
-            default -> 0;
-        };
-    }
-
-    private static String getDefaultLabel(String staticFieldName) {
-        return switch (staticFieldName) {
-            case "company" -> "Компанія";
-            case "source" -> "Залучення";
-            case "createdAt" -> "Створено";
-            case "updatedAt" -> "Оновлено";
-            default -> staticFieldName;
-        };
-    }
-
-    private static String getFieldType(String staticFieldName) {
-        return switch (staticFieldName) {
-            case "company", "source" -> "TEXT";
-            case "createdAt", "updatedAt" -> "DATE";
-            default -> "TEXT";
-        };
+    
+    private static String getFieldLabel(@NonNull StaticFieldConfig config, @NonNull StaticField staticField) {
+        String label = config.getFieldLabel();
+        if (label != null && !label.trim().isEmpty()) {
+            return label;
+        }
+        return staticField.getDefaultLabel();
     }
 }
-

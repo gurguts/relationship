@@ -1,23 +1,33 @@
 package org.example.clientservice.services.impl;
 
-
+import lombok.NonNull;
+import org.example.clientservice.models.dto.fields.SourceCreateDTO;
 import org.example.clientservice.models.field.Source;
 
 import java.util.List;
 import java.util.Map;
 
 public interface ISourceService {
-    Source getSource(Long id);
+    @NonNull
+    Source getSource(@NonNull Long id);
 
-    Source updateSource(Long id, Source source);
+    @NonNull
+    Source updateSource(@NonNull Long id, @NonNull Source source);
 
-    void deleteSource(Long id);
+    void deleteSource(@NonNull Long id);
 
+    @NonNull
     List<Source> getAllSources();
 
-    Source createSource(Source source);
+    @NonNull
+    Source createSource(@NonNull Source source);
+    
+    @NonNull
+    Source createSource(@NonNull SourceCreateDTO dto);
 
+    @NonNull
     Map<Long, String> getSourceNames();
 
-    List<Source> findByNameContaining(String query);
+    @NonNull
+    List<Source> findByNameContaining(@NonNull String query);
 }

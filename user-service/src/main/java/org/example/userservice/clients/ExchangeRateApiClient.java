@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 
 import java.math.BigDecimal;
 
-@FeignClient(name = "purchase-service", contextId = "exchangeRateApiClient", url = "http://localhost:8093/api/v1/exchange-rates", configuration = FeignConfig.class)
+@FeignClient(name = "purchase-service", contextId = "exchangeRateApiClient", url = "${purchase.service.url}/api/v1/exchange-rates", configuration = FeignConfig.class)
 public interface ExchangeRateApiClient {
     @GetMapping("/{currency}/rate")
     BigDecimal getExchangeRateToEur(@PathVariable("currency") String currency);

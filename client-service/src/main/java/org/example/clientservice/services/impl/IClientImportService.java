@@ -1,9 +1,10 @@
 package org.example.clientservice.services.impl;
 
+import lombok.NonNull;
 import org.springframework.web.multipart.MultipartFile;
 
 public interface IClientImportService {
-    byte[] generateTemplate(Long clientTypeId);
-    String importClients(Long clientTypeId, MultipartFile file);
+    byte[] generateTemplate(@NonNull Long clientTypeId);
+    String importClients(@NonNull Long clientTypeId, @NonNull MultipartFile file);
 }
 

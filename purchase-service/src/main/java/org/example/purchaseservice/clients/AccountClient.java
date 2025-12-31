@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 
 import java.util.List;
 
-@FeignClient(name = "account-client", url = "http://localhost:8082/api/v1/accounts",
+@FeignClient(name = "account-client", url = "${user.service.url}/api/v1/accounts",
         configuration = FeignConfig.class)
 public interface AccountClient {
 

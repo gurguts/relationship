@@ -6,7 +6,7 @@ import org.example.purchaseservice.models.dto.transaction.TransactionDTO;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.*;
 
-@FeignClient(name = "account-transaction-client", url = "http://localhost:8082/api/v1/transaction",
+@FeignClient(name = "account-transaction-client", url = "${user.service.url}/api/v1/transaction",
         configuration = FeignConfig.class)
 public interface AccountTransactionClient {
 
