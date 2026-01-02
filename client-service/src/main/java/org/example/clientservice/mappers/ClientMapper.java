@@ -17,7 +17,9 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Component
@@ -74,10 +76,8 @@ public class ClientMapper {
     }
 
     private void mapClientTypeFromCreateDTO(@NonNull ClientCreateDTO clientCreateDTO, @NonNull Client client) {
-        if (clientCreateDTO.getClientTypeId() != null) {
-            ClientType clientType = clientTypeService.getClientTypeById(clientCreateDTO.getClientTypeId());
-            client.setClientType(clientType);
-        }
+        ClientType clientType = clientTypeService.getClientTypeById(clientCreateDTO.getClientTypeId());
+        client.setClientType(clientType);
     }
 
     private void mapFieldValuesFromCreateDTO(@NonNull ClientCreateDTO clientCreateDTO, @NonNull Client client) {
@@ -111,6 +111,7 @@ public class ClientMapper {
     
     private List<ClientFieldValue> mapFieldValuesFromDTOs(@NonNull List<? extends ClientFieldValueCreateDTO> dtos, 
                                                           @NonNull Client client) {
+        Set<String> seenKeys = new LinkedHashSet<>();
         return dtos.stream()
                 .map(dto -> {
                     ClientFieldValue fieldValue = new ClientFieldValue();
@@ -126,7 +127,32 @@ public class ClientMapper {
                     fieldValue.setDisplayOrder(dto.getDisplayOrder() != null ? dto.getDisplayOrder() : DEFAULT_DISPLAY_ORDER);
                     return fieldValue;
                 })
+                .filter(fieldValue -> {
+                    String key = buildFieldValueKey(fieldValue);
+                    if (seenKeys.contains(key)) {
+                        return false;
+                    }
+                    seenKeys.add(key);
+                    return true;
+                })
                 .collect(Collectors.toList());
+    }
+    
+    private String buildFieldValueKey(@NonNull ClientFieldValue fieldValue) {
+        Long fieldId = fieldValue.getField().getId();
+        if (fieldValue.getValueList() != null) {
+            Long valueListId = fieldValue.getValueList().getId();
+            return String.format("field:%d:list:%d", fieldId, valueListId);
+        } else if (fieldValue.getValueText() != null) {
+            return String.format("field:%d:text:%s", fieldId, fieldValue.getValueText());
+        } else if (fieldValue.getValueNumber() != null) {
+            return String.format("field:%d:number:%s", fieldId, fieldValue.getValueNumber());
+        } else if (fieldValue.getValueDate() != null) {
+            return String.format("field:%d:date:%s", fieldId, fieldValue.getValueDate());
+        } else if (fieldValue.getValueBoolean() != null) {
+            return String.format("field:%d:boolean:%s", fieldId, fieldValue.getValueBoolean());
+        }
+        return String.format("field:%d:empty", fieldId);
     }
 
     public ClientListDTO clientToClientListDTO(@NonNull Client client, @NonNull ExternalClientDataCache cache) {
@@ -137,7 +163,7 @@ public class ClientMapper {
         clientDTO.setCreatedAt(processTime(client.getCreatedAt()));
         clientDTO.setUpdatedAt(processTime(client.getUpdatedAt()));
 
-        if (cache.sourceMap() != null && client.getSourceId() != null) {
+        if (client.getSourceId() != null) {
             Source source = cache.sourceMap().get(client.getSourceId());
             if (source != null) {
                 SourceDTO sourceDTO = new SourceDTO();

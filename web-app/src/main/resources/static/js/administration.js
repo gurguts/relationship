@@ -63,6 +63,7 @@ const allPermissions = [
     'inventory:manage',
 
     'declarant:view',
+    'declarant:create',
     'declarant:edit',
     'declarant:delete',
     'declarant:excel',
@@ -182,6 +183,7 @@ function formatPermissionName(permission) {
         'inventory:manage': 'Управление балансом тары',
 
         'declarant:view': 'Отображение страницы декларантов',
+        'declarant:create': 'Создание на странице декларантов',
         'declarant:edit': 'Редактирование на странице декларантов',
         'declarant:delete': 'Удаление на странице декларантов',
         'declarant:excel': 'Экспорт в excel на странице декларантов',

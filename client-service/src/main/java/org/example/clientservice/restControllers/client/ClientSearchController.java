@@ -1,5 +1,6 @@
 package org.example.clientservice.restControllers.client;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Positive;
@@ -17,6 +18,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -53,8 +55,31 @@ public class ClientSearchController {
     @PreAuthorize("hasAuthority('client:view')")
     @PostMapping("/ids")
     public ResponseEntity<List<Map<Long, String>>> getIdsForClient(
-            @RequestBody @Valid ClientIdsRequest request) {
-        List<Map<Long, String>> result = clientService.searchIdsClient(request.clientIds());
+            @RequestBody JsonNode requestBody) {
+        List<Long> clientIds = new ArrayList<>();
+        
+        if (requestBody.isArray()) {
+            for (JsonNode node : requestBody) {
+                if (node.isNumber()) {
+                    clientIds.add(node.asLong());
+                }
+            }
+        } else if (requestBody.has("clientIds") && requestBody.get("clientIds").isArray()) {
+            JsonNode clientIdsNode = requestBody.get("clientIds");
+            for (JsonNode node : clientIdsNode) {
+                if (node.isNumber()) {
+                    clientIds.add(node.asLong());
+                }
+            }
+        } else {
+            return ResponseEntity.badRequest().build();
+        }
+        
+        if (clientIds.isEmpty()) {
+            return ResponseEntity.badRequest().build();
+        }
+        
+        List<Map<Long, String>> result = clientService.searchIdsClient(clientIds);
         return ResponseEntity.ok(result);
     }
 }

@@ -59,6 +59,7 @@ public enum Permission {
     INVENTORY_MANAGE("inventory:manage"),
 
     DECLARANT_VIEW("declarant:view"),
+    DECLARANT_CREATE("declarant:create"),
     DECLARANT_EDIT("declarant:edit"),
     DECLARANT_DELETE("declarant:delete"),
     DECLARANT_EXCEL("declarant:excel"),

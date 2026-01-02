@@ -105,6 +105,10 @@ public class InvalidRequestFilter implements WebFilter {
         if (str == null) {
             return false;
         }
+        
+        if (ALLOWED_CHARS_QUERY.equals(allowedChars)) {
+            return str.chars().anyMatch(c -> !isAllowedQueryCharacter(c, allowedChars));
+        }
         return str.chars().anyMatch(c -> !isAllowedCharacter(c, allowedChars));
     }
 
@@ -113,5 +117,25 @@ public class InvalidRequestFilter implements WebFilter {
             return allowedChars.indexOf(c) >= 0;
         }
         return c == '\t' || c == '\n' || c == '\r';
+    }
+
+    private boolean isAllowedQueryCharacter(int c, String allowedChars) {
+        
+        if (c >= 32 && c <= 126) {
+            return allowedChars.indexOf(c) >= 0;
+        }
+        
+        if (c == '\t' || c == '\n' || c == '\r' || c == ' ') {
+            return true;
+        }
+        
+        return Character.isLetterOrDigit(c) 
+                || Character.getType(c) == Character.CONNECTOR_PUNCTUATION
+                || Character.getType(c) == Character.DASH_PUNCTUATION
+                || Character.getType(c) == Character.START_PUNCTUATION
+                || Character.getType(c) == Character.END_PUNCTUATION
+                || Character.getType(c) == Character.INITIAL_QUOTE_PUNCTUATION
+                || Character.getType(c) == Character.FINAL_QUOTE_PUNCTUATION
+                || Character.getType(c) == Character.OTHER_PUNCTUATION;
     }
 }
