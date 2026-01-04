@@ -1,10 +1,12 @@
 package org.example.containerservice.services;
 
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.containerservice.exceptions.ContainerException;
 import org.example.containerservice.exceptions.ContainerNotFoundException;
 import org.example.containerservice.models.ClientContainer;
+import org.example.containerservice.models.Container;
 import org.example.containerservice.models.ContainerBalance;
 import org.example.containerservice.models.ContainerTransactionType;
 import org.example.containerservice.repositories.ClientContainerRepository;
@@ -15,12 +17,25 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
-@Service
 @Slf4j
+@Service
 @RequiredArgsConstructor
 public class ClientContainerService {
+
+    private static final String ERROR_INVALID_BALANCE = "INVALID_BALANCE";
+    private static final String ERROR_NOT_ENOUGH_DATA = "NOT_ENOUGH_DATA";
+    private static final String ERROR_AUTHENTICATION_REQUIRED = "AUTHENTICATION_REQUIRED";
+    private static final String MESSAGE_CONTAINER_NULL = "Container is null in balance";
+    private static final String MESSAGE_VALIDATION_REQUIRED = "Client ID, container ID, and quantity must be valid";
+    private static final String MESSAGE_AUTHENTICATION_REQUIRED = "User authentication required";
+    private static final String MESSAGE_BALANCE_NOT_FOUND = "No balance found for user %d";
 
     private final ClientContainerRepository clientContainerRepository;
     private final ContainerBalanceRepository containerBalanceRepository;
@@ -28,12 +43,14 @@ public class ClientContainerService {
     private final IContainerService containerService;
 
     @Transactional
-    public void transferContainerToClient(Long clientId, Long containerId, BigDecimal quantity) {
-        ContainerBalance balance = validateAndGetBalance(clientId, containerId, quantity);
+    public void transferContainerToClient(@NonNull Long clientId,
+                                          @NonNull Long containerId,
+                                          @NonNull BigDecimal quantity) {
+        ContainerBalance balance = validateAndGetBalance(containerId, quantity);
         Long userId = balance.getUserId();
-        org.example.containerservice.models.Container container = balance.getContainer();
+        Container container = balance.getContainer();
         if (container == null) {
-            throw new ContainerException("INVALID_BALANCE", "Container is null in balance");
+            throw new ContainerException(ERROR_INVALID_BALANCE, MESSAGE_CONTAINER_NULL);
         }
 
         ClientContainer clientContainer = getOrCreateClientContainer(clientId, userId, containerId, container);
@@ -50,32 +67,36 @@ public class ClientContainerService {
     }
 
     @Transactional
-    public void collectContainerFromClient(Long clientId, Long containerId, BigDecimal quantity) {
-        ContainerBalance collectorBalance = validateAndGetBalance(clientId, containerId, quantity);
+    public void collectContainerFromClient(@NonNull Long clientId,
+                                           @NonNull Long containerId,
+                                           @NonNull BigDecimal quantity) {
+        ContainerBalance collectorBalance = validateAndGetBalance(containerId, quantity);
         Long collectingUserId = collectorBalance.getUserId();
-        org.example.containerservice.models.Container container = collectorBalance.getContainer();
+        Container container = collectorBalance.getContainer();
         if (container == null) {
-            throw new ContainerException("INVALID_BALANCE", "Container is null in balance");
+            throw new ContainerException(ERROR_INVALID_BALANCE, MESSAGE_CONTAINER_NULL);
         }
 
         List<ClientContainer> clientContainers =
                 clientContainerRepository.findByClientAndContainerIdOrderByUpdatedAtAsc(clientId, containerId);
         BigDecimal remainingQuantity = quantity;
 
-        java.util.Set<Long> ownerUserIds = clientContainers.stream()
+        Set<Long> ownerUserIds = clientContainers.stream()
                 .map(ClientContainer::getUser)
-                .filter(userId -> userId != null)
-                .collect(java.util.stream.Collectors.toSet());
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
 
-        java.util.Map<Long, ContainerBalance> balanceMap = new java.util.HashMap<>();
+        Map<Long, ContainerBalance> balanceMap = new HashMap<>();
         if (!ownerUserIds.isEmpty()) {
             List<ContainerBalance> balances = containerBalanceRepository.findByUserIdInAndContainerId(ownerUserIds, containerId);
             balanceMap = balances.stream()
-                    .collect(java.util.stream.Collectors.toMap(ContainerBalance::getUserId, b -> b));
+                    .collect(Collectors.toMap(ContainerBalance::getUserId, balance -> balance));
         }
 
         for (ClientContainer clientContainer : clientContainers) {
-            if (remainingQuantity.compareTo(BigDecimal.ZERO) <= 0) break;
+            if (remainingQuantity.compareTo(BigDecimal.ZERO) <= 0) {
+                break;
+            }
 
             Long ownerUserId = clientContainer.getUser();
             BigDecimal availableQuantity = clientContainer.getQuantity();
@@ -92,8 +113,7 @@ public class ClientContainerService {
 
                 ContainerBalance ownerBalance = balanceMap.get(ownerUserId);
                 if (ownerBalance == null) {
-                    throw new ContainerNotFoundException(
-                            String.format("No balance found for user %d", ownerUserId));
+                    throw new ContainerNotFoundException(String.format(MESSAGE_BALANCE_NOT_FOUND, ownerUserId));
                 }
                 BigDecimal newOwnerTotal =
                         ownerBalance.getTotalQuantity().subtract(collectedQuantity).max(BigDecimal.ZERO);
@@ -123,26 +143,29 @@ public class ClientContainerService {
         containerBalanceRepository.save(collectorBalance);
     }
 
-    private ContainerBalance validateAndGetBalance(Long clientId, Long containerId, BigDecimal quantity) {
-        if (clientId == null || containerId == null || quantity == null || quantity.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new ContainerException("NOT_ENOUGH_DATA", "Client ID, container ID, and quantity must be valid");
+    private ContainerBalance validateAndGetBalance(@NonNull Long containerId,
+                                                   @NonNull BigDecimal quantity) {
+        if (quantity.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new ContainerException(ERROR_NOT_ENOUGH_DATA, MESSAGE_VALIDATION_REQUIRED);
         }
 
         Long userId = SecurityUtils.getCurrentUserId();
         if (userId == null) {
-            throw new ContainerException("AUTHENTICATION_REQUIRED", "User authentication required");
+            throw new ContainerException(ERROR_AUTHENTICATION_REQUIRED, MESSAGE_AUTHENTICATION_REQUIRED);
         }
 
         return getOrCreateBalance(userId, containerId);
     }
 
     @Transactional(readOnly = true)
-    public List<ClientContainer> getClientContainers(Long clientId) {
+    public List<ClientContainer> getClientContainers(@NonNull Long clientId) {
         return clientContainerRepository.findByClient(clientId);
     }
 
-    private ClientContainer getOrCreateClientContainer(Long clientId, Long userId, Long containerId,
-                                                       org.example.containerservice.models.Container container) {
+    private ClientContainer getOrCreateClientContainer(@NonNull Long clientId,
+                                                       @NonNull Long userId,
+                                                       @NonNull Long containerId,
+                                                       @NonNull Container container) {
         return clientContainerRepository.findByClientAndUserAndContainerId(clientId, userId, containerId)
                 .orElseGet(() -> {
                     ClientContainer newContainer = new ClientContainer();
@@ -154,7 +177,7 @@ public class ClientContainerService {
                 });
     }
 
-    private ContainerBalance getOrCreateBalance(Long userId, Long containerId) {
+    private ContainerBalance getOrCreateBalance(@NonNull Long userId, @NonNull Long containerId) {
         return containerBalanceRepository.findByUserIdAndContainerId(userId, containerId)
                 .orElseGet(() -> {
                     ContainerBalance newBalance = new ContainerBalance();

@@ -1,19 +1,15 @@
 package org.example.purchaseservice.repositories;
 
+import lombok.NonNull;
 import org.example.purchaseservice.models.balance.VehicleSender;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
 
 import java.util.List;
-import java.util.Optional;
 
-@Repository
 public interface VehicleSenderRepository extends JpaRepository<VehicleSender, Long> {
-    
-    Optional<VehicleSender> findByName(String name);
-    
-    boolean existsByName(String name);
-    
+    boolean existsByName(@NonNull String name);
+
+    @NonNull
     List<VehicleSender> findAllByOrderByNameAsc();
 }
 

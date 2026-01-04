@@ -20,4 +20,3 @@ public class ClientFieldValueDTO {
     private String valueListValue;
     private Integer displayOrder;
 }
-

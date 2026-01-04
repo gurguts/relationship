@@ -1,5 +1,6 @@
 package org.example.purchaseservice.mappers;
 
+import lombok.NonNull;
 import org.example.purchaseservice.models.dto.warehouse.WithdrawalReasonCreateDTO;
 import org.example.purchaseservice.models.dto.warehouse.WithdrawalReasonDTO;
 import org.example.purchaseservice.models.dto.warehouse.WithdrawalReasonUpdateDTO;
@@ -8,10 +9,8 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class WithdrawalReasonMapper {
-    public WithdrawalReasonDTO withdrawalReasonToWithdrawalReasonDTO(WithdrawalReason withdrawalReason) {
-        if (withdrawalReason == null) {
-            return null;
-        }
+
+    public WithdrawalReasonDTO withdrawalReasonToWithdrawalReasonDTO(@NonNull WithdrawalReason withdrawalReason) {
         WithdrawalReasonDTO dto = new WithdrawalReasonDTO();
         dto.setId(withdrawalReason.getId());
         dto.setName(withdrawalReason.getName());
@@ -19,20 +18,14 @@ public class WithdrawalReasonMapper {
         return dto;
     }
 
-    public WithdrawalReason withdrawalReasonCreateDTOToWithdrawalReason(WithdrawalReasonCreateDTO dto) {
-        if (dto == null) {
-            return null;
-        }
+    public WithdrawalReason withdrawalReasonCreateDTOToWithdrawalReason(@NonNull WithdrawalReasonCreateDTO dto) {
         WithdrawalReason withdrawalReason = new WithdrawalReason();
         withdrawalReason.setName(dto.getName());
         withdrawalReason.setPurpose(dto.getPurpose());
         return withdrawalReason;
     }
 
-    public WithdrawalReason withdrawalReasonUpdateDTOToWithdrawalReason(WithdrawalReasonUpdateDTO dto) {
-        if (dto == null) {
-            return null;
-        }
+    public WithdrawalReason withdrawalReasonUpdateDTOToWithdrawalReason(@NonNull WithdrawalReasonUpdateDTO dto) {
         WithdrawalReason withdrawalReason = new WithdrawalReason();
         withdrawalReason.setName(dto.getName());
         withdrawalReason.setPurpose(dto.getPurpose());

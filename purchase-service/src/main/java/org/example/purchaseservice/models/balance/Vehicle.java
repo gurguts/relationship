@@ -55,10 +55,10 @@ public class Vehicle {
     @Column(name = "destination_country", length = 100)
     private String destinationCountry;
     
-    @Column(name = "destination_place", length = 255)
+    @Column(name = "destination_place")
     private String destinationPlace;
     
-    @Column(name = "product", length = 255)
+    @Column(name = "product")
     private String product;
     
     @Column(name = "product_quantity", length = 100)
@@ -70,7 +70,7 @@ public class Vehicle {
     @Column(name = "terminal", length = 100)
     private String terminal;
     
-    @Column(name = "driver_full_name", length = 255)
+    @Column(name = "driver_full_name")
     private String driverFullName;
     
     @Column(name = "eur1", nullable = false)
@@ -120,20 +120,4 @@ public class Vehicle {
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
-    
-    public void addWithdrawalCost(BigDecimal withdrawalCost) {
-        if (withdrawalCost != null && withdrawalCost.compareTo(BigDecimal.ZERO) > 0) {
-            this.totalCostEur = this.totalCostEur.add(withdrawalCost);
-        }
-    }
-    
-    public void subtractWithdrawalCost(BigDecimal withdrawalCost) {
-        if (withdrawalCost != null && withdrawalCost.compareTo(BigDecimal.ZERO) > 0) {
-            this.totalCostEur = this.totalCostEur.subtract(withdrawalCost);
-            if (this.totalCostEur.compareTo(BigDecimal.ZERO) < 0) {
-                this.totalCostEur = BigDecimal.ZERO;
-            }
-        }
-    }
 }
-

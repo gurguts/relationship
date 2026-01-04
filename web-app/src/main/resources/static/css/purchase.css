@@ -994,6 +994,7 @@ input.custom-select-placeholder {
     padding: 0.3em 0.3em;
     font-size: 14px;
     cursor: pointer;
+    margin: 0 0.2em;
     transition: background-color 0.3s ease;
 }
 

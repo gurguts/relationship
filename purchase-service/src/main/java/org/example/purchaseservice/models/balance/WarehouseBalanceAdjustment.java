@@ -55,10 +55,4 @@ public class WarehouseBalanceAdjustment {
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
-
-    public enum AdjustmentType {
-        QUANTITY,
-        TOTAL_COST,
-        BOTH
-    }
 }

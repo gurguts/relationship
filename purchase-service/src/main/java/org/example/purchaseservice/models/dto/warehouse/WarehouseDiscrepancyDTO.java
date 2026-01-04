@@ -25,7 +25,7 @@ public class WarehouseDiscrepancyDTO {
     private BigDecimal discrepancyQuantity;
     private BigDecimal unitPriceEur;
     private BigDecimal discrepancyValueEur;
-    private String type; // LOSS or GAIN
+    private String type;
     private String comment;
     private Long createdByUserId;
     private LocalDateTime createdAt;

@@ -27,7 +27,7 @@ public class InvalidRequestFilter implements WebFilter {
     private static final String MESSAGE_KEY_INVALID_REQUEST = "invalid.request";
 
     private static final String ALLOWED_CHARS_PATH = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~:/?#[]@!$&'()*+,;=%";
-    private static final String ALLOWED_CHARS_QUERY = ALLOWED_CHARS_PATH + "{}\"";
+    private static final String ALLOWED_CHARS_QUERY = ALLOWED_CHARS_PATH + "{}\" ";
 
     private final MessageSource messageSource;
     private final ObjectMapper objectMapper;
@@ -121,12 +121,12 @@ public class InvalidRequestFilter implements WebFilter {
 
     private boolean isAllowedQueryCharacter(int c, String allowedChars) {
         
-        if (c >= 32 && c <= 126) {
-            return allowedChars.indexOf(c) >= 0;
+        if (c == ' ' || c == '\t' || c == '\n' || c == '\r') {
+            return true;
         }
         
-        if (c == '\t' || c == '\n' || c == '\r' || c == ' ') {
-            return true;
+        if (c >= 32 && c <= 126) {
+            return allowedChars.indexOf(c) >= 0;
         }
         
         return Character.isLetterOrDigit(c) 

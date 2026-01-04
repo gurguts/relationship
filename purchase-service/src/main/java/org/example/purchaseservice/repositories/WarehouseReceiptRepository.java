@@ -1,5 +1,6 @@
 package org.example.purchaseservice.repositories;
 
+import lombok.NonNull;
 import org.example.purchaseservice.models.warehouse.WarehouseReceipt;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -10,10 +11,13 @@ import java.time.LocalDate;
 import java.util.List;
 
 public interface WarehouseReceiptRepository extends JpaRepository<WarehouseReceipt, Long> {
-    Page<WarehouseReceipt> findAll(Specification<WarehouseReceipt> specification, Pageable pageable);
+    @NonNull
+    Page<WarehouseReceipt> findAll(Specification<WarehouseReceipt> specification, @NonNull Pageable pageable);
 
+    @NonNull
     List<WarehouseReceipt> findAll(Specification<WarehouseReceipt> specification);
 
-    List<WarehouseReceipt> findAllByEntryDateLessThanEqual(LocalDate date);
+    @NonNull
+    List<WarehouseReceipt> findAllByEntryDateLessThanEqual(@NonNull LocalDate date);
 }
 

@@ -1,5 +1,6 @@
 package org.example.purchaseservice.mappers;
 
+import lombok.NonNull;
 import org.example.purchaseservice.exceptions.PurchaseException;
 import org.example.purchaseservice.models.Purchase;
 import org.example.purchaseservice.models.dto.purchase.*;
@@ -12,12 +13,10 @@ import java.time.format.DateTimeFormatter;
 @Component
 public class PurchaseMapper {
 
-    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+    private static final String DATE_PATTERN = "yyyy-MM-dd";
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern(DATE_PATTERN);
 
-    public PurchaseDTO toDto(Purchase purchase) {
-        if (purchase == null) {
-            return null;
-        }
+    public PurchaseDTO toDto(@NonNull Purchase purchase) {
         PurchaseDTO dto = new PurchaseDTO();
         dto.setId(purchase.getId());
         dto.setUserId(purchase.getUser());
@@ -37,10 +36,7 @@ public class PurchaseMapper {
         return dto;
     }
 
-    public Purchase purchaseUpdateDTOToPurchase(PurchaseUpdateDTO purchaseDto) {
-        if (purchaseDto == null) {
-            return null;
-        }
+    public Purchase purchaseUpdateDTOToPurchase(@NonNull PurchaseUpdateDTO purchaseDto) {
         Purchase purchase = new Purchase();
         purchase.setSource(purchaseDto.getSourceId());
         purchase.setProduct(purchaseDto.getProductId());
@@ -49,7 +45,6 @@ public class PurchaseMapper {
         purchase.setExchangeRate(purchaseDto.getExchangeRate());
         purchase.setCreatedAt(parseCreatedAt(purchaseDto.getCreatedAt()));
         purchase.setComment(purchaseDto.getComment());
-
         return purchase;
     }
 
@@ -59,16 +54,14 @@ public class PurchaseMapper {
                 LocalDate localDate = LocalDate.parse(createdAt, DATE_FORMATTER);
                 return localDate.atStartOfDay();
             } catch (Exception e) {
-                throw new PurchaseException("INVALID_DATE_FORMAT", String.format("Invalid date format for createdAt: %s", createdAt));
+                throw new PurchaseException("INVALID_DATE_FORMAT",
+                        String.format("Invalid date format for createdAt: %s", createdAt));
             }
         }
         return null;
     }
 
-    public Purchase purchaseCreateDTOToPurchase(PurchaseCreateDTO dto) {
-        if (dto == null) {
-            return null;
-        }
+    public Purchase purchaseCreateDTOToPurchase(@NonNull PurchaseCreateDTO dto) {
         Purchase purchase = new Purchase();
         purchase.setUser(dto.getUserId());
         purchase.setClient(dto.getClientId());
@@ -83,11 +76,7 @@ public class PurchaseMapper {
         return purchase;
     }
 
-    public PurchaseWarehouseDTO purchaseToPurchaseWarehouseDTO(Purchase purchase) {
-        if (purchase == null) {
-            return null;
-        }
-
+    public PurchaseWarehouseDTO purchaseToPurchaseWarehouseDTO(@NonNull Purchase purchase) {
         PurchaseWarehouseDTO dto = new PurchaseWarehouseDTO();
         dto.setId(purchase.getId());
         dto.setUserId(purchase.getUser());
@@ -97,11 +86,7 @@ public class PurchaseMapper {
         return dto;
     }
 
-    public PurchaseModalDTO purchaseToPurchaseModalDTO(Purchase purchase) {
-        if (purchase == null) {
-            return null;
-        }
-
+    public PurchaseModalDTO purchaseToPurchaseModalDTO(@NonNull Purchase purchase) {
         PurchaseModalDTO dto = new PurchaseModalDTO();
         dto.setId(purchase.getId());
         dto.setUserId(purchase.getUser());

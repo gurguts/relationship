@@ -1,7 +1,11 @@
 package org.example.containerservice.exceptions;
 
+import lombok.NonNull;
+
 public class ContainerNotFoundException extends RuntimeException {
-    public ContainerNotFoundException(String message) {
+    
+    public ContainerNotFoundException(@NonNull String message) {
         super(message);
     }
+
 }

@@ -1,6 +1,5 @@
 package org.example.containerservice.models;
 
-
 import org.example.containerservice.models.dto.client.ClientDTO;
 
 import java.util.List;

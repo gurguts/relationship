@@ -1,7 +1,11 @@
 package org.example.purchaseservice.exceptions;
 
+import lombok.NonNull;
+
 public class WarehouseNotFoundException extends RuntimeException {
-    public WarehouseNotFoundException(String message) {
+    
+    public WarehouseNotFoundException(@NonNull String message) {
         super(message);
     }
+
 }

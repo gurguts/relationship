@@ -2,7 +2,7 @@ package org.example.purchaseservice.models.dto.balance;
 
 import lombok.Builder;
 import lombok.Value;
-import org.example.purchaseservice.models.balance.WarehouseBalanceAdjustment;
+import org.example.purchaseservice.models.balance.AdjustmentType;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -19,7 +19,7 @@ public class WarehouseBalanceAdjustmentDTO {
     BigDecimal newTotalCostEur;
     BigDecimal previousAveragePriceEur;
     BigDecimal newAveragePriceEur;
-    WarehouseBalanceAdjustment.AdjustmentType adjustmentType;
+    AdjustmentType adjustmentType;
     String description;
     Long userId;
     LocalDateTime createdAt;

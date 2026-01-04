@@ -8,11 +8,11 @@ import java.util.Map;
 @Data
 @Builder
 public class PurchaseReportDTO {
-    private Map<Long, Double> totalCollectedByProduct; // productId -> quantity
-    private Map<Long, Double> totalDeliveredByProduct; // productId -> quantity (new field)
-    private Map<String, Map<Long, Double>> byAttractors; // attractorName -> (productId -> quantity)
-    private Map<String, Map<Long, Double>> byDrivers; // driverName -> (productId -> quantity)
-    private Map<String, Double> totalSpentByCurrency; // currency -> amount
-    private Map<String, Double> averagePriceByCurrency; // currency -> price
-    private Map<Long, Double> averageCollectedPerTimeByProduct; // productId -> quantity
+    private Map<Long, Double> totalCollectedByProduct;
+    private Map<Long, Double> totalDeliveredByProduct;
+    private Map<String, Map<Long, Double>> byAttractors;
+    private Map<String, Map<Long, Double>> byDrivers;
+    private Map<String, Double> totalSpentByCurrency;
+    private Map<String, Double> averagePriceByCurrency;
+    private Map<Long, Double> averageCollectedPerTimeByProduct;
 }

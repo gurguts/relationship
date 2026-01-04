@@ -5,8 +5,6 @@ import lombok.Data;
 @Data
 public class ClientTypeFieldListValueDTO {
     private Long id;
-    private Long fieldId;
     private String value;
     private Integer displayOrder;
 }
-

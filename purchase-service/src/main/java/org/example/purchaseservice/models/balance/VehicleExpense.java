@@ -46,4 +46,3 @@ public class VehicleExpense {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 }
-

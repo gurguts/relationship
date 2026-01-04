@@ -140,6 +140,8 @@
         <thead>
             <tr>
                             <th data-column="vehicleNumber" class="resizable-header">Номер машини</th>
+                            <th data-column="productsTotalCost" class="resizable-header">Витрати на товар</th>
+                            <th data-column="expensesTotal" class="resizable-header">Витрати на машину</th>
                             <th data-column="totalExpenses" class="resizable-header">Загальні витрати</th>
                             <th data-column="totalIncome" class="resizable-header">Загальний дохід</th>
                             <th data-column="margin" class="resizable-header">Маржа</th>
@@ -158,7 +160,7 @@
                             <th data-column="driverFullName" class="resizable-header">Водій (ПІБ)</th>
                             <th data-column="eur1" class="resizable-header">EUR1</th>
                             <th data-column="fito" class="resizable-header">FITO</th>
-                            <th data-column="customsDate" class="resizable-header">Дата митниці</th>
+                            <th data-column="customsDate" class="resizable-header">Дата замитнення</th>
                             <th data-column="customsClearanceDate" class="resizable-header">Дата розмитнення</th>
                             <th data-column="unloadingDate" class="resizable-header">Дата вивантаження</th>
                             <th data-column="carrier" class="resizable-header">Перевізник</th>
@@ -201,7 +203,7 @@
                 </div>
                 
                 <div class="form-section">
-                    <h4 class="section-title">Дата митниці</h4>
+                    <h4 class="section-title">Дата замитнення</h4>
                     <div class="form-grid">
                         <div class="form-group">
                             <label for="vehicles-customs-date-from-filter">Дата від:</label>
@@ -391,7 +393,7 @@
                             <input type="text" id="vehicle-driver-full-name" class="form-input">
                         </div>
                         <div class="form-group">
-                            <label for="vehicle-customs-date">Дата митниці</label>
+                            <label for="vehicle-customs-date">Дата замитнення</label>
                             <input type="date" id="vehicle-customs-date" class="form-input">
                         </div>
                         <div class="form-group">
@@ -579,7 +581,7 @@
                                 <input type="text" id="detail-vehicle-driver-full-name" class="form-input" disabled>
                             </div>
                             <div class="form-group">
-                                <label for="detail-vehicle-customs-date">Дата митниці</label>
+                                <label for="detail-vehicle-customs-date">Дата замитнення</label>
                                 <input type="date" id="detail-vehicle-customs-date" class="form-input" disabled>
                             </div>
                             <div class="form-group">
@@ -821,13 +823,13 @@
                     <label for="edit-expense-currency">Валюта *</label>
                     <select id="edit-expense-currency" class="form-input" required>
                         <option value="">Оберіть валюту</option>
-                    </select>
+            </select>
                 </div>
                 <div class="form-group">
                     <label for="edit-expense-description">Опис</label>
                     <textarea id="edit-expense-description" rows="3" class="form-input" placeholder="Опис витрати"></textarea>
                 </div>
-            </form>
+        </form>
         </div>
         <div class="modal-footer">
             <button type="button" class="btn btn-secondary" id="cancel-edit-vehicle-expense-btn">Скасувати</button>

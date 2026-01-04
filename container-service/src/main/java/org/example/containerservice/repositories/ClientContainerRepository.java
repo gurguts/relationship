@@ -1,7 +1,7 @@
 package org.example.containerservice.repositories;
 
+import lombok.NonNull;
 import org.example.containerservice.models.ClientContainer;
-import org.jetbrains.annotations.NotNull;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -15,19 +15,21 @@ import java.util.Optional;
 
 public interface ClientContainerRepository extends JpaRepository<ClientContainer, Long>,
         JpaSpecificationExecutor<ClientContainer> {
-    Optional<ClientContainer> findByClientAndUserAndContainerId(Long clientId, Long userId, Long containerId);
+    Optional<ClientContainer> findByClientAndUserAndContainerId(@NonNull Long clientId, @NonNull Long userId, @NonNull Long containerId);
 
     @EntityGraph(attributePaths = {"container"})
-    List<ClientContainer> findByClient(Long clientId);
+    @NonNull
+    List<ClientContainer> findByClient(@NonNull Long clientId);
 
     @EntityGraph(attributePaths = {"container"})
-    List<ClientContainer> findByClientAndContainerIdOrderByUpdatedAtAsc(Long clientId, Long containerId);
+    @NonNull
+    List<ClientContainer> findByClientAndContainerIdOrderByUpdatedAtAsc(@NonNull Long clientId, @NonNull Long containerId);
 
     @EntityGraph(attributePaths = {"container"})
-    @NotNull
-    Page<ClientContainer> findAll(Specification<ClientContainer> spec, @NotNull Pageable pageable);
+    @NonNull
+    Page<ClientContainer> findAll(Specification<ClientContainer> spec, @NonNull Pageable pageable);
 
     @EntityGraph(attributePaths = {"container"})
-    @NotNull
-    List<ClientContainer> findAll(@NotNull Specification<ClientContainer> spec, @NotNull Sort sort);
+    @NonNull
+    List<ClientContainer> findAll(Specification<ClientContainer> spec, @NonNull Sort sort);
 }

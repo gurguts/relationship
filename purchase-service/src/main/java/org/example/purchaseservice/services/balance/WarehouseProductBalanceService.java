@@ -3,6 +3,7 @@ package org.example.purchaseservice.services.balance;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.purchaseservice.exceptions.PurchaseException;
+import org.example.purchaseservice.models.balance.AdjustmentType;
 import org.example.purchaseservice.models.balance.WarehouseBalanceAdjustment;
 import org.example.purchaseservice.models.balance.WarehouseProductBalance;
 import org.example.purchaseservice.repositories.WarehouseBalanceAdjustmentRepository;
@@ -23,15 +24,18 @@ public class WarehouseProductBalanceService {
     private final WarehouseProductBalanceRepository warehouseProductBalanceRepository;
     private final WarehouseBalanceAdjustmentRepository warehouseBalanceAdjustmentRepository;
     
-    /**
-     * Add product to warehouse (when receiving from driver)
-     * @param totalCost TOTAL cost of all received product (NOT unit price)
-     */
     @Transactional
     public WarehouseProductBalance addProduct(Long warehouseId, Long productId, 
                                                BigDecimal quantity, BigDecimal totalCost) {
         log.info("Adding product to warehouse balance: warehouseId={}, productId={}, quantity={}, totalCost={}", 
                 warehouseId, productId, quantity, totalCost);
+        
+        if (quantity == null || quantity.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Added quantity must be positive");
+        }
+        if (totalCost == null || totalCost.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Added total cost must be non-negative");
+        }
         
         WarehouseProductBalance balance = warehouseProductBalanceRepository
                 .findByWarehouseIdAndProductId(warehouseId, productId)
@@ -42,7 +46,16 @@ public class WarehouseProductBalanceService {
                     return newBalance;
                 });
         
-        balance.addProduct(quantity, totalCost);
+        BigDecimal newTotalCost = balance.getTotalCostEur().add(totalCost);
+        BigDecimal newQuantity = balance.getQuantity().add(quantity);
+        
+        balance.setQuantity(newQuantity);
+        balance.setTotalCostEur(newTotalCost);
+        
+        if (newQuantity.compareTo(BigDecimal.ZERO) > 0) {
+            balance.setAveragePriceEur(newTotalCost.divide(newQuantity, 6, RoundingMode.CEILING));
+        }
+        
         WarehouseProductBalance saved = warehouseProductBalanceRepository.save(balance);
         
         log.info("Warehouse balance updated: id={}, newQuantity={}, newTotalCost={}, newAveragePrice={}", 
@@ -56,13 +69,33 @@ public class WarehouseProductBalanceService {
         log.info("Removing product from warehouse balance: warehouseId={}, productId={}, quantity={}", 
                 warehouseId, productId, quantity);
         
+        if (quantity == null || quantity.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Removed quantity must be positive");
+        }
+        
         WarehouseProductBalance balance = warehouseProductBalanceRepository
                 .findByWarehouseIdAndProductId(warehouseId, productId)
                 .orElseThrow(() -> new PurchaseException("WAREHOUSE_BALANCE_NOT_FOUND", 
                         String.format("Warehouse balance not found: warehouseId=%d, productId=%d", 
                                 warehouseId, productId)));
         
-        BigDecimal averagePrice = balance.removeProduct(quantity);
+        if (quantity.compareTo(balance.getQuantity()) > 0) {
+            throw new IllegalArgumentException("Cannot remove more than available quantity. Available: " 
+                    + balance.getQuantity() + ", trying to remove: " + quantity);
+        }
+        
+        BigDecimal currentAveragePrice = balance.getAveragePriceEur();
+        BigDecimal newQuantity = balance.getQuantity().subtract(quantity);
+        
+        balance.setQuantity(newQuantity);
+        
+        if (newQuantity.compareTo(BigDecimal.ZERO) == 0) {
+            balance.setAveragePriceEur(BigDecimal.ZERO);
+            balance.setTotalCostEur(BigDecimal.ZERO);
+        } else {
+            balance.setAveragePriceEur(balance.getTotalCostEur().divide(newQuantity, 6, RoundingMode.CEILING));
+        }
+        
         WarehouseProductBalance saved = warehouseProductBalanceRepository.save(balance);
         
         if (saved.getQuantity().compareTo(BigDecimal.ZERO) == 0) {
@@ -73,7 +106,7 @@ public class WarehouseProductBalanceService {
                     saved.getId(), saved.getQuantity(), saved.getTotalCostEur(), saved.getAveragePriceEur());
         }
         
-        return averagePrice;
+        return currentAveragePrice;
     }
     
     @Transactional
@@ -106,16 +139,17 @@ public class WarehouseProductBalanceService {
                 saved.getId(), saved.getQuantity(), saved.getTotalCostEur(), saved.getAveragePriceEur());
     }
     
-    /**
-     * Remove product with specific cost from warehouse (for product movements/transfers)
-     * This allows removing product at a specific price different from average warehouse price
-     * @param quantity quantity to remove
-     * @param totalCost total cost to remove (quantity * specified unit price)
-     */
     @Transactional
     public void removeProductWithCost(Long warehouseId, Long productId, BigDecimal quantity, BigDecimal totalCost) {
         log.info("Removing product with specific cost from warehouse: warehouseId={}, productId={}, quantity={}, totalCost={}", 
                 warehouseId, productId, quantity, totalCost);
+        
+        if (quantity == null || quantity.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Removed quantity must be positive");
+        }
+        if (totalCost == null || totalCost.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Removed total cost must be non-negative");
+        }
         
         WarehouseProductBalance balance = warehouseProductBalanceRepository
                 .findByWarehouseIdAndProductId(warehouseId, productId)
@@ -123,10 +157,30 @@ public class WarehouseProductBalanceService {
                         String.format("Warehouse balance not found: warehouseId=%d, productId=%d", 
                                 warehouseId, productId)));
         
-        balance.removeProductWithCost(quantity, totalCost);
+        if (quantity.compareTo(balance.getQuantity()) > 0) {
+            throw new IllegalArgumentException("Cannot remove more than available quantity. Available: " 
+                    + balance.getQuantity() + ", trying to remove: " + quantity);
+        }
+        
+        BigDecimal newQuantity = balance.getQuantity().subtract(quantity);
+        BigDecimal newTotalCost = balance.getTotalCostEur().subtract(totalCost);
+        
+        if (newTotalCost.compareTo(BigDecimal.ZERO) < 0) {
+            newTotalCost = BigDecimal.ZERO;
+        }
+        
+        balance.setQuantity(newQuantity);
+        balance.setTotalCostEur(newTotalCost);
+        
+        if (newQuantity.compareTo(BigDecimal.ZERO) > 0) {
+            balance.setAveragePriceEur(newTotalCost.divide(newQuantity, 6, RoundingMode.CEILING));
+        } else {
+            balance.setAveragePriceEur(BigDecimal.ZERO);
+            balance.setTotalCostEur(BigDecimal.ZERO);
+        }
+        
         WarehouseProductBalance saved = warehouseProductBalanceRepository.save(balance);
         
-        // Delete record if quantity becomes 0
         if (saved.getQuantity().compareTo(BigDecimal.ZERO) == 0) {
             warehouseProductBalanceRepository.delete(saved);
             log.info("Warehouse balance deleted (quantity=0): id={}", saved.getId());
@@ -136,25 +190,16 @@ public class WarehouseProductBalanceService {
         }
     }
     
-    /**
-     * Get balance for specific product on warehouse
-     */
     @Transactional(readOnly = true)
     public WarehouseProductBalance getBalance(Long warehouseId, Long productId) {
         return warehouseProductBalanceRepository.findByWarehouseIdAndProductId(warehouseId, productId).orElse(null);
     }
     
-    /**
-     * Get all balances for specific warehouse
-     */
     @Transactional(readOnly = true)
     public List<WarehouseProductBalance> getWarehouseBalances(Long warehouseId) {
         return warehouseProductBalanceRepository.findByWarehouseId(warehouseId);
     }
     
-    /**
-     * Get all balances for specific product (across all warehouses)
-     */
     @Transactional(readOnly = true)
     public List<WarehouseProductBalance> getProductBalances(Long productId) {
         return warehouseProductBalanceRepository.findByProductId(productId);
@@ -171,10 +216,22 @@ public class WarehouseProductBalanceService {
                         String.format("Warehouse balance not found: warehouseId=%d, productId=%d",
                                 warehouseId, productId)));
 
-        try {
-            balance.adjustTotalCost(costDelta);
-        } catch (IllegalArgumentException ex) {
-            throw new PurchaseException("INVALID_COST_ADJUSTMENT", ex.getMessage());
+        if (costDelta == null) {
+            throw new PurchaseException("INVALID_COST_ADJUSTMENT", "Cost delta must not be null");
+        }
+
+        BigDecimal newTotalCost = balance.getTotalCostEur().add(costDelta);
+        if (newTotalCost.compareTo(BigDecimal.ZERO) < 0) {
+            throw new PurchaseException("INVALID_COST_ADJUSTMENT", "Resulting total cost cannot be negative");
+        }
+
+        balance.setTotalCostEur(newTotalCost);
+
+        if (balance.getQuantity().compareTo(BigDecimal.ZERO) > 0) {
+            balance.setAveragePriceEur(newTotalCost.divide(balance.getQuantity(), 6, RoundingMode.CEILING));
+        } else {
+            balance.setTotalCostEur(BigDecimal.ZERO);
+            balance.setAveragePriceEur(BigDecimal.ZERO);
         }
 
         WarehouseProductBalance saved = warehouseProductBalanceRepository.save(balance);
@@ -188,9 +245,6 @@ public class WarehouseProductBalanceService {
         }
     }
 
-    /**
-     * Check if warehouse has enough product
-     */
     @Transactional(readOnly = true)
     public boolean hasEnoughProduct(Long warehouseId, Long productId, BigDecimal requiredQuantity) {
         WarehouseProductBalance balance = getBalance(warehouseId, productId);
@@ -200,19 +254,12 @@ public class WarehouseProductBalanceService {
         return balance.getQuantity().compareTo(requiredQuantity) >= 0;
     }
     
-    /**
-     * Get average price of product on warehouse
-     */
     @Transactional(readOnly = true)
     public BigDecimal getAveragePrice(Long warehouseId, Long productId) {
         WarehouseProductBalance balance = getBalance(warehouseId, productId);
         return balance != null ? balance.getAveragePriceEur() : BigDecimal.ZERO;
     }
     
-    /**
-     * Set initial warehouse balance (for migration or manual initialization)
-     * Use this when warehouse already has products but system is being set up
-     */
     @Transactional
     public WarehouseProductBalance setInitialBalance(Long warehouseId, Long productId,
                                                       BigDecimal initialQuantity, BigDecimal averagePriceEur) {
@@ -244,9 +291,6 @@ public class WarehouseProductBalanceService {
         return saved;
     }
     
-    /**
-     * Get all balances with quantity > 0
-     */
     @Transactional(readOnly = true)
     public List<WarehouseProductBalance> getAllActiveBalances() {
         return warehouseProductBalanceRepository.findAllWithPositiveQuantity();
@@ -269,7 +313,7 @@ public class WarehouseProductBalanceService {
         BigDecimal previousTotalCost = balance.getTotalCostEur().setScale(6, RoundingMode.HALF_UP);
         BigDecimal previousAverage = balance.getAveragePriceEur().setScale(6, RoundingMode.HALF_UP);
 
-        WarehouseBalanceAdjustment.AdjustmentType adjustmentType = null;
+        AdjustmentType adjustmentType = null;
 
         BigDecimal updatedQuantity = previousQuantity;
         BigDecimal updatedTotalCost = previousTotalCost;
@@ -288,7 +332,7 @@ public class WarehouseProductBalanceService {
                     updatedTotalCost = unitPrice.multiply(updatedQuantity).setScale(6, RoundingMode.HALF_UP);
                 }
             }
-            adjustmentType = WarehouseBalanceAdjustment.AdjustmentType.QUANTITY;
+            adjustmentType = AdjustmentType.QUANTITY;
         }
 
         if (newTotalCost != null) {
@@ -298,8 +342,8 @@ public class WarehouseProductBalanceService {
             }
             updatedTotalCost = total;
             adjustmentType = adjustmentType == null
-                    ? WarehouseBalanceAdjustment.AdjustmentType.TOTAL_COST
-                    : WarehouseBalanceAdjustment.AdjustmentType.BOTH;
+                    ? AdjustmentType.TOTAL_COST
+                    : AdjustmentType.BOTH;
         }
 
         if (adjustmentType == null) {
@@ -308,7 +352,6 @@ public class WarehouseProductBalanceService {
 
         BigDecimal updatedAverage;
         if (updatedQuantity.compareTo(BigDecimal.ZERO) > 0) {
-            // Round up to avoid loss of precision when converting back to total cost
             updatedAverage = updatedTotalCost.divide(updatedQuantity, 6, RoundingMode.CEILING);
         } else {
             updatedAverage = BigDecimal.ZERO.setScale(6, RoundingMode.HALF_UP);
@@ -360,7 +403,6 @@ public class WarehouseProductBalanceService {
         if (totalCost == null) {
             return BigDecimal.ZERO.setScale(6, RoundingMode.HALF_UP);
         }
-        // Round up to avoid loss of precision
         return totalCost.divide(quantity, 6, RoundingMode.CEILING);
     }
 }

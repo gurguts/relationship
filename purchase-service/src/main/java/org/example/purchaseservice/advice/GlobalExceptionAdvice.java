@@ -1,7 +1,9 @@
 package org.example.purchaseservice.advice;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.purchaseservice.exceptions.*;
@@ -14,6 +16,8 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.util.HashMap;
 import java.util.Locale;
@@ -28,171 +32,218 @@ public class GlobalExceptionAdvice {
 
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ErrorResponse handleValidationExceptions(MethodArgumentNotValidException ex, Locale locale) {
+    public ErrorResponse handleValidationExceptions(@NonNull MethodArgumentNotValidException ex, @NonNull Locale locale) {
         Map<String, String> errors = new HashMap<>();
         ex.getBindingResult().getAllErrors().forEach(error -> {
             String fieldName = error instanceof FieldError ? ((FieldError) error).getField() : error.getObjectName();
-            String errorMessage =
-                    messageSource.getMessage(Objects.requireNonNull(error.getDefaultMessage()), null,
-                            error.getDefaultMessage(), locale);
+            String defaultMessage = Objects.toString(error.getDefaultMessage(), "");
+            String errorMessage = MessageLocalizationHelper.getLocalizedMessage(
+                    messageSource, defaultMessage, defaultMessage, locale);
             errors.put(fieldName, errorMessage);
         });
-        log.info("Validation errors: {}", errors);
+        logRequestContext("Validation errors: {}", errors);
         return new ErrorResponse(
-                "VALIDATION_ERROR",
-                messageSource.getMessage("validation.error", null, "Validation errors", locale),
+                ErrorConstants.ERROR_VALIDATION,
+                MessageLocalizationHelper.getLocalizedMessage(
+                        messageSource, ErrorConstants.MESSAGE_KEY_VALIDATION,
+                        ErrorConstants.DEFAULT_MESSAGE_VALIDATION, locale),
                 errors
         );
     }
 
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ExceptionHandler(ConstraintViolationException.class)
-    public ErrorResponse handleConstraintViolation(ConstraintViolationException ex, Locale locale) {
+    public ErrorResponse handleConstraintViolation(@NonNull ConstraintViolationException ex, @NonNull Locale locale) {
         Map<String, String> errors = new HashMap<>();
         ex.getConstraintViolations().forEach(violation -> {
             String fieldName = violation.getPropertyPath().toString();
-            String errorMessage = messageSource.getMessage(violation.getMessage(), null,
-                    violation.getMessage(), locale);
+            String violationMessage = Objects.toString(violation.getMessage(), "");
+            String errorMessage = MessageLocalizationHelper.getLocalizedMessage(
+                    messageSource, violationMessage, violationMessage, locale);
             errors.put(fieldName, errorMessage);
         });
-        log.info("Constraint Violation Errors: {}", errors);
+        logRequestContext("Constraint Violation Errors: {}", errors);
         return new ErrorResponse(
-                "VALIDATION_ERROR",
-                messageSource.getMessage("validation.error", null,
-                        "Constraint Violation Errors", locale),
+                ErrorConstants.ERROR_VALIDATION,
+                MessageLocalizationHelper.getLocalizedMessage(
+                        messageSource, ErrorConstants.MESSAGE_KEY_VALIDATION,
+                        ErrorConstants.DEFAULT_MESSAGE_CONSTRAINT_VIOLATION, locale),
                 errors
         );
     }
 
     @ResponseStatus(HttpStatus.FORBIDDEN)
     @ExceptionHandler(AccessDeniedException.class)
-    public ErrorResponse handleAccessDeniedException(AccessDeniedException ex, Locale locale) {
-        log.warn("Access Denied: {}", ex.getMessage());
+    public ErrorResponse handleAccessDeniedException(@NonNull AccessDeniedException ex, @NonNull Locale locale) {
+        logRequestContext("Access Denied: {}", Objects.toString(ex.getMessage(), ""));
         return new ErrorResponse(
-                "ACCESS_DENIED",
-                messageSource.getMessage("access.denied", null,
-                        "You do not have permission to perform this action.", locale),
+                ErrorConstants.ERROR_ACCESS_DENIED,
+                MessageLocalizationHelper.getLocalizedMessage(
+                        messageSource, ErrorConstants.MESSAGE_KEY_ACCESS_DENIED,
+                        ErrorConstants.DEFAULT_MESSAGE_ACCESS_DENIED, locale),
                 null
         );
     }
 
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ExceptionHandler(PurchaseException.class)
-    public ErrorResponse handlePurchaseException(PurchaseException ex, Locale locale) {
-        log.warn("Purchase error: code={}, message={}", ex.getErrorCode(), ex.getMessage());
+    public ErrorResponse handlePurchaseException(@NonNull PurchaseException ex, @NonNull Locale locale) {
+        String errorCode = ex.getErrorCode();
+        String exceptionMessage = Objects.toString(ex.getMessage(), "");
+        logRequestContext("Purchase error: code={}, message={}", errorCode, exceptionMessage);
         
-        // Try to get localized message from messages.properties
-        String messageKey = String.format("purchase.error.%s", ex.getErrorCode().toUpperCase());
+        String messageKey = String.format(ErrorConstants.MESSAGE_KEY_PREFIX_PURCHASE_ERROR, errorCode.toUpperCase());
         String localizedMessage = messageSource.getMessage(messageKey, null, null, locale);
+        boolean hasLocalizedMessage = MessageLocalizationHelper.isValidLocalizedMessage(localizedMessage, messageKey);
         
-        // If no localized message found, use the English message from exception
-        String message = (localizedMessage != null && !localizedMessage.equals(messageKey))
-                ? localizedMessage 
-                : ex.getMessage();
+        String finalMessage = hasLocalizedMessage ? localizedMessage : exceptionMessage;
+        Map<String, String> details = buildDetailsIfComplex(exceptionMessage);
         
-        Map<String, String> details = null;
-        // For complex error messages (with newlines or long text), put full message in details
-        if (ex.getMessage() != null && (ex.getMessage().contains("\n") || ex.getMessage().length() > 100)) {
-            details = new HashMap<>();
-            details.put("error", ex.getMessage());
-            // Use localized message if available, otherwise use first line of English message
-            if (localizedMessage != null && !localizedMessage.equals(messageKey)) {
-                message = localizedMessage;
-            } else {
-                String[] lines = ex.getMessage().split("\n");
-                message = lines.length > 0 ? lines[0] : ex.getMessage();
-            }
+        if (details != null && !hasLocalizedMessage) {
+            finalMessage = MessageLocalizationHelper.extractFirstLine(exceptionMessage);
         }
         
-        return new ErrorResponse(ex.getErrorCode(), message, details);
+        return new ErrorResponse(errorCode, finalMessage, details);
+    }
+
+    private Map<String, String> buildDetailsIfComplex(String exceptionMessage) {
+        if (!MessageLocalizationHelper.isComplexMessage(exceptionMessage)) {
+            return null;
+        }
+        
+        Map<String, String> details = new HashMap<>();
+        details.put(ErrorConstants.DETAILS_KEY_ERROR, exceptionMessage);
+        return details;
     }
 
     @ResponseStatus(HttpStatus.NOT_FOUND)
     @ExceptionHandler(PurchaseNotFoundException.class)
-    public ErrorResponse handlePurchaseNotFoundException(PurchaseNotFoundException ex, Locale locale) {
-        log.warn("Purchase not found: {}", ex.getMessage());
+    public ErrorResponse handlePurchaseNotFoundException(@NonNull PurchaseNotFoundException ex, @NonNull Locale locale) {
+        String exceptionMessage = Objects.toString(ex.getMessage(), "");
+        logRequestContext("Purchase not found: {}", exceptionMessage);
         return new ErrorResponse(
-                "PURCHASE_NOT_FOUND",
-                messageSource.getMessage("purchase.notfound", null, ex.getMessage(), locale),
+                ErrorConstants.ERROR_PURCHASE_NOT_FOUND,
+                MessageLocalizationHelper.getLocalizedMessage(
+                        messageSource, ErrorConstants.MESSAGE_KEY_PURCHASE_NOT_FOUND,
+                        exceptionMessage, locale),
                 null
         );
     }
 
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ExceptionHandler(ProductException.class)
-    public ErrorResponse handleProductException(ProductException ex, Locale locale) {
-        log.warn("Product error: code={}, message={}", ex.getErrorCode(), ex.getMessage());
-        
-        // Try to get localized message from messages.properties
-        String messageKey = String.format("product.error.%s", ex.getErrorCode().toUpperCase());
-        String localizedMessage = messageSource.getMessage(messageKey, null, null, locale);
-        
-        // If no localized message found, use the English message from exception
-        String message = (localizedMessage != null && !localizedMessage.equals(messageKey))
-                ? localizedMessage 
-                : ex.getMessage();
-        
-        return new ErrorResponse(ex.getErrorCode(), message, null);
+    public ErrorResponse handleProductException(@NonNull ProductException ex, @NonNull Locale locale) {
+        String errorCode = ex.getErrorCode();
+        String exceptionMessage = Objects.toString(ex.getMessage(), "");
+        logRequestContext("Product error: code={}, message={}", errorCode, exceptionMessage);
+        String message = MessageLocalizationHelper.getLocalizedErrorCodeMessage(
+                messageSource, errorCode,
+                ErrorConstants.MESSAGE_KEY_PREFIX_PRODUCT_ERROR,
+                exceptionMessage, locale);
+        return new ErrorResponse(errorCode, message, null);
     }
 
     @ResponseStatus(HttpStatus.NOT_FOUND)
     @ExceptionHandler(ProductNotFoundException.class)
-    public ErrorResponse handleProductNotFoundException(ProductNotFoundException ex, Locale locale) {
-        log.warn("Product not found: {}", ex.getMessage());
+    public ErrorResponse handleProductNotFoundException(@NonNull ProductNotFoundException ex, @NonNull Locale locale) {
+        String exceptionMessage = Objects.toString(ex.getMessage(), "");
+        logRequestContext("Product not found: {}", exceptionMessage);
         return new ErrorResponse(
-                "PRODUCT_NOT_FOUND",
-                messageSource.getMessage("product.notfound", null, ex.getMessage(), locale),
+                ErrorConstants.ERROR_PRODUCT_NOT_FOUND,
+                MessageLocalizationHelper.getLocalizedMessage(
+                        messageSource, ErrorConstants.MESSAGE_KEY_PRODUCT_NOT_FOUND,
+                        exceptionMessage, locale),
                 null
         );
     }
 
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ExceptionHandler(WarehouseException.class)
-    public ErrorResponse handleWarehouseException(WarehouseException ex, Locale locale) {
-        log.warn("Warehouse error: code={}, message={}", ex.getErrorCode(), ex.getMessage());
-        
-        // Try to get localized message from messages.properties
-        String messageKey = String.format("warehouse.error.%s", ex.getErrorCode().toUpperCase());
-        String localizedMessage = messageSource.getMessage(messageKey, null, null, locale);
-        
-        // If no localized message found, use the English message from exception
-        String message = (localizedMessage != null && !localizedMessage.equals(messageKey))
-                ? localizedMessage 
-                : ex.getMessage();
-        
-        return new ErrorResponse(ex.getErrorCode(), message, null);
+    public ErrorResponse handleWarehouseException(@NonNull WarehouseException ex, @NonNull Locale locale) {
+        String errorCode = ex.getErrorCode();
+        String exceptionMessage = Objects.toString(ex.getMessage(), "");
+        logRequestContext("Warehouse error: code={}, message={}", errorCode, exceptionMessage);
+        String message = MessageLocalizationHelper.getLocalizedErrorCodeMessage(
+                messageSource, errorCode,
+                ErrorConstants.MESSAGE_KEY_PREFIX_WAREHOUSE_ERROR,
+                exceptionMessage, locale);
+        return new ErrorResponse(errorCode, message, null);
     }
 
     @ResponseStatus(HttpStatus.NOT_FOUND)
     @ExceptionHandler(WarehouseNotFoundException.class)
-    public ErrorResponse handleWarehouseNotFoundException(WarehouseNotFoundException ex, Locale locale) {
-        log.warn("Warehouse not found: {}", ex.getMessage());
+    public ErrorResponse handleWarehouseNotFoundException(@NonNull WarehouseNotFoundException ex, @NonNull Locale locale) {
+        String exceptionMessage = Objects.toString(ex.getMessage(), "");
+        logRequestContext("Warehouse not found: {}", exceptionMessage);
         return new ErrorResponse(
-                "WAREHOUSE_NOT_FOUND",
-                messageSource.getMessage("warehouse.notfound", null, ex.getMessage(), locale),
+                ErrorConstants.ERROR_WAREHOUSE_NOT_FOUND,
+                MessageLocalizationHelper.getLocalizedMessage(
+                        messageSource, ErrorConstants.MESSAGE_KEY_WAREHOUSE_NOT_FOUND,
+                        exceptionMessage, locale),
                 null
         );
     }
 
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ExceptionHandler(JsonProcessingException.class)
-    public ErrorResponse handleJsonProcessingException(JsonProcessingException ex, Locale locale) {
-        log.warn("Invalid JSON format: {}", ex.getMessage());
+    public ErrorResponse handleJsonProcessingException(@NonNull JsonProcessingException ex, @NonNull Locale locale) {
+        String exceptionMessage = Objects.toString(ex.getMessage(), "");
+        logRequestContext("Invalid JSON format: {}", exceptionMessage);
         return new ErrorResponse(
-                "INVALID_JSON",
-                messageSource.getMessage("json.error", null, "Invalid JSON format", locale),
+                ErrorConstants.ERROR_INVALID_JSON,
+                MessageLocalizationHelper.getLocalizedMessage(
+                        messageSource, ErrorConstants.MESSAGE_KEY_JSON_ERROR,
+                        ErrorConstants.DEFAULT_MESSAGE_INVALID_JSON, locale),
                 null
         );
     }
 
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     @ExceptionHandler(Exception.class)
-    public ErrorResponse handleGenericException(Exception ex, Locale locale) {
-        log.error("An unexpected error occurred", ex);
+    public ErrorResponse handleGenericException(@NonNull Exception ex, @NonNull Locale locale) {
+        String exceptionMessage = Objects.toString(ex.getMessage(), "");
+        logRequestContextWithException(exceptionMessage, ex);
         return new ErrorResponse(
-                "SERVER_ERROR",
-                messageSource.getMessage("server.error", null, "Internal server error", locale),
+                ErrorConstants.ERROR_SERVER_ERROR,
+                MessageLocalizationHelper.getLocalizedMessage(
+                        messageSource, ErrorConstants.MESSAGE_KEY_SERVER_ERROR,
+                        ErrorConstants.DEFAULT_MESSAGE_SERVER_ERROR, locale),
                 null
         );
+    }
+
+    private void logRequestContext(String message, Object... args) {
+        HttpServletRequest request = getCurrentRequest();
+        if (request != null) {
+            String path = Objects.toString(request.getRequestURI(), "unknown");
+            String method = request.getMethod() != null ? request.getMethod() : "unknown";
+            String remoteAddress = Objects.toString(request.getRemoteAddr(), "unknown");
+            log.warn("{} Path: {}, Method: {}, Remote: {}", 
+                    String.format(message.replace("{}", "%s"), args), path, method, remoteAddress);
+        } else {
+            log.warn(message, args);
+        }
+    }
+
+    private void logRequestContextWithException(String exceptionMessage, Throwable ex) {
+        HttpServletRequest request = getCurrentRequest();
+        if (request != null) {
+            String path = Objects.toString(request.getRequestURI(), "unknown");
+            String method = request.getMethod() != null ? request.getMethod() : "unknown";
+            String remoteAddress = Objects.toString(request.getRemoteAddr(), "unknown");
+            log.error("{}: {} Path: {}, Method: {}, Remote: {}",
+                    "An unexpected error occurred", exceptionMessage, path, method, remoteAddress, ex);
+        } else {
+            log.error("{}: {}", "An unexpected error occurred", exceptionMessage, ex);
+        }
+    }
+
+    private HttpServletRequest getCurrentRequest() {
+        try {
+            ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+            return attributes != null ? attributes.getRequest() : null;
+        } catch (Exception e) {
+            return null;
+        }
     }
 }

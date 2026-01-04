@@ -141,7 +141,10 @@ public class VehicleService {
                 .orElseThrow(() -> new PurchaseException("VEHICLE_NOT_FOUND", 
                         String.format("Vehicle not found: id=%d", vehicleId)));
         
-        vehicle.addWithdrawalCost(withdrawalCost);
+        if (withdrawalCost != null && withdrawalCost.compareTo(BigDecimal.ZERO) > 0) {
+            vehicle.setTotalCostEur(vehicle.getTotalCostEur().add(withdrawalCost));
+        }
+        
         Vehicle saved = vehicleRepository.save(vehicle);
         
         log.info("Vehicle updated: id={}, newTotalCost={}", saved.getId(), saved.getTotalCostEur());
@@ -157,7 +160,14 @@ public class VehicleService {
                 .orElseThrow(() -> new PurchaseException("VEHICLE_NOT_FOUND", 
                         String.format("Vehicle not found: id=%d", vehicleId)));
         
-        vehicle.subtractWithdrawalCost(withdrawalCost);
+        if (withdrawalCost != null && withdrawalCost.compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal newTotalCost = vehicle.getTotalCostEur().subtract(withdrawalCost);
+            if (newTotalCost.compareTo(BigDecimal.ZERO) < 0) {
+                newTotalCost = BigDecimal.ZERO;
+            }
+            vehicle.setTotalCostEur(newTotalCost);
+        }
+        
         Vehicle saved = vehicleRepository.save(vehicle);
         
         log.info("Vehicle updated: id={}, newTotalCost={}", saved.getId(), saved.getTotalCostEur());
@@ -244,7 +254,13 @@ public class VehicleService {
                         oldTotalCost
                 );
 
-                vehicle.subtractWithdrawalCost(oldTotalCost);
+                if (oldTotalCost != null && oldTotalCost.compareTo(BigDecimal.ZERO) > 0) {
+                    BigDecimal newTotalCost = vehicle.getTotalCostEur().subtract(oldTotalCost);
+                    if (newTotalCost.compareTo(BigDecimal.ZERO) < 0) {
+                        newTotalCost = BigDecimal.ZERO;
+                    }
+                    vehicle.setTotalCostEur(newTotalCost);
+                }
                 vehicleProductRepository.delete(item);
                 vehicleRepository.save(vehicle);
                 return vehicle;
@@ -277,14 +293,22 @@ public class VehicleService {
 
                 warehouseProductBalanceService.removeProductWithCost(
                         item.getWarehouseId(), item.getProductId(), deltaQuantity, deltaCost);
-                vehicle.addWithdrawalCost(deltaCost);
+                if (deltaCost != null && deltaCost.compareTo(BigDecimal.ZERO) > 0) {
+                    vehicle.setTotalCostEur(vehicle.getTotalCostEur().add(deltaCost));
+                }
             } else {
                 BigDecimal returnQuantity = deltaQuantity.abs();
                 BigDecimal returnCost = deltaCost.abs();
 
                 warehouseProductBalanceService.addProduct(
                         item.getWarehouseId(), item.getProductId(), returnQuantity, returnCost);
-                vehicle.subtractWithdrawalCost(returnCost);
+                if (returnCost != null && returnCost.compareTo(BigDecimal.ZERO) > 0) {
+                    BigDecimal newTotalCost = vehicle.getTotalCostEur().subtract(returnCost);
+                    if (newTotalCost.compareTo(BigDecimal.ZERO) < 0) {
+                        newTotalCost = BigDecimal.ZERO;
+                    }
+                    vehicle.setTotalCostEur(newTotalCost);
+                }
             }
 
             BigDecimal newTotal = oldTotalCost.add(deltaCost).setScale(6, java.math.RoundingMode.HALF_UP);
@@ -309,9 +333,14 @@ public class VehicleService {
                     item.getWarehouseId(), item.getProductId(), deltaCost.negate());
 
             if (deltaCost.compareTo(BigDecimal.ZERO) > 0) {
-                vehicle.addWithdrawalCost(deltaCost);
+                vehicle.setTotalCostEur(vehicle.getTotalCostEur().add(deltaCost));
             } else {
-                vehicle.subtractWithdrawalCost(deltaCost.abs());
+                BigDecimal absCost = deltaCost.abs();
+                BigDecimal newTotalCost = vehicle.getTotalCostEur().subtract(absCost);
+                if (newTotalCost.compareTo(BigDecimal.ZERO) < 0) {
+                    newTotalCost = BigDecimal.ZERO;
+                }
+                vehicle.setTotalCostEur(newTotalCost);
             }
 
             item.setTotalCostEur(newTotalCost);
@@ -490,7 +519,9 @@ public class VehicleService {
         
         VehicleProduct saved = vehicleProductRepository.save(vehicleProduct);
 
-        vehicle.addWithdrawalCost(totalCost);
+        if (totalCost != null && totalCost.compareTo(BigDecimal.ZERO) > 0) {
+            vehicle.setTotalCostEur(vehicle.getTotalCostEur().add(totalCost));
+        }
         vehicleRepository.save(vehicle);
         
         log.info("Product added to vehicle: id={}, totalCost={}", saved.getId(), totalCost);
@@ -547,7 +578,13 @@ public class VehicleService {
                 totalCostToSubtract = totalCostToSubtract.add(product.totalCostEur);
             }
             
-            vehicle.subtractWithdrawalCost(totalCostToSubtract);
+            if (totalCostToSubtract != null && totalCostToSubtract.compareTo(BigDecimal.ZERO) > 0) {
+                BigDecimal newTotalCost = vehicle.getTotalCostEur().subtract(totalCostToSubtract);
+                if (newTotalCost.compareTo(BigDecimal.ZERO) < 0) {
+                    newTotalCost = BigDecimal.ZERO;
+                }
+                vehicle.setTotalCostEur(newTotalCost);
+            }
         }
 
         vehicleProductRepository.deleteAll(products);

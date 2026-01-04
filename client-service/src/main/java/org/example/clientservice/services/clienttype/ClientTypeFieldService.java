@@ -83,7 +83,7 @@ public class ClientTypeFieldService implements IClientTypeFieldService {
     @NonNull
     public ClientTypeField getFieldById(@NonNull Long fieldId) {
         try {
-            return fieldRepository.findById(fieldId)
+            return fieldRepository.findByIdWithListValues(fieldId)
                     .orElseThrow(() -> new ClientNotFoundException("Field not found with id: " + fieldId));
         } catch (ClientNotFoundException e) {
             throw e;
@@ -98,7 +98,7 @@ public class ClientTypeFieldService implements IClientTypeFieldService {
     @NonNull
     public List<ClientTypeField> getFieldsByClientTypeId(@NonNull Long clientTypeId) {
         try {
-            return fieldRepository.findByClientTypeIdOrderByDisplayOrderAsc(clientTypeId);
+            return fieldRepository.findByClientTypeIdOrderByDisplayOrderAscWithListValues(clientTypeId);
         } catch (Exception e) {
             log.error("Error getting fields for client type {}: {}", clientTypeId, e.getMessage(), e);
             throw new ClientException("FIELDS_FETCH_ERROR",
@@ -160,7 +160,7 @@ public class ClientTypeFieldService implements IClientTypeFieldService {
         validateFieldIdsRequest(request);
         
         try {
-            return fieldRepository.findAllById(request.fieldIds());
+            return fieldRepository.findByIdsWithListValues(request.fieldIds());
         } catch (Exception e) {
             log.error("Error getting fields by IDs: {}", e.getMessage(), e);
             throw new ClientException("FIELDS_BY_IDS_FETCH_ERROR",

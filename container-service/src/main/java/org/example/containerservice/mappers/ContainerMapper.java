@@ -1,5 +1,6 @@
 package org.example.containerservice.mappers;
 
+import lombok.NonNull;
 import org.example.containerservice.models.ClientContainer;
 import org.example.containerservice.models.Container;
 import org.example.containerservice.models.ContainerBalance;
@@ -10,18 +11,14 @@ import org.springframework.stereotype.Component;
 @Component
 public class ContainerMapper {
 
-    public ContainerDTO containerToContainerDTO(Container container) {
-        if (container == null) {
-            return null;
-        }
-
+    public ContainerDTO containerToContainerDTO(@NonNull Container container) {
         ContainerDTO dto = new ContainerDTO();
         dto.setId(container.getId());
         dto.setName(container.getName());
         return dto;
     }
 
-    public ContainerBalanceDTO toContainerBalanceDTO(ContainerBalance balance) {
+    public ContainerBalanceDTO toContainerBalanceDTO(@NonNull ContainerBalance balance) {
         ContainerBalanceDTO dto = new ContainerBalanceDTO();
         dto.setUserId(balance.getUserId());
         dto.setContainerId(balance.getContainer().getId());
@@ -31,7 +28,7 @@ public class ContainerMapper {
         return dto;
     }
 
-    public ClientContainerDTO toClientContainerDTO(ClientContainer clientContainer) {
+    public ClientContainerDTO toClientContainerDTO(@NonNull ClientContainer clientContainer) {
         ClientContainerDTO dto = new ClientContainerDTO();
         dto.setClientId(clientContainer.getClient());
         dto.setUserId(clientContainer.getUser());
@@ -42,7 +39,7 @@ public class ContainerMapper {
         return dto;
     }
 
-    public ContainerTransactionDTO toContainerTransactionDTO(ContainerTransaction transaction) {
+    public ContainerTransactionDTO toContainerTransactionDTO(@NonNull ContainerTransaction transaction) {
         ContainerTransactionDTO dto = new ContainerTransactionDTO();
         dto.setFromUserId(transaction.getFromUserId());
         dto.setToUserId(transaction.getToUserId());
@@ -55,7 +52,7 @@ public class ContainerMapper {
         return dto;
     }
 
-    public ContainerBalanceDetailDTO toContainerBalanceDetailDTO(ContainerBalance balance) {
+    public ContainerBalanceDetailDTO toContainerBalanceDetailDTO(@NonNull ContainerBalance balance) {
         ContainerBalanceDetailDTO dto = new ContainerBalanceDetailDTO();
         dto.setContainerId(balance.getContainer().getId());
         dto.setContainerName(balance.getContainer().getName());
@@ -64,13 +61,13 @@ public class ContainerMapper {
         return dto;
     }
 
-    public Container containerCreateDTOToContainer(ContainerCreateDTO dto) {
+    public Container containerCreateDTOToContainer(@NonNull ContainerCreateDTO dto) {
         Container container = new Container();
         container.setName(dto.getName());
         return container;
     }
 
-    public Container containerUpdateDTOToContainer(ContainerUpdateDTO dto) {
+    public Container containerUpdateDTOToContainer(@NonNull ContainerUpdateDTO dto) {
         Container container = new Container();
         container.setName(dto.getName());
         return container;

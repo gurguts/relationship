@@ -25,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.example.purchaseservice.services.ExchangeRateService;
 
 import java.math.BigDecimal;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
@@ -41,6 +42,7 @@ public class PurchaseCrudService implements IPurchaseCrudService {
     private final org.example.purchaseservice.services.balance.DriverProductBalanceService driverProductBalanceService;
     private final WarehouseReceiptRepository warehouseReceiptRepository;
     private final ExchangeRateService exchangeRateService;
+    private final PurchaseService purchaseService;
 
     @Override
     @Transactional
@@ -48,13 +50,12 @@ public class PurchaseCrudService implements IPurchaseCrudService {
         Long executedUserId = SecurityUtils.getCurrentUserId();
         purchase.setExecutedUser(executedUserId);
 
-        purchase.calculateAndSetUnitPrice();
+        purchaseService.calculateAndSetUnitPrice(purchase);
         
-        // Get exchange rate to EUR and convert prices/quantity
         String purchaseCurrency = purchase.getCurrency() != null ? purchase.getCurrency() : "EUR";
         BigDecimal exchangeRateToEur = exchangeRateService.getExchangeRateToEur(purchaseCurrency);
         purchase.setExchangeRateToEur(exchangeRateToEur);
-        purchase.calculateAndSetPricesInEur(exchangeRateToEur);
+        purchaseService.calculateAndSetPricesInEur(purchase, exchangeRateToEur);
 
         Long transactionId = null;
         if (purchase.getPaymentMethod().equals(PaymentMethod.CASH)) {
@@ -95,7 +96,11 @@ public class PurchaseCrudService implements IPurchaseCrudService {
 
         // Check source ownership only if source is set
         if (existingPurchase.getSource() != null) {
-            String sourceName = sourceClient.getSourceName(existingPurchase.getSource()).getName();
+            var sourceResponse = sourceClient.getSourceName(existingPurchase.getSource()).getBody();
+            if (sourceResponse == null) {
+                throw new PurchaseException("SOURCE_NOT_FOUND", "Source not found");
+            }
+            String sourceName = sourceResponse.getName();
             if (!(fullName.equals(sourceName) || canEditData)) {
                 throw new PurchaseException("ONLY_OWNER", "You cannot change someone else's purchase.");
             }
@@ -118,7 +123,7 @@ public class PurchaseCrudService implements IPurchaseCrudService {
                 (existingPurchase.getQuantity() == null || updatedPurchase.getQuantity().compareTo(
                         existingPurchase.getQuantity()) != 0)) {
             existingPurchase.setQuantity(updatedPurchase.getQuantity());
-            existingPurchase.calculateAndSetUnitPrice();
+            purchaseService.calculateAndSetUnitPrice(existingPurchase);
             needsBalanceUpdate = true;
         }
 
@@ -126,7 +131,7 @@ public class PurchaseCrudService implements IPurchaseCrudService {
                 (existingPurchase.getTotalPrice() == null || updatedPurchase.getTotalPrice().compareTo(
                         existingPurchase.getTotalPrice()) != 0)) {
             existingPurchase.setTotalPrice(updatedPurchase.getTotalPrice());
-            existingPurchase.calculateAndSetUnitPrice();
+            purchaseService.calculateAndSetUnitPrice(existingPurchase);
             needsBalanceUpdate = true;
 
             if (existingPurchase.getTransaction() != null) {
@@ -158,11 +163,10 @@ public class PurchaseCrudService implements IPurchaseCrudService {
             existingPurchase.setComment(updatedPurchase.getComment());
         }
 
-        // Recalculate prices in EUR
         String purchaseCurrency = existingPurchase.getCurrency() != null ? existingPurchase.getCurrency() : "EUR";
         BigDecimal exchangeRateToEur = exchangeRateService.getExchangeRateToEur(purchaseCurrency);
         existingPurchase.setExchangeRateToEur(exchangeRateToEur);
-        existingPurchase.calculateAndSetPricesInEur(exchangeRateToEur);
+        purchaseService.calculateAndSetPricesInEur(existingPurchase, exchangeRateToEur);
 
         Purchase savedPurchase = purchaseRepository.save(existingPurchase);
 
@@ -186,14 +190,18 @@ public class PurchaseCrudService implements IPurchaseCrudService {
         if (login == null) {
             return null;
         }
-        return userCLient.getUserFullNameFromLogin(login);
+        var response = userCLient.getUserFullNameFromLogin(login).getBody();
+        return response != null ? response : null;
     }
 
     private Long createAccountTransactionForPurchase(Long userId, Purchase purchase) {
 
-        List<AccountDTO> userAccounts = accountClient.getAccountsByUserId(userId);
+        List<AccountDTO> userAccounts = accountClient.getAccountsByUserId(userId).getBody();
+        if (userAccounts == null) {
+            userAccounts = Collections.emptyList();
+        }
         
-        if (userAccounts == null || userAccounts.isEmpty()) {
+        if (userAccounts.isEmpty()) {
             throw new PurchaseException("NO_ACCOUNTS", 
                     String.format("У користувача з ID %d немає рахунків. Створіть рахунок перед створенням закупки.", userId));
         }
@@ -217,7 +225,10 @@ public class PurchaseCrudService implements IPurchaseCrudService {
 
         transactionRequest.setDescription(purchase.getComment());
 
-        var transactionDTO = accountTransactionClient.createTransaction(transactionRequest);
+        var transactionDTO = accountTransactionClient.createTransaction(transactionRequest).getBody();
+        if (transactionDTO == null) {
+            throw new PurchaseException("TRANSACTION_CREATION_FAILED", "Failed to create transaction");
+        }
         return transactionDTO.getId();
     }
 

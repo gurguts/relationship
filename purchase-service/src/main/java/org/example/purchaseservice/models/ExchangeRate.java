@@ -20,10 +20,10 @@ public class ExchangeRate {
     private Long id;
     
     @Column(name = "from_currency", nullable = false, length = 3)
-    private String fromCurrency; // UAH or USD
+    private String fromCurrency;
     
     @Column(name = "to_currency", nullable = false, length = 3)
-    private String toCurrency = "EUR"; // Always EUR
+    private String toCurrency = "EUR";
     
     @Column(name = "rate", nullable = false, precision = 20, scale = 6)
     private BigDecimal rate;

@@ -1,7 +1,11 @@
 package org.example.purchaseservice.exceptions;
 
+import lombok.NonNull;
+
 public class PurchaseNotFoundException extends RuntimeException {
-    public PurchaseNotFoundException(String message) {
+    
+    public PurchaseNotFoundException(@NonNull String message) {
         super(message);
     }
+
 }

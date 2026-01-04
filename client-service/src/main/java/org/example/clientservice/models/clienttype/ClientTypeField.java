@@ -78,7 +78,8 @@ public class ClientTypeField {
     private Boolean allowMultiple = DEFAULT_ALLOW_MULTIPLE;
 
     @EqualsAndHashCode.Exclude
-    @OneToMany(mappedBy = "field", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "field", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @org.hibernate.annotations.BatchSize(size = 50)
     private List<ClientTypeFieldListValue> listValues;
 
     @CreationTimestamp

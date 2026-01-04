@@ -123,7 +123,10 @@ public class VehicleExportService {
             Map<Long, String> accountNameMap = new HashMap<>();
             if (!accountIds.isEmpty()) {
                 try {
-                    List<org.example.purchaseservice.models.dto.account.AccountDTO> accounts = accountClient.getAllAccounts();
+                    List<org.example.purchaseservice.models.dto.account.AccountDTO> accounts = accountClient.getAllAccounts().getBody();
+                    if (accounts == null) {
+                        accounts = Collections.emptyList();
+                    }
                     for (org.example.purchaseservice.models.dto.account.AccountDTO account : accounts) {
                         if (accountIds.contains(account.getId())) {
                             accountNameMap.put(account.getId(), account.getName());
@@ -137,7 +140,7 @@ public class VehicleExportService {
             Map<Long, String> categoryNameMap = new HashMap<>();
             for (Long categoryId : categoryIds) {
                 try {
-                    Map<String, Object> category = transactionCategoryClient.getCategoryById(categoryId);
+                    Map<String, Object> category = transactionCategoryClient.getCategoryById(categoryId).getBody();
                     if (category != null && category.containsKey("name")) {
                         categoryNameMap.put(categoryId, (String) category.get("name"));
                     } else {
@@ -194,7 +197,7 @@ public class VehicleExportService {
             headerList.add("Водій (ПІБ)");
             headerList.add("EUR1");
             headerList.add("FITO");
-            headerList.add("Дата митниці");
+            headerList.add("Дата замитнення");
             headerList.add("Дата розмитнення");
             headerList.add("Дата вивантаження");
             headerList.add("Перевізник (назва)");

@@ -2,6 +2,7 @@ package org.example.containerservice.models;
 
 import jakarta.persistence.*;
 import lombok.Getter;
+import lombok.NonNull;
 import lombok.Setter;
 
 @Getter
@@ -12,6 +13,8 @@ public class Container {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    
+    @NonNull
     @Column(nullable = false)
     private String name;
 }

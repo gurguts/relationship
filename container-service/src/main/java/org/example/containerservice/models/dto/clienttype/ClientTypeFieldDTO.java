@@ -23,4 +23,3 @@ public class ClientTypeFieldDTO {
     private Boolean isStatic;
     private String staticFieldName;
 }
-

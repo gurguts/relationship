@@ -19,7 +19,7 @@ import org.example.purchaseservice.models.dto.client.ClientDTO;
 import org.example.purchaseservice.models.dto.client.ClientSearchRequest;
 import org.example.purchaseservice.models.dto.clienttype.ClientFieldValueDTO;
 import org.example.purchaseservice.models.dto.clienttype.ClientTypeFieldDTO;
-import org.example.purchaseservice.models.dto.fields.*;
+import org.example.purchaseservice.models.dto.fields.SourceDTO;
 import org.example.purchaseservice.models.dto.impl.IdNameDTO;
 import org.example.purchaseservice.models.dto.purchase.PurchaseReportDTO;
 import org.example.purchaseservice.models.dto.user.UserDTO;
@@ -54,6 +54,7 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
     private final ClientApiClient clientApiClient;
     private final ClientTypeFieldApiClient clientTypeFieldApiClient;
     private final UserClient userClient;
+    private final SourceClient sourceClient;
     private final IProductService productService;
     private final IWarehouseReceiptService warehouseReceiptService;
 
@@ -71,7 +72,7 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
         
         Sort sort = createSort(sortDirection, sortProperty);
         List<ClientDTO> clients = fetchClientIds(query, filterParams);
-        FilterIds filterIds = createFilterIds(clients);
+        FilterIds filterIds = createFilterIds();
 
         if (clients.isEmpty()) {
             log.info("No clients found for the given filters, returning empty workbook");
@@ -80,25 +81,32 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
             return;
         }
 
+        Long clientTypeId = org.example.purchaseservice.utils.FilterUtils.extractClientTypeId(filterParams);
+        Map<String, List<String>> clientFilterParams = org.example.purchaseservice.utils.FilterUtils.filterClientParams(filterParams, false);
+        
+        List<Long> sourceIds = null;
+        if (query != null && !query.trim().isEmpty() && clientFilterParams.isEmpty() && clientTypeId == null) {
+            sourceIds = fetchSourceIds(query);
+        }
+
         List<Purchase> purchaseList = fetchPurchases(
-                query, filterParams, clients.stream().map(ClientDTO::getId).toList(), filterIds.sourceIds(), sort);
+                query, filterParams, clients.stream().map(ClientDTO::getId).toList(), sourceIds, sort);
         Map<Long, ClientDTO> clientMap = fetchClientMap(clients);
         
-        Long clientTypeId = org.example.purchaseservice.utils.FilterUtils.extractClientTypeId(filterParams);
-        
         Map<Long, List<ClientFieldValueDTO>> clientFieldValuesMap = fetchClientFieldValues(clients.stream().map(ClientDTO::getId).toList());
+        
+        List<SourceDTO> sourceDTOs = fetchSourceDTOs(purchaseList);
+        FilterIds updatedFilterIds = new FilterIds(sourceDTOs, 
+                sourceDTOs.stream().map(SourceDTO::getId).toList(),
+                filterIds.productDTOs(), filterIds.productIds(),
+                filterIds.userDTOs(), filterIds.userIds());
 
-        Workbook workbook = generateWorkbook(purchaseList, selectedFields, filterIds, clientMap, clientTypeId, clientFieldValuesMap);
+        Workbook workbook = generateWorkbook(purchaseList, selectedFields, updatedFilterIds, clientMap, clientTypeId, clientFieldValuesMap);
         sendExcelFileResponse(workbook, response);
     }
 
     private record FilterIds(
             List<SourceDTO> sourceDTOs, List<Long> sourceIds,
-            List<StatusDTO> statusDTOs, List<Long> statusIds,
-            List<RouteDTO> routeDTOs, List<Long> routeIds,
-            List<RegionDTO> regionDTOs, List<Long> regionIds,
-            List<BusinessDTO> businessDTOs, List<Long> businessIds,
-            List<ClientProductDTO> clientProductDTOs, List<Long> clientProductIds,
             List<Product> productDTOs, List<Long> productIds,
             List<UserDTO> userDTOs, List<Long> userIds
     ) {
@@ -108,63 +116,18 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
         return Sort.by(sortDirection, sortProperty);
     }
 
-    private FilterIds createFilterIds(List<ClientDTO> clients) {
-
-        List<SourceDTO> sourceDTOs = clients.stream()
-                .map(ClientDTO::getSource)
-                .filter(Objects::nonNull)
-                .distinct()
-                .toList();
-        List<Long> sourceIds = sourceDTOs.stream().map(SourceDTO::getId).toList();
-
-        List<StatusDTO> statusDTOs = clients.stream()
-                .map(ClientDTO::getStatus)
-                .filter(Objects::nonNull)
-                .distinct()
-                .toList();
-        List<Long> statusIds = statusDTOs.stream().map(StatusDTO::getId).toList();
-
-        List<RouteDTO> routeDTOs = clients.stream()
-                .map(ClientDTO::getRoute)
-                .filter(Objects::nonNull)
-                .distinct()
-                .toList();
-        List<Long> routeIds = routeDTOs.stream().map(RouteDTO::getId).toList();
-
-        List<RegionDTO> regionDTOs = clients.stream()
-                .map(ClientDTO::getRegion)
-                .filter(Objects::nonNull)
-                .distinct()
-                .toList();
-        List<Long> regionIds = regionDTOs.stream().map(RegionDTO::getId).toList();
-
-        List<BusinessDTO> businessDTOs = clients.stream()
-                .map(ClientDTO::getBusiness)
-                .filter(Objects::nonNull)
-                .distinct()
-                .toList();
-        List<Long> businessIds = businessDTOs.stream().map(BusinessDTO::getId).toList();
-
-        List<ClientProductDTO> clientProductDTOs = clients.stream()
-                .map(ClientDTO::getClientProduct)
-                .filter(Objects::nonNull)
-                .distinct()
-                .toList();
-        List<Long> clientProductIds = clientProductDTOs.stream().map(ClientProductDTO::getId).toList();
-
+    private FilterIds createFilterIds() {
         List<Product> products = productService.getAllProducts("all");
         List<Long> productIds = products.stream().map(Product::getId).toList();
 
-        List<UserDTO> userDTOs = userClient.getAllUsers();
+        List<UserDTO> userDTOs = userClient.getAllUsers().getBody();
+        if (userDTOs == null) {
+            userDTOs = Collections.emptyList();
+        }
         List<Long> userIds = userDTOs.stream().map(UserDTO::getId).toList();
 
         return new FilterIds(
-                sourceDTOs, sourceIds,
-                statusDTOs, statusIds,
-                routeDTOs, routeIds,
-                regionDTOs, regionIds,
-                businessDTOs, businessIds,
-                clientProductDTOs, clientProductIds,
+                Collections.emptyList(), Collections.emptyList(),
                 products, productIds,
                 userDTOs, userIds);
     }
@@ -174,11 +137,47 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
         
         Map<String, List<String>> filteredParams = org.example.purchaseservice.utils.FilterUtils.filterClientParams(filterParams, true);
         ClientSearchRequest clientRequest = new ClientSearchRequest(query, filteredParams, clientTypeId);
-        return clientApiClient.searchClients(clientRequest);
+        List<ClientDTO> clients = clientApiClient.searchClients(clientRequest).getBody();
+        return clients != null ? clients : Collections.emptyList();
     }
 
     private Map<Long, ClientDTO> fetchClientMap(List<ClientDTO> clients) {
         return clients.stream().collect(Collectors.toMap(ClientDTO::getId, client -> client));
+    }
+
+    private List<Long> fetchSourceIds(String query) {
+        List<SourceDTO> sources = sourceClient.findByNameContaining(query).getBody();
+        if (sources == null) {
+            sources = Collections.emptyList();
+        }
+        return sources.stream()
+                .map(SourceDTO::getId)
+                .toList();
+    }
+
+    private List<SourceDTO> fetchSourceDTOs(List<Purchase> purchases) {
+        Set<Long> sourceIds = purchases.stream()
+                .map(Purchase::getSource)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        if (sourceIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<SourceDTO> sourceDTOs = new ArrayList<>();
+        for (Long sourceId : sourceIds) {
+            try {
+                SourceDTO sourceDTO = sourceClient.getSourceName(sourceId).getBody();
+                if (sourceDTO != null) {
+                    sourceDTOs.add(sourceDTO);
+                }
+            } catch (Exception e) {
+                log.warn("Failed to get source name for sourceId {}: {}", sourceId, e.getMessage());
+            }
+        }
+
+        return sourceDTOs;
     }
 
     private List<Purchase> fetchPurchases(String query, Map<String, List<String>> filterParams, List<Long> clientIds,
@@ -237,24 +236,9 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
         
         headerMap.put("id-client", "Id (клієнта)");
         headerMap.put("company-client", "Компанія (клієнта)");
-        headerMap.put("person-client", "Контактна особа (клієнта)");
-        headerMap.put("phoneNumbers-client", "Номери телефонів (клієнта)");
         headerMap.put("createdAt-client", "Дата створення (клієнта)");
         headerMap.put("updatedAt-client", "Дата оновлення (клієнта)");
-        headerMap.put("status-client", "Статус (клієнта)");
         headerMap.put("source-client", "Залучення (клієнта)");
-        headerMap.put("location-client", "Адреса (клієнта)");
-        headerMap.put("pricePurchase-client", "Ціна закупівлі (клієнта)");
-        headerMap.put("priceSale-client", "Ціна продажі (клієнта)");
-        headerMap.put("volumeMonth-client", "Орієнтований об'єм на місяць (клієнта)");
-        headerMap.put("route-client", "Маршрут (клієнта)");
-        headerMap.put("region-client", "Область (клієнта)");
-        headerMap.put("business-client", "Тип бізнесу (клієнта)");
-        headerMap.put("clientProduct-client", "Товар (клієнта)");
-        headerMap.put("edrpou-client", "ЄДРПОУ (клієнта)");
-        headerMap.put("enterpriseName-client", "Назва підприємства (клієнта)");
-        headerMap.put("vat-client", "ПДВ (клієнта)");
-        headerMap.put("comment-client", "Коментар (клієнта)");
         
         headerMap.put("id", "Id");
         headerMap.put("user", "Водій");
@@ -288,10 +272,12 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
         Map<Long, ClientTypeFieldDTO> fieldMap = new HashMap<>();
         if (!fieldIds.isEmpty()) {
             try {
-                List<ClientTypeFieldDTO> fields = clientTypeFieldApiClient.getFieldsByIds(fieldIds);
-                fieldMap = fields.stream()
+                List<ClientTypeFieldDTO> fields = clientTypeFieldApiClient.getFieldsByIds(fieldIds).getBody();
+                if (fields != null) {
+                    fieldMap = fields.stream()
                         .filter(Objects::nonNull)
                         .collect(Collectors.toMap(ClientTypeFieldDTO::getId, field -> field));
+                }
             } catch (Exception e) {
                 log.warn("Failed to get fields by IDs: {}", e.getMessage());
             }
@@ -356,25 +342,9 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
             return switch (field) {
                 case "id-client" -> client.getId() != null ? String.valueOf(client.getId()) : "";
                 case "company-client" -> client.getCompany() != null ? client.getCompany() : "";
-                case "person-client" -> client.getPerson() != null ? client.getPerson() : "";
-                case "phoneNumbers-client" -> client.getPhoneNumbers() != null
-                        ? String.join(", ", client.getPhoneNumbers()) : "";
                 case "createdAt-client" -> client.getCreatedAt() != null ? client.getCreatedAt() : "";
                 case "updatedAt-client" -> client.getUpdatedAt() != null ? client.getUpdatedAt() : "";
-                case "status-client" -> client.getStatus() != null ? client.getStatus().getName() : "";
-                case "source-client" -> client.getSource() != null ? client.getSource().getName() : "";
-                case "location-client" -> client.getLocation() != null ? client.getLocation() : "";
-                case "pricePurchase-client" -> client.getPricePurchase() != null ? client.getPricePurchase() : "";
-                case "priceSale-client" -> client.getPriceSale() != null ? client.getPriceSale() : "";
-                case "volumeMonth-client" -> client.getVolumeMonth() != null ? client.getVolumeMonth() : "";
-                case "route-client" -> client.getRoute() != null ? client.getRoute().getName() : "";
-                case "region-client" -> client.getRegion() != null ? client.getRegion().getName() : "";
-                case "business-client" -> client.getBusiness() != null ? client.getBusiness().getName() : "";
-                case "clientProduct-client" -> client.getClientProduct() != null ? client.getClientProduct().getName() : "";
-                case "edrpou-client" -> client.getEdrpou() != null ? client.getEdrpou() : "";
-                case "enterpriseName-client" -> client.getEnterpriseName() != null ? client.getEnterpriseName() : "";
-                case "vat-client" -> Boolean.TRUE.equals(client.getVat()) ? "так" : "";
-                case "comment-client" -> client.getComment() != null ? client.getComment() : "";
+                case "source-client" -> client.getSourceId() != null ? client.getSourceId() : "";
                 default -> "";
             };
         } else {
@@ -454,7 +424,7 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
         }
         
         try {
-            Map<Long, List<ClientFieldValueDTO>> result = clientApiClient.getClientFieldValuesBatch(clientIds);
+            Map<Long, List<ClientFieldValueDTO>> result = clientApiClient.getClientFieldValuesBatch(clientIds).getBody();
             return result != null ? result : Collections.emptyMap();
         } catch (Exception e) {
             log.warn("Failed to fetch field values batch for clients: {}", e.getMessage());
@@ -504,14 +474,29 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
     public PurchaseReportDTO generateReport(String query, Map<String, List<String>> filterParams) {
 
         List<ClientDTO> clients = fetchClientIds(query, filterParams);
-        FilterIds filterIds = createFilterIds(clients);
-        List<Purchase> purchaseList = fetchPurchases(query, filterParams, clients, filterIds);
+        FilterIds filterIds = createFilterIds();
+        
+        Long clientTypeId = org.example.purchaseservice.utils.FilterUtils.extractClientTypeId(filterParams);
+        Map<String, List<String>> clientFilterParams = org.example.purchaseservice.utils.FilterUtils.filterClientParams(filterParams, false);
+        
+        List<Long> sourceIds = null;
+        if (query != null && !query.trim().isEmpty() && clientFilterParams.isEmpty() && clientTypeId == null) {
+            sourceIds = fetchSourceIds(query);
+        }
+        
+        List<Purchase> purchaseList = fetchPurchases(query, filterParams, clients, sourceIds);
+        
+        List<SourceDTO> sourceDTOs = fetchSourceDTOs(purchaseList);
+        FilterIds updatedFilterIds = new FilterIds(sourceDTOs, 
+                sourceDTOs.stream().map(SourceDTO::getId).toList(),
+                filterIds.productDTOs(), filterIds.productIds(),
+                filterIds.userDTOs(), filterIds.userIds());
         List<WarehouseReceipt> warehouseReceipts = fetchWarehouseReceipts(filterParams);
 
         Map<Long, Double> totalCollectedByProduct = calculateTotalCollectedByProduct(purchaseList);
         Map<Long, Double> totalDeliveredByProduct = calculateTotalDeliveredByProduct(warehouseReceipts);
-        Map<String, Map<Long, Double>> byDrivers = calculateByDrivers(purchaseList, filterIds);
-        Map<String, Map<Long, Double>> byAttractors = calculateByAttractors(purchaseList, filterIds);
+        Map<String, Map<Long, Double>> byDrivers = calculateByDrivers(purchaseList, updatedFilterIds);
+        Map<String, Map<Long, Double>> byAttractors = calculateByAttractors(purchaseList, updatedFilterIds);
         Map<String, Double> totalSpentByCurrency = calculateTotalSpentByCurrency(purchaseList);
         Map<String, Double> averagePriceByCurrency = calculateAveragePriceByCurrency(purchaseList);
         Map<Long, Double> averageCollectedPerTimeByProduct = calculateAverageCollectedPerTimeByProduct(purchaseList);
@@ -528,12 +513,12 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
     }
 
     private List<Purchase> fetchPurchases(String query, Map<String, List<String>> filterParams,
-                                          List<ClientDTO> clients, FilterIds filterIds) {
+                                          List<ClientDTO> clients, List<Long> sourceIds) {
         return fetchPurchases(
                 query,
                 filterParams,
                 clients.stream().map(ClientDTO::getId).toList(),
-                filterIds.sourceIds(),
+                sourceIds,
                 Sort.by("id")
         );
     }
@@ -716,14 +701,17 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
             LocalDateTime toDateTime = toDate.atTime(23, 59, 59, 999999999);
 
             ClientSearchRequest request = new ClientSearchRequest(null, null);
-            List<ClientDTO> clients = clientApiClient.searchClients(request);
+            List<ClientDTO> clients = clientApiClient.searchClients(request).getBody();
+            if (clients == null) {
+                clients = Collections.emptyList();
+            }
 
             XSSFWorkbook workbook = new XSSFWorkbook();
             XSSFSheet sheet = workbook.createSheet("Purchase Report");
 
             Row headerRow = sheet.createRow(0);
             String[] headers = {
-                    "Client ID", "Company", "Phone Numbers", "Location", "Region", "Product", "Total Volume"
+                    "Client ID", "Company", "Product", "Total Volume"
             };
             for (int i = 0; i < headers.length; i++) {
                 Cell cell = headerRow.createCell(i);
@@ -770,21 +758,15 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
                     Row row = sheet.createRow(rowNum++);
                     row.createCell(0).setCellValue(client.getId());
                     row.createCell(1).setCellValue(client.getCompany());
-                    row.createCell(2).setCellValue(String.join(", ", client.getPhoneNumbers()));
-                    row.createCell(3).setCellValue(client.getLocation());
-                    row.createCell(4).setCellValue(client.getRegion() != null ? client.getRegion().getName() : "");
-                    row.createCell(5).setCellValue(productNames.getOrDefault(1L, "Unknown Product"));
-                    row.createCell(6).setCellValue(0);
+                    row.createCell(2).setCellValue(productNames.getOrDefault(1L, "Unknown Product"));
+                    row.createCell(3).setCellValue(0);
                 } else {
                     for (Map.Entry<Long, BigDecimal> entry : productSums.entrySet()) {
                         Row row = sheet.createRow(rowNum++);
                         row.createCell(0).setCellValue(client.getId());
                         row.createCell(1).setCellValue(client.getCompany());
-                        row.createCell(2).setCellValue(String.join(", ", client.getPhoneNumbers()));
-                        row.createCell(3).setCellValue(client.getLocation());
-                        row.createCell(4).setCellValue(client.getRegion() != null ? client.getRegion().getName() : "");
-                        row.createCell(5).setCellValue(productNames.getOrDefault(entry.getKey(), "Unknown Product"));
-                        row.createCell(6).setCellValue(entry.getValue().doubleValue());
+                        row.createCell(2).setCellValue(productNames.getOrDefault(entry.getKey(), "Unknown Product"));
+                        row.createCell(3).setCellValue(entry.getValue().doubleValue());
                     }
                 }
             }

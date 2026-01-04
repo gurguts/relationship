@@ -573,7 +573,7 @@ async function loadVehicles(page = 0) {
             const row = document.createElement('tr');
             row.className = 'loading-row';
         const cell = document.createElement('td');
-        cell.colSpan = 24;
+        cell.colSpan = 26;
         cell.style.textAlign = 'center';
         cell.style.color = 'var(--text-muted)';
         cell.textContent = 'Помилка завантаження даних';
@@ -703,7 +703,7 @@ function formatCarrier(carrier) {
     return carrier?.companyName || '-';
 }
 
-function renderVehicles(vehicles) {
+async function renderVehicles(vehicles) {
     if (!vehiclesTbody) {
         return;
     }
@@ -721,7 +721,7 @@ function renderVehicles(vehicles) {
         const row = document.createElement('tr');
         row.className = 'loading-row';
         const cell = document.createElement('td');
-        cell.colSpan = 24;
+        cell.colSpan = 26;
         cell.style.textAlign = 'center';
         cell.style.color = 'var(--text-muted)';
         cell.textContent = 'Немає даних';
@@ -731,7 +731,38 @@ function renderVehicles(vehicles) {
     }
     
     vehiclesTbody.textContent = '';
-    vehicles.forEach(vehicle => {
+    
+    const expensesPromises = vehicles.map(async (vehicle) => {
+        try {
+            const response = await fetch(`/api/v1/vehicles/${vehicle.id}/expenses`);
+            if (!response.ok) return 0;
+            const expenses = await response.json();
+            return expenses.reduce((sum, e) => sum + (parseFloat(e.convertedAmount) || 0), 0);
+        } catch (error) {
+            return 0;
+        }
+    });
+    
+    const itemsPromises = vehicles.map(async (vehicle) => {
+        if (vehicle.items && vehicle.items.length > 0) {
+            return calculateProductsTotalCost(vehicle);
+        }
+        try {
+            const response = await fetch(`/api/v1/vehicles/${vehicle.id}`);
+            if (!response.ok) return 0;
+            const vehicleDetails = await response.json();
+            return calculateProductsTotalCost(vehicleDetails);
+        } catch (error) {
+            return 0;
+        }
+    });
+    
+    const [expensesTotals, productsTotals] = await Promise.all([
+        Promise.all(expensesPromises),
+        Promise.all(itemsPromises)
+    ]);
+    
+    vehicles.forEach((vehicle, index) => {
         const row = document.createElement('tr');
         const rowClickHandler = () => viewVehicleDetails(vehicle.id);
         row.addEventListener('click', rowClickHandler);
@@ -747,7 +778,12 @@ function renderVehicles(vehicles) {
             return cell;
         };
         
+        const productsTotalCost = productsTotals[index] || 0;
+        const expensesTotal = expensesTotals[index] || 0;
+        
         row.appendChild(createCell(vehicle.vehicleNumber || '-', 'Номер машини'));
+        row.appendChild(createCell(`${formatNumber(productsTotalCost, 2)} EUR`, 'Витрати на товар', { fontWeight: '600', color: 'var(--primary)' }));
+        row.appendChild(createCell(`${formatNumber(expensesTotal, 2)} EUR`, 'Витрати на машину', { fontWeight: '600', color: 'var(--primary)' }));
         row.appendChild(createCell(`${formatNumber(vehicle.totalExpenses, 2)} EUR`, 'Загальні витрати', { fontWeight: '600', color: 'var(--primary)' }));
         row.appendChild(createCell(`${formatNumber(vehicle.totalIncome, 2)} EUR`, 'Загальний дохід', { fontWeight: '600', color: 'var(--success)' }));
         const marginValue = vehicle.margin != null ? parseFloat(vehicle.margin) : 0;
@@ -767,7 +803,7 @@ function renderVehicles(vehicles) {
         row.appendChild(createCell(vehicle.driverFullName || '-', 'Водій (ПІБ)'));
         row.appendChild(createCell(formatBoolean(vehicle.eur1), 'EUR1'));
         row.appendChild(createCell(formatBoolean(vehicle.fito), 'FITO'));
-        row.appendChild(createCell(formatDate(vehicle.customsDate), 'Дата митниці'));
+        row.appendChild(createCell(formatDate(vehicle.customsDate), 'Дата замитнення'));
         row.appendChild(createCell(formatDate(vehicle.customsClearanceDate), 'Дата розмитнення'));
         row.appendChild(createCell(formatDate(vehicle.unloadingDate), 'Дата вивантаження'));
         row.appendChild(createCell(formatCarrier(vehicle.carrier), 'Перевізник'));

@@ -7,7 +7,6 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDateTime;
 
 @Getter
@@ -76,36 +75,4 @@ public class Purchase {
 
     @Column(name = "unit_price_eur", precision = 20, scale = 6)
     private BigDecimal unitPriceEur;
-
-    public void calculateAndSetUnitPrice() {
-        if (quantity != null && totalPrice != null && quantity.compareTo(BigDecimal.ZERO) != 0) {
-            this.unitPrice = totalPrice.divide(quantity, 6, RoundingMode.CEILING);
-        } else {
-            this.unitPrice = BigDecimal.ZERO;
-        }
-    }
-
-    public void calculateAndSetPricesInEur(BigDecimal exchangeRateToEur) {
-        if (totalPrice == null || quantity == null) {
-            return;
-        }
-
-        if ("EUR".equalsIgnoreCase(currency) || currency == null) {
-            this.totalPriceEur = totalPrice;
-            this.unitPriceEur = unitPrice;
-        } else {
-            if (exchangeRateToEur != null && exchangeRateToEur.compareTo(BigDecimal.ZERO) > 0) {
-                this.totalPriceEur = totalPrice.divide(exchangeRateToEur, 6, RoundingMode.HALF_UP);
-
-                if (quantity.compareTo(BigDecimal.ZERO) != 0) {
-                    this.unitPriceEur = this.totalPriceEur.divide(quantity, 6, RoundingMode.CEILING);
-                } else {
-                    this.unitPriceEur = BigDecimal.ZERO;
-                }
-            } else {
-                this.totalPriceEur = totalPrice;
-                this.unitPriceEur = unitPrice;
-            }
-        }
-    }
 }

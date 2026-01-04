@@ -401,13 +401,15 @@ async function loadBalance() {
             
             const tbody = document.createElement('tbody');
             let warehouseTotal = 0;
+            let warehouseTotalQuantity = 0;
             
             for (const balance of warehouseBalances) {
                 const productName = findNameByIdFromMap(productMap, balance.productId) || '';
                 const quantity = formatNumber(balance.quantity, 2);
                 const avgPrice = formatNumber(balance.averagePriceEur, 6);
                 const totalCost = formatNumber(balance.totalCostEur, 6);
-                warehouseTotal += parseFloat(totalCost);
+                warehouseTotal += parseFloat(balance.totalCostEur);
+                warehouseTotalQuantity += parseFloat(balance.quantity);
                 
                 const row = document.createElement('tr');
                 row.className = 'balance-row';
@@ -449,25 +451,32 @@ async function loadBalance() {
             footerRow.className = 'balance-tfoot-row';
             
             const footerCell1 = document.createElement('td');
-            footerCell1.setAttribute('data-label', 'Загальна вартість складу');
+            footerCell1.setAttribute('data-label', 'Загалом');
             const strong1 = document.createElement('strong');
-            strong1.textContent = 'Загальна вартість складу:';
+            strong1.textContent = 'Загалом:';
             footerCell1.appendChild(strong1);
             footerRow.appendChild(footerCell1);
             
             const footerCell2 = document.createElement('td');
-            footerCell2.setAttribute('data-label', '');
+            footerCell2.setAttribute('data-label', 'Кількість (кг)');
+            const strong2 = document.createElement('strong');
+            strong2.textContent = formatNumber(warehouseTotalQuantity, 2);
+            footerCell2.appendChild(strong2);
             footerRow.appendChild(footerCell2);
             
             const footerCell3 = document.createElement('td');
-            footerCell3.setAttribute('data-label', '');
+            footerCell3.setAttribute('data-label', 'Середня ціна (EUR/кг)');
+            const strong3 = document.createElement('strong');
+            const averagePrice = warehouseTotalQuantity > 0 ? warehouseTotal / warehouseTotalQuantity : 0;
+            strong3.textContent = formatNumber(averagePrice, 6);
+            footerCell3.appendChild(strong3);
             footerRow.appendChild(footerCell3);
             
             const footerCell4 = document.createElement('td');
-            footerCell4.setAttribute('data-label', 'Сума');
-            const strong2 = document.createElement('strong');
-            strong2.textContent = `${formatNumber(warehouseTotal, 6)} EUR`;
-            footerCell4.appendChild(strong2);
+            footerCell4.setAttribute('data-label', 'Загальна вартість (EUR)');
+            const strong4 = document.createElement('strong');
+            strong4.textContent = `${formatNumber(warehouseTotal, 6)} EUR`;
+            footerCell4.appendChild(strong4);
             footerRow.appendChild(footerCell4);
             
             tfoot.appendChild(footerRow);

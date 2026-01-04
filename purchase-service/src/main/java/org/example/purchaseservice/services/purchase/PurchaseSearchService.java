@@ -90,7 +90,10 @@ public class PurchaseSearchService implements IPurchaseSearchService {
 
     private ClientData fetchClientData(String query, Map<String, List<String>> clientFilterParams, Long clientTypeId) {
         ClientSearchRequest clientRequest = new ClientSearchRequest(query, clientFilterParams, clientTypeId);
-        List<ClientDTO> foundClients = clientApiClient.searchClients(clientRequest);
+        List<ClientDTO> foundClients = clientApiClient.searchClients(clientRequest).getBody();
+        if (foundClients == null) {
+            foundClients = Collections.emptyList();
+        }
 
         if (!clientFilterParams.isEmpty() || clientTypeId != null || (query != null && !query.trim().isEmpty())) {
             Map<Long, ClientDTO> clientMap = foundClients.stream()
@@ -103,7 +106,10 @@ public class PurchaseSearchService implements IPurchaseSearchService {
             return new ClientData(clientIds, clientMap);
         } else {
             ClientSearchRequest allClientsRequest = new ClientSearchRequest(null, Collections.emptyMap(), clientTypeId);
-            List<ClientDTO> allClients = clientApiClient.searchClients(allClientsRequest);
+            List<ClientDTO> allClients = clientApiClient.searchClients(allClientsRequest).getBody();
+            if (allClients == null) {
+                allClients = Collections.emptyList();
+            }
             Map<Long, ClientDTO> clientMap = allClients.stream()
                     .collect(Collectors.toMap(ClientDTO::getId, client -> client));
             
@@ -112,7 +118,10 @@ public class PurchaseSearchService implements IPurchaseSearchService {
     }
 
     private List<Long> fetchSourceIds(String query) {
-        List<SourceDTO> sources = sourceClient.findByNameContaining(query);
+        List<SourceDTO> sources = sourceClient.findByNameContaining(query).getBody();
+        if (sources == null) {
+            sources = Collections.emptyList();
+        }
         return sources.stream()
                 .map(SourceDTO::getId)
                 .toList();
