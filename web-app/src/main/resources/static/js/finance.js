@@ -1732,7 +1732,7 @@ async function handleUpdateExchangeRate(event) {
     
     try {
         const response = await fetch(`${API_BASE}/exchange-rates/${currency}`, {
-            method: 'PUT',
+            method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json'
             },

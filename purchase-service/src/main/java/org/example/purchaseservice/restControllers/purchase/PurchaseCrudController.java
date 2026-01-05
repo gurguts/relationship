@@ -1,6 +1,8 @@
 package org.example.purchaseservice.restControllers.purchase;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Positive;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.purchaseservice.mappers.PurchaseMapper;
@@ -17,25 +19,22 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/v1/purchase")
 @RequiredArgsConstructor
-@Slf4j
 @Validated
 public class PurchaseCrudController {
     private final IPurchaseCrudService purchaseCrudService;
     private final PurchaseMapper purchaseMapper;
-    private final org.example.purchaseservice.services.purchase.PurchaseCrudService purchaseCrudServiceImpl;
 
     @PreAuthorize("hasAuthority('purchase:create')")
     @PostMapping
     public ResponseEntity<PurchaseDTO> createPurchase(
-            @Valid @RequestBody PurchaseCreateDTO purchaseCreateDTO) {
+            @RequestBody @Valid @NonNull PurchaseCreateDTO purchaseCreateDTO) {
         Purchase purchase = purchaseMapper.purchaseCreateDTOToPurchase(purchaseCreateDTO);
         Purchase createdPurchase = purchaseCrudService.createPurchase(purchase);
-        PurchaseDTO createdPurchaseDto = purchaseMapper.toDto(createdPurchase);
-
-        createdPurchaseDto.setIsReceived(false);
+        PurchaseDTO createdPurchaseDto = purchaseMapper.toDtoForCreate(createdPurchase);
         log.info("Purchase created with ID: {}", createdPurchaseDto.getId());
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
                 .path("/{id}")
@@ -46,30 +45,29 @@ public class PurchaseCrudController {
 
     @PreAuthorize("hasAuthority('purchase:edit')")
     @PatchMapping("/{id}")
-    public ResponseEntity<PurchaseDTO> updatePurchase(@PathVariable Long id,
-                                                      @Valid @RequestBody PurchaseUpdateDTO purchaseDto) {
+    public ResponseEntity<PurchaseDTO> updatePurchase(
+            @PathVariable @Positive Long id,
+            @RequestBody @Valid @NonNull PurchaseUpdateDTO purchaseDto) {
         Purchase purchase = purchaseMapper.purchaseUpdateDTOToPurchase(purchaseDto);
         Purchase updatedPurchase = purchaseCrudService.updatePurchase(id, purchase);
         PurchaseDTO updatedPurchaseDto = purchaseMapper.toDto(updatedPurchase);
-
-        purchaseCrudServiceImpl.enrichPurchaseDTOWithReceivedStatus(updatedPurchaseDto, updatedPurchase);
+        purchaseCrudService.enrichPurchaseDTOWithReceivedStatus(updatedPurchaseDto, updatedPurchase);
         log.info("Purchase updated with ID: {}", updatedPurchaseDto.getId());
         return ResponseEntity.ok(updatedPurchaseDto);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<PurchaseDTO> getPurchaseById(@PathVariable Long id) {
+    public ResponseEntity<PurchaseDTO> getPurchaseById(@PathVariable @Positive Long id) {
         Purchase purchase = purchaseCrudService.findPurchaseById(id);
         PurchaseDTO purchaseDto = purchaseMapper.toDto(purchase);
-
-        purchaseCrudServiceImpl.enrichPurchaseDTOWithReceivedStatus(purchaseDto, purchase);
+        purchaseCrudService.enrichPurchaseDTOWithReceivedStatus(purchaseDto, purchase);
         log.info("Purchase fetched with ID: {}", purchaseDto.getId());
         return ResponseEntity.ok(purchaseDto);
     }
 
     @PreAuthorize("hasAuthority('purchase:delete')")
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deletePurchase(@PathVariable Long id) {
+    public ResponseEntity<Void> deletePurchase(@PathVariable @Positive Long id) {
         purchaseCrudService.deletePurchase(id);
         log.info("Purchase deleted with ID: {}", id);
         return ResponseEntity.noContent().build();

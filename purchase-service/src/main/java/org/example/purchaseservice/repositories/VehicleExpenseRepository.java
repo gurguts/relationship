@@ -14,5 +14,7 @@ public interface VehicleExpenseRepository extends JpaRepository<VehicleExpense, 
     List<VehicleExpense> findByVehicleIdInOrderByCreatedAtDesc(@NonNull List<Long> vehicleIds);
 
     boolean existsByVehicleIdAndCategoryId(@NonNull Long vehicleId, @NonNull Long categoryId);
+    
+    boolean existsByVehicleIdAndCategoryIdAndIdNot(@NonNull Long vehicleId, @NonNull Long categoryId, @NonNull Long excludeId);
 }
 

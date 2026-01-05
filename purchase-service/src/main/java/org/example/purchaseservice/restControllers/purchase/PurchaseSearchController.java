@@ -2,6 +2,7 @@ package org.example.purchaseservice.restControllers.purchase;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.purchaseservice.exceptions.PurchaseException;
@@ -24,12 +25,11 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/v1/purchase")
 @RequiredArgsConstructor
-@Slf4j
 @Validated
 public class PurchaseSearchController {
     private final IPurchaseSearchService purchaseSearchService;
@@ -87,11 +87,11 @@ public class PurchaseSearchController {
 
     @PreAuthorize("hasAuthority('purchase:view')")
     @GetMapping("/client/{clientId}")
-    public ResponseEntity<List<PurchaseModalDTO>> getSalesByClientId(@PathVariable("clientId") Long clientId) {
+    public ResponseEntity<List<PurchaseModalDTO>> getSalesByClientId(@PathVariable @Positive Long clientId) {
         List<Purchase> purchaseRecords = purchaseSearchService.getPurchasesByClientId(clientId);
         List<PurchaseModalDTO> purchaseDTOs = purchaseRecords.stream()
                 .map(purchaseMapper::purchaseToPurchaseModalDTO)
-                .collect(Collectors.toList());
+                .toList();
         return ResponseEntity.ok(purchaseDTOs);
     }
 
@@ -104,7 +104,7 @@ public class PurchaseSearchController {
 
         List<PurchaseWarehouseDTO> purchaseList = purchaseSearchService.searchForWarehouse(listFilters).stream()
                 .map(purchaseMapper::purchaseToPurchaseWarehouseDTO)
-                .collect(Collectors.toList());
+                .toList();
         return ResponseEntity.ok(purchaseList);
     }
 }

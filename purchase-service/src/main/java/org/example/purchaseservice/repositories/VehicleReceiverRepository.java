@@ -9,6 +9,8 @@ import java.util.List;
 public interface VehicleReceiverRepository extends JpaRepository<VehicleReceiver, Long> {
     boolean existsByName(@NonNull String name);
 
+    boolean existsByNameAndIdNot(@NonNull String name, @NonNull Long excludeId);
+
     @NonNull
     List<VehicleReceiver> findAllByOrderByNameAsc();
 }

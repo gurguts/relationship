@@ -32,7 +32,7 @@ import java.util.stream.Collectors;
 public class WarehouseWithdrawService implements IWarehouseWithdrawService {
     private final WarehouseWithdrawalRepository warehouseWithdrawalRepository;
     private final WithdrawalReasonRepository withdrawalReasonRepository;
-    private final org.example.purchaseservice.services.balance.WarehouseProductBalanceService warehouseProductBalanceService;
+    private final org.example.purchaseservice.services.balance.IWarehouseProductBalanceService warehouseProductBalanceService;
     private final org.example.purchaseservice.services.balance.VehicleService vehicleService;
 
 

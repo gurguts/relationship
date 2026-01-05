@@ -1,6 +1,8 @@
 package org.example.purchaseservice.restControllers.warehouse;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Positive;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.purchaseservice.mappers.WarehouseMapper;
@@ -29,7 +31,7 @@ public class WarehouseCrudController {
 
     @PreAuthorize("hasAuthority('warehouse:view')")
     @GetMapping("/{id}")
-    public ResponseEntity<WarehouseDTO> getWarehouse(@PathVariable Long id) {
+    public ResponseEntity<WarehouseDTO> getWarehouse(@PathVariable @Positive Long id) {
         WarehouseDTO warehouseDTO = warehouseMapper.warehouseToWarehouseDTO(warehouseService.getWarehouse(id));
         return ResponseEntity.ok(warehouseDTO);
     }
@@ -46,7 +48,7 @@ public class WarehouseCrudController {
 
     @PreAuthorize("hasAuthority('system:admin')")
     @PostMapping
-    public ResponseEntity<WarehouseDTO> createWarehouse(@RequestBody @Valid WarehouseCreateDTO warehouseCreateDTO) {
+    public ResponseEntity<WarehouseDTO> createWarehouse(@RequestBody @Valid @NonNull WarehouseCreateDTO warehouseCreateDTO) {
         Warehouse warehouse = warehouseMapper.warehouseCreateDTOToWarehouse(warehouseCreateDTO);
         WarehouseDTO createdWarehouse = warehouseMapper.warehouseToWarehouseDTO(warehouseService.createWarehouse(warehouse));
 
@@ -58,17 +60,18 @@ public class WarehouseCrudController {
     }
 
     @PreAuthorize("hasAuthority('system:admin')")
-    @PutMapping("/{id}")
-    public ResponseEntity<WarehouseDTO> updateWarehouse(@PathVariable Long id,
-                                                      @RequestBody @Valid WarehouseUpdateDTO businessUpdateDTO) {
-        Warehouse warehouse = warehouseMapper.warehouseUpdateDTOToWarehouse(businessUpdateDTO);
-        Warehouse updatedBusiness = warehouseService.updateWarehouse(id, warehouse);
-        return ResponseEntity.ok(warehouseMapper.warehouseToWarehouseDTO(updatedBusiness));
+    @PatchMapping("/{id}")
+    public ResponseEntity<WarehouseDTO> updateWarehouse(
+            @PathVariable @Positive Long id,
+            @RequestBody @Valid @NonNull WarehouseUpdateDTO warehouseUpdateDTO) {
+        Warehouse warehouse = warehouseMapper.warehouseUpdateDTOToWarehouse(warehouseUpdateDTO);
+        Warehouse updatedWarehouse = warehouseService.updateWarehouse(id, warehouse);
+        return ResponseEntity.ok(warehouseMapper.warehouseToWarehouseDTO(updatedWarehouse));
     }
 
     @PreAuthorize("hasAuthority('system:admin')")
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteWarehouse(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteWarehouse(@PathVariable @Positive Long id) {
         warehouseService.deleteWarehouse(id);
         return ResponseEntity.noContent().build();
     }

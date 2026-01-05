@@ -1203,7 +1203,7 @@ if (updateVehicleForm) {
         
         try {
             const response = await fetch(`/api/v1/vehicles/${currentVehicleId}`, {
-                method: 'PUT',
+                method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
@@ -1370,7 +1370,7 @@ if (editVehicleItemForm) {
 
         try {
             const response = await fetch(`/api/v1/vehicles/${currentVehicleId}/products/${currentVehicleItemId}`, {
-                method: 'PUT',
+                method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
@@ -2212,8 +2212,8 @@ if (editVehicleExpenseForm) {
         };
         
         try {
-            const response = await fetch(`/api/v1/vehicles/${currentVehicleId}/expenses/${currentExpenseId}`, {
-                method: 'PUT',
+            const response = await fetch(`/api/v1/vehicles/expenses/${currentExpenseId}`, {
+                method: 'PATCH',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify(formData)
             });

@@ -9,4 +9,6 @@ import java.util.List;
 public interface CarrierRepository extends JpaRepository<Carrier, Long> {
     @NonNull
     List<Carrier> findByCompanyNameContainingIgnoreCase(@NonNull String companyName);
+
+    boolean existsByCompanyNameIgnoreCase(@NonNull String companyName);
 }

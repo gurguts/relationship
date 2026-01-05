@@ -16,6 +16,7 @@ import org.example.userservice.services.account.AccountBalanceService;
 import org.example.userservice.services.branch.BranchPermissionService;
 import org.example.userservice.clients.ExchangeRateApiClient;
 import org.example.userservice.clients.VehicleCostApiClient;
+import org.example.userservice.models.dto.UpdateVehicleCostRequest;
 import org.example.userservice.utils.SecurityUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -137,7 +138,10 @@ public class AccountTransactionService {
         
         for (java.util.Map.Entry<Long, java.math.BigDecimal> entry : vehicleCostAdjustments.entrySet()) {
             try {
-                vehicleCostApiClient.updateVehicleCost(entry.getKey(), entry.getValue().abs(), "subtract");
+                UpdateVehicleCostRequest request = new UpdateVehicleCostRequest();
+                request.setAmountEur(entry.getValue().abs());
+                request.setOperation("subtract");
+                vehicleCostApiClient.updateVehicleCost(entry.getKey(), request);
             } catch (Exception e) {
                 log.error("Failed to revert vehicle cost for vehicleId {}: {}", entry.getKey(), e.getMessage());
                 throw new TransactionException("FAILED_TO_REVERT_VEHICLE_COST", "Failed to revert vehicle cost: " + e.getMessage());
@@ -369,7 +373,10 @@ public class AccountTransactionService {
         Transaction savedTransaction = transactionRepository.save(transaction);
 
         try {
-            vehicleCostApiClient.updateVehicleCost(transaction.getVehicleId(), convertedAmount, "add");
+            UpdateVehicleCostRequest request = new UpdateVehicleCostRequest();
+            request.setAmountEur(convertedAmount);
+            request.setOperation("add");
+            vehicleCostApiClient.updateVehicleCost(transaction.getVehicleId(), request);
         } catch (Exception e) {
             log.error("Failed to update vehicle cost for vehicleId {}: {}", transaction.getVehicleId(), e.getMessage());
             throw new TransactionException("FAILED_TO_UPDATE_VEHICLE_COST", "Failed to update vehicle cost: " + e.getMessage());
@@ -595,7 +602,10 @@ public class AccountTransactionService {
                 // Revert: subtract from vehicle cost (using old converted amount in EUR)
                 if (oldConvertedAmount != null && oldConvertedAmount.compareTo(BigDecimal.ZERO) > 0) {
                     try {
-                        vehicleCostApiClient.updateVehicleCost(transaction.getVehicleId(), oldConvertedAmount, "subtract");
+                        UpdateVehicleCostRequest request = new UpdateVehicleCostRequest();
+                        request.setAmountEur(oldConvertedAmount);
+                        request.setOperation("subtract");
+                        vehicleCostApiClient.updateVehicleCost(transaction.getVehicleId(), request);
                     } catch (Exception e) {
                         log.error("Failed to revert vehicle cost for vehicleId {}: {}", transaction.getVehicleId(), e.getMessage());
                         throw new TransactionException("FAILED_TO_REVERT_VEHICLE_COST", "Failed to revert vehicle cost: " + e.getMessage());
@@ -640,7 +650,10 @@ public class AccountTransactionService {
                 // Apply new: add to vehicle cost (in EUR)
                 if (newConvertedAmountValue != null && newConvertedAmountValue.compareTo(BigDecimal.ZERO) > 0) {
                     try {
-                        vehicleCostApiClient.updateVehicleCost(transaction.getVehicleId(), newConvertedAmountValue, "add");
+                        UpdateVehicleCostRequest request = new UpdateVehicleCostRequest();
+                        request.setAmountEur(newConvertedAmountValue);
+                        request.setOperation("add");
+                        vehicleCostApiClient.updateVehicleCost(transaction.getVehicleId(), request);
                     } catch (Exception e) {
                         log.error("Failed to update vehicle cost for vehicleId {}: {}", transaction.getVehicleId(), e.getMessage());
                         throw new TransactionException("FAILED_TO_UPDATE_VEHICLE_COST", "Failed to update vehicle cost: " + e.getMessage());
@@ -705,7 +718,10 @@ public class AccountTransactionService {
                 accountBalanceService.addAmount(transaction.getFromAccountId(), transaction.getCurrency(), amount);
                 if (convertedAmount != null && convertedAmount.compareTo(BigDecimal.ZERO) > 0 && transaction.getVehicleId() != null) {
                     try {
-                        vehicleCostApiClient.updateVehicleCost(transaction.getVehicleId(), convertedAmount, "subtract");
+                        UpdateVehicleCostRequest request = new UpdateVehicleCostRequest();
+                        request.setAmountEur(convertedAmount);
+                        request.setOperation("subtract");
+                        vehicleCostApiClient.updateVehicleCost(transaction.getVehicleId(), request);
                     } catch (Exception e) {
                         log.error("Failed to revert vehicle cost for vehicleId {}: {}", transaction.getVehicleId(), e.getMessage());
                         throw new TransactionException("FAILED_TO_REVERT_VEHICLE_COST", "Failed to revert vehicle cost: " + e.getMessage());

@@ -7,6 +7,11 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.example.purchaseservice.models.balance.DriverProductBalance;
 import org.example.purchaseservice.models.warehouse.WarehouseDiscrepancy;
 import org.example.purchaseservice.repositories.WarehouseDiscrepancyRepository;
+import org.example.purchaseservice.models.dto.warehouse.DiscrepancyStatisticsDTO;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -180,20 +185,67 @@ public class WarehouseDiscrepancyService {
         return discrepancyRepository.getTotalGainsValue();
     }
     
-    /**
-     * Export discrepancies to Excel with filters
-     */
     @Transactional(readOnly = true)
-    public byte[] exportToExcel(
+    public Page<WarehouseDiscrepancy> getDiscrepancies(
             Long driverId,
             Long productId,
             Long warehouseId,
             String type,
             LocalDate dateFrom,
-            LocalDate dateTo) throws IOException {
+            LocalDate dateTo,
+            Pageable pageable) {
         
-        // Build specification with filters
-        Specification<WarehouseDiscrepancy> spec = (root, query, criteriaBuilder) -> {
+        Specification<WarehouseDiscrepancy> spec = buildSpecification(driverId, productId, warehouseId, type, dateFrom, dateTo);
+        return discrepancyRepository.findAll(spec, pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public DiscrepancyStatisticsDTO getStatistics(String type, LocalDate dateFrom, LocalDate dateTo) {
+        Specification<WarehouseDiscrepancy> spec = buildSpecification(null, null, null, type, dateFrom, dateTo);
+        List<WarehouseDiscrepancy> filteredDiscrepancies = discrepancyRepository.findAll(spec);
+
+        BigDecimal totalLosses = filteredDiscrepancies.stream()
+                .filter(d -> d.getType() == WarehouseDiscrepancy.DiscrepancyType.LOSS)
+                .map(WarehouseDiscrepancy::getDiscrepancyValueEur)
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .abs();
+        
+        BigDecimal totalGains = filteredDiscrepancies.stream()
+                .filter(d -> d.getType() == WarehouseDiscrepancy.DiscrepancyType.GAIN)
+                .map(WarehouseDiscrepancy::getDiscrepancyValueEur)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        
+        long lossCount = filteredDiscrepancies.stream()
+                .filter(d -> d.getType() == WarehouseDiscrepancy.DiscrepancyType.LOSS)
+                .count();
+        
+        long gainCount = filteredDiscrepancies.stream()
+                .filter(d -> d.getType() == WarehouseDiscrepancy.DiscrepancyType.GAIN)
+                .count();
+        
+        DiscrepancyStatisticsDTO stats = new DiscrepancyStatisticsDTO();
+        stats.setTotalLossesValue(totalLosses);
+        stats.setTotalGainsValue(totalGains);
+        stats.setLossCount(lossCount);
+        stats.setGainCount(gainCount);
+        stats.setNetValue(totalGains.add(totalLosses.negate()));
+        
+        return stats;
+    }
+
+    @Transactional(readOnly = true)
+    public WarehouseDiscrepancy getDiscrepancyById(Long id) {
+        return discrepancyRepository.findById(id).orElse(null);
+    }
+
+    private Specification<WarehouseDiscrepancy> buildSpecification(
+            Long driverId,
+            Long productId,
+            Long warehouseId,
+            String type,
+            LocalDate dateFrom,
+            LocalDate dateTo) {
+        return (root, query, criteriaBuilder) -> {
             List<Predicate> predicates = new ArrayList<>();
             
             if (driverId != null) {
@@ -223,7 +275,21 @@ public class WarehouseDiscrepancyService {
             
             return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
         };
+    }
+
+    /**
+     * Export discrepancies to Excel with filters
+     */
+    @Transactional(readOnly = true)
+    public byte[] exportToExcel(
+            Long driverId,
+            Long productId,
+            Long warehouseId,
+            String type,
+            LocalDate dateFrom,
+            LocalDate dateTo) throws IOException {
         
+        Specification<WarehouseDiscrepancy> spec = buildSpecification(driverId, productId, warehouseId, type, dateFrom, dateTo);
         List<WarehouseDiscrepancy> discrepancies = discrepancyRepository.findAll(spec);
         
         try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {

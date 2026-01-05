@@ -3,6 +3,7 @@ package org.example.purchaseservice.restControllers.purchase;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.purchaseservice.exceptions.PurchaseException;
@@ -11,6 +12,7 @@ import org.example.purchaseservice.services.impl.IPurchaseSpecialOperationsServi
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Collections;
@@ -18,10 +20,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/v1/purchase")
 @RequiredArgsConstructor
-@Slf4j
+@Validated
 public class PurchaseSpecialOperationsController {
     private final IPurchaseSpecialOperationsService purchaseService;
     private final ObjectMapper objectMapper;
@@ -29,28 +32,35 @@ public class PurchaseSpecialOperationsController {
     @PreAuthorize("hasAuthority('purchase:excel')")
     @PostMapping("/export/excel")
     public void exportPurchaseToExcel(
-            @RequestBody Map<String, List<String>> requestBody,
+            @RequestBody @NonNull Map<String, List<String>> requestBody,
             @RequestParam(name = "q", required = false) String query,
             @RequestParam(name = "sort", defaultValue = "updatedAt") String sortProperty,
             @RequestParam(name = "direction", defaultValue = "DESC") Sort.Direction sortDirection,
             @RequestParam(name = "filters", required = false) String filtersJson,
-            HttpServletResponse response) throws Exception {
+            HttpServletResponse response) {
+        try {
+            List<String> selectedFields = requestBody.get("fields");
 
-        List<String> selectedFields = requestBody.get("fields");
+            if (query != null) {
+                query = query.trim();
+            }
 
-        if (query != null) {
-            query = query.trim();
+            Map<String, List<String>> filters = new HashMap<>();
+
+            if (filtersJson != null) {
+                filters = objectMapper.readValue(filtersJson, new TypeReference<>() {
+                });
+            }
+
+            purchaseService.generateExcelFile(sortDirection, sortProperty, query, filters, response, selectedFields);
+        } catch (Exception e) {
+            log.error("Error exporting purchase to Excel", e);
+            try {
+                response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Failed to export purchase to Excel");
+            } catch (Exception ex) {
+                log.error("Failed to send error response", ex);
+            }
         }
-
-        ObjectMapper objectMapper = new ObjectMapper();
-        Map<String, List<String>> filters = new HashMap<>();
-
-        if (filtersJson != null) {
-            filters = objectMapper.readValue(filtersJson, new TypeReference<>() {
-            });
-        }
-
-        purchaseService.generateExcelFile(sortDirection, sortProperty, query, filters, response, selectedFields);
     }
 
     @PreAuthorize("hasAuthority('purchase:view')")
@@ -77,7 +87,6 @@ public class PurchaseSpecialOperationsController {
 
         return ResponseEntity.ok(report);
     }
-
 
     @PreAuthorize("hasAuthority('purchase:excel')")
     @PostMapping("/comparison/excel")

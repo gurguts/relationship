@@ -36,6 +36,12 @@ public class PurchaseMapper {
         return dto;
     }
 
+    public PurchaseDTO toDtoForCreate(@NonNull Purchase purchase) {
+        PurchaseDTO dto = toDto(purchase);
+        dto.setIsReceived(false);
+        return dto;
+    }
+
     public Purchase purchaseUpdateDTOToPurchase(@NonNull PurchaseUpdateDTO purchaseDto) {
         Purchase purchase = new Purchase();
         purchase.setSource(purchaseDto.getSourceId());

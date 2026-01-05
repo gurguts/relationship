@@ -1,6 +1,8 @@
 package org.example.purchaseservice.restControllers.warehouse;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Positive;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.purchaseservice.mappers.WithdrawalReasonMapper;
@@ -29,8 +31,9 @@ public class WithdrawalReasonCrudController {
 
     @PreAuthorize("hasAuthority('warehouse:view')")
     @GetMapping("/{id}")
-    public ResponseEntity<WithdrawalReasonDTO> getWithdrawalReason(@PathVariable Long id) {
-        WithdrawalReasonDTO withdrawalReasonDTO = withdrawalReasonMapper.withdrawalReasonToWithdrawalReasonDTO(withdrawalReasonService.getWithdrawalReason(id));
+    public ResponseEntity<WithdrawalReasonDTO> getWithdrawalReason(@PathVariable @Positive Long id) {
+        WithdrawalReason withdrawalReason = withdrawalReasonService.getWithdrawalReason(id);
+        WithdrawalReasonDTO withdrawalReasonDTO = withdrawalReasonMapper.withdrawalReasonToWithdrawalReasonDTO(withdrawalReason);
         return ResponseEntity.ok(withdrawalReasonDTO);
     }
 
@@ -46,9 +49,10 @@ public class WithdrawalReasonCrudController {
 
     @PreAuthorize("hasAuthority('administration:edit')")
     @PostMapping
-    public ResponseEntity<WithdrawalReasonDTO> createWithdrawalReason(@RequestBody @Valid WithdrawalReasonCreateDTO withdrawalReasonCreateDTO) {
+    public ResponseEntity<WithdrawalReasonDTO> createWithdrawalReason(@RequestBody @Valid @NonNull WithdrawalReasonCreateDTO withdrawalReasonCreateDTO) {
         WithdrawalReason withdrawalReason = withdrawalReasonMapper.withdrawalReasonCreateDTOToWithdrawalReason(withdrawalReasonCreateDTO);
-        WithdrawalReasonDTO createdWithdrawalReason = withdrawalReasonMapper.withdrawalReasonToWithdrawalReasonDTO(withdrawalReasonService.createWithdrawalReason(withdrawalReason));
+        WithdrawalReason created = withdrawalReasonService.createWithdrawalReason(withdrawalReason);
+        WithdrawalReasonDTO createdWithdrawalReason = withdrawalReasonMapper.withdrawalReasonToWithdrawalReasonDTO(created);
 
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
                 .path("/{id}")
@@ -58,9 +62,10 @@ public class WithdrawalReasonCrudController {
     }
 
     @PreAuthorize("hasAuthority('administration:edit')")
-    @PutMapping("/{id}")
-    public ResponseEntity<WithdrawalReasonDTO> updateWithdrawalReason(@PathVariable Long id,
-                                                                    @RequestBody @Valid WithdrawalReasonUpdateDTO withdrawalReasonUpdateDTO) {
+    @PatchMapping("/{id}")
+    public ResponseEntity<WithdrawalReasonDTO> updateWithdrawalReason(
+            @PathVariable @Positive Long id,
+            @RequestBody @Valid @NonNull WithdrawalReasonUpdateDTO withdrawalReasonUpdateDTO) {
         WithdrawalReason withdrawalReason = withdrawalReasonMapper.withdrawalReasonUpdateDTOToWithdrawalReason(withdrawalReasonUpdateDTO);
         WithdrawalReason updatedWithdrawalReason = withdrawalReasonService.updateWithdrawalReason(id, withdrawalReason);
         return ResponseEntity.ok(withdrawalReasonMapper.withdrawalReasonToWithdrawalReasonDTO(updatedWithdrawalReason));
@@ -68,7 +73,7 @@ public class WithdrawalReasonCrudController {
 
     @PreAuthorize("hasAuthority('administration:edit')")
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteWithdrawalReason(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteWithdrawalReason(@PathVariable @Positive Long id) {
         withdrawalReasonService.deleteWithdrawalReason(id);
         return ResponseEntity.noContent().build();
     }

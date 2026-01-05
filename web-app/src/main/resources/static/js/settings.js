@@ -944,7 +944,7 @@ async function handleCreateVehicleSender(e) {
         return;
     }
 
-    const method = id ? 'PUT' : 'POST';
+    const method = id ? 'PATCH' : 'POST';
     const url = id ? `${API_BASE}/vehicle-senders/${id}` : `${API_BASE}/vehicle-senders`;
 
     try {
@@ -1061,7 +1061,7 @@ async function handleCreateVehicleReceiver(e) {
         return;
     }
 
-    const method = id ? 'PUT' : 'POST';
+    const method = id ? 'PATCH' : 'POST';
     const url = id ? `${API_BASE}/vehicle-receivers/${id}` : `${API_BASE}/vehicle-receivers`;
 
     try {

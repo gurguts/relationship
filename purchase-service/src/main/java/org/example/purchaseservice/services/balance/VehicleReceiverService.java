@@ -1,10 +1,10 @@
 package org.example.purchaseservice.services.balance;
 
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.purchaseservice.exceptions.PurchaseException;
 import org.example.purchaseservice.models.balance.VehicleReceiver;
-import org.example.purchaseservice.models.dto.balance.VehicleReceiverCreateDTO;
 import org.example.purchaseservice.repositories.VehicleReceiverRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,17 +19,20 @@ public class VehicleReceiverService {
     private final VehicleReceiverRepository vehicleReceiverRepository;
     
     @Transactional
-    public VehicleReceiver createVehicleReceiver(VehicleReceiverCreateDTO dto) {
-        log.info("Creating new vehicle receiver: name={}", dto.getName());
-        
-        if (vehicleReceiverRepository.existsByName(dto.getName())) {
-            throw new PurchaseException("VEHICLE_RECEIVER_ALREADY_EXISTS",
-                    String.format("Vehicle receiver with name '%s' already exists", dto.getName()));
+    public VehicleReceiver createVehicleReceiver(@NonNull VehicleReceiver receiver) {
+        if (receiver.getName() == null || receiver.getName().trim().isEmpty()) {
+            throw new PurchaseException("INVALID_RECEIVER_DATA", "Receiver name is required");
         }
         
-        VehicleReceiver receiver = new VehicleReceiver();
-        receiver.setName(dto.getName().trim());
+        String normalizedName = receiver.getName().trim();
+        log.info("Creating new vehicle receiver: name={}", normalizedName);
         
+        if (vehicleReceiverRepository.existsByName(normalizedName)) {
+            throw new PurchaseException("VEHICLE_RECEIVER_ALREADY_EXISTS",
+                    String.format("Vehicle receiver with name '%s' already exists", normalizedName));
+        }
+        
+        receiver.setName(normalizedName);
         VehicleReceiver saved = vehicleReceiverRepository.save(receiver);
         log.info("Vehicle receiver created: id={}", saved.getId());
         
@@ -37,20 +40,26 @@ public class VehicleReceiverService {
     }
     
     @Transactional
-    public VehicleReceiver updateVehicleReceiver(Long receiverId, VehicleReceiverCreateDTO dto) {
+    public VehicleReceiver updateVehicleReceiver(@NonNull Long receiverId, @NonNull VehicleReceiver updateData) {
         log.info("Updating vehicle receiver: id={}", receiverId);
         
         VehicleReceiver receiver = vehicleReceiverRepository.findById(receiverId)
                 .orElseThrow(() -> new PurchaseException("VEHICLE_RECEIVER_NOT_FOUND",
                         String.format("Vehicle receiver not found: id=%d", receiverId)));
         
-        String trimmedName = dto.getName().trim();
-        if (!receiver.getName().equals(trimmedName) && vehicleReceiverRepository.existsByName(trimmedName)) {
-            throw new PurchaseException("VEHICLE_RECEIVER_ALREADY_EXISTS",
-                    String.format("Vehicle receiver with name '%s' already exists", trimmedName));
+        if (updateData.getName() == null || updateData.getName().trim().isEmpty()) {
+            throw new PurchaseException("INVALID_RECEIVER_DATA", "Receiver name cannot be empty");
         }
         
-        receiver.setName(trimmedName);
+        String normalizedName = updateData.getName().trim();
+        
+        if (!receiver.getName().equals(normalizedName)) {
+            if (vehicleReceiverRepository.existsByNameAndIdNot(normalizedName, receiverId)) {
+                throw new PurchaseException("VEHICLE_RECEIVER_ALREADY_EXISTS",
+                        String.format("Vehicle receiver with name '%s' already exists", normalizedName));
+            }
+            receiver.setName(normalizedName);
+        }
         
         VehicleReceiver saved = vehicleReceiverRepository.save(receiver);
         log.info("Vehicle receiver updated: id={}", saved.getId());
@@ -58,7 +67,7 @@ public class VehicleReceiverService {
     }
     
     @Transactional(readOnly = true)
-    public VehicleReceiver getVehicleReceiver(Long receiverId) {
+    public VehicleReceiver getVehicleReceiver(@NonNull Long receiverId) {
         return vehicleReceiverRepository.findById(receiverId)
                 .orElseThrow(() -> new PurchaseException("VEHICLE_RECEIVER_NOT_FOUND",
                         String.format("Vehicle receiver not found: id=%d", receiverId)));
@@ -70,7 +79,7 @@ public class VehicleReceiverService {
     }
     
     @Transactional
-    public void deleteVehicleReceiver(Long receiverId) {
+    public void deleteVehicleReceiver(@NonNull Long receiverId) {
         log.info("Deleting vehicle receiver: id={}", receiverId);
         
         VehicleReceiver receiver = vehicleReceiverRepository.findById(receiverId)

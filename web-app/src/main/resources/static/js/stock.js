@@ -806,14 +806,14 @@ document.getElementById('move-form').addEventListener('submit',
                 body: JSON.stringify(transfer)
             });
 
-            const data = await response.json();
-
-            if (!response.ok || !data.success) {
-                handleError(new Error(data.message || 'Помилка переміщення товару'));
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                handleError(new Error(errorData.message || 'Помилка переміщення товару'));
                 return;
             }
 
-            showMessage(data.message || 'Товар успішно переміщено', 'success');
+            await response.json().catch(() => null);
+            showMessage('Товар успішно переміщено', 'success');
             closeModal('move-modal');
             loadBalance();
             if (historyContainer.style.display === 'block') {
@@ -961,7 +961,7 @@ document.getElementById('edit-form').addEventListener('submit',
 
         try {
             const response = await fetch(`/api/v1/warehouse/withdraw/${id}`, {
-                method: 'PUT',
+                method: 'PATCH',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify(withdrawalUpdate)
             });
@@ -3080,7 +3080,7 @@ if (updateVehicleForm) {
         
         try {
             const response = await fetch(`/api/v1/vehicles/${currentVehicleId}`, {
-                method: 'PUT',
+                method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
@@ -3398,7 +3398,7 @@ if (editVehicleItemForm) {
 
         try {
             const response = await fetch(`/api/v1/vehicles/${currentVehicleId}/products/${currentVehicleItemId}`, {
-                method: 'PUT',
+                method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
@@ -3532,7 +3532,7 @@ if (editTransferForm) {
 
         try {
             const response = await fetch(`/api/v1/warehouse/transfers/${id}`, {
-                method: 'PUT',
+                method: 'PATCH',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify(payload)
             });

@@ -1,38 +1,44 @@
 package org.example.purchaseservice.restControllers.balance;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Positive;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.purchaseservice.models.balance.VehicleReceiver;
 import org.example.purchaseservice.models.dto.balance.VehicleReceiverCreateDTO;
 import org.example.purchaseservice.models.dto.balance.VehicleReceiverDTO;
+import org.example.purchaseservice.mappers.VehicleReceiverMapper;
 import org.example.purchaseservice.services.balance.VehicleReceiverService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Slf4j
 @RestController
 @RequestMapping("/api/v1/vehicle-receivers")
 @RequiredArgsConstructor
+@Validated
 public class VehicleReceiverController {
     
     private final VehicleReceiverService vehicleReceiverService;
+    private final VehicleReceiverMapper vehicleReceiverMapper;
     
     @PreAuthorize("hasAuthority('settings_declarant:create')")
     @PostMapping
-    public ResponseEntity<VehicleReceiverDTO> createVehicleReceiver(@Valid @RequestBody VehicleReceiverCreateDTO dto) {
-        VehicleReceiver receiver = vehicleReceiverService.createVehicleReceiver(dto);
-        VehicleReceiverDTO detailsDTO = mapToDTO(receiver);
+    public ResponseEntity<VehicleReceiverDTO> createVehicleReceiver(@RequestBody @Valid @NonNull VehicleReceiverCreateDTO dto) {
+        VehicleReceiver receiver = vehicleReceiverMapper.vehicleReceiverCreateDTOToVehicleReceiver(dto);
+        VehicleReceiver created = vehicleReceiverService.createVehicleReceiver(receiver);
+        VehicleReceiverDTO detailsDTO = vehicleReceiverMapper.vehicleReceiverToVehicleReceiverDTO(created);
         
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
                 .path("/{id}")
-                .buildAndExpand(receiver.getId())
+                .buildAndExpand(created.getId())
                 .toUri();
         
         return ResponseEntity.created(location).body(detailsDTO);
@@ -40,9 +46,9 @@ public class VehicleReceiverController {
 
     @PreAuthorize("hasAuthority('declarant:view')")
     @GetMapping("/{receiverId}")
-    public ResponseEntity<VehicleReceiverDTO> getVehicleReceiverDetails(@PathVariable Long receiverId) {
+    public ResponseEntity<VehicleReceiverDTO> getVehicleReceiverDetails(@PathVariable @Positive Long receiverId) {
         VehicleReceiver receiver = vehicleReceiverService.getVehicleReceiver(receiverId);
-        VehicleReceiverDTO detailsDTO = mapToDTO(receiver);
+        VehicleReceiverDTO detailsDTO = vehicleReceiverMapper.vehicleReceiverToVehicleReceiverDTO(receiver);
         return ResponseEntity.ok(detailsDTO);
     }
 
@@ -51,34 +57,26 @@ public class VehicleReceiverController {
     public ResponseEntity<List<VehicleReceiverDTO>> getAllVehicleReceivers() {
         List<VehicleReceiver> receivers = vehicleReceiverService.getAllVehicleReceivers();
         List<VehicleReceiverDTO> dtos = receivers.stream()
-                .map(this::mapToDTO)
-                .collect(Collectors.toList());
+                .map(vehicleReceiverMapper::vehicleReceiverToVehicleReceiverDTO)
+                .toList();
         return ResponseEntity.ok(dtos);
     }
     
     @PreAuthorize("hasAuthority('settings_declarant:create')")
-    @PutMapping("/{receiverId}")
+    @PatchMapping("/{receiverId}")
     public ResponseEntity<VehicleReceiverDTO> updateVehicleReceiver(
-            @PathVariable Long receiverId,
-            @Valid @RequestBody VehicleReceiverCreateDTO dto) {
-        VehicleReceiver updated = vehicleReceiverService.updateVehicleReceiver(receiverId, dto);
-        return ResponseEntity.ok(mapToDTO(updated));
+            @PathVariable @Positive Long receiverId,
+            @RequestBody @Valid @NonNull VehicleReceiverCreateDTO dto) {
+        VehicleReceiver updateData = vehicleReceiverMapper.vehicleReceiverCreateDTOToVehicleReceiver(dto);
+        VehicleReceiver updated = vehicleReceiverService.updateVehicleReceiver(receiverId, updateData);
+        return ResponseEntity.ok(vehicleReceiverMapper.vehicleReceiverToVehicleReceiverDTO(updated));
     }
     
     @PreAuthorize("hasAuthority('settings_declarant:delete')")
     @DeleteMapping("/{receiverId}")
-    public ResponseEntity<Void> deleteVehicleReceiver(@PathVariable Long receiverId) {
+    public ResponseEntity<Void> deleteVehicleReceiver(@PathVariable @Positive Long receiverId) {
         vehicleReceiverService.deleteVehicleReceiver(receiverId);
         return ResponseEntity.noContent().build();
-    }
-    
-    private VehicleReceiverDTO mapToDTO(VehicleReceiver receiver) {
-        return VehicleReceiverDTO.builder()
-                .id(receiver.getId())
-                .name(receiver.getName())
-                .createdAt(receiver.getCreatedAt())
-                .updatedAt(receiver.getUpdatedAt())
-                .build();
     }
 }
 

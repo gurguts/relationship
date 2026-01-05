@@ -728,7 +728,7 @@ document.addEventListener('DOMContentLoaded', function () {
     async function updateStorage(id, name, description) {
         try {
             const response = await fetch(`/api/v1/warehouse/${id}`, {
-                method: 'PUT',
+                method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json'
                 },
@@ -847,7 +847,7 @@ document.addEventListener('DOMContentLoaded', function () {
     async function updateWithdrawalReason(id, name, purpose) {
         try {
             const response = await fetch(`/api/v1/withdrawal-reason/${id}`, {
-                method: 'PUT',
+                method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json'
                 },
@@ -1003,7 +1003,7 @@ document.addEventListener('DOMContentLoaded', function () {
         };
 
         fetch(`${apiBaseUrl}/${id}`, {
-            method: 'PUT',
+            method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json'
             },

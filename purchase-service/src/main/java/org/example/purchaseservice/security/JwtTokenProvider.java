@@ -73,7 +73,7 @@ public class JwtTokenProvider {
                 throw new IllegalArgumentException("Token subject is missing");
             }
 
-            Long userId = claims.get("userId", Long.class);
+            Long userId = claims.get(SecurityConstants.CLAIM_USER_ID, Long.class);
             List<GrantedAuthority> authorities = extractAuthorities(claims);
 
             UsernamePasswordAuthenticationToken authentication =
@@ -87,7 +87,7 @@ public class JwtTokenProvider {
     }
 
     private List<GrantedAuthority> extractAuthorities(@NonNull Claims claims) {
-        Object authoritiesClaim = claims.get("authorities");
+        Object authoritiesClaim = claims.get(SecurityConstants.CLAIM_AUTHORITIES);
         if (authoritiesClaim == null) {
             return Collections.emptyList();
         }

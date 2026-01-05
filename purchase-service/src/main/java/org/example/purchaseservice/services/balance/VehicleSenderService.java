@@ -1,10 +1,10 @@
 package org.example.purchaseservice.services.balance;
 
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.purchaseservice.exceptions.PurchaseException;
 import org.example.purchaseservice.models.balance.VehicleSender;
-import org.example.purchaseservice.models.dto.balance.VehicleSenderCreateDTO;
 import org.example.purchaseservice.repositories.VehicleSenderRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,17 +19,20 @@ public class VehicleSenderService {
     private final VehicleSenderRepository vehicleSenderRepository;
     
     @Transactional
-    public VehicleSender createVehicleSender(VehicleSenderCreateDTO dto) {
-        log.info("Creating new vehicle sender: name={}", dto.getName());
-        
-        if (vehicleSenderRepository.existsByName(dto.getName())) {
-            throw new PurchaseException("VEHICLE_SENDER_ALREADY_EXISTS",
-                    String.format("Vehicle sender with name '%s' already exists", dto.getName()));
+    public VehicleSender createVehicleSender(@NonNull VehicleSender sender) {
+        if (sender.getName() == null || sender.getName().trim().isEmpty()) {
+            throw new PurchaseException("INVALID_SENDER_DATA", "Sender name is required");
         }
         
-        VehicleSender sender = new VehicleSender();
-        sender.setName(dto.getName().trim());
+        String normalizedName = sender.getName().trim();
+        log.info("Creating new vehicle sender: name={}", normalizedName);
         
+        if (vehicleSenderRepository.existsByName(normalizedName)) {
+            throw new PurchaseException("VEHICLE_SENDER_ALREADY_EXISTS",
+                    String.format("Vehicle sender with name '%s' already exists", normalizedName));
+        }
+        
+        sender.setName(normalizedName);
         VehicleSender saved = vehicleSenderRepository.save(sender);
         log.info("Vehicle sender created: id={}", saved.getId());
         
@@ -37,20 +40,26 @@ public class VehicleSenderService {
     }
     
     @Transactional
-    public VehicleSender updateVehicleSender(Long senderId, VehicleSenderCreateDTO dto) {
+    public VehicleSender updateVehicleSender(@NonNull Long senderId, @NonNull VehicleSender updateData) {
         log.info("Updating vehicle sender: id={}", senderId);
         
         VehicleSender sender = vehicleSenderRepository.findById(senderId)
                 .orElseThrow(() -> new PurchaseException("VEHICLE_SENDER_NOT_FOUND",
                         String.format("Vehicle sender not found: id=%d", senderId)));
         
-        String trimmedName = dto.getName().trim();
-        if (!sender.getName().equals(trimmedName) && vehicleSenderRepository.existsByName(trimmedName)) {
-            throw new PurchaseException("VEHICLE_SENDER_ALREADY_EXISTS",
-                    String.format("Vehicle sender with name '%s' already exists", trimmedName));
+        if (updateData.getName() == null || updateData.getName().trim().isEmpty()) {
+            throw new PurchaseException("INVALID_SENDER_DATA", "Sender name cannot be empty");
         }
         
-        sender.setName(trimmedName);
+        String normalizedName = updateData.getName().trim();
+        
+        if (!sender.getName().equals(normalizedName)) {
+            if (vehicleSenderRepository.existsByNameAndIdNot(normalizedName, senderId)) {
+                throw new PurchaseException("VEHICLE_SENDER_ALREADY_EXISTS",
+                        String.format("Vehicle sender with name '%s' already exists", normalizedName));
+            }
+            sender.setName(normalizedName);
+        }
         
         VehicleSender saved = vehicleSenderRepository.save(sender);
         log.info("Vehicle sender updated: id={}", saved.getId());
@@ -58,7 +67,7 @@ public class VehicleSenderService {
     }
     
     @Transactional(readOnly = true)
-    public VehicleSender getVehicleSender(Long senderId) {
+    public VehicleSender getVehicleSender(@NonNull Long senderId) {
         return vehicleSenderRepository.findById(senderId)
                 .orElseThrow(() -> new PurchaseException("VEHICLE_SENDER_NOT_FOUND",
                         String.format("Vehicle sender not found: id=%d", senderId)));
@@ -70,7 +79,7 @@ public class VehicleSenderService {
     }
     
     @Transactional
-    public void deleteVehicleSender(Long senderId) {
+    public void deleteVehicleSender(@NonNull Long senderId) {
         log.info("Deleting vehicle sender: id={}", senderId);
         
         VehicleSender sender = vehicleSenderRepository.findById(senderId)

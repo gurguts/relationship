@@ -8,9 +8,13 @@ import org.example.purchaseservice.models.dto.warehouse.ProductTransferResponseD
 import org.example.purchaseservice.models.dto.warehouse.ProductTransferUpdateDTO;
 import org.example.purchaseservice.models.warehouse.ProductTransfer;
 import org.example.purchaseservice.models.warehouse.WithdrawalReason;
+import org.example.purchaseservice.repositories.ProductRepository;
 import org.example.purchaseservice.repositories.ProductTransferRepository;
+import org.example.purchaseservice.repositories.WarehouseRepository;
 import org.example.purchaseservice.repositories.WithdrawalReasonRepository;
-import org.example.purchaseservice.services.balance.WarehouseProductBalanceService;
+import org.example.purchaseservice.services.balance.IWarehouseProductBalanceService;
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -21,8 +25,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import jakarta.persistence.criteria.Predicate;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
@@ -32,9 +39,11 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ProductTransferService {
     
-    private final WarehouseProductBalanceService warehouseProductBalanceService;
+    private final IWarehouseProductBalanceService warehouseProductBalanceService;
     private final ProductTransferRepository productTransferRepository;
     private final WithdrawalReasonRepository withdrawalReasonRepository;
+    private final ProductRepository productRepository;
+    private final WarehouseRepository warehouseRepository;
     
     /**
      * Transfer product from one product to another within the same warehouse
@@ -397,7 +406,7 @@ public class ProductTransferService {
         return toDTO(saved);
     }
 
-    private ProductTransferResponseDTO toDTO(ProductTransfer transfer) {
+    public ProductTransferResponseDTO toDTO(ProductTransfer transfer) {
         ProductTransferResponseDTO dto = new ProductTransferResponseDTO();
         dto.setId(transfer.getId());
         dto.setWarehouseId(transfer.getWarehouseId());
@@ -432,6 +441,156 @@ public class ProductTransferService {
 
         throw new PurchaseException("TRANSFER_PRICE_MISSING",
                 String.format("Transfer %d is missing price information", transfer.getId()));
+    }
+
+    public record TransferExcelData(
+            ProductTransferResponseDTO transfer,
+            String warehouseName,
+            String fromProductName,
+            String toProductName,
+            String reasonName
+    ) {}
+
+    @Transactional(readOnly = true)
+    public List<TransferExcelData> getTransfersForExcel(
+            LocalDate dateFrom,
+            LocalDate dateTo,
+            Long warehouseId,
+            Long fromProductId,
+            Long toProductId,
+            Long userId,
+            Long reasonId) {
+        
+        List<ProductTransferResponseDTO> transfers = getAllTransfers(
+                dateFrom, dateTo, warehouseId, fromProductId, toProductId, userId, reasonId);
+        
+        return transfers.stream().map(transfer -> {
+            String warehouseName = warehouseRepository.findById(transfer.getWarehouseId())
+                    .map(w -> w.getName())
+                    .orElse("Невідомо");
+            String fromProductName = productRepository.findById(transfer.getFromProductId())
+                    .map(p -> p.getName())
+                    .orElse("Невідомо");
+            String toProductName = productRepository.findById(transfer.getToProductId())
+                    .map(p -> p.getName())
+                    .orElse("Невідомо");
+            String reasonName = transfer.getReasonId() != null 
+                    ? withdrawalReasonRepository.findById(transfer.getReasonId())
+                            .map(r -> r.getName())
+                            .orElse("Не вказано")
+                    : "Не вказано";
+            
+            return new TransferExcelData(transfer, warehouseName, fromProductName, toProductName, reasonName);
+        }).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public byte[] exportToExcel(
+            LocalDate dateFrom,
+            LocalDate dateTo,
+            Long warehouseId,
+            Long fromProductId,
+            Long toProductId,
+            Long userId,
+            Long reasonId) throws IOException {
+        
+        List<TransferExcelData> transfersData = getTransfersForExcel(
+                dateFrom, dateTo, warehouseId, fromProductId, toProductId, userId, reasonId);
+        
+        try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            Sheet sheet = workbook.createSheet("Переміщення");
+
+            CellStyle headerStyle = workbook.createCellStyle();
+            Font headerFont = workbook.createFont();
+            headerFont.setBold(true);
+            headerFont.setColor(IndexedColors.WHITE.getIndex());
+            headerStyle.setFont(headerFont);
+            headerStyle.setFillForegroundColor(IndexedColors.DARK_BLUE.getIndex());
+            headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+            headerStyle.setBorderBottom(BorderStyle.THIN);
+            headerStyle.setBorderTop(BorderStyle.THIN);
+            headerStyle.setBorderRight(BorderStyle.THIN);
+            headerStyle.setBorderLeft(BorderStyle.THIN);
+            headerStyle.setAlignment(HorizontalAlignment.CENTER);
+
+            CellStyle dataStyle = workbook.createCellStyle();
+            dataStyle.setBorderBottom(BorderStyle.THIN);
+            dataStyle.setBorderTop(BorderStyle.THIN);
+            dataStyle.setBorderRight(BorderStyle.THIN);
+            dataStyle.setBorderLeft(BorderStyle.THIN);
+
+            Row headerRow = sheet.createRow(0);
+            String[] headers = {"№", "Дата", "Склад", "З товару", "До товару", 
+                               "Кількість (кг)", "Ціна за кг (грн)", "Загальна вартість (грн)", 
+                               "Користувач ID", "Причина", "Опис"};
+            
+            for (int i = 0; i < headers.length; i++) {
+                Cell cell = headerRow.createCell(i);
+                cell.setCellValue(headers[i]);
+                cell.setCellStyle(headerStyle);
+            }
+
+            DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy");
+            int rowNum = 1;
+            
+            for (TransferExcelData data : transfersData) {
+                Row row = sheet.createRow(rowNum);
+                ProductTransferResponseDTO transfer = data.transfer();
+
+                Cell cell0 = row.createCell(0);
+                cell0.setCellValue(rowNum);
+                cell0.setCellStyle(dataStyle);
+
+                Cell cell1 = row.createCell(1);
+                cell1.setCellValue(transfer.getTransferDate().format(dateFormatter));
+                cell1.setCellStyle(dataStyle);
+
+                Cell cell2 = row.createCell(2);
+                cell2.setCellValue(data.warehouseName());
+                cell2.setCellStyle(dataStyle);
+
+                Cell cell3 = row.createCell(3);
+                cell3.setCellValue(data.fromProductName());
+                cell3.setCellStyle(dataStyle);
+
+                Cell cell4 = row.createCell(4);
+                cell4.setCellValue(data.toProductName());
+                cell4.setCellStyle(dataStyle);
+
+                Cell cell5 = row.createCell(5);
+                cell5.setCellValue(transfer.getQuantity().doubleValue());
+                cell5.setCellStyle(dataStyle);
+
+                Cell cell6 = row.createCell(6);
+                cell6.setCellValue(transfer.getUnitPriceEur().doubleValue());
+                cell6.setCellStyle(dataStyle);
+
+                Cell cell7 = row.createCell(7);
+                cell7.setCellValue(transfer.getTotalCostEur().doubleValue());
+                cell7.setCellStyle(dataStyle);
+
+                Cell cell8 = row.createCell(8);
+                cell8.setCellValue(transfer.getUserId());
+                cell8.setCellStyle(dataStyle);
+
+                Cell cell9 = row.createCell(9);
+                cell9.setCellValue(data.reasonName());
+                cell9.setCellStyle(dataStyle);
+
+                Cell cell10 = row.createCell(10);
+                cell10.setCellValue(transfer.getDescription() != null ? transfer.getDescription() : "");
+                cell10.setCellStyle(dataStyle);
+                
+                rowNum++;
+            }
+
+            for (int i = 0; i < headers.length; i++) {
+                sheet.autoSizeColumn(i);
+            }
+            
+            workbook.write(out);
+            return out.toByteArray();
+        }
     }
 }
 

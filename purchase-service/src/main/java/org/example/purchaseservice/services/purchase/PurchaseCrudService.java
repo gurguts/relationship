@@ -275,6 +275,7 @@ public class PurchaseCrudService implements IPurchaseCrudService {
                 .orElseThrow(() -> new PurchaseNotFoundException(String.format("Purchase with ID %d not found", id)));
     }
 
+    @Override
     @Transactional(readOnly = true)
     public void enrichPurchaseDTOWithReceivedStatus(org.example.purchaseservice.models.dto.purchase.PurchaseDTO dto, Purchase purchase) {
         if (dto != null && purchase != null) {

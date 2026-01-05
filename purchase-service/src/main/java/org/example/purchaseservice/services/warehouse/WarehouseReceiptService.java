@@ -32,7 +32,7 @@ public class WarehouseReceiptService implements IWarehouseReceiptService {
     private final WarehouseReceiptRepository warehouseReceiptRepository;
     private final WarehouseWithdrawalRepository warehouseWithdrawalRepository;
     private final org.example.purchaseservice.services.balance.DriverProductBalanceService driverProductBalanceService;
-    private final org.example.purchaseservice.services.balance.WarehouseProductBalanceService warehouseProductBalanceService;
+    private final org.example.purchaseservice.services.balance.IWarehouseProductBalanceService warehouseProductBalanceService;
     private final WarehouseDiscrepancyService warehouseDiscrepancyService;
 
     @Override
