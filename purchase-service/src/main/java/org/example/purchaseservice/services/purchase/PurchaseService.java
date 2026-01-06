@@ -1,8 +1,10 @@
 package org.example.purchaseservice.services.purchase;
 
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.purchaseservice.models.Purchase;
+import org.example.purchaseservice.services.impl.IPurchasePriceCalculationService;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -11,65 +13,96 @@ import java.math.RoundingMode;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class PurchaseService {
+public class PurchaseService implements IPurchasePriceCalculationService {
+    
+    private static final int PRICE_SCALE = 6;
+    private static final String EUR_CURRENCY = "EUR";
+    private static final RoundingMode UNIT_PRICE_ROUNDING_MODE = RoundingMode.CEILING;
+    private static final RoundingMode EXCHANGE_RATE_ROUNDING_MODE = RoundingMode.HALF_UP;
 
-    public void calculateAndSetUnitPrice(Purchase purchase) {
-        if (purchase == null) {
-            log.warn("Cannot calculate unit price: purchase is null");
-            return;
-        }
-
+    @Override
+    public void calculateAndSetUnitPrice(@NonNull Purchase purchase) {
         BigDecimal quantity = purchase.getQuantity();
         BigDecimal totalPrice = purchase.getTotalPrice();
 
-        if (quantity != null && totalPrice != null && quantity.compareTo(BigDecimal.ZERO) != 0) {
-            BigDecimal unitPrice = totalPrice.divide(quantity, 6, RoundingMode.CEILING);
+        validateNonNegative(quantity, "quantity");
+        validateNonNegative(totalPrice, "totalPrice");
+
+        if (isValidForUnitPriceCalculation(quantity, totalPrice)) {
+            BigDecimal unitPrice = totalPrice.divide(quantity, PRICE_SCALE, UNIT_PRICE_ROUNDING_MODE);
             purchase.setUnitPrice(unitPrice);
-            log.debug("Calculated unit price: {} for purchase id={}", unitPrice, purchase.getId());
         } else {
             purchase.setUnitPrice(BigDecimal.ZERO);
-            log.debug("Set unit price to ZERO for purchase id={}", purchase.getId());
         }
     }
 
-    public void calculateAndSetPricesInEur(Purchase purchase, BigDecimal exchangeRateToEur) {
-        if (purchase == null) {
-            log.warn("Cannot calculate prices in EUR: purchase is null");
-            return;
-        }
+    private boolean isValidForUnitPriceCalculation(BigDecimal quantity, BigDecimal totalPrice) {
+        return quantity != null && totalPrice != null && quantity.compareTo(BigDecimal.ZERO) > 0;
+    }
 
+    private void validateNonNegative(BigDecimal value, String fieldName) {
+        if (value != null && value.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException(
+                    String.format("Value of %s cannot be negative. Provided value: %s", fieldName, value));
+        }
+    }
+
+    @Override
+    public void calculateAndSetPricesInEur(@NonNull Purchase purchase, BigDecimal exchangeRateToEur) {
         BigDecimal totalPrice = purchase.getTotalPrice();
         BigDecimal quantity = purchase.getQuantity();
 
         if (totalPrice == null || quantity == null) {
-            log.debug("Cannot calculate prices in EUR: totalPrice or quantity is null for purchase id={}", purchase.getId());
+            purchase.setTotalPriceEur(null);
+            purchase.setUnitPriceEur(null);
             return;
         }
 
-        String currency = purchase.getCurrency();
-        if ("EUR".equalsIgnoreCase(currency) || currency == null) {
-            purchase.setTotalPriceEur(totalPrice);
-            purchase.setUnitPriceEur(purchase.getUnitPrice());
-            log.debug("Purchase currency is EUR, set prices directly for purchase id={}", purchase.getId());
-        } else {
-            if (exchangeRateToEur != null && exchangeRateToEur.compareTo(BigDecimal.ZERO) > 0) {
-                BigDecimal totalPriceEur = totalPrice.divide(exchangeRateToEur, 6, RoundingMode.HALF_UP);
-                purchase.setTotalPriceEur(totalPriceEur);
-
-                if (quantity.compareTo(BigDecimal.ZERO) != 0) {
-                    BigDecimal unitPriceEur = totalPriceEur.divide(quantity, 6, RoundingMode.CEILING);
-                    purchase.setUnitPriceEur(unitPriceEur);
-                } else {
-                    purchase.setUnitPriceEur(BigDecimal.ZERO);
-                }
-                log.debug("Calculated prices in EUR: totalPriceEur={}, unitPriceEur={} for purchase id={}", 
-                        totalPriceEur, purchase.getUnitPriceEur(), purchase.getId());
-            } else {
-                purchase.setTotalPriceEur(totalPrice);
-                purchase.setUnitPriceEur(purchase.getUnitPrice());
-                log.debug("Exchange rate to EUR is invalid, set prices directly for purchase id={}", purchase.getId());
-            }
+        validateNonNegative(totalPrice, "totalPrice");
+        validateNonNegative(quantity, "quantity");
+        if (exchangeRateToEur != null) {
+            validateNonNegative(exchangeRateToEur, "exchangeRateToEur");
         }
+
+        if (isEurCurrency(purchase.getCurrency())) {
+            setPricesDirectly(purchase, totalPrice, quantity);
+        } else {
+            calculatePricesWithExchangeRate(purchase, totalPrice, quantity, exchangeRateToEur);
+        }
+    }
+
+    private boolean isEurCurrency(String currency) {
+        if (currency == null) {
+            return true;
+        }
+        return EUR_CURRENCY.equalsIgnoreCase(currency);
+    }
+
+    private void setPricesDirectly(@NonNull Purchase purchase, @NonNull BigDecimal totalPrice, @NonNull BigDecimal quantity) {
+        purchase.setTotalPriceEur(totalPrice);
+        purchase.setUnitPriceEur(calculateUnitPriceEur(totalPrice, quantity));
+    }
+
+    private void calculatePricesWithExchangeRate(@NonNull Purchase purchase, @NonNull BigDecimal totalPrice,
+                                                  @NonNull BigDecimal quantity, BigDecimal exchangeRateToEur) {
+        if (isValidExchangeRate(exchangeRateToEur)) {
+            BigDecimal totalPriceEur = totalPrice.divide(exchangeRateToEur, PRICE_SCALE, EXCHANGE_RATE_ROUNDING_MODE);
+            purchase.setTotalPriceEur(totalPriceEur);
+            purchase.setUnitPriceEur(calculateUnitPriceEur(totalPriceEur, quantity));
+        } else {
+            setPricesDirectly(purchase, totalPrice, quantity);
+        }
+    }
+
+    private boolean isValidExchangeRate(BigDecimal exchangeRateToEur) {
+        return exchangeRateToEur != null && exchangeRateToEur.compareTo(BigDecimal.ZERO) > 0;
+    }
+
+    private BigDecimal calculateUnitPriceEur(@NonNull BigDecimal totalPriceEur, @NonNull BigDecimal quantity) {
+        if (quantity.compareTo(BigDecimal.ZERO) != 0) {
+            return totalPriceEur.divide(quantity, PRICE_SCALE, UNIT_PRICE_ROUNDING_MODE);
+        }
+        return BigDecimal.ZERO;
     }
 }
 
