@@ -13,4 +13,8 @@ public interface ProductRepository extends CrudRepository<Product, Long> {
 
     @NonNull
     List<Product> findByUsage(@NonNull ProductUsage usage);
+    
+    boolean existsByNameIgnoreCase(@NonNull String name);
+    
+    boolean existsByNameIgnoreCaseAndIdNot(@NonNull String name, @NonNull Long excludeId);
 }

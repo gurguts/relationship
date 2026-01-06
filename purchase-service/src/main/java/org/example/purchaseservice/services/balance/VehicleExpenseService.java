@@ -9,7 +9,7 @@ import org.example.purchaseservice.models.dto.balance.VehicleExpenseCreateDTO;
 import org.example.purchaseservice.models.dto.balance.VehicleExpenseUpdateDTO;
 import org.example.purchaseservice.repositories.VehicleExpenseRepository;
 import org.example.purchaseservice.repositories.VehicleRepository;
-import org.example.purchaseservice.services.ExchangeRateService;
+import org.example.purchaseservice.services.exchange.IExchangeRateService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,7 +32,7 @@ public class VehicleExpenseService {
     
     private final VehicleExpenseRepository vehicleExpenseRepository;
     private final VehicleRepository vehicleRepository;
-    private final ExchangeRateService exchangeRateService;
+    private final IExchangeRateService exchangeRateService;
     
     @Transactional
     public VehicleExpense createVehicleExpense(@NonNull VehicleExpenseCreateDTO dto) {

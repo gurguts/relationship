@@ -9,7 +9,7 @@ import org.example.purchaseservice.models.ExchangeRate;
 import org.example.purchaseservice.models.dto.ExchangeRateDTO;
 import org.example.purchaseservice.models.dto.ExchangeRateUpdateDTO;
 import org.example.purchaseservice.mappers.ExchangeRateMapper;
-import org.example.purchaseservice.services.ExchangeRateService;
+import org.example.purchaseservice.services.exchange.IExchangeRateService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
@@ -24,7 +24,7 @@ import java.util.List;
 @Validated
 public class ExchangeRateController {
     
-    private final ExchangeRateService exchangeRateService;
+    private final IExchangeRateService exchangeRateService;
     private final ExchangeRateMapper exchangeRateMapper;
 
     @GetMapping

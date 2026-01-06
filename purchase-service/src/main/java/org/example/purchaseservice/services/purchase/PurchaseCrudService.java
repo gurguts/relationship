@@ -22,7 +22,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.example.purchaseservice.utils.SecurityUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.example.purchaseservice.services.ExchangeRateService;
+import org.example.purchaseservice.services.exchange.IExchangeRateService;
 
 import java.math.BigDecimal;
 import java.util.Collections;
@@ -41,7 +41,7 @@ public class PurchaseCrudService implements IPurchaseCrudService {
     private final UserClient userCLient;
     private final org.example.purchaseservice.services.balance.DriverProductBalanceService driverProductBalanceService;
     private final WarehouseReceiptRepository warehouseReceiptRepository;
-    private final ExchangeRateService exchangeRateService;
+    private final IExchangeRateService exchangeRateService;
     private final PurchaseService purchaseService;
 
     @Override
