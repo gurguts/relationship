@@ -16,7 +16,7 @@ import org.example.purchaseservice.repositories.CarrierRepository;
 import org.example.purchaseservice.repositories.VehicleReceiverRepository;
 import org.example.purchaseservice.repositories.VehicleSenderRepository;
 import org.example.purchaseservice.services.balance.VehicleExpenseService;
-import org.example.purchaseservice.services.balance.VehicleService;
+import org.example.purchaseservice.services.balance.IVehicleService;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -27,7 +27,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class VehicleMapper {
     private final CarrierMapper carrierMapper;
-    private final VehicleService vehicleService;
+    private final IVehicleService vehicleService;
     private final VehicleExpenseService vehicleExpenseService;
     private final CarrierRepository carrierRepository;
     private final VehicleSenderRepository vehicleSenderRepository;

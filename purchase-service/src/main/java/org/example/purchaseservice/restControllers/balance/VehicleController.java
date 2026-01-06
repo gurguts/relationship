@@ -21,7 +21,7 @@ import org.example.purchaseservice.models.dto.balance.VehicleProductUpdateDTO;
 import org.example.purchaseservice.models.dto.balance.VehicleUpdateDTO;
 import org.example.purchaseservice.models.balance.VehicleExpense;
 import org.example.purchaseservice.mappers.VehicleMapper;
-import org.example.purchaseservice.services.balance.VehicleService;
+import org.example.purchaseservice.services.balance.IVehicleService;
 import org.example.purchaseservice.repositories.VehicleProductRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -51,7 +51,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Validated
 public class VehicleController {
-    private final VehicleService vehicleService;
+    private final IVehicleService vehicleService;
     private final ObjectMapper objectMapper;
     private final org.example.purchaseservice.services.balance.VehicleExportService vehicleExportService;
     private final org.example.purchaseservice.services.balance.VehicleExpenseService vehicleExpenseService;

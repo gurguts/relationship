@@ -7,6 +7,8 @@ import org.example.purchaseservice.exceptions.PurchaseException;
 import org.example.purchaseservice.models.ExchangeRate;
 import org.example.purchaseservice.repositories.ExchangeRateRepository;
 import org.example.purchaseservice.utils.SecurityUtils;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +25,7 @@ public class ExchangeRateService implements IExchangeRateService {
     private final ExchangeRateRepository exchangeRateRepository;
 
     @Transactional(readOnly = true)
+    @Cacheable(value = "exchangeRates", key = "#fromCurrency.toUpperCase()")
     public BigDecimal getExchangeRateToEur(@NonNull String fromCurrency) {
         String normalizedCurrency = normalizeCurrency(fromCurrency);
         
@@ -56,6 +59,7 @@ public class ExchangeRateService implements IExchangeRateService {
     }
 
     @Transactional
+    @CacheEvict(value = "exchangeRates", key = "#fromCurrency.toUpperCase()")
     public ExchangeRate updateExchangeRate(@NonNull String fromCurrency, @NonNull BigDecimal rate) {
         String normalizedCurrency = normalizeCurrency(fromCurrency);
         

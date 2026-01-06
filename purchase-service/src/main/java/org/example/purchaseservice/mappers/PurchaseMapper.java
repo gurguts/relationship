@@ -3,6 +3,7 @@ package org.example.purchaseservice.mappers;
 import lombok.NonNull;
 import org.example.purchaseservice.exceptions.PurchaseException;
 import org.example.purchaseservice.models.Purchase;
+import org.example.purchaseservice.models.dto.client.ClientDTO;
 import org.example.purchaseservice.models.dto.purchase.*;
 import org.springframework.stereotype.Component;
 
@@ -105,6 +106,27 @@ public class PurchaseMapper {
         dto.setCurrency(purchase.getCurrency());
         dto.setExchangeRate(purchase.getExchangeRate());
         dto.setCreatedAt(purchase.getCreatedAt());
+        dto.setComment(purchase.getComment());
+        return dto;
+    }
+
+    public PurchasePageDTO toPurchasePageDTO(@NonNull Purchase purchase, ClientDTO client) {
+        PurchasePageDTO dto = new PurchasePageDTO();
+        dto.setId(purchase.getId());
+        dto.setUserId(purchase.getUser());
+        dto.setClient(client);
+        dto.setSourceId(purchase.getSource());
+        dto.setProductId(purchase.getProduct());
+        dto.setQuantity(purchase.getQuantity());
+        dto.setUnitPrice(purchase.getUnitPrice());
+        dto.setTotalPrice(purchase.getTotalPrice());
+        dto.setTotalPriceEur(purchase.getTotalPriceEur());
+        dto.setPaymentMethod(purchase.getPaymentMethod());
+        dto.setCurrency(purchase.getCurrency());
+        dto.setExchangeRate(purchase.getExchangeRate());
+        dto.setTransactionId(purchase.getTransaction());
+        dto.setCreatedAt(purchase.getCreatedAt());
+        dto.setUpdatedAt(purchase.getUpdatedAt());
         dto.setComment(purchase.getComment());
         return dto;
     }

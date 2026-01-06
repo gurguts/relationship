@@ -11,6 +11,8 @@ import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.example.purchaseservice.clients.*;
+import org.example.purchaseservice.services.source.SourceService;
+import org.example.purchaseservice.services.user.UserService;
 import org.example.purchaseservice.models.Product;
 import org.example.purchaseservice.models.Purchase;
 import org.example.purchaseservice.models.PaymentMethod;
@@ -53,8 +55,8 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
     private final PurchaseRepository purchaseRepository;
     private final ClientApiClient clientApiClient;
     private final ClientTypeFieldApiClient clientTypeFieldApiClient;
-    private final UserClient userClient;
-    private final SourceClient sourceClient;
+    private final UserService userService;
+    private final SourceService sourceService;
     private final IProductService productService;
     private final IWarehouseReceiptService warehouseReceiptService;
 
@@ -120,10 +122,7 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
         List<Product> products = productService.getAllProducts("all");
         List<Long> productIds = products.stream().map(Product::getId).toList();
 
-        List<UserDTO> userDTOs = userClient.getAllUsers().getBody();
-        if (userDTOs == null) {
-            userDTOs = Collections.emptyList();
-        }
+        List<UserDTO> userDTOs = userService.getAllUsers();
         List<Long> userIds = userDTOs.stream().map(UserDTO::getId).toList();
 
         return new FilterIds(
@@ -146,10 +145,7 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
     }
 
     private List<Long> fetchSourceIds(String query) {
-        List<SourceDTO> sources = sourceClient.findByNameContaining(query).getBody();
-        if (sources == null) {
-            sources = Collections.emptyList();
-        }
+        List<SourceDTO> sources = sourceService.findByNameContaining(query);
         return sources.stream()
                 .map(SourceDTO::getId)
                 .toList();
@@ -168,10 +164,8 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
         List<SourceDTO> sourceDTOs = new ArrayList<>();
         for (Long sourceId : sourceIds) {
             try {
-                SourceDTO sourceDTO = sourceClient.getSourceName(sourceId).getBody();
-                if (sourceDTO != null) {
-                    sourceDTOs.add(sourceDTO);
-                }
+                SourceDTO sourceDTO = sourceService.getSourceName(sourceId);
+                sourceDTOs.add(sourceDTO);
             } catch (Exception e) {
                 log.warn("Failed to get source name for sourceId {}: {}", sourceId, e.getMessage());
             }

@@ -1,16 +1,17 @@
 package org.example.purchaseservice.services.impl;
 
+import lombok.NonNull;
 import org.example.purchaseservice.models.Purchase;
 import org.example.purchaseservice.models.dto.purchase.PurchaseDTO;
 
 public interface IPurchaseCrudService {
-    Purchase createPurchase(Purchase purchase);
+    Purchase createPurchase(@NonNull Purchase purchase);
 
-    Purchase updatePurchase(Long id, Purchase updatedPurchase);
+    Purchase updatePurchase(@NonNull Long id, @NonNull Purchase updatedPurchase);
 
-    Purchase findPurchaseById(Long id);
+    Purchase findPurchaseById(@NonNull Long id);
 
-    void deletePurchase(Long id);
+    void deletePurchase(@NonNull Long id);
 
-    void enrichPurchaseDTOWithReceivedStatus(PurchaseDTO dto, Purchase purchase);
+    void enrichPurchaseDTOWithReceivedStatus(@NonNull PurchaseDTO dto, @NonNull Purchase purchase);
 }

@@ -262,10 +262,11 @@ public class VehicleService implements IVehicleService {
         }
         
         BigDecimal availableQuantity = balance.getQuantity();
-        if (availableQuantity.compareTo(deltaQuantity) < 0) {
+        if (availableQuantity == null || availableQuantity.compareTo(deltaQuantity) < 0) {
+            String availableStr = availableQuantity != null ? availableQuantity.toString() : "0";
             throw new PurchaseException("INSUFFICIENT_PRODUCT", String.format(
                     "Insufficient product on warehouse. Available: %s, requested additionally: %s",
-                    availableQuantity, deltaQuantity));
+                    availableStr, deltaQuantity));
         }
         
         warehouseProductBalanceService.removeProductWithCost(
@@ -421,10 +422,11 @@ public class VehicleService implements IVehicleService {
         }
         
         BigDecimal availableQuantity = balance.getQuantity();
-        if (availableQuantity.compareTo(quantity) < 0) {
+        if (availableQuantity == null || availableQuantity.compareTo(quantity) < 0) {
+            String availableStr = availableQuantity != null ? availableQuantity.toString() : "0";
             throw new PurchaseException("INSUFFICIENT_PRODUCT", String.format(
                     "Insufficient product on warehouse. Available: %s, requested: %s",
-                    availableQuantity, quantity));
+                    availableStr, quantity));
         }
         
         return balance;
