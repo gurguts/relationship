@@ -75,21 +75,6 @@ public class WarehouseReceiptController {
         return ResponseEntity.created(location).body(warehouseReceiptDTO);
     }
 
-    @PreAuthorize("hasAuthority('warehouse:view')")
-    @GetMapping("/balance")
-    public ResponseEntity<BalanceWarehouseDTO> getBalance(
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate balanceDate) {
-        LocalDate date = balanceDate != null ? balanceDate : LocalDate.now();
-
-        Map<Long, Map<Long, Double>> balanceByWarehouseAndProduct = warehouseReceiptService.getWarehouseBalance(date);
-
-        BalanceWarehouseDTO balanceWarehouseDTO = BalanceWarehouseDTO.builder()
-                .balanceByWarehouseAndProduct(balanceByWarehouseAndProduct)
-                .build();
-
-        return ResponseEntity.ok(balanceWarehouseDTO);
-    }
-
     @Deprecated
     @PreAuthorize("hasAuthority('warehouse:view')")
     @GetMapping("/entries")

@@ -16,7 +16,7 @@ public class CacheConfig {
     private static final long MAXIMUM_SIZE = 1000L;
     private static final long EXPIRE_AFTER_ACCESS_HOURS = 12L;
     private static final String[] CACHE_NAMES = {"products", "warehouses", "withdrawalReasons", 
-            "exchangeRates", "userFullNames"};
+            "exchangeRates"};
 
     @Bean
     @NonNull

@@ -1,13 +1,25 @@
 package org.example.purchaseservice.utils;
 
+import lombok.NonNull;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 
-public class SecurityUtils {
+public final class SecurityUtils {
+    
+    private static final String AUTHORITY_SYSTEM_ADMIN = "system:admin";
+    private static final String AUTHORITY_ADMINISTRATION_VIEW = "administration:view";
+    
+    private SecurityUtils() {
+        throw new UnsupportedOperationException("Utility class");
+    }
+    
+    private static Authentication getAuthentication() {
+        return SecurityContextHolder.getContext().getAuthentication();
+    }
 
     public static Long getCurrentUserId() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        Authentication authentication = getAuthentication();
         if (authentication == null || authentication.getDetails() == null) {
             return null;
         }
@@ -16,17 +28,17 @@ public class SecurityUtils {
     }
 
     public static boolean isAdmin() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        Authentication authentication = getAuthentication();
         if (authentication == null) {
             return false;
         }
         return authentication.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
-                .anyMatch(auth -> "system:admin".equals(auth) || "administration:view".equals(auth));
+                .anyMatch(auth -> AUTHORITY_SYSTEM_ADMIN.equals(auth) || AUTHORITY_ADMINISTRATION_VIEW.equals(auth));
     }
 
-    public static boolean hasAuthority(String authority) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+    public static boolean hasAuthority(@NonNull String authority) {
+        Authentication authentication = getAuthentication();
         if (authentication == null) {
             return false;
         }
@@ -36,7 +48,7 @@ public class SecurityUtils {
     }
 
     public static String getCurrentUserLogin() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        Authentication authentication = getAuthentication();
         if (authentication == null) {
             return null;
         }

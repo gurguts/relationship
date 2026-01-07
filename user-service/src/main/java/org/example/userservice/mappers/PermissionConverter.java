@@ -9,6 +9,9 @@ import java.util.Arrays;
 
 @Converter(autoApply = true)
 public class PermissionConverter implements AttributeConverter<Permission, String> {
+
+    private static final String ERROR_CODE_UNKNOWN_PERMISSION = "UNKNOWN_PERMISSION";
+
     @Override
     public String convertToDatabaseColumn(Permission permission) {
         return permission != null ? permission.getPermission() : null;
@@ -22,6 +25,7 @@ public class PermissionConverter implements AttributeConverter<Permission, Strin
         return Arrays.stream(Permission.values())
                 .filter(permission -> permission.getPermission().equals(permissionValue))
                 .findFirst()
-                .orElseThrow(() -> new UserException(String.format("Unknown permission value: %s", permissionValue)));
+                .orElseThrow(() -> new UserException(ERROR_CODE_UNKNOWN_PERMISSION,
+                        String.format("Unknown permission value: %s", permissionValue)));
     }
 }

@@ -1,15 +1,17 @@
 package org.example.userservice.exceptions.account;
 
+import lombok.Getter;
+import lombok.NonNull;
+
+@Getter
 public class AccountException extends RuntimeException {
-    private final String field;
-    
-    public AccountException(String field, String message) {
+
+    private final String errorCode;
+
+    public AccountException(@NonNull String errorCode, @NonNull String message) {
         super(message);
-        this.field = field;
+        this.errorCode = errorCode;
     }
-    
-    public String getField() {
-        return field;
-    }
+
 }
 

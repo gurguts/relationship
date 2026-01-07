@@ -1,5 +1,6 @@
 package org.example.userservice.services.impl;
 
+import lombok.NonNull;
 import org.example.userservice.models.user.Permission;
 import org.example.userservice.models.user.User;
 
@@ -7,20 +8,19 @@ import java.util.List;
 import java.util.Set;
 
 public interface IUserService {
-    User getUserByLogin(String login);
+    User getUserByLogin(@NonNull String login);
 
-    List<User> getUsers();
-    
-    List<User> getActiveUsers();
+    @NonNull List<User> getUsers();
 
+    @NonNull List<User> getActiveUsers();
 
-    User getUserById(Long id);
+    User getUserById(@NonNull Long id);
 
-    void updateUserPermissions(Long id, Set<Permission> permissions);
+    void updateUserPermissions(@NonNull Long id, @NonNull Set<Permission> permissions);
 
-    User createUser(User user);
+    User createUser(@NonNull User user);
 
-    void deleteUser(Long userId);
+    void deleteUser(@NonNull Long userId);
 
-    User updateUser(User user);
+    User updateUser(@NonNull User user);
 }

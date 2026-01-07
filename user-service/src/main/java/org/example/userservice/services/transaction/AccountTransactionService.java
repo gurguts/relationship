@@ -335,7 +335,7 @@ public class AccountTransactionService {
         if (!"EUR".equalsIgnoreCase(currency)) {
             if (exchangeRate == null || exchangeRate.compareTo(BigDecimal.ZERO) <= 0) {
                 try {
-                    exchangeRate = exchangeRateApiClient.getExchangeRateToEur(currency);
+                    exchangeRate = exchangeRateApiClient.getExchangeRateToEur(currency).getBody();
                     if (exchangeRate == null || exchangeRate.compareTo(BigDecimal.ZERO) <= 0) {
                         throw new TransactionException("EXCHANGE_RATE_NOT_FOUND", "Exchange rate not found for currency: " + currency);
                     }

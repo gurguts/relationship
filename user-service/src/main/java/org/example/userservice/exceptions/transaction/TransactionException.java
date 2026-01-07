@@ -1,18 +1,22 @@
 package org.example.userservice.exceptions.transaction;
 
 import lombok.Getter;
+import lombok.NonNull;
 
 @Getter
 public class TransactionException extends RuntimeException {
+
+    private static final String DEFAULT_ERROR_CODE = "DEFAULT";
+
     private final String errorCode;
 
-    public TransactionException(String errorCode, String message) {
+    public TransactionException(@NonNull String errorCode, @NonNull String message) {
         super(message);
         this.errorCode = errorCode;
     }
 
-    public TransactionException(String message) {
+    public TransactionException(@NonNull String message) {
         super(message);
-        this.errorCode = "DEFAULT";
+        this.errorCode = DEFAULT_ERROR_CODE;
     }
 }

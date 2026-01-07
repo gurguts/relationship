@@ -1,147 +1,145 @@
 package org.example.userservice.restControllers.branch;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Positive;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.example.userservice.exceptions.user.UserException;
+import org.example.userservice.mappers.BranchMapper;
 import org.example.userservice.models.branch.Branch;
+import org.example.userservice.models.branch.BranchPermission;
 import org.example.userservice.models.dto.branch.BranchCreateDTO;
 import org.example.userservice.models.dto.branch.BranchDTO;
 import org.example.userservice.services.branch.BranchPermissionService;
 import org.example.userservice.services.branch.BranchService;
 import org.example.userservice.utils.SecurityUtils;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import java.net.URI;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
-@Slf4j
+import static org.springframework.http.HttpStatus.FORBIDDEN;
+
 @RestController
 @RequestMapping("/api/v1/branches")
 @RequiredArgsConstructor
+@Validated
 public class BranchController {
     private final BranchService branchService;
     private final BranchPermissionService branchPermissionService;
+    private final BranchMapper branchMapper;
 
     @GetMapping
     @PreAuthorize("hasAuthority('finance:view')")
     public ResponseEntity<List<BranchDTO>> getAllBranches() {
-        Long currentUserId = SecurityUtils.getCurrentUserId();
-        List<Branch> branches = branchService.getBranchesAccessibleToUser(currentUserId);
+        Long currentUserId = getCurrentUserIdOrThrow();
         
-        List<org.example.userservice.models.branch.BranchPermission> userPermissions = 
-                branchPermissionService.getPermissionsByUserId(currentUserId);
-        java.util.Map<Long, org.example.userservice.models.branch.BranchPermission> permissionMap = 
-                userPermissions.stream()
-                        .collect(Collectors.toMap(
-                                org.example.userservice.models.branch.BranchPermission::getBranchId,
-                                p -> p,
-                                (existing, replacement) -> existing
-                        ));
+        List<Branch> branches = branchService.getBranchesAccessibleToUser(currentUserId);
+        Map<Long, BranchPermission> permissionMap = buildPermissionMap(currentUserId);
         
         List<BranchDTO> dtos = branches.stream()
-                .map(branch -> mapToDTO(branch, permissionMap))
-                .collect(Collectors.toList());
+                .map(branch -> branchMapper.branchToBranchDTO(branch, permissionMap))
+                .toList();
         return ResponseEntity.ok(dtos);
     }
 
     @GetMapping("/all")
     @PreAuthorize("hasAuthority('administration:view')")
     public ResponseEntity<List<BranchDTO>> getAllBranchesForAdmin() {
-        Long currentUserId = SecurityUtils.getCurrentUserId();
-        List<Branch> branches = branchService.getAllBranches();
+        Long currentUserId = getCurrentUserIdOrThrow();
         
-        List<org.example.userservice.models.branch.BranchPermission> userPermissions = 
-                branchPermissionService.getPermissionsByUserId(currentUserId);
-        java.util.Map<Long, org.example.userservice.models.branch.BranchPermission> permissionMap = 
-                userPermissions.stream()
-                        .collect(Collectors.toMap(
-                                org.example.userservice.models.branch.BranchPermission::getBranchId,
-                                p -> p,
-                                (existing, replacement) -> existing
-                        ));
+        List<Branch> branches = branchService.getAllBranches();
+        Map<Long, BranchPermission> permissionMap = buildPermissionMap(currentUserId);
         
         List<BranchDTO> dtos = branches.stream()
-                .map(branch -> mapToDTO(branch, permissionMap))
-                .collect(Collectors.toList());
+                .map(branch -> branchMapper.branchToBranchDTO(branch, permissionMap))
+                .toList();
         return ResponseEntity.ok(dtos);
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('finance:view')")
-    public ResponseEntity<BranchDTO> getBranchById(@PathVariable Long id) {
-        Long currentUserId = SecurityUtils.getCurrentUserId();
+    public ResponseEntity<BranchDTO> getBranchById(@PathVariable @Positive @NonNull Long id) {
+        Long currentUserId = getCurrentUserIdOrThrow();
+        
         Branch branch = branchService.getBranchById(id);
 
         if (!branchPermissionService.canView(currentUserId, id)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            return ResponseEntity.status(FORBIDDEN).build();
         }
         
-        java.util.Optional<org.example.userservice.models.branch.BranchPermission> permission = 
-                branchPermissionService.getPermission(currentUserId, id);
-        java.util.Map<Long, org.example.userservice.models.branch.BranchPermission> permissionMap = 
-                permission.map(p -> java.util.Map.of(id, p))
-                        .orElse(java.util.Collections.emptyMap());
-        
-        return ResponseEntity.ok(mapToDTO(branch, permissionMap));
+        Map<Long, BranchPermission> permissionMap = buildPermissionMapForSingleBranch(currentUserId, id);
+        return ResponseEntity.ok(branchMapper.branchToBranchDTO(branch, permissionMap));
     }
 
     @PostMapping
     @PreAuthorize("hasAuthority('settings_finance:create')")
-    public ResponseEntity<BranchDTO> createBranch(@RequestBody BranchCreateDTO dto) {
-        Branch branch = new Branch();
-        branch.setName(dto.getName());
-        branch.setDescription(dto.getDescription());
+    public ResponseEntity<BranchDTO> createBranch(@RequestBody @Valid @NonNull BranchCreateDTO dto) {
+        Branch branch = branchMapper.branchCreateDTOToBranch(dto);
         Branch created = branchService.createBranch(branch);
         
-        java.util.Map<Long, org.example.userservice.models.branch.BranchPermission> permissionMap = 
-                java.util.Collections.emptyMap();
+        Map<Long, BranchPermission> permissionMap = Collections.emptyMap();
+        BranchDTO branchDTO = branchMapper.branchToBranchDTO(created, permissionMap);
         
-        return ResponseEntity.status(HttpStatus.CREATED).body(mapToDTO(created, permissionMap));
+        URI location = ServletUriComponentsBuilder.fromCurrentRequest()
+                .path("/{id}")
+                .buildAndExpand(branchDTO.getId())
+                .toUri();
+        return ResponseEntity.created(location).body(branchDTO);
     }
 
-    @PutMapping("/{id}")
+    @PatchMapping("/{id}")
     @PreAuthorize("hasAuthority('settings_finance:edit')")
-    public ResponseEntity<BranchDTO> updateBranch(@PathVariable Long id, @RequestBody BranchCreateDTO dto) {
-        Long currentUserId = SecurityUtils.getCurrentUserId();
-        Branch branch = new Branch();
-        branch.setName(dto.getName());
-        branch.setDescription(dto.getDescription());
+    public ResponseEntity<BranchDTO> updateBranch(
+            @PathVariable @Positive @NonNull Long id,
+            @RequestBody @Valid @NonNull BranchCreateDTO dto) {
+        Long currentUserId = getCurrentUserIdOrThrow();
+        
+        Branch branch = branchMapper.branchCreateDTOToBranch(dto);
         Branch updated = branchService.updateBranch(id, branch);
         
-        java.util.Optional<org.example.userservice.models.branch.BranchPermission> permission = 
-                branchPermissionService.getPermission(currentUserId, id);
-        java.util.Map<Long, org.example.userservice.models.branch.BranchPermission> permissionMap = 
-                permission.map(p -> java.util.Map.of(id, p))
-                        .orElse(java.util.Collections.emptyMap());
-        
-        return ResponseEntity.ok(mapToDTO(updated, permissionMap));
+        Map<Long, BranchPermission> permissionMap = buildPermissionMapForSingleBranch(currentUserId, id);
+        return ResponseEntity.ok(branchMapper.branchToBranchDTO(updated, permissionMap));
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('settings_finance:delete')")
-    public ResponseEntity<Void> deleteBranch(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteBranch(@PathVariable @Positive @NonNull Long id) {
         branchService.deleteBranch(id);
-
         branchPermissionService.deleteAllPermissionsByBranchId(id);
         return ResponseEntity.noContent().build();
     }
 
-    private BranchDTO mapToDTO(Branch branch, java.util.Map<Long, org.example.userservice.models.branch.BranchPermission> permissionMap) {
-        org.example.userservice.models.branch.BranchPermission permission = permissionMap.get(branch.getId());
-        Boolean canView = permission != null && permission.getCanView();
-        Boolean canOperate = permission != null && permission.getCanOperate();
-        
-        return new BranchDTO(
-                branch.getId(),
-                branch.getName(),
-                branch.getDescription(),
-                branch.getCreatedAt(),
-                branch.getUpdatedAt(),
-                canView,
-                canOperate
-        );
+    private Long getCurrentUserIdOrThrow() {
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        if (currentUserId == null) {
+            throw new UserException("USER_NOT_FOUND", "Current user ID is null");
+        }
+        return currentUserId;
+    }
+
+    private Map<Long, BranchPermission> buildPermissionMap(@NonNull Long userId) {
+        List<BranchPermission> userPermissions = branchPermissionService.getPermissionsByUserId(userId);
+        return userPermissions.stream()
+                .collect(Collectors.toMap(
+                        BranchPermission::getBranchId,
+                        p -> p,
+                        (existing, replacement) -> existing
+                ));
+    }
+
+    private Map<Long, BranchPermission> buildPermissionMapForSingleBranch(@NonNull Long userId, @NonNull Long branchId) {
+        Optional<BranchPermission> permission = branchPermissionService.getPermission(userId, branchId);
+        return permission.map(p -> Map.of(branchId, p))
+                .orElse(Collections.emptyMap());
     }
 }
 

@@ -8,6 +8,7 @@ import org.example.userservice.models.user.Permission;
 import org.example.userservice.models.user.User;
 import org.example.userservice.repositories.UserRepository;
 import org.example.userservice.services.impl.IUserService;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -28,11 +29,12 @@ public class UserService implements IUserService {
     @Override
     @Transactional(readOnly = true)
     @Cacheable(value = "users", key = "#login")
-    public User getUserByLogin(String login) {
+    public User getUserByLogin(@NotNull String login) {
         return userRepository.findByLogin(login)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
     }
 
+    @NotNull
     @Override
     @Transactional(readOnly = true)
     @Cacheable(value = "users", key = "'allUsers'")
@@ -40,6 +42,7 @@ public class UserService implements IUserService {
         return userRepository.findAll();
     }
     
+    @NotNull
     @Override
     @Transactional(readOnly = true)
     @Cacheable(value = "users", key = "'activeUsers'")
@@ -51,7 +54,7 @@ public class UserService implements IUserService {
     @Override
     @Transactional(readOnly = true)
     @Cacheable(value = "users", key = "#id")
-    public User getUserById(Long id) {
+    public User getUserById(@NotNull Long id) {
         return userRepository.findById(id)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
     }
@@ -59,7 +62,7 @@ public class UserService implements IUserService {
     @Override
     @Transactional
     @CacheEvict(value = {"users"}, allEntries = true)
-    public void updateUserPermissions(Long id, Set<Permission> permissions) {
+    public void updateUserPermissions(@NotNull Long id, @NotNull Set<Permission> permissions) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
         user.setPermissions(permissions);
@@ -69,7 +72,7 @@ public class UserService implements IUserService {
     @Override
     @Transactional
     @CacheEvict(value = {"users"}, allEntries = true)
-    public User createUser(User user) {
+    public User createUser(@NotNull User user) {
         log.info(String.format("Started saving by user: %s", user.getLogin()));
 
         if (userRepository.existsByLogin(user.getLogin())) {
@@ -84,7 +87,7 @@ public class UserService implements IUserService {
     @Override
     @Transactional
     @CacheEvict(value = {"users"}, allEntries = true)
-    public void deleteUser(Long userId) {
+    public void deleteUser(@NotNull Long userId) {
         // Balance deletion is now handled by Accounts
         userRepository.deleteById(userId);
     }
@@ -92,7 +95,7 @@ public class UserService implements IUserService {
     @Override
     @Transactional
     @CacheEvict(value = {"users"}, allEntries = true)
-    public User updateUser(User user) {
+    public User updateUser(@NotNull User user) {
         User existingUser = userRepository.findById(user.getId())
                 .orElseThrow(() -> new UserNotFoundException(String.format("User not found with id: %d", user.getId())));
 

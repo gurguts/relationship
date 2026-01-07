@@ -24,6 +24,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -69,13 +70,15 @@ public class TransactionExportService {
 
         Map<Long, String> clientCompanyMap = clientIds.isEmpty()
                 ? Collections.emptyMap()
-                : clientApiClient.getClients(clientIds).stream()
-                .flatMap(map -> map.entrySet().stream())
-                .collect(Collectors.toMap(
-                        Map.Entry::getKey,
-                        Map.Entry::getValue,
-                        (a, _) -> a
-                ));
+                : Optional.ofNullable(clientApiClient.getClients(clientIds).getBody())
+                        .map(clients -> clients.stream()
+                                .flatMap(map -> map.entrySet().stream())
+                                .collect(Collectors.toMap(
+                                        Map.Entry::getKey,
+                                        Map.Entry::getValue,
+                                        (a, _) -> a
+                                )))
+                        .orElse(Collections.emptyMap());
 
         // Get account IDs
         Set<Long> accountIds = transactions.stream()

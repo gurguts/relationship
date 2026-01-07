@@ -1,18 +1,22 @@
 package org.example.userservice.exceptions.user;
 
 import lombok.Getter;
+import lombok.NonNull;
 
 @Getter
 public class UserException extends RuntimeException {
+
+    private static final String DEFAULT_ERROR_CODE = "DEFAULT";
+
     private final String errorCode;
 
-    public UserException(String errorCode, String message) {
+    public UserException(@NonNull String errorCode, @NonNull String message) {
         super(message);
         this.errorCode = errorCode;
     }
 
-    public UserException(String message) {
+    public UserException(@NonNull String message) {
         super(message);
-        this.errorCode = "DEFAULT";
+        this.errorCode = DEFAULT_ERROR_CODE;
     }
 }

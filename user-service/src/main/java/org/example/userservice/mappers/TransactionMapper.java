@@ -1,5 +1,6 @@
 package org.example.userservice.mappers;
 
+import lombok.NonNull;
 import org.example.userservice.models.dto.transaction.TransactionCreateRequestDTO;
 import org.example.userservice.models.dto.transaction.TransactionDTO;
 import org.example.userservice.models.dto.transaction.TransactionPageDTO;
@@ -9,39 +10,14 @@ import org.springframework.stereotype.Component;
 @Component
 public class TransactionMapper {
 
-    public TransactionPageDTO transactionToTransactionPageDTO(Transaction transaction) {
-        if (transaction == null) {
-            return null;
-        }
-
+    public TransactionPageDTO transactionToTransactionPageDTO(@NonNull Transaction transaction) {
         TransactionPageDTO transactionDTO = new TransactionPageDTO();
-
-        transactionDTO.setId(transaction.getId());
-        transactionDTO.setTargetUserId(null);
-        transactionDTO.setAmount(transaction.getAmount());
+        mapCommonFieldsToPageDTO(transaction, transactionDTO);
         transactionDTO.setType(transaction.getType().name());
-        transactionDTO.setDescription(transaction.getDescription());
-        transactionDTO.setCreatedAt(transaction.getCreatedAt());
-        transactionDTO.setExecutorUserId(transaction.getExecutorUserId());
-        transactionDTO.setCurrency(transaction.getCurrency());
-        transactionDTO.setFromAccountId(transaction.getFromAccountId());
-        transactionDTO.setToAccountId(transaction.getToAccountId());
-        transactionDTO.setCategoryId(transaction.getCategoryId());
-        transactionDTO.setExchangeRate(transaction.getExchangeRate());
-        transactionDTO.setConvertedCurrency(transaction.getConvertedCurrency());
-        transactionDTO.setConvertedAmount(transaction.getConvertedAmount());
-        transactionDTO.setCommission(transaction.getCommission());
-        transactionDTO.setVehicleId(transaction.getVehicleId());
-        transactionDTO.setCounterpartyId(transaction.getCounterpartyId());
-
         return transactionDTO;
     }
 
-    public Transaction transactionCreateRequestDTOToTransaction(TransactionCreateRequestDTO dto) {
-        if (dto == null) {
-            return null;
-        }
-
+    public Transaction transactionCreateRequestDTOToTransaction(@NonNull TransactionCreateRequestDTO dto) {
         Transaction transaction = new Transaction();
         transaction.setType(dto.getType());
         transaction.setCategoryId(dto.getCategoryId());
@@ -56,19 +32,37 @@ public class TransactionMapper {
         transaction.setCommission(dto.getCommission());
         transaction.setVehicleId(dto.getVehicleId());
         transaction.setCounterpartyId(dto.getCounterpartyId());
-
         return transaction;
     }
 
-    public TransactionDTO transactionToTransactionDTO(Transaction transaction) {
-        if (transaction == null) {
-            return null;
-        }
-
+    public TransactionDTO transactionToTransactionDTO(@NonNull Transaction transaction) {
         TransactionDTO dto = new TransactionDTO();
+        mapCommonFieldsToDTO(transaction, dto);
+        dto.setType(transaction.getType());
+        return dto;
+    }
+
+    private void mapCommonFieldsToPageDTO(Transaction transaction, TransactionPageDTO dto) {
         dto.setId(transaction.getId());
         dto.setAmount(transaction.getAmount());
-        dto.setType(transaction.getType());
+        dto.setDescription(transaction.getDescription());
+        dto.setCreatedAt(transaction.getCreatedAt());
+        dto.setExecutorUserId(transaction.getExecutorUserId());
+        dto.setCurrency(transaction.getCurrency());
+        dto.setFromAccountId(transaction.getFromAccountId());
+        dto.setToAccountId(transaction.getToAccountId());
+        dto.setCategoryId(transaction.getCategoryId());
+        dto.setExchangeRate(transaction.getExchangeRate());
+        dto.setConvertedCurrency(transaction.getConvertedCurrency());
+        dto.setConvertedAmount(transaction.getConvertedAmount());
+        dto.setCommission(transaction.getCommission());
+        dto.setVehicleId(transaction.getVehicleId());
+        dto.setCounterpartyId(transaction.getCounterpartyId());
+    }
+
+    private void mapCommonFieldsToDTO(Transaction transaction, TransactionDTO dto) {
+        dto.setId(transaction.getId());
+        dto.setAmount(transaction.getAmount());
         dto.setDescription(transaction.getDescription());
         dto.setCreatedAt(transaction.getCreatedAt());
         dto.setClientId(transaction.getClientId());
@@ -83,7 +77,5 @@ public class TransactionMapper {
         dto.setCommission(transaction.getCommission());
         dto.setVehicleId(transaction.getVehicleId());
         dto.setCounterpartyId(transaction.getCounterpartyId());
-
-        return dto;
     }
 }

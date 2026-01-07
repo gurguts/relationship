@@ -1,7 +1,7 @@
 package org.example.userservice.repositories;
 
+import lombok.NonNull;
 import org.example.userservice.models.user.User;
-import org.jetbrains.annotations.NotNull;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.repository.CrudRepository;
 
@@ -10,18 +10,19 @@ import java.util.Optional;
 
 public interface UserRepository extends CrudRepository<User, Long> {
     @EntityGraph(attributePaths = {"permissions"})
-    Optional<User> findByLogin(String login);
+    Optional<User> findByLogin(@NonNull String login);
 
-    @NotNull
+    @NonNull
     @EntityGraph(attributePaths = {"permissions"})
     List<User> findAll();
 
-    @NotNull
+    @NonNull
     @EntityGraph(attributePaths = {"permissions"})
-    Optional<User> findById(@NotNull Long id);
+    Optional<User> findById(@NonNull Long id);
     
+    @NonNull
     @EntityGraph(attributePaths = {"permissions"})
-    List<User> findByStatus(org.example.userservice.models.user.Status status);
+    List<User> findByStatus(@NonNull org.example.userservice.models.user.Status status);
     
-    boolean existsByLogin(String login);
+    boolean existsByLogin(@NonNull String login);
 }

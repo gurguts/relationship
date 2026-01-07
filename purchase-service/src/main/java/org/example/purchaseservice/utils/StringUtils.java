@@ -5,6 +5,7 @@ import lombok.NonNull;
 public final class StringUtils {
 
     private StringUtils() {
+        throw new UnsupportedOperationException("Utility class");
     }
 
     public static String normalizeString(String value) {

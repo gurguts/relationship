@@ -1,7 +1,10 @@
 package org.example.userservice.exceptions.transaction;
 
+import lombok.NonNull;
+
 public class TransactionCategoryNotFoundException extends RuntimeException {
-    public TransactionCategoryNotFoundException(String message) {
+
+    public TransactionCategoryNotFoundException(@NonNull String message) {
         super(message);
     }
 }

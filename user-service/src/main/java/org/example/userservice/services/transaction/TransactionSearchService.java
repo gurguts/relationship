@@ -16,6 +16,7 @@ import org.example.userservice.repositories.TransactionCategoryRepository;
 import org.example.userservice.repositories.TransactionRepository;
 import org.example.userservice.services.impl.ITransactionSearchService;
 import org.example.userservice.spec.TransactionSpecification;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -26,6 +27,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -42,6 +44,7 @@ public class TransactionSearchService implements ITransactionSearchService {
     private final TransactionCategoryRepository transactionCategoryRepository;
     private final CounterpartyRepository counterpartyRepository;
 
+    @NotNull
     @Transactional(readOnly = true)
     public PageResponse<TransactionPageDTO> getTransactionsWithPagination(int page, int size, String sort,
                                                                           String direction, Map<String,
@@ -62,13 +65,15 @@ public class TransactionSearchService implements ITransactionSearchService {
 
         Map<Long, String> clientCompanyMap = clientIds.isEmpty()
                 ? Collections.emptyMap()
-                : clientApiClient.getClients(clientIds).stream()
-                .flatMap(map -> map.entrySet().stream())
-                .collect(Collectors.toMap(
-                        Map.Entry::getKey,
-                        Map.Entry::getValue,
-                        (a, _) -> a
-                ));
+                : Optional.ofNullable(clientApiClient.getClients(clientIds).getBody())
+                        .map(clients -> clients.stream()
+                                .flatMap(map -> map.entrySet().stream())
+                                .collect(Collectors.toMap(
+                                        Map.Entry::getKey,
+                                        Map.Entry::getValue,
+                                        (a, _) -> a
+                                )))
+                        .orElse(Collections.emptyMap());
 
         // Get account IDs
         Set<Long> accountIds = transactionPage.getContent().stream()
@@ -125,14 +130,16 @@ public class TransactionSearchService implements ITransactionSearchService {
             vehicleNumberMap = Collections.emptyMap();
         } else {
             try {
-                List<Map<Long, String>> vehiclesResponse = vehicleApiClient.getVehicles(vehicleIds);
-                vehicleNumberMap = vehiclesResponse.stream()
+                List<Map<Long, String>> vehiclesResponse = vehicleApiClient.getVehicles(vehicleIds).getBody();
+                vehicleNumberMap = vehiclesResponse != null
+                        ? vehiclesResponse.stream()
                         .flatMap(map -> map.entrySet().stream())
                         .collect(Collectors.toMap(
                                 Map.Entry::getKey,
                                 Map.Entry::getValue,
                                 (a, _) -> a
-                        ));
+                        ))
+                        : Collections.emptyMap();
             } catch (Exception e) {
                 log.warn("Failed to fetch vehicle numbers: {}", e.getMessage());
                 vehicleNumberMap = Collections.emptyMap();

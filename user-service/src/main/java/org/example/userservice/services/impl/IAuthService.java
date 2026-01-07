@@ -1,7 +1,9 @@
 package org.example.userservice.services.impl;
 
+import lombok.NonNull;
+
 import java.util.Map;
 
 public interface IAuthService {
-    Map<String, Object> authenticate(final String login, final String password);
+    @NonNull Map<String, Object> authenticate(@NonNull String login, @NonNull String password);
 }

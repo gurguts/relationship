@@ -9,6 +9,7 @@ import org.example.userservice.repositories.TransactionRepository;
 import org.example.userservice.services.impl.ITransactionCrudService;
 import org.example.userservice.services.account.AccountBalanceService;
 import org.example.userservice.models.transaction.TransactionType;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,7 +25,7 @@ public class TransactionCrudService implements ITransactionCrudService {
 
     @Override
     @Transactional(readOnly = true)
-    public Transaction getTransaction(Long id) {
+    public Transaction getTransaction(@NotNull Long id) {
         return transactionRepository.findById(id)
                 .orElseThrow(() -> new TransactionNotFoundException(
                         String.format("Transaction not found with id: %d", id)));
@@ -32,7 +33,7 @@ public class TransactionCrudService implements ITransactionCrudService {
 
     @Override
     @Transactional
-    public void updateTransactionAmount(Long transactionId, BigDecimal amount) {
+    public void updateTransactionAmount(@NotNull Long transactionId, @NotNull BigDecimal amount) {
         if (transactionId == null || amount == null) {
             throw new TransactionException("INVALID_INPUT", "Transaction ID and amount cannot be null");
         }
@@ -132,7 +133,7 @@ public class TransactionCrudService implements ITransactionCrudService {
     }
 
     @Override
-    public void delete(Long transactionId) {
+    public void delete(@NotNull Long transactionId) {
         accountTransactionService.deleteTransaction(transactionId);
     }
 

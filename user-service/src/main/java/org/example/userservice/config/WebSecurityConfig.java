@@ -1,5 +1,6 @@
 package org.example.userservice.config;
 
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.example.userservice.security.CustomUserDetailsService;
 import org.example.userservice.security.JwtTokenFilter;
@@ -24,11 +25,13 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @RequiredArgsConstructor
 public class WebSecurityConfig {
 
+    private static final int BCRYPT_STRENGTH = 12;
+
     private final JwtTokenFilter jwtTokenFilter;
     private final CustomUserDetailsService customUserDetailsService;
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(@NonNull HttpSecurity http) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -47,7 +50,7 @@ public class WebSecurityConfig {
     }
 
     @Bean
-    public AuthenticationManager authenticationManager(HttpSecurity http) throws Exception {
+    public AuthenticationManager authenticationManager(@NonNull HttpSecurity http) throws Exception {
         return http.getSharedObject(AuthenticationManagerBuilder.class)
                 .authenticationProvider(daoAuthenticationProvider())
                 .build();
@@ -62,8 +65,9 @@ public class WebSecurityConfig {
     }
 
     @Bean
+    @NonNull
     public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder(12);
+        return new BCryptPasswordEncoder(BCRYPT_STRENGTH);
     }
 }
 
