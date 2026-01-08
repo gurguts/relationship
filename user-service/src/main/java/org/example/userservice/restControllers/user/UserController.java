@@ -39,7 +39,6 @@ public class UserController {
         return ResponseEntity.ok(user.getFullName());
     }
 
-    @PreAuthorize("hasAuthority('user:view')")
     @GetMapping
     public ResponseEntity<List<UserIdNameDTO>> getUsers() {
         List<User> users = userService.getActiveUsers();

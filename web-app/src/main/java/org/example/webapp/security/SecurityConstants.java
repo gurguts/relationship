@@ -1,0 +1,13 @@
+package org.example.webapp.security;
+
+final class SecurityConstants {
+
+    static final String BEARER_PREFIX = "Bearer ";
+    static final int BEARER_PREFIX_LENGTH = BEARER_PREFIX.length();
+    static final String AUTHORIZATION_HEADER = "Authorization";
+    static final String CLAIM_AUTHORITIES = "authorities";
+
+    private SecurityConstants() {
+        throw new UnsupportedOperationException("Utility class");
+    }
+}

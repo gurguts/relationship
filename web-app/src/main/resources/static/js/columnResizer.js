@@ -161,7 +161,7 @@ function initColumnResizer(clientTypeId) {
             
             // Вычисляем разницу в координатах мыши
             const diff = e.clientX - startX;
-            const newWidth = Math.max(50, startWidth + diff); // Минимальная ширина 50px
+            const newWidth = Math.max(CLIENT_CONSTANTS.MIN_COLUMN_WIDTH, startWidth + diff); // Минимальная ширина 50px
             
             // Получаем сохраненные данные
             const savedColumnWidths = resizer._columnWidths || columnWidths;
@@ -479,7 +479,7 @@ function initColumnResizerForPurchase(containerId, storageKey) {
             e.stopPropagation();
             
             const diff = e.clientX - startX;
-            const newWidth = Math.max(50, startWidth + diff);
+            const newWidth = Math.max(CLIENT_CONSTANTS.MIN_COLUMN_WIDTH, startWidth + diff);
             
             columnWidths[index] = newWidth;
             
@@ -643,7 +643,7 @@ function initColumnResizerForContainers(containerId, storageKey) {
             if (!isResizing) return;
             
             const diff = e.clientX - startX;
-            const newWidth = Math.max(50, startWidth + diff);
+            const newWidth = Math.max(CLIENT_CONSTANTS.MIN_COLUMN_WIDTH, startWidth + diff);
             
             width = newWidth;
             columnWidths[index] = newWidth;

@@ -1,17 +1,17 @@
 package org.example.userservice.services.user;
 
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.userservice.exceptions.user.UserException;
 import org.example.userservice.exceptions.user.UserNotFoundException;
 import org.example.userservice.models.user.Permission;
+import org.example.userservice.models.user.Status;
 import org.example.userservice.models.user.User;
 import org.example.userservice.repositories.UserRepository;
 import org.example.userservice.services.impl.IUserService;
-import org.jetbrains.annotations.NotNull;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,81 +23,104 @@ import java.util.Set;
 @Service
 @RequiredArgsConstructor
 public class UserService implements IUserService {
+    private static final String ERROR_CODE_USER_ALREADY_EXISTS = "ALREADY_EXISTS";
+    private static final String ERROR_CODE_LOGIN_REQUIRED = "LOGIN_REQUIRED";
+    private static final String ERROR_CODE_PASSWORD_REQUIRED = "PASSWORD_REQUIRED";
+    private static final String ERROR_CODE_USER_ID_REQUIRED = "USER_ID_REQUIRED";
+
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Override
     @Transactional(readOnly = true)
     @Cacheable(value = "users", key = "#login")
-    public User getUserByLogin(@NotNull String login) {
+    public User getUserByLogin(@NonNull String login) {
+        if (login.trim().isEmpty()) {
+            throw new UserException(ERROR_CODE_LOGIN_REQUIRED, "Login cannot be empty");
+        }
+        
         return userRepository.findByLogin(login)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+                .orElseThrow(() -> new UserNotFoundException(String.format("User not found with login: %s", login)));
     }
 
-    @NotNull
     @Override
+    @NonNull
     @Transactional(readOnly = true)
     @Cacheable(value = "users", key = "'allUsers'")
     public List<User> getUsers() {
         return userRepository.findAll();
     }
     
-    @NotNull
     @Override
+    @NonNull
     @Transactional(readOnly = true)
     @Cacheable(value = "users", key = "'activeUsers'")
     public List<User> getActiveUsers() {
-        return userRepository.findByStatus(org.example.userservice.models.user.Status.ACTIVE);
+        return userRepository.findByStatus(Status.ACTIVE);
     }
-
 
     @Override
     @Transactional(readOnly = true)
     @Cacheable(value = "users", key = "#id")
-    public User getUserById(@NotNull Long id) {
+    public User getUserById(@NonNull Long id) {
+        return getUserByIdOrThrow(id);
+    }
+
+    private User getUserByIdOrThrow(@NonNull Long id) {
         return userRepository.findById(id)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+                .orElseThrow(() -> new UserNotFoundException(String.format("User not found with id: %d", id)));
     }
 
     @Override
     @Transactional
     @CacheEvict(value = {"users"}, allEntries = true)
-    public void updateUserPermissions(@NotNull Long id, @NotNull Set<Permission> permissions) {
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+    public void updateUserPermissions(@NonNull Long id, @NonNull Set<Permission> permissions) {
+        User user = getUserByIdOrThrow(id);
         user.setPermissions(permissions);
         userRepository.save(user);
+        log.info("Updated permissions for user: id={}, permissionsCount={}", id, permissions.size());
     }
 
     @Override
     @Transactional
     @CacheEvict(value = {"users"}, allEntries = true)
-    public User createUser(@NotNull User user) {
-        log.info(String.format("Started saving by user: %s", user.getLogin()));
+    public User createUser(@NonNull User user) {
+        validateUserForCreation(user);
+        
+        log.info("Creating user: login={}", user.getLogin());
 
         if (userRepository.existsByLogin(user.getLogin())) {
-            throw new UserException("ALREADY_EXISTS", String.format("User with login %s already exists",
-                    user.getLogin()));
+            throw new UserException(ERROR_CODE_USER_ALREADY_EXISTS, 
+                    String.format("User with login %s already exists", user.getLogin()));
         }
+        
         user.setPassword(passwordEncoder.encode(user.getPassword()));
-
-        return userRepository.save(user);
+        User saved = userRepository.save(user);
+        
+        log.info("User created: id={}, login={}", saved.getId(), saved.getLogin());
+        return saved;
     }
 
     @Override
     @Transactional
     @CacheEvict(value = {"users"}, allEntries = true)
-    public void deleteUser(@NotNull Long userId) {
-        // Balance deletion is now handled by Accounts
+    public void deleteUser(@NonNull Long userId) {
+        User user = getUserByIdOrThrow(userId);
         userRepository.deleteById(userId);
+        log.info("User deleted: id={}, login={}", userId, user.getLogin());
     }
 
     @Override
     @Transactional
     @CacheEvict(value = {"users"}, allEntries = true)
-    public User updateUser(@NotNull User user) {
-        User existingUser = userRepository.findById(user.getId())
-                .orElseThrow(() -> new UserNotFoundException(String.format("User not found with id: %d", user.getId())));
+    public User updateUser(@NonNull User user) {
+        if (user.getId() == null) {
+            throw new UserException(ERROR_CODE_USER_ID_REQUIRED, "User ID is required for update");
+        }
+        
+        User existingUser = getUserByIdOrThrow(user.getId());
+        
+        log.info("Updating user: id={}, login={}", user.getId(), user.getLogin());
 
         existingUser.setLogin(user.getLogin());
         existingUser.setFullName(user.getFullName());
@@ -106,6 +129,17 @@ public class UserService implements IUserService {
             existingUser.setStatus(user.getStatus());
         }
 
-        return userRepository.save(existingUser);
+        User saved = userRepository.save(existingUser);
+        log.info("User updated: id={}, login={}", saved.getId(), saved.getLogin());
+        return saved;
+    }
+
+    private void validateUserForCreation(@NonNull User user) {
+        if (user.getLogin() == null || user.getLogin().trim().isEmpty()) {
+            throw new UserException(ERROR_CODE_LOGIN_REQUIRED, "User login is required");
+        }
+        if (user.getPassword() == null || user.getPassword().trim().isEmpty()) {
+            throw new UserException(ERROR_CODE_PASSWORD_REQUIRED, "User password is required");
+        }
     }
 }

@@ -1,5 +1,6 @@
 package org.example.webapp.config;
 
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.example.webapp.security.JwtTokenFilter;
 import org.springframework.context.annotation.Bean;
@@ -9,8 +10,6 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
@@ -23,33 +22,18 @@ public class WebSecurityConfig {
     private final JwtTokenFilter jwtTokenFilter;
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http
+    @NonNull
+    public SecurityFilterChain securityFilterChain(@NonNull HttpSecurity http) throws Exception {
+        return http
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(
-                                "/login",
-                                "/api/v1/auth/**",
-                                "/api/v1/user/login",
-                                "/favicon.ico",
-                                "/favicon/**",
-                                "/js/login.js",
-                                "/css/**"
-                        ).permitAll()
+                        .requestMatchers(SecurityConstants.PUBLIC_PATH_PATTERNS).permitAll()
                         .anyRequest().authenticated()
                 )
-                .addFilterBefore(jwtTokenFilter, UsernamePasswordAuthenticationFilter.class);
-
-        return http.build();
-    }
-
-    @Bean
-    public UserDetailsService userDetailsService() {
-        return _ -> {
-            throw new UsernameNotFoundException("UserDetailsService is not used in the web app");
-        };
+                .addFilterBefore(jwtTokenFilter, UsernamePasswordAuthenticationFilter.class)
+                .build();
     }
 
 }

@@ -202,7 +202,7 @@ function initExcelExport(config) {
             document.body.removeChild(link);
             window.URL.revokeObjectURL(url);
 
-            showMessage('Дані успішно експортовані в Excel', 'info');
+            showMessage(CLIENT_MESSAGES.EXPORT_SUCCESS, 'info');
         } catch (error) {
             console.error('Помилка під час експорту в Excel:', error);
             handleError(error);

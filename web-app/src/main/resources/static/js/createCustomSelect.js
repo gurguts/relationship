@@ -22,7 +22,7 @@ function createCustomSelect(selectElement, isFilter = false) {
     const placeholderInput = document.createElement('input');
     placeholderInput.type = 'text';
     placeholderInput.className = 'custom-select-placeholder';
-    placeholderInput.placeholder = 'Параметр не задано';
+    placeholderInput.placeholder = CLIENT_MESSAGES.PARAMETER_NOT_SET;
     placeholderInput.autocomplete = 'off';
 
     trigger.appendChild(tagsContainer);
@@ -36,7 +36,7 @@ function createCustomSelect(selectElement, isFilter = false) {
     searchWrapper.className = 'custom-select-search';
     const searchInput = document.createElement('input');
     searchInput.type = 'text';
-    searchInput.placeholder = 'Пошук...';
+    searchInput.placeholder = CLIENT_MESSAGES.SEARCH_PLACEHOLDER;
     searchInput.autocomplete = 'off';
     searchWrapper.appendChild(searchInput);
     dropdown.appendChild(searchWrapper);
@@ -89,7 +89,7 @@ function createCustomSelect(selectElement, isFilter = false) {
                     tagsContainer.appendChild(tag);
                 });
                 placeholderInput.value = '';
-                placeholderInput.placeholder = selectedValues.size > 0 ? '' : 'Параметр не задано';
+                placeholderInput.placeholder = selectedValues.size > 0 ? '' : CLIENT_MESSAGES.PARAMETER_NOT_SET;
             } else {
                 const value = Array.from(selectedValues)[0];
                 if (value) {
@@ -99,7 +99,7 @@ function createCustomSelect(selectElement, isFilter = false) {
                     }
                 } else {
                     placeholderInput.value = '';
-                    placeholderInput.placeholder = 'Параметр не задано';
+                    placeholderInput.placeholder = CLIENT_MESSAGES.PARAMETER_NOT_SET;
                 }
             }
             if (isFilter) updateFilterCounter();
@@ -195,12 +195,12 @@ function createCustomSelect(selectElement, isFilter = false) {
 
     const handleSearchInput = debounce(() => {
         sortAndFilterOptions(searchInput.value);
-    }, 200);
+    }, CLIENT_CONSTANTS.CUSTOM_SELECT_DEBOUNCE_DELAY);
 
     const handlePlaceholderInput = debounce(() => {
         sortAndFilterOptions(placeholderInput.value);
         dropdown.classList.add('open');
-    }, 200);
+    }, CLIENT_CONSTANTS.CUSTOM_SELECT_DEBOUNCE_DELAY);
 
     const handleSearchKeydown = (e) => {
         if (e.key === 'Enter') {
@@ -332,7 +332,7 @@ function populateSelect(selectId, data) {
     if (!selectId.endsWith('-filter')) {
         const defaultOption = document.createElement('option');
         defaultOption.value = '';
-        defaultOption.text = select.dataset.placeholder || 'Виберіть параметр';
+        defaultOption.text = select.dataset.placeholder || CLIENT_MESSAGES.SELECT_PLACEHOLDER;
         defaultOption.disabled = true;
         defaultOption.selected = true;
         select.appendChild(defaultOption);

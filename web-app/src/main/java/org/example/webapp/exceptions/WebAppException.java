@@ -11,9 +11,5 @@ public class WebAppException extends RuntimeException {
         this.errorCode = errorCode;
     }
 
-    public WebAppException(String message) {
-        super(message);
-        this.errorCode = "DEFAULT";
-    }
 }
 

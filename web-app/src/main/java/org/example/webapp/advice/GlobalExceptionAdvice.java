@@ -1,6 +1,8 @@
 package org.example.webapp.advice;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.webapp.exceptions.WebAppException;
@@ -14,6 +16,8 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.util.HashMap;
 import java.util.Locale;
@@ -28,92 +32,141 @@ public class GlobalExceptionAdvice {
 
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ErrorResponse handleValidationExceptions(MethodArgumentNotValidException ex, Locale locale) {
+    public ErrorResponse handleValidationExceptions(@NonNull MethodArgumentNotValidException ex, @NonNull Locale locale) {
         Map<String, String> errors = new HashMap<>();
         ex.getBindingResult().getAllErrors().forEach(error -> {
             String fieldName = error instanceof FieldError ? ((FieldError) error).getField() : error.getObjectName();
-            String errorMessage = messageSource.getMessage(Objects.requireNonNull(error.getDefaultMessage()),
-                    null, error.getDefaultMessage(), locale);
+            String defaultMessage = Objects.toString(error.getDefaultMessage(), "");
+            String errorMessage = MessageLocalizationHelper.getLocalizedMessage(
+                    messageSource, defaultMessage, defaultMessage, locale);
             errors.put(fieldName, errorMessage);
         });
-        log.info("Validation errors: {}", errors);
+        logRequestContext("Validation errors: {}", errors);
         return new ErrorResponse(
-                "VALIDATION_ERROR",
-                messageSource.getMessage("validation.error", null, "Validation errors", locale),
+                ErrorConstants.ERROR_VALIDATION,
+                MessageLocalizationHelper.getLocalizedMessage(
+                        messageSource, ErrorConstants.MESSAGE_KEY_VALIDATION,
+                        ErrorConstants.DEFAULT_MESSAGE_VALIDATION, locale),
                 errors
         );
     }
 
     @ResponseStatus(HttpStatus.FORBIDDEN)
     @ExceptionHandler(AccessDeniedException.class)
-    public ErrorResponse handleAccessDeniedException(AccessDeniedException ex, Locale locale) {
-        log.warn("Access Denied: {}", ex.getMessage());
+    public ErrorResponse handleAccessDeniedException(@NonNull AccessDeniedException ex, @NonNull Locale locale) {
+        logRequestContext("Access Denied: {}", Objects.toString(ex.getMessage(), ""));
         return new ErrorResponse(
-                "ACCESS_DENIED",
-                messageSource.getMessage("access.denied", null,
-                        "You do not have permission to perform this action.", locale),
+                ErrorConstants.ERROR_ACCESS_DENIED,
+                MessageLocalizationHelper.getLocalizedMessage(
+                        messageSource, ErrorConstants.MESSAGE_KEY_ACCESS_DENIED,
+                        ErrorConstants.DEFAULT_MESSAGE_ACCESS_DENIED, locale),
                 null
         );
     }
 
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ExceptionHandler(WebAppException.class)
-    public ErrorResponse handleWebAppException(WebAppException ex, Locale locale) {
-        log.warn("WebApp error: code={}, message={}", ex.getErrorCode(), ex.getMessage());
+    public ErrorResponse handleWebAppException(@NonNull WebAppException ex, @NonNull Locale locale) {
+        String errorCode = ex.getErrorCode();
+        String exceptionMessage = Objects.toString(ex.getMessage(), "");
+        logRequestContext("WebApp error: code={}, message={}", errorCode, exceptionMessage);
         
-        // Try to get localized message from messages.properties
-        String messageKey = String.format("webapp.error.%s", ex.getErrorCode().toUpperCase());
-        String localizedMessage = messageSource.getMessage(messageKey, null, null, locale);
+        String message = MessageLocalizationHelper.getLocalizedErrorCodeMessage(
+                messageSource, errorCode,
+                ErrorConstants.MESSAGE_KEY_PREFIX_WEBAPP_ERROR,
+                exceptionMessage, locale);
         
-        // If no localized message found, use the English message from exception
-        String message = (localizedMessage != null && !localizedMessage.equals(messageKey))
-                ? localizedMessage 
-                : ex.getMessage();
-        
-        return new ErrorResponse(ex.getErrorCode(), message, null);
+        return new ErrorResponse(errorCode, message, null);
     }
 
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ExceptionHandler(IllegalArgumentException.class)
-    public ErrorResponse handleIllegalArgumentException(IllegalArgumentException ex, Locale locale) {
-        log.warn("Illegal argument: {}", ex.getMessage());
+    public ErrorResponse handleIllegalArgumentException(@NonNull IllegalArgumentException ex, @NonNull Locale locale) {
+        String exceptionMessage = Objects.toString(ex.getMessage(), "");
+        logRequestContext("Illegal argument: {}", exceptionMessage);
         return new ErrorResponse(
-                "INVALID_ARGUMENT",
-                messageSource.getMessage("webapp.error.INVALID_ARGUMENT", null, ex.getMessage(), locale),
+                ErrorConstants.ERROR_INVALID_ARGUMENT,
+                MessageLocalizationHelper.getLocalizedMessage(
+                        messageSource, ErrorConstants.MESSAGE_KEY_INVALID_ARGUMENT,
+                        exceptionMessage, locale),
                 null
         );
     }
 
     @ResponseStatus(HttpStatus.NOT_FOUND)
     @ExceptionHandler(UsernameNotFoundException.class)
-    public ErrorResponse handleUsernameNotFoundException(UsernameNotFoundException ex, Locale locale) {
-        log.warn("Username not found: {}", ex.getMessage());
+    public ErrorResponse handleUsernameNotFoundException(@NonNull UsernameNotFoundException ex, @NonNull Locale locale) {
+        String exceptionMessage = Objects.toString(ex.getMessage(), "");
+        logRequestContext("Username not found: {}", exceptionMessage);
         return new ErrorResponse(
-                "USER_NOT_FOUND",
-                messageSource.getMessage("webapp.error.USER_NOT_FOUND", null, ex.getMessage(), locale),
+                ErrorConstants.ERROR_USER_NOT_FOUND,
+                MessageLocalizationHelper.getLocalizedMessage(
+                        messageSource, ErrorConstants.MESSAGE_KEY_USER_NOT_FOUND,
+                        exceptionMessage, locale),
                 null
         );
     }
 
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ExceptionHandler(JsonProcessingException.class)
-    public ErrorResponse handleJsonProcessingException(JsonProcessingException ex, Locale locale) {
-        log.warn("Invalid JSON format: {}", ex.getMessage());
+    public ErrorResponse handleJsonProcessingException(@NonNull JsonProcessingException ex, @NonNull Locale locale) {
+        String exceptionMessage = Objects.toString(ex.getMessage(), "");
+        logRequestContext("Invalid JSON format: {}", exceptionMessage);
         return new ErrorResponse(
-                "INVALID_JSON",
-                messageSource.getMessage("json.error", null, "Invalid JSON format", locale),
+                ErrorConstants.ERROR_INVALID_JSON,
+                MessageLocalizationHelper.getLocalizedMessage(
+                        messageSource, ErrorConstants.MESSAGE_KEY_JSON_ERROR,
+                        ErrorConstants.DEFAULT_MESSAGE_INVALID_JSON, locale),
                 null
         );
     }
 
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     @ExceptionHandler(Exception.class)
-    public ErrorResponse handleGenericException(Exception ex, Locale locale) {
-        log.error("An unexpected error occurred", ex);
+    public ErrorResponse handleGenericException(@NonNull Exception ex, @NonNull Locale locale) {
+        String exceptionMessage = Objects.toString(ex.getMessage(), "");
+        logRequestContextWithException(exceptionMessage, ex);
         return new ErrorResponse(
-                "SERVER_ERROR",
-                messageSource.getMessage("server.error", null, "Internal server error", locale),
+                ErrorConstants.ERROR_SERVER_ERROR,
+                MessageLocalizationHelper.getLocalizedMessage(
+                        messageSource, ErrorConstants.MESSAGE_KEY_SERVER_ERROR,
+                        ErrorConstants.DEFAULT_MESSAGE_SERVER_ERROR, locale),
                 null
         );
+    }
+
+    private void logRequestContext(String message, Object... args) {
+        HttpServletRequest request = getCurrentRequest();
+        if (request != null) {
+            String path = Objects.toString(request.getRequestURI(), "unknown");
+            String method = request.getMethod() != null ? request.getMethod() : "unknown";
+            String remoteAddress = Objects.toString(request.getRemoteAddr(), "unknown");
+            log.warn("{} Path: {}, Method: {}, Remote: {}", 
+                    String.format(message.replace("{}", "%s"), args), path, method, remoteAddress);
+        } else {
+            log.warn(message, args);
+        }
+    }
+
+    private void logRequestContextWithException(String exceptionMessage, Throwable ex) {
+        HttpServletRequest request = getCurrentRequest();
+        if (request != null) {
+            String path = Objects.toString(request.getRequestURI(), "unknown");
+            String method = request.getMethod() != null ? request.getMethod() : "unknown";
+            String remoteAddress = Objects.toString(request.getRemoteAddr(), "unknown");
+            log.error("{}: {} Path: {}, Method: {}, Remote: {}",
+                    "An unexpected error occurred", exceptionMessage, path, method, remoteAddress, ex);
+        } else {
+            log.error("{}: {}", "An unexpected error occurred", exceptionMessage, ex);
+        }
+    }
+
+    private HttpServletRequest getCurrentRequest() {
+        try {
+            ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+            return attributes != null ? attributes.getRequest() : null;
+        } catch (Exception e) {
+            return null;
+        }
     }
 }

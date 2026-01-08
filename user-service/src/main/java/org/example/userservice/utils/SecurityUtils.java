@@ -13,10 +13,6 @@ public class SecurityUtils {
         throw new UserException("AUTHENTICATION_REQUIRED", "User is not authenticated or userId is not available");
     }
 
-    public static boolean isAuthenticated() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        return authentication != null && authentication.isAuthenticated();
-    }
 }
 
 
