@@ -708,7 +708,6 @@
 
     .client-row {
         width: calc(100% - 2em);
-        max-width: 600px;
         margin: 0 auto 1em auto;
         display: flex;
         flex-direction: column;

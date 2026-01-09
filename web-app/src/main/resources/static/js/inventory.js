@@ -1,206 +1,77 @@
-function escapeHtml(text) {
-    if (text == null) return '';
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
 const userContainerBalanceList = document.getElementById('user-container-balance-list');
-const balanceOperationModal = document.getElementById('balanceOperationModal');
-const operationUserId = document.getElementById('operationUserId');
-const balanceOperationForm = document.getElementById('balanceOperationForm');
-const operationContainerType = document.getElementById('operationContainerType');
-const operationAction = document.getElementById('operationAction');
-const operationQuantity = document.getElementById('operationQuantity');
+const loaderBackdrop = document.getElementById('loader-backdrop');
 
+async function loadData() {
+    if (loaderBackdrop) {
+        loaderBackdrop.style.display = 'flex';
+    }
 
-async function loadUserContainerBalances() {
     try {
-        const response = await fetch('/api/v1/containers/balance/users', {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-        });
+        const [balances, containerTypes] = await Promise.all([
+            InventoryDataLoader.loadUserContainerBalances(),
+            InventoryDataLoader.loadContainerTypes()
+        ]);
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            handleError(new ErrorResponse(errorData.error, errorData.message, errorData.details));
-            return;
-        }
-
-        const balances = await response.json();
-        renderUserContainerBalances(balances);
+        InventoryRenderer.renderUserContainerBalances(balances, userContainerBalanceList);
+        InventoryModal.setContainerTypes(containerTypes);
     } catch (error) {
-        console.error('Error:', error);
+        console.error('Error loading data:', error);
         handleError(error);
+    } finally {
+        if (loaderBackdrop) {
+            loaderBackdrop.style.display = 'none';
+        }
     }
 }
 
-async function loadContainerTypes() {
+async function handleBalanceOperation(action, userId, containerId, quantity) {
+    if (loaderBackdrop) {
+        loaderBackdrop.style.display = 'flex';
+    }
+
     try {
-        const response = await fetch('/api/v1/container', {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            handleError(new ErrorResponse(errorData.error, errorData.message, errorData.details));
-            return;
-        }
-
-        const types = await response.json();
-        if (operationContainerType) {
-            types.forEach(type => {
-                const option = document.createElement('option');
-                option.value = type.id;
-                option.textContent = type.name;
-                operationContainerType.appendChild(option);
-            });
+        await InventoryDataLoader.executeBalanceOperation(action, userId, containerId, quantity);
+        InventoryModal.closeModal();
+        await loadData();
+        if (typeof showMessage === 'function') {
+            showMessage('Операція успішно виконана', 'info');
         }
     } catch (error) {
-        console.error('Error:', error);
+        console.error('Error executing balance operation:', error);
         handleError(error);
+    } finally {
+        if (loaderBackdrop) {
+            loaderBackdrop.style.display = 'none';
+        }
     }
 }
 
-function renderUserContainerBalances(balances) {
+function setupOperationButtons() {
     if (!userContainerBalanceList) return;
-    
-    userContainerBalanceList.textContent = '';
 
-    balances.forEach(userBalance => {
-        const item = document.createElement('li');
-        item.className = 'user-container-balance-item';
-
-        const header = document.createElement('div');
-        header.className = 'user-container-balance-item-header';
-        
-        const userNameSpan = document.createElement('span');
-        userNameSpan.className = 'user-name';
-        userNameSpan.textContent = userBalance.userName || '';
-        header.appendChild(userNameSpan);
-        
-        const operationButton = document.createElement('button');
-        operationButton.className = 'user-container-balance-button';
-        operationButton.textContent = 'Операція';
-        operationButton.addEventListener('click', () => {
-            openBalanceOperationModal(userBalance.userId);
-        });
-        header.appendChild(operationButton);
-
-        const balanceList = document.createElement('ul');
-        if (userBalance.balances && Array.isArray(userBalance.balances)) {
-            userBalance.balances.forEach(balance => {
-                const balanceItem = document.createElement('li');
-                const containerName = balance.containerName || '';
-                const totalQuantity = balance.totalQuantity != null ? balance.totalQuantity : 0;
-                const clientQuantity = balance.clientQuantity != null ? balance.clientQuantity : 0;
-                balanceItem.textContent = `${containerName} - ${totalQuantity} шт - у клієнта ${clientQuantity} шт`;
-                balanceList.appendChild(balanceItem);
-            });
+    userContainerBalanceList.addEventListener('click', (event) => {
+        const button = event.target.closest('.user-container-balance-button');
+        if (button) {
+            const userId = button.getAttribute('data-user-id');
+            if (userId) {
+                InventoryModal.openModal(userId);
+            }
         }
-
-        item.appendChild(header);
-        item.appendChild(balanceList);
-        userContainerBalanceList.appendChild(item);
     });
 }
 
-function openBalanceOperationModal(userId) {
-    if (balanceOperationModal) {
-        balanceOperationModal.classList.add('show');
-    }
-    if (operationUserId) {
-        operationUserId.value = userId;
-    }
-}
-
-function closeBalanceOperationModal() {
-    if (balanceOperationModal) {
-        balanceOperationModal.classList.remove('show');
-    }
-    if (balanceOperationForm) {
-        balanceOperationForm.reset();
-    }
-}
-
-function initBalanceOperationModal() {
-    const closeBtn = document.querySelector('.close-balance-operation');
-    if (closeBtn) {
-        if (closeBtn._closeModalHandler) {
-            closeBtn.removeEventListener('click', closeBtn._closeModalHandler);
-        }
-        const closeModalHandler = () => {
-            closeBalanceOperationModal();
-        };
-        closeBtn._closeModalHandler = closeModalHandler;
-        closeBtn.addEventListener('click', closeModalHandler);
-    }
-
-    if (balanceOperationModal) {
-        if (balanceOperationModal._modalClickHandler) {
-            balanceOperationModal.removeEventListener('click', balanceOperationModal._modalClickHandler);
-            balanceOperationModal._modalClickHandler = null;
-        }
-    }
-
-    if (balanceOperationForm) {
-        if (balanceOperationForm._submitHandler) {
-            balanceOperationForm.removeEventListener('submit', balanceOperationForm._submitHandler);
-        }
-        const submitHandler = async (event) => {
-            event.preventDefault();
-
-            if (!operationAction || !operationContainerType || !operationQuantity || !operationUserId) {
-                return;
-            }
-
-            const action = operationAction.value;
-            const containerId = operationContainerType.value;
-            const quantity = operationQuantity.value;
-            const userId = operationUserId.value;
-
-            const endpoint = `/api/v1/containers/balance/${action}`;
-            const requestBody = {
-                userId: parseInt(userId),
-                containerId: parseInt(containerId),
-                quantity: quantity,
-            };
-
-            try {
-                const response = await fetch(endpoint, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(requestBody),
-                });
-
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    handleError(new ErrorResponse(errorData.error, errorData.message, errorData.details));
-                    return;
-                }
-
-                closeBalanceOperationModal();
-                await loadUserContainerBalances();
-                showMessage('Операція успішно виконана', 'info');
-            } catch (error) {
-                console.error('Ошибка:', error);
-                handleError(error);
-            }
-        };
-        balanceOperationForm._submitHandler = submitHandler;
-        balanceOperationForm.addEventListener('submit', submitHandler);
-    }
-}
-
 document.addEventListener('DOMContentLoaded', async () => {
-    await loadUserContainerBalances();
-    await loadContainerTypes();
-    initBalanceOperationModal();
+    InventoryModal.init({
+        modalId: 'balanceOperationModal',
+        formId: 'balanceOperationForm',
+        closeBtnSelector: '.close-balance-operation',
+        userIdInputId: 'operationUserId',
+        containerTypeSelectId: 'operationContainerType',
+        actionSelectId: 'operationAction',
+        quantityInputId: 'operationQuantity',
+        onSubmit: handleBalanceOperation
+    });
+
+    setupOperationButtons();
+    await loadData();
 });

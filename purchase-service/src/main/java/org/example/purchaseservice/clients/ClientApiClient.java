@@ -26,5 +26,11 @@ public interface ClientApiClient {
     ResponseEntity<List<ClientFieldValueDTO>> getClientFieldValues(@PathVariable @NonNull Long clientId);
     
     @PostMapping("/field-values/batch")
-    ResponseEntity<Map<Long, List<ClientFieldValueDTO>>> getClientFieldValuesBatch(@RequestBody @NonNull List<Long> clientIds);
+    ResponseEntity<Map<Long, List<ClientFieldValueDTO>>> getClientFieldValuesBatch(@RequestBody @NonNull org.example.purchaseservice.models.dto.client.ClientIdsRequest request);
+    
+    @PostMapping("/ids/search")
+    ResponseEntity<List<Long>> searchClientIds(@RequestBody @NonNull ClientSearchRequest request);
+    
+    @PostMapping("/by-ids")
+    ResponseEntity<List<ClientDTO>> getClientsByIds(@RequestBody @NonNull List<Long> clientIds);
 }

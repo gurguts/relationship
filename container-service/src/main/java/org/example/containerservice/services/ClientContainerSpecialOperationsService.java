@@ -19,7 +19,9 @@ import org.example.containerservice.models.dto.client.ClientDTO;
 import org.example.containerservice.models.dto.client.ClientSearchRequest;
 import org.example.containerservice.models.dto.clienttype.ClientFieldValueDTO;
 import org.example.containerservice.models.dto.clienttype.ClientTypeFieldDTO;
+import org.example.containerservice.models.dto.fields.SourceDTO;
 import org.example.containerservice.models.dto.impl.IdNameDTO;
+import feign.FeignException;
 import org.example.containerservice.repositories.ClientContainerRepository;
 import org.example.containerservice.services.impl.IClientContainerSpecialOperationsService;
 import org.example.containerservice.spec.ClientContainerSpecification;
@@ -129,15 +131,22 @@ public class ClientContainerSpecialOperationsService implements IClientContainer
 
         FilterUtils.extractClientTypeId(filterParams);
         Map<Long, List<ClientFieldValueDTO>> clientFieldValuesMap = fetchClientFieldValues(clientIds);
+        List<SourceDTO> sourceDTOs = fetchClientSourceDTOs(clients);
 
-        Workbook workbook = generateWorkbook(clientContainerList, selectedFields, filterIds, clientMap,
+        FilterIds updatedFilterIds = new FilterIds(
+                filterIds.userDTOs(),
+                filterIds.userIds(),
+                sourceDTOs
+        );
+
+        Workbook workbook = generateWorkbook(clientContainerList, selectedFields, updatedFilterIds, clientMap,
                 clientFieldValuesMap);
 
         sendExcelFileResponse(workbook, response);
     }
 
     private record FilterIds(
-            List<UserDTO> userDTOs, List<Long> userIds
+            List<UserDTO> userDTOs, List<Long> userIds, List<SourceDTO> sourceDTOs
     ) {}
 
     private void validateInputs(String query, @NonNull List<String> selectedFields) {
@@ -168,7 +177,7 @@ public class ClientContainerSpecialOperationsService implements IClientContainer
         }
         List<Long> userIds = userDTOs.stream().map(UserDTO::getId).toList();
 
-        return new FilterIds(userDTOs, userIds);
+        return new FilterIds(userDTOs, userIds, Collections.emptyList());
     }
 
     private List<ClientDTO> fetchClientIds(String query, Map<String, List<String>> filterParams) {
@@ -316,18 +325,35 @@ public class ClientContainerSpecialOperationsService implements IClientContainer
     }
 
     private Map<Long, ClientTypeFieldDTO> loadFieldMap(@NonNull List<Long> fieldIds) {
-        Map<Long, ClientTypeFieldDTO> fieldMap = new HashMap<>();
-        for (Long fieldId : fieldIds) {
+        if (fieldIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        Map<Long, ClientTypeFieldDTO> result = new HashMap<>();
+        int batchSize = 100;
+
+        for (int i = 0; i < fieldIds.size(); i += batchSize) {
+            int endIndex = Math.min(i + batchSize, fieldIds.size());
+            List<Long> batch = fieldIds.subList(i, endIndex);
+
             try {
-                ClientTypeFieldDTO fieldDTO = clientTypeFieldApiClient.getFieldById(fieldId).getBody();
-                if (fieldDTO != null) {
-                    fieldMap.put(fieldId, fieldDTO);
+                org.example.containerservice.models.dto.clienttype.FieldIdsRequest request =
+                        new org.example.containerservice.models.dto.clienttype.FieldIdsRequest(batch);
+                List<ClientTypeFieldDTO> fields = clientTypeFieldApiClient.getFieldsByIds(request).getBody();
+                if (fields != null) {
+                    fields.stream()
+                            .filter(Objects::nonNull)
+                            .forEach(field -> result.putIfAbsent(field.getId(), field));
                 }
+            } catch (FeignException e) {
+                log.error("Feign error fetching client type fields: status={}, error={}",
+                        e.status(), e.getMessage(), e);
             } catch (Exception e) {
-                log.warn("Failed to get field label for field {}: {}", fieldId, e.getMessage());
+                log.error("Unexpected error fetching client type fields: error={}", e.getMessage(), e);
             }
         }
-        return fieldMap;
+
+        return result;
     }
 
     private void addDynamicFieldHeaders(@NonNull Map<String, String> headerMap,
@@ -338,11 +364,22 @@ public class ClientContainerSpecialOperationsService implements IClientContainer
                 Long fieldId = parseFieldId(field);
                 if (fieldId != null) {
                     ClientTypeFieldDTO fieldDTO = fieldMap.get(fieldId);
-                    if (fieldDTO != null && fieldDTO.getFieldLabel() != null) {
-                        headerMap.put(field, fieldDTO.getFieldLabel() + " (клієнта)");
+                    String header;
+                    if (fieldDTO != null) {
+                        String label = fieldDTO.getFieldLabel();
+                        if (label != null && !label.trim().isEmpty()) {
+                            header = label + " (клієнта)";
+                        } else {
+                            String name = fieldDTO.getFieldName();
+                            header = (name != null && !name.trim().isEmpty())
+                                    ? name + " (клієнта)"
+                                    : field + " (клієнта)";
+                        }
                     } else {
-                        headerMap.put(field, field + " (клієнта)");
+                        log.warn("ClientTypeFieldDTO not found for fieldId: {}", fieldId);
+                        header = field + " (клієнта)";
                     }
+                    headerMap.put(field, header);
                 } else {
                     log.warn("Invalid field ID in field name: {}", field);
                     headerMap.put(field, field + " (клієнта)");
@@ -396,21 +433,85 @@ public class ClientContainerSpecialOperationsService implements IClientContainer
         }
 
         if (field.endsWith(FIELD_SUFFIX_CLIENT) && client != null) {
-            return getClientFieldValue(client, field);
+            return getClientFieldValue(client, field, filterIds);
         }
 
         return getContainerFieldValue(clientContainer, field, filterIds);
     }
 
-    private String getClientFieldValue(@NonNull ClientDTO client, @NonNull String field) {
+    private String getClientFieldValue(@NonNull ClientDTO client, @NonNull String field, @NonNull FilterIds filterIds) {
         return switch (field) {
             case FIELD_ID_CLIENT -> client.getId() != null ? String.valueOf(client.getId()) : EMPTY_STRING;
             case FIELD_COMPANY_CLIENT -> client.getCompany() != null ? client.getCompany() : EMPTY_STRING;
             case FIELD_CREATED_AT_CLIENT -> client.getCreatedAt() != null ? client.getCreatedAt() : EMPTY_STRING;
             case FIELD_UPDATED_AT_CLIENT -> client.getUpdatedAt() != null ? client.getUpdatedAt() : EMPTY_STRING;
-            case FIELD_SOURCE_CLIENT -> client.getSourceId() != null ? client.getSourceId() : EMPTY_STRING;
+            case FIELD_SOURCE_CLIENT -> getClientSourceName(client, filterIds.sourceDTOs());
             default -> EMPTY_STRING;
         };
+    }
+
+    private String getClientSourceName(@NonNull ClientDTO client, @NonNull List<SourceDTO> sourceDTOs) {
+        try {
+            java.lang.reflect.Method getSourceMethod = client.getClass().getMethod("getSource");
+            Object sourceObj = getSourceMethod.invoke(client);
+            if (sourceObj != null) {
+                java.lang.reflect.Method getNameMethod = sourceObj.getClass().getMethod("getName");
+                Object sourceName = getNameMethod.invoke(sourceObj);
+                if (sourceName != null) {
+                    return sourceName.toString();
+                }
+            }
+        } catch (NoSuchMethodException | java.lang.reflect.InvocationTargetException | IllegalAccessException e) {
+        }
+
+        String sourceId = client.getSourceId();
+        if (sourceId == null || sourceId.trim().isEmpty()) {
+            return EMPTY_STRING;
+        }
+        try {
+            Long sourceIdLong = Long.parseLong(sourceId.trim());
+            String name = getNameFromDTOList(sourceDTOs, sourceIdLong);
+            if (name.isEmpty() && !sourceDTOs.isEmpty()) {
+                log.debug("Source name not found for sourceId: {} in {} sources", sourceIdLong, sourceDTOs.size());
+            }
+            return name;
+        } catch (NumberFormatException e) {
+            log.warn("Invalid sourceId format: {}", sourceId);
+            return EMPTY_STRING;
+        }
+    }
+
+    private List<SourceDTO> fetchClientSourceDTOs(@NonNull List<ClientDTO> clients) {
+        Map<Long, SourceDTO> uniqueSources = new HashMap<>();
+
+        for (ClientDTO client : clients) {
+            try {
+                java.lang.reflect.Method getSourceMethod = client.getClass().getMethod("getSource");
+                Object sourceObj = getSourceMethod.invoke(client);
+                if (sourceObj != null) {
+                    SourceDTO sourceDTO = (SourceDTO) sourceObj;
+                    if (sourceDTO.getId() != null) {
+                        uniqueSources.put(sourceDTO.getId(), sourceDTO);
+                    }
+                }
+            } catch (NoSuchMethodException | java.lang.reflect.InvocationTargetException | IllegalAccessException | ClassCastException e) {
+            }
+
+            String sourceId = client.getSourceId();
+            if (sourceId != null && !sourceId.trim().isEmpty()) {
+                try {
+                    Long sourceIdLong = Long.parseLong(sourceId.trim());
+                    if (!uniqueSources.containsKey(sourceIdLong)) {
+                        log.debug("Source ID {} found in client but SourceDTO not available via reflection", sourceIdLong);
+                    }
+                } catch (NumberFormatException e) {
+                    log.warn("Invalid sourceId format in client: {}", sourceId);
+                }
+            }
+        }
+
+        log.debug("Fetched {} unique source names for clients", uniqueSources.size());
+        return new ArrayList<>(uniqueSources.values());
     }
 
     private String getContainerFieldValue(@NonNull ClientContainer clientContainer,
@@ -482,13 +583,29 @@ public class ClientContainerSpecialOperationsService implements IClientContainer
             return Collections.emptyMap();
         }
 
-        try {
-            Map<Long, List<ClientFieldValueDTO>> result = clientApiClient.getClientFieldValuesBatch(clientIds).getBody();
-            return result != null ? result : Collections.emptyMap();
-        } catch (Exception e) {
-            log.warn("Failed to fetch field values batch for clients: {}", e.getMessage());
-            return Collections.emptyMap();
+        Map<Long, List<ClientFieldValueDTO>> result = new HashMap<>();
+        int batchSize = 100;
+
+        for (int i = 0; i < clientIds.size(); i += batchSize) {
+            int endIndex = Math.min(i + batchSize, clientIds.size());
+            List<Long> batch = clientIds.subList(i, endIndex);
+
+            try {
+                org.example.containerservice.models.dto.client.ClientIdsRequest request =
+                        new org.example.containerservice.models.dto.client.ClientIdsRequest(batch);
+                Map<Long, List<ClientFieldValueDTO>> batchResult = clientApiClient.getClientFieldValuesBatch(request).getBody();
+                if (batchResult != null) {
+                    result.putAll(batchResult);
+                }
+            } catch (FeignException e) {
+                log.error("Feign error fetching field values batch for clients: status={}, error={}",
+                        e.status(), e.getMessage(), e);
+            } catch (Exception e) {
+                log.warn("Failed to fetch field values batch for clients: {}", e.getMessage());
+            }
         }
+
+        return result;
     }
 
     private <T extends IdNameDTO> String getNameFromDTOList(@NonNull List<T> dtoList, Long id) {

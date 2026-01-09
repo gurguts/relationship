@@ -8,6 +8,7 @@ import org.example.purchaseservice.services.source.SourceService;
 import org.example.purchaseservice.models.ClientData;
 import org.example.purchaseservice.models.PageResponse;
 import org.example.purchaseservice.models.Purchase;
+import org.example.purchaseservice.models.UserProductIds;
 import org.example.purchaseservice.models.dto.client.ClientDTO;
 import org.example.purchaseservice.models.dto.client.ClientSearchRequest;
 import org.example.purchaseservice.models.dto.purchase.PurchasePageDTO;
@@ -20,13 +21,16 @@ import org.example.purchaseservice.services.impl.IPurchaseSearchService;
 import org.example.purchaseservice.spec.PurchaseSpecification;
 import feign.FeignException;
 import jakarta.persistence.criteria.Predicate;
+import org.example.purchaseservice.utils.FilterUtils;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -79,18 +83,45 @@ public class PurchaseSearchService implements IPurchaseSearchService {
     @Transactional(readOnly = true)
     public PageResponse<PurchasePageDTO> searchPurchase(String query, @NonNull Pageable pageable,
                                                         Map<String, List<String>> filterParams) {
+        long startTime = System.currentTimeMillis();
+        
         validateSearchRequest(pageable, query);
         
         SearchFilters filters = extractFilters(filterParams);
-        ClientData clientData = fetchClientData(query, filters.clientFilterParams(), filters.clientTypeId());
-        List<Long> sourceIds = resolveSourceIds(query, filters.clientFilterParams(), filters.clientTypeId());
         
+        long clientDataStart = System.currentTimeMillis();
+        ClientData clientData = fetchClientData(query, filters.clientFilterParams(), filters.clientTypeId());
+        log.info("Fetch client IDs completed in {} ms", System.currentTimeMillis() - clientDataStart);
+
+        long sourceDataStart = System.currentTimeMillis();
+        List<Long> sourceIds = resolveSourceIds(query, filters.clientFilterParams(), filters.clientTypeId());
+        log.info("Fetch source IDs completed in {} ms", System.currentTimeMillis() - sourceDataStart);
+        
+        long fetchPurchasesStart = System.currentTimeMillis();
         Page<Purchase> purchasePage = fetchPurchases(query, filters.purchaseFilterParams(), 
                 clientData.clientIds(), sourceIds, pageable);
+        log.info("Fetch purchases from database completed in {} ms", System.currentTimeMillis() - fetchPurchasesStart);
         
         List<Purchase> purchases = purchasePage.getContent();
+        
+        long receivedStatusStart = System.currentTimeMillis();
         Map<String, Boolean> receivedStatusMap = buildReceivedStatusMap(purchases);
-        List<PurchasePageDTO> purchaseDTOs = mapPurchasesToDTOs(purchases, clientData.clientMap(), receivedStatusMap);
+        log.info("Build received status map completed in {} ms", System.currentTimeMillis() - receivedStatusStart);
+        
+        Set<Long> requiredClientIds = purchases.stream()
+                .map(Purchase::getClient)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        
+        long fetchClientsStart = System.currentTimeMillis();
+        Map<Long, ClientDTO> clientMap = fetchClientsByIds(requiredClientIds);
+        log.info("Fetch clients by IDs completed in {} ms", System.currentTimeMillis() - fetchClientsStart);
+        
+        long mappingStart = System.currentTimeMillis();
+        List<PurchasePageDTO> purchaseDTOs = mapPurchasesToDTOs(purchases, clientMap, receivedStatusMap);
+        log.info("Map purchases to DTOs completed in {} ms", System.currentTimeMillis() - mappingStart);
+        
+        log.info("Total searchPurchase completed in {} ms", System.currentTimeMillis() - startTime);
         
         return buildPageResponse(purchasePage, purchaseDTOs);
     }
@@ -116,8 +147,8 @@ public class PurchaseSearchService implements IPurchaseSearchService {
     }
 
     private SearchFilters extractFilters(Map<String, List<String>> filterParams) {
-        Long clientTypeId = org.example.purchaseservice.utils.FilterUtils.extractClientTypeId(filterParams);
-        Map<String, List<String>> clientFilterParams = org.example.purchaseservice.utils.FilterUtils.filterClientParams(filterParams, false);
+        Long clientTypeId = FilterUtils.extractClientTypeId(filterParams);
+        Map<String, List<String>> clientFilterParams = FilterUtils.filterClientParams(filterParams, false);
         Map<String, List<String>> purchaseFilterParams = filterPurchaseParams(filterParams);
         return new SearchFilters(clientTypeId, clientFilterParams, purchaseFilterParams);
     }
@@ -152,53 +183,65 @@ public class PurchaseSearchService implements IPurchaseSearchService {
     
     private ClientData fetchClientData(String query, @NonNull Map<String, List<String>> clientFilterParams, Long clientTypeId) {
         try {
-            if (hasClientFilters(clientFilterParams, clientTypeId, query)) {
-                return fetchClientsWithFilters(query, clientFilterParams, clientTypeId);
+            if (hasClientFilters(clientFilterParams, query)) {
+                ClientData clientData = fetchClientIdsWithFilters(query, clientFilterParams, clientTypeId);
+                if (clientData.clientIds() != null && clientData.clientIds().isEmpty() && 
+                    StringUtils.hasText(query) && clientFilterParams.isEmpty()) {
+                    return new ClientData(null, Collections.emptyMap());
+                }
+                return clientData;
             } else {
-                return fetchAllClientsData();
+                return new ClientData(null, Collections.emptyMap());
             }
         } catch (FeignException e) {
             log.error("Feign error fetching client data: query={}, status={}, error={}", 
                     query, e.status(), e.getMessage(), e);
+            if (StringUtils.hasText(query) && clientFilterParams.isEmpty()) {
+                return new ClientData(null, Collections.emptyMap());
+            }
             return new ClientData(Collections.emptyList(), Collections.emptyMap());
         } catch (Exception e) {
             log.error("Unexpected error fetching client data: query={}, error={}", query, e.getMessage(), e);
+            if (StringUtils.hasText(query) && clientFilterParams.isEmpty()) {
+                return new ClientData(null, Collections.emptyMap());
+            }
             return new ClientData(Collections.emptyList(), Collections.emptyMap());
         }
     }
 
-    private boolean hasClientFilters(@NonNull Map<String, List<String>> clientFilterParams, Long clientTypeId, String query) {
-        return !clientFilterParams.isEmpty() || clientTypeId != null || (query != null && !query.trim().isEmpty());
+    private boolean hasClientFilters(@NonNull Map<String, List<String>> clientFilterParams, String query) {
+        boolean hasQuery = query != null && !query.trim().isEmpty();
+        boolean hasClientFilters = !clientFilterParams.isEmpty();
+        return hasClientFilters || hasQuery;
     }
 
-    private ClientData fetchClientsWithFilters(String query, @NonNull Map<String, List<String>> clientFilterParams, Long clientTypeId) {
+    private ClientData fetchClientIdsWithFilters(String query, @NonNull Map<String, List<String>> clientFilterParams, Long clientTypeId) {
         ClientSearchRequest clientRequest = new ClientSearchRequest(query, clientFilterParams, clientTypeId);
-        List<ClientDTO> foundClients = clientApiClient.searchClients(clientRequest).getBody();
-        if (foundClients == null) {
-            foundClients = Collections.emptyList();
+        List<Long> clientIds = clientApiClient.searchClientIds(clientRequest).getBody();
+        if (clientIds == null) {
+            clientIds = Collections.emptyList();
         }
-        Map<Long, ClientDTO> clientMap = buildClientMap(foundClients);
-        List<Long> clientIds = extractClientIds(foundClients);
-        return new ClientData(clientIds, clientMap);
+        return new ClientData(clientIds, Collections.emptyMap());
     }
 
-    private ClientData fetchAllClientsData() {
-        ClientSearchRequest allClientsRequest = new ClientSearchRequest(null, Collections.emptyMap(), null);
-        List<ClientDTO> allClients = fetchAllClients(allClientsRequest);
-        Map<Long, ClientDTO> clientMap = buildClientMap(allClients);
-        return new ClientData(null, clientMap);
-    }
-    
-    private List<ClientDTO> fetchAllClients(@NonNull ClientSearchRequest request) {
+    private Map<Long, ClientDTO> fetchClientsByIds(@NonNull Set<Long> clientIds) {
+        if (clientIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        
         try {
-            List<ClientDTO> allClients = clientApiClient.searchClients(request).getBody();
-            return Objects.requireNonNullElse(allClients, Collections.emptyList());
+            List<Long> clientIdsList = new ArrayList<>(clientIds);
+            List<ClientDTO> clients = clientApiClient.getClientsByIds(clientIdsList).getBody();
+            if (clients == null) {
+                clients = Collections.emptyList();
+            }
+            return buildClientMap(clients);
         } catch (FeignException e) {
-            log.error("Feign error fetching all clients: status={}, error={}", e.status(), e.getMessage(), e);
-            return Collections.emptyList();
+            log.error("Feign error fetching clients by IDs: status={}, error={}", e.status(), e.getMessage(), e);
+            return Collections.emptyMap();
         } catch (Exception e) {
-            log.error("Unexpected error fetching all clients: error={}", e.getMessage(), e);
-            return Collections.emptyList();
+            log.error("Unexpected error fetching clients by IDs: error={}", e.getMessage(), e);
+            return Collections.emptyMap();
         }
     }
     
@@ -211,15 +254,6 @@ public class PurchaseSearchService implements IPurchaseSearchService {
                         client -> client,
                         (existing, _) -> existing
                 ));
-    }
-    
-    private List<Long> extractClientIds(@NonNull List<ClientDTO> clients) {
-        return clients.stream()
-                .filter(Objects::nonNull)
-                .map(ClientDTO::getId)
-                .filter(Objects::nonNull)
-                .distinct()
-                .toList();
     }
 
     private List<Long> fetchSourceIds(@NonNull String query) {
@@ -237,11 +271,11 @@ public class PurchaseSearchService implements IPurchaseSearchService {
     private Page<Purchase> fetchPurchases(String query, @NonNull Map<String, List<String>> filterParams,
                                           List<Long> clientIds, List<Long> sourceIds, @NonNull Pageable pageable) {
         if (clientIds != null && clientIds.isEmpty()) {
-            return org.springframework.data.domain.Page.empty(pageable);
+            return Page.empty(pageable);
         }
 
         if (sourceIds != null && sourceIds.isEmpty()) {
-            return org.springframework.data.domain.Page.empty(pageable);
+            return Page.empty(pageable);
         }
         
         Specification<Purchase> spec = new PurchaseSpecification(query, filterParams, clientIds, sourceIds);
@@ -285,13 +319,27 @@ public class PurchaseSearchService implements IPurchaseSearchService {
             return Collections.emptyMap();
         }
         
-        List<WarehouseReceipt> receipts = loadWarehouseReceipts(userProductIds.userIds(), userProductIds.productIds());
-        Map<String, NavigableSet<LocalDateTime>> receiptDatesByKey = groupReceiptsByKey(receipts);
+        LocalDateTime minPurchaseDate = purchases.stream()
+                .map(Purchase::getCreatedAt)
+                .filter(Objects::nonNull)
+                .min(LocalDateTime::compareTo)
+                .orElse(null);
         
-        return buildStatusMap(purchases, receiptDatesByKey);
+        long loadReceiptsStart = System.currentTimeMillis();
+        List<WarehouseReceipt> receipts = loadWarehouseReceipts(userProductIds.userIds(), userProductIds.productIds(), minPurchaseDate);
+        log.info("Load warehouse receipts completed in {} ms, receipts count: {}", 
+                System.currentTimeMillis() - loadReceiptsStart, receipts.size());
+        
+        long groupReceiptsStart = System.currentTimeMillis();
+        Map<String, NavigableSet<LocalDateTime>> receiptDatesByKey = groupReceiptsByKey(receipts);
+        log.info("Group receipts by key completed in {} ms", System.currentTimeMillis() - groupReceiptsStart);
+        
+        long buildStatusStart = System.currentTimeMillis();
+        Map<String, Boolean> statusMap = buildStatusMap(purchases, receiptDatesByKey);
+        log.info("Build status map completed in {} ms", System.currentTimeMillis() - buildStatusStart);
+        
+        return statusMap;
     }
-
-    private record UserProductIds(List<Long> userIds, List<Long> productIds) {}
 
     private UserProductIds extractUserAndProductIds(@NonNull List<Purchase> purchases) {
         List<Long> userIds = purchases.stream()
@@ -309,11 +357,18 @@ public class PurchaseSearchService implements IPurchaseSearchService {
         return new UserProductIds(userIds, productIds);
     }
 
-    private List<WarehouseReceipt> loadWarehouseReceipts(@NonNull List<Long> userIds, @NonNull List<Long> productIds) {
+    private List<WarehouseReceipt> loadWarehouseReceipts(@NonNull List<Long> userIds, @NonNull List<Long> productIds, LocalDateTime minPurchaseDate) {
         Specification<WarehouseReceipt> spec = (root, _, cb) -> {
             Predicate userIdPredicate = root.get("userId").in(userIds);
             Predicate productIdPredicate = root.get("productId").in(productIds);
-            return cb.and(userIdPredicate, productIdPredicate);
+            Predicate basePredicate = cb.and(userIdPredicate, productIdPredicate);
+            
+            if (minPurchaseDate != null) {
+                Predicate datePredicate = cb.greaterThanOrEqualTo(root.get("createdAt"), minPurchaseDate);
+                return cb.and(basePredicate, datePredicate);
+            }
+            
+            return basePredicate;
         };
         return warehouseReceiptRepository.findAll(spec);
     }

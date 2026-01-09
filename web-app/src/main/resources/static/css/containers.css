@@ -1316,7 +1316,6 @@
         display: flex !important;
         flex-direction: column !important;
         width: calc(100% - 2em) !important;
-        max-width: 600px !important;
         margin: 0 auto 1em auto !important;
         padding: 0.8em !important;
         border-radius: 12px !important;
@@ -1616,7 +1615,6 @@
         display: flex !important;
         flex-direction: column !important;
         width: calc(100% - 2em) !important;
-        max-width: 600px !important;
         margin: 0 auto 1em auto !important;
         padding: 0.8em !important;
         border-radius: 12px !important;

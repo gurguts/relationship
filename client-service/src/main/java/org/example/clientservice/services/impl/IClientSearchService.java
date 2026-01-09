@@ -17,4 +17,8 @@ public interface IClientSearchService {
     List<ClientListDTO> searchClientsForPurchase(@NonNull ClientSearchRequest request);
 
     List<Map<Long, String>> searchIdsClient(@NonNull List<Long> ids);
+    
+    List<Long> searchClientIds(@NonNull ClientSearchRequest request);
+    
+    List<ClientDTO> getClientsByIds(@NonNull List<Long> clientIds);
 }

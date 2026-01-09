@@ -1,4 +1,14 @@
 const PurchaseRenderer = (function() {
+    function attachCompanyCellClickHandler(companyCell, client, loadClientDetailsFn) {
+        if (companyCell && loadClientDetailsFn && client) {
+            companyCell.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                loadClientDetailsFn(client);
+            });
+        }
+    }
+    
     function getDefaultSortDirection(sortField) {
         if (sortField === 'updatedAt' || sortField === 'createdAt') {
             return 'DESC';
@@ -146,9 +156,9 @@ const PurchaseRenderer = (function() {
             const companyCell = document.createElement('td');
             companyCell.className = 'company-cell';
             companyCell.setAttribute('data-label', 'Назва клієнта');
+            companyCell.style.cursor = 'pointer';
             if (clientName) {
                 companyCell.textContent = clientName;
-                companyCell.style.cursor = 'pointer';
             } else {
                 companyCell.appendChild(ClientUtils.createEmptyCellSpan());
             }
@@ -281,10 +291,9 @@ const PurchaseRenderer = (function() {
             row.appendChild(actionsCell);
             tableBody.appendChild(row);
             
-            if (companyCell && purchase.client && loadClientDetailsFn) {
-                companyCell.addEventListener('click', () => {
-                    loadClientDetailsFn(purchase.client);
-                });
+            if (purchase.client && loadClientDetailsFn) {
+                const companyCellInRow = row.querySelector('.company-cell');
+                attachCompanyCellClickHandler(companyCellInRow, purchase.client, loadClientDetailsFn);
             }
             
             if (!isReceived) {

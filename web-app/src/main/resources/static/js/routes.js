@@ -559,11 +559,11 @@ async function renderClients(clients) {
         openCreateContainerModalWrapper,
         (typeId) => {
             if (typeof applyColumnWidths === 'function' && typeId) {
-                setTimeout(() => {
+        setTimeout(() => {
                     applyColumnWidths(typeId);
-                }, 0);
-            }
-        }
+        }, 0);
+    }
+}
     );
     
     RouteRenderer.setupSortHandlers(currentSort, currentDirection, (newSort, newDirection) => {
@@ -627,7 +627,7 @@ function handleSortClick(event) {
 
 async function loadDataWithSort(page, size, sort, direction) {
     if (loaderBackdrop) {
-        loaderBackdrop.style.display = 'flex';
+    loaderBackdrop.style.display = 'flex';
     }
     const searchTerm = searchInput && searchInput.value ? searchInput.value : '';
     const params = {
@@ -680,9 +680,9 @@ async function loadDataWithSort(page, size, sort, direction) {
         handleError(error instanceof ErrorResponse ? error : new Error(error.message || 'Failed to load clients'));
     } finally {
         if (loaderBackdrop) {
-            loaderBackdrop.style.display = 'none';
-        }
+        loaderBackdrop.style.display = 'none';
     }
+}
 }
 
 
@@ -1020,14 +1020,14 @@ function updateFilterCounter() {
 
 if (filterCounter) {
     filterCounter.addEventListener('click', () => {
-        clearFilters();
+    clearFilters();
     });
 }
 
 function clearFilters() {
     ClientFilters.clearFilters(selectedFilters, filterForm, customSelects, searchInput, () => {
-        updateFilterCounter();
-        loadDataWithSort(currentPage, pageSize, currentSort, currentDirection);
+    updateFilterCounter();
+    loadDataWithSort(currentPage, pageSize, currentSort, currentDirection);
     });
 }
 

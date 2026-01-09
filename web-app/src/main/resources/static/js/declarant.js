@@ -1660,7 +1660,7 @@ if (carrierForm) {
             let response;
             if (id) {
                 response = await fetch(`/api/v1/carriers/${id}`, {
-                    method: 'PUT',
+                    method: 'PATCH',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify(carrierData)
                 });

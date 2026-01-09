@@ -187,7 +187,7 @@ async function handleCreateCounterparty(e) {
     try {
         const data = { type, name, description };
         const url = `${API_BASE}/counterparties${id ? `/${id}` : ''}`;
-        const method = id ? 'PUT' : 'POST';
+        const method = id ? 'PATCH' : 'POST';
         
         const response = await fetch(url, {
             method,
@@ -336,7 +336,7 @@ async function handleCreateCategory(e) {
         const url = categoryId 
             ? `${API_BASE}/transaction-categories/${categoryId}`
             : `${API_BASE}/transaction-categories`;
-        const method = categoryId ? 'PUT' : 'POST';
+        const method = categoryId ? 'PATCH' : 'POST';
         
         const response = await fetch(url, {
             method: method,
@@ -488,7 +488,7 @@ async function handleCreateField(e) {
         const url = fieldId 
             ? `${API_BASE}/${config.endpoint}/${fieldId}`
             : `${API_BASE}/${config.endpoint}`;
-        const method = fieldId ? 'PUT' : 'POST';
+        const method = fieldId ? 'PATCH' : 'POST';
         
         const response = await fetch(url, {
             method: method,
@@ -622,7 +622,7 @@ async function handleCreateBranch(e) {
         const url = branchId 
             ? `${API_BASE}/branches/${branchId}`
             : `${API_BASE}/branches`;
-        const method = branchId ? 'PUT' : 'POST';
+        const method = branchId ? 'PATCH' : 'POST';
         
         const response = await fetch(url, {
             method: method,
@@ -800,7 +800,7 @@ async function handleCreateAccount(e) {
         const url = accountId 
             ? `${API_BASE}/accounts/${accountId}`
             : `${API_BASE}/accounts`;
-        const method = accountId ? 'PUT' : 'POST';
+        const method = accountId ? 'PATCH' : 'POST';
         
         const response = await fetch(url, {
             method: method,

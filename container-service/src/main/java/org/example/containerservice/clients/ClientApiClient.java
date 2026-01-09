@@ -20,6 +20,12 @@ public interface ClientApiClient {
     @PostMapping("/search")
     ResponseEntity<List<ClientDTO>> searchClients(@NonNull @RequestBody ClientSearchRequest request);
     
+    @PostMapping("/ids/search")
+    ResponseEntity<List<Long>> searchClientIds(@RequestBody @NonNull ClientSearchRequest request);
+    
+    @PostMapping("/by-ids")
+    ResponseEntity<List<ClientDTO>> getClientsByIds(@RequestBody @NonNull List<Long> clientIds);
+    
     @PostMapping("/field-values/batch")
-    ResponseEntity<Map<Long, List<ClientFieldValueDTO>>> getClientFieldValuesBatch(@NonNull @RequestBody List<Long> clientIds);
+    ResponseEntity<Map<Long, List<ClientFieldValueDTO>>> getClientFieldValuesBatch(@RequestBody @NonNull org.example.containerservice.models.dto.client.ClientIdsRequest request);
 }

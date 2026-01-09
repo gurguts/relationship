@@ -94,7 +94,7 @@ public class ClientSearchService implements IClientSearchService {
                 : null;
         
         Map<String, List<String>> cleanedFilterParams = cleanFilterParamsForPurchase(request.filterParams());
-        List<Client> clients = fetchClients(normalizedQuery, cleanedFilterParams, filterIds, request.clientTypeId());
+        List<Client> clients = fetchClients(normalizedQuery, cleanedFilterParams, filterIds, request.clientTypeId(), false);
         
         ExternalClientDataCache cache = ExternalClientDataCache.of(sourceService.getAllSources());
         
@@ -226,12 +226,19 @@ public class ClientSearchService implements IClientSearchService {
     
     private List<Client> fetchClients(String query, @NonNull Map<String, List<String>> filterParams, 
                                      ClientFilterIds filterIds, Long clientTypeId) {
+        return fetchClients(query, filterParams, filterIds, clientTypeId, true);
+    }
+    
+    private List<Client> fetchClients(String query, @NonNull Map<String, List<String>> filterParams, 
+                                     ClientFilterIds filterIds, Long clientTypeId, boolean loadFieldValues) {
         ClientSpecification specification = createClientSpecification(query, filterParams, filterIds, 
                 clientTypeId, null);
         
         List<Client> clients = clientRepository.findAll(specification);
         
-        loadFieldValuesIfNeeded(clients);
+        if (loadFieldValues) {
+            loadFieldValuesIfNeeded(clients);
+        }
         
         return clients;
     }
@@ -316,6 +323,44 @@ public class ClientSearchService implements IClientSearchService {
                 .map(ClientType::getId)
                 .filter(Objects::nonNull)
                 .distinct()
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @NonNull
+    public List<Long> searchClientIds(@NonNull ClientSearchRequest request) {
+        String normalizedQuery = normalizeQuery(request.query());
+        validateQuery(normalizedQuery);
+        
+        ClientFilterIds filterIds = normalizedQuery != null 
+                ? fetchFilterIds(normalizedQuery) 
+                : null;
+        
+        Map<String, List<String>> cleanedFilterParams = cleanFilterParamsForPurchase(request.filterParams());
+        List<Client> clients = fetchClients(normalizedQuery, cleanedFilterParams, filterIds, request.clientTypeId(), false);
+        
+        return clients.stream()
+                .map(Client::getId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @NonNull
+    public List<ClientDTO> getClientsByIds(@NonNull List<Long> clientIds) {
+        if (clientIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+        
+        if (clientIds.size() > MAX_IDS_LIMIT) {
+            throw new ClientException("TOO_MANY_IDS", 
+                    String.format("Cannot request more than %d client IDs at once", MAX_IDS_LIMIT));
+        }
+        
+        List<Client> clients = clientRepository.findAllById(clientIds);
+        return clients.stream()
+                .map(clientMapper::clientToClientDTO)
                 .collect(Collectors.toList());
     }
 }

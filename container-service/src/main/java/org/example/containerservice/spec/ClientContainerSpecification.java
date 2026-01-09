@@ -15,6 +15,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -48,7 +49,7 @@ public class ClientContainerSpecification implements Specification<ClientContain
     public ClientContainerSpecification(String query, Map<String, List<String>> filterParams,
                                         List<Long> clientIds) {
         this.query = query;
-        this.filterParams = filterParams;
+        this.filterParams = filterParams != null ? filterParams : Collections.emptyMap();
         this.clientIds = clientIds;
     }
 
@@ -62,26 +63,31 @@ public class ClientContainerSpecification implements Specification<ClientContain
         predicates.add(filterPredicate);
 
         if (StringUtils.hasText(this.query)) {
-            List<Predicate> searchPredicates = new ArrayList<>();
-
-            String escapedQuery = escapeQuery(this.query);
-            String searchPattern = String.format(LIKE_PATTERN, escapedQuery);
-            searchPredicates.add(
-                    criteriaBuilder.like(
-                            criteriaBuilder.toString(root.get(FIELD_ID)), searchPattern)
-            );
-
             if (clientIds != null && !clientIds.isEmpty()) {
-                searchPredicates.add(root.get(FIELD_CLIENT).in(clientIds));
+                predicates.add(root.get(FIELD_CLIENT).in(clientIds));
+            } else {
+                List<Predicate> searchPredicates = buildSearchPredicates(root, criteriaBuilder);
+                Predicate searchPredicate = criteriaBuilder.or(searchPredicates.toArray(new Predicate[0]));
+                predicates.add(searchPredicate);
             }
-
-            Predicate searchPredicate = criteriaBuilder.or(searchPredicates.toArray(new Predicate[0]));
-            predicates.add(searchPredicate);
         } else if (clientIds != null && !clientIds.isEmpty()) {
             predicates.add(root.get(FIELD_CLIENT).in(clientIds));
         }
 
         return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
+    }
+
+    private List<Predicate> buildSearchPredicates(@NonNull Root<ClientContainer> root, @NonNull CriteriaBuilder criteriaBuilder) {
+        List<Predicate> searchPredicates = new ArrayList<>();
+
+        String escapedQuery = escapeQuery(this.query);
+        String searchPattern = String.format(LIKE_PATTERN, escapedQuery);
+        searchPredicates.add(
+                criteriaBuilder.like(
+                        criteriaBuilder.toString(root.get(FIELD_ID)), searchPattern)
+        );
+
+        return searchPredicates;
     }
 
     private String escapeQuery(String query) {

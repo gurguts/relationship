@@ -1,4 +1,4 @@
-const PurchaseFilters = (function() {
+const ContainerFilters = (function() {
     let isBuildingFilters = false;
     
     function convertFieldNamesToFieldIds(filters, filterableFields, clientTypeFields) {
@@ -46,8 +46,7 @@ const PurchaseFilters = (function() {
             filterableFields,
             availableSources,
             availableUsers,
-            availableProducts,
-            availableCurrencies
+            availableContainers
         } = config;
         
         if (!filterForm) return;
@@ -81,39 +80,29 @@ const PurchaseFilters = (function() {
                 el.remove();
             });
 
-            const purchaseH2 = document.createElement('h2');
-            purchaseH2.textContent = 'Фільтри закупівлі:';
-            filterForm.appendChild(purchaseH2);
+            const containerH2 = document.createElement('h2');
+            containerH2.textContent = 'Фільтри тари:';
+            filterForm.appendChild(containerH2);
+
+            const containerSelectItem = document.createElement('div');
+            containerSelectItem.className = 'select-section-item';
+            containerSelectItem.innerHTML = `
+                <br>
+                <label class="select-label-style" for="filter-container">Тип тари:</label>
+                <select id="filter-container" name="container" multiple>
+                </select>
+            `;
+            filterForm.appendChild(containerSelectItem);
 
             const userSelectItem = document.createElement('div');
             userSelectItem.className = 'select-section-item';
             userSelectItem.innerHTML = `
                 <br>
-                <label class="select-label-style" for="filter-user">Водій:</label>
+                <label class="select-label-style" for="filter-user">Власник:</label>
                 <select id="filter-user" name="user" multiple>
                 </select>
             `;
             filterForm.appendChild(userSelectItem);
-
-            const sourceSelectItem = document.createElement('div');
-            sourceSelectItem.className = 'select-section-item';
-            sourceSelectItem.innerHTML = `
-                <br>
-                <label class="select-label-style" for="filter-source">Залучення:</label>
-                <select id="filter-source" name="source" multiple>
-                </select>
-            `;
-            filterForm.appendChild(sourceSelectItem);
-
-            const productSelectItem = document.createElement('div');
-            productSelectItem.className = 'select-section-item';
-            productSelectItem.innerHTML = `
-                <br>
-                <label class="select-label-style" for="filter-product">Товар:</label>
-                <select id="filter-product" name="product" multiple>
-                </select>
-            `;
-            filterForm.appendChild(productSelectItem);
 
             const quantityH2 = document.createElement('h2');
             quantityH2.textContent = 'Кількість:';
@@ -129,70 +118,19 @@ const PurchaseFilters = (function() {
             `;
             filterForm.appendChild(quantityBlock);
 
-            const unitPriceH2 = document.createElement('h2');
-            unitPriceH2.textContent = 'Ціна за одиницю:';
-            filterForm.appendChild(unitPriceH2);
+            const updatedAtH2 = document.createElement('h2');
+            updatedAtH2.textContent = 'Дата оновлення:';
+            filterForm.appendChild(updatedAtH2);
             
-            const unitPriceBlock = document.createElement('div');
-            unitPriceBlock.className = 'filter-block';
-            unitPriceBlock.innerHTML = `
-                <label class="from-to-style" for="filter-unitPrice-from">Від:</label>
-                <input type="number" id="filter-unitPrice-from" name="unitPriceFrom" step="0.01" placeholder="Мінімум">
-                <label class="from-to-style" for="filter-unitPrice-to">До:</label>
-                <input type="number" id="filter-unitPrice-to" name="unitPriceTo" step="0.01" placeholder="Максимум">
+            const updatedAtBlock = document.createElement('div');
+            updatedAtBlock.className = 'filter-block';
+            updatedAtBlock.innerHTML = `
+                <label class="from-to-style" for="filter-updatedAt-from">Від:</label>
+                <input type="date" id="filter-updatedAt-from" name="updatedAtFrom">
+                <label class="from-to-style" for="filter-updatedAt-to">До:</label>
+                <input type="date" id="filter-updatedAt-to" name="updatedAtTo">
             `;
-            filterForm.appendChild(unitPriceBlock);
-
-            const totalPriceH2 = document.createElement('h2');
-            totalPriceH2.textContent = 'Всього сплачено:';
-            filterForm.appendChild(totalPriceH2);
-            
-            const totalPriceBlock = document.createElement('div');
-            totalPriceBlock.className = 'filter-block';
-            totalPriceBlock.innerHTML = `
-                <label class="from-to-style" for="filter-totalPrice-from">Від:</label>
-                <input type="number" id="filter-totalPrice-from" name="totalPriceFrom" step="0.01" placeholder="Мінімум">
-                <label class="from-to-style" for="filter-totalPrice-to">До:</label>
-                <input type="number" id="filter-totalPrice-to" name="totalPriceTo" step="0.01" placeholder="Максимум">
-            `;
-            filterForm.appendChild(totalPriceBlock);
-
-            const paymentMethodSelectItem = document.createElement('div');
-            paymentMethodSelectItem.className = 'select-section-item';
-            paymentMethodSelectItem.innerHTML = `
-                <br>
-                <label class="select-label-style" for="filter-paymentMethod">Метод оплати:</label>
-                <select id="filter-paymentMethod" name="paymentMethod">
-                    <option value="">Всі</option>
-                    <option value="2">2</option>
-                    <option value="1">1</option>
-                </select>
-            `;
-            filterForm.appendChild(paymentMethodSelectItem);
-
-            const createdAtH2 = document.createElement('h2');
-            createdAtH2.textContent = 'Дата створення:';
-            filterForm.appendChild(createdAtH2);
-            
-            const createdAtBlock = document.createElement('div');
-            createdAtBlock.className = 'filter-block';
-            createdAtBlock.innerHTML = `
-                <label class="from-to-style" for="filter-createdAt-from">Від:</label>
-                <input type="date" id="filter-createdAt-from" name="createdAtFrom">
-                <label class="from-to-style" for="filter-createdAt-to">До:</label>
-                <input type="date" id="filter-createdAt-to" name="createdAtTo">
-            `;
-            filterForm.appendChild(createdAtBlock);
-
-            const currencySelectItem = document.createElement('div');
-            currencySelectItem.className = 'select-section-item';
-            currencySelectItem.innerHTML = `
-                <br>
-                <label class="select-label-style" for="filter-currency">Валюта:</label>
-                <select id="filter-currency" name="currency" multiple>
-                </select>
-            `;
-            filterForm.appendChild(currencySelectItem);
+            filterForm.appendChild(updatedAtBlock);
 
             const clientH2 = document.createElement('h2');
             clientH2.textContent = 'Фільтри клієнта:';
@@ -237,6 +175,36 @@ const PurchaseFilters = (function() {
             filterForm.appendChild(clientSourceSelectItem);
 
             setTimeout(() => {
+                const containerSelect = filterForm.querySelector('#filter-container');
+                if (containerSelect && availableContainers && availableContainers.length > 0) {
+                    const containerData = availableContainers.map(c => ({
+                        id: c.id,
+                        name: c.name
+                    }));
+                    if (typeof createCustomSelect === 'function') {
+                        const customSelect = createCustomSelect(containerSelect, true);
+                        if (customSelect) {
+                            customSelects['filter-container'] = customSelect;
+                            customSelect.populate(containerData);
+                        }
+                    }
+                }
+
+                const userSelect = filterForm.querySelector('#filter-user');
+                if (userSelect && availableUsers && availableUsers.length > 0) {
+                    const userData = availableUsers.map(u => ({
+                        id: u.id,
+                        name: u.name
+                    }));
+                    if (typeof createCustomSelect === 'function') {
+                        const customSelect = createCustomSelect(userSelect, true);
+                        if (customSelect) {
+                            customSelects['filter-user'] = customSelect;
+                            customSelect.populate(userData);
+                        }
+                    }
+                }
+
                 const clientSourceSelect = filterForm.querySelector('#filter-clientSource');
                 if (clientSourceSelect && !customSelects['filter-clientSource'] && availableSources && availableSources.length > 0) {
                     const sourceData = availableSources.map(s => ({
@@ -264,10 +232,10 @@ const PurchaseFilters = (function() {
                         const filterBlock = document.createElement('div');
                         filterBlock.className = 'filter-block';
                         filterBlock.innerHTML = `
-                            <label class="from-to-style" for="filter-${field.fieldName}-from">Від:</label>
-                            <input type="date" id="filter-${field.fieldName}-from" name="${field.fieldName}From">
-                            <label class="from-to-style" for="filter-${field.fieldName}-to">До:</label>
-                            <input type="date" id="filter-${field.fieldName}-to" name="${field.fieldName}To">
+                            <label class="from-to-style" for="filter-${ClientUtils.escapeHtml(field.fieldName)}-from">Від:</label>
+                            <input type="date" id="filter-${ClientUtils.escapeHtml(field.fieldName)}-from" name="${ClientUtils.escapeHtml(field.fieldName)}From">
+                            <label class="from-to-style" for="filter-${ClientUtils.escapeHtml(field.fieldName)}-to">До:</label>
+                            <input type="date" id="filter-${ClientUtils.escapeHtml(field.fieldName)}-to" name="${ClientUtils.escapeHtml(field.fieldName)}To">
                         `;
                         filterForm.appendChild(filterBlock);
                     } else if (field.fieldType === 'NUMBER') {
@@ -278,10 +246,10 @@ const PurchaseFilters = (function() {
                         const filterBlock = document.createElement('div');
                         filterBlock.className = 'filter-block';
                         filterBlock.innerHTML = `
-                            <label class="from-to-style" for="filter-${field.fieldName}-from">Від:</label>
-                            <input type="number" id="filter-${field.fieldName}-from" name="${field.fieldName}From" step="any" placeholder="Мінімум">
-                            <label class="from-to-style" for="filter-${field.fieldName}-to">До:</label>
-                            <input type="number" id="filter-${field.fieldName}-to" name="${field.fieldName}To" step="any" placeholder="Максимум">
+                            <label class="from-to-style" for="filter-${ClientUtils.escapeHtml(field.fieldName)}-from">Від:</label>
+                            <input type="number" id="filter-${ClientUtils.escapeHtml(field.fieldName)}-from" name="${ClientUtils.escapeHtml(field.fieldName)}From" step="any" placeholder="Мінімум">
+                            <label class="from-to-style" for="filter-${ClientUtils.escapeHtml(field.fieldName)}-to">До:</label>
+                            <input type="number" id="filter-${ClientUtils.escapeHtml(field.fieldName)}-to" name="${ClientUtils.escapeHtml(field.fieldName)}To" step="any" placeholder="Максимум">
                         `;
                         filterForm.appendChild(filterBlock);
                     } else if (field.fieldType === 'LIST') {
@@ -370,10 +338,10 @@ const PurchaseFilters = (function() {
                         selectItem.className = 'select-section-item';
                         selectItem.innerHTML = `
                             <br>
-                            <label class="select-label-style" for="filter-${field.fieldName}">${field.fieldLabel}:</label>
+                            <label class="select-label-style" for="filter-${ClientUtils.escapeHtml(field.fieldName)}">${ClientUtils.escapeHtml(field.fieldLabel)}:</label>
                             <input type="text" 
-                                   id="filter-${field.fieldName}" 
-                                   name="${field.fieldName}" 
+                                   id="filter-${ClientUtils.escapeHtml(field.fieldName)}" 
+                                   name="${ClientUtils.escapeHtml(field.fieldName)}" 
                                    placeholder="Пошук...">
                         `;
                         filterForm.appendChild(selectItem);
@@ -382,8 +350,8 @@ const PurchaseFilters = (function() {
                         selectItem.className = 'select-section-item';
                         selectItem.innerHTML = `
                             <br>
-                            <label class="select-label-style" for="filter-${field.fieldName}">${field.fieldLabel}:</label>
-                            <select id="filter-${field.fieldName}" name="${field.fieldName}">
+                            <label class="select-label-style" for="filter-${ClientUtils.escapeHtml(field.fieldName)}">${ClientUtils.escapeHtml(field.fieldLabel)}:</label>
+                            <select id="filter-${ClientUtils.escapeHtml(field.fieldName)}" name="${ClientUtils.escapeHtml(field.fieldName)}">
                                 <option value="">Всі</option>
                                 <option value="true">Так</option>
                                 <option value="false">Ні</option>
@@ -393,68 +361,6 @@ const PurchaseFilters = (function() {
                     }
                 });
             }
-
-            setTimeout(() => {
-                const userSelect = filterForm.querySelector('#filter-user');
-                if (userSelect && availableUsers && availableUsers.length > 0) {
-                    const userData = availableUsers.map(u => ({
-                        id: u.id,
-                        name: u.name
-                    }));
-                    if (typeof createCustomSelect === 'function') {
-                        const customSelect = createCustomSelect(userSelect, true);
-                        if (customSelect) {
-                            customSelects['filter-user'] = customSelect;
-                            customSelect.populate(userData);
-                        }
-                    }
-                }
-
-                const sourceSelect = filterForm.querySelector('#filter-source');
-                if (sourceSelect && availableSources && availableSources.length > 0) {
-                    const sourceData = availableSources.map(s => ({
-                        id: s.id,
-                        name: s.name
-                    }));
-                    if (typeof createCustomSelect === 'function') {
-                        const customSelect = createCustomSelect(sourceSelect, true);
-                        if (customSelect) {
-                            customSelects['filter-source'] = customSelect;
-                            customSelect.populate(sourceData);
-                        }
-                    }
-                }
-
-                const productSelect = filterForm.querySelector('#filter-product');
-                if (productSelect && availableProducts && availableProducts.length > 0) {
-                    const productData = availableProducts.map(p => ({
-                        id: p.id,
-                        name: p.name
-                    }));
-                    if (typeof createCustomSelect === 'function') {
-                        const customSelect = createCustomSelect(productSelect, true);
-                        if (customSelect) {
-                            customSelects['filter-product'] = customSelect;
-                            customSelect.populate(productData);
-                        }
-                    }
-                }
-
-                const currencySelect = filterForm.querySelector('#filter-currency');
-                if (currencySelect && availableCurrencies && availableCurrencies.length > 0) {
-                    const currencyData = availableCurrencies.map(c => ({
-                        id: c.id,
-                        name: c.name
-                    }));
-                    if (typeof createCustomSelect === 'function') {
-                        const customSelect = createCustomSelect(currencySelect, true);
-                        if (customSelect) {
-                            customSelects['filter-currency'] = customSelect;
-                            customSelect.populate(currencyData);
-                        }
-                    }
-                }
-            }, 0);
         } finally {
             isBuildingFilters = false;
         }
@@ -487,20 +393,23 @@ const PurchaseFilters = (function() {
         
         const formData = new FormData(filterForm);
 
-        const purchaseFilters = [
-            'createdAtFrom', 'createdAtTo',
-            'quantityFrom', 'quantityTo',
-            'totalPriceFrom', 'totalPriceTo',
-            'unitPriceFrom', 'unitPriceTo',
-            'paymentMethod'
-        ];
+        const quantityFrom = formData.get('quantityFrom');
+        const quantityTo = formData.get('quantityTo');
+        if (quantityFrom && quantityFrom.trim() !== '' && !isNaN(quantityFrom)) {
+            selectedFilters['quantityFrom'] = [quantityFrom];
+        }
+        if (quantityTo && quantityTo.trim() !== '' && !isNaN(quantityTo)) {
+            selectedFilters['quantityTo'] = [quantityTo];
+        }
 
-        purchaseFilters.forEach(field => {
-            const value = formData.get(field);
-            if (value && value.trim() !== '') {
-                selectedFilters[field] = [value];
-            }
-        });
+        const updatedAtFrom = formData.get('updatedAtFrom');
+        const updatedAtTo = formData.get('updatedAtTo');
+        if (updatedAtFrom && updatedAtFrom.trim() !== '') {
+            selectedFilters['updatedAtFrom'] = [updatedAtFrom];
+        }
+        if (updatedAtTo && updatedAtTo.trim() !== '') {
+            selectedFilters['updatedAtTo'] = [updatedAtTo];
+        }
 
         const clientCreatedAtFrom = formData.get('clientCreatedAtFrom');
         const clientCreatedAtTo = formData.get('clientCreatedAtTo');
@@ -574,65 +483,109 @@ const PurchaseFilters = (function() {
             filterableFields,
             availableSources,
             availableUsers,
-            availableProducts,
-            availableCurrencies
+            availableContainers
         } = config;
         
         if (!filterForm) return;
         
-        const createdAtFromKey = Object.keys(selectedFilters).find(key => key.toLowerCase() === 'createdatfrom');
-        if (createdAtFromKey) {
-            const fromInput = filterForm.querySelector('#filter-createdAt-from');
+        const updatedAtFromKey = Object.keys(selectedFilters).find(key => key.toLowerCase() === 'updatedatfrom');
+        if (updatedAtFromKey) {
+            const fromInput = filterForm.querySelector('#filter-updatedAt-from');
             if (fromInput) {
-                const value = Array.isArray(selectedFilters[createdAtFromKey]) 
-                    ? selectedFilters[createdAtFromKey][0] 
-                    : selectedFilters[createdAtFromKey];
+                const value = Array.isArray(selectedFilters[updatedAtFromKey]) 
+                    ? selectedFilters[updatedAtFromKey][0] 
+                    : selectedFilters[updatedAtFromKey];
                 if (value) fromInput.value = value;
             }
         }
-        const createdAtToKey = Object.keys(selectedFilters).find(key => key.toLowerCase() === 'createdatto');
-        if (createdAtToKey) {
-            const toInput = filterForm.querySelector('#filter-createdAt-to');
+        const updatedAtToKey = Object.keys(selectedFilters).find(key => key.toLowerCase() === 'updatedatto');
+        if (updatedAtToKey) {
+            const toInput = filterForm.querySelector('#filter-updatedAt-to');
             if (toInput) {
-                const value = Array.isArray(selectedFilters[createdAtToKey]) 
-                    ? selectedFilters[createdAtToKey][0] 
-                    : selectedFilters[createdAtToKey];
+                const value = Array.isArray(selectedFilters[updatedAtToKey]) 
+                    ? selectedFilters[updatedAtToKey][0] 
+                    : selectedFilters[updatedAtToKey];
                 if (value) toInput.value = value;
             }
         }
 
-        const purchaseNumberFields = [
-            { key: 'quantityFrom', inputId: '#filter-quantity-from' },
-            { key: 'quantityTo', inputId: '#filter-quantity-to' },
-            { key: 'unitPriceFrom', inputId: '#filter-unitPrice-from' },
-            { key: 'unitPriceTo', inputId: '#filter-unitPrice-to' },
-            { key: 'totalPriceFrom', inputId: '#filter-totalPrice-from' },
-            { key: 'totalPriceTo', inputId: '#filter-totalPrice-to' }
-        ];
-
-        purchaseNumberFields.forEach(field => {
-            if (selectedFilters[field.key]) {
-                const input = filterForm.querySelector(field.inputId);
-                if (input) {
-                    const value = Array.isArray(selectedFilters[field.key]) 
-                        ? selectedFilters[field.key][0] 
-                        : selectedFilters[field.key];
-                    if (value) input.value = value;
-                }
+        const quantityFrom = selectedFilters['quantityFrom'];
+        const quantityTo = selectedFilters['quantityTo'];
+        if (quantityFrom) {
+            const input = filterForm.querySelector('#filter-quantity-from');
+            if (input) {
+                const value = Array.isArray(quantityFrom) ? quantityFrom[0] : quantityFrom;
+                if (value) input.value = value;
             }
-        });
+        }
+        if (quantityTo) {
+            const input = filterForm.querySelector('#filter-quantity-to');
+            if (input) {
+                const value = Array.isArray(quantityTo) ? quantityTo[0] : quantityTo;
+                if (value) input.value = value;
+            }
+        }
 
-        if (selectedFilters['paymentMethod']) {
-            const paymentMethodSelect = filterForm.querySelector('#filter-paymentMethod');
-            if (paymentMethodSelect) {
-                const value = Array.isArray(selectedFilters['paymentMethod']) 
-                    ? selectedFilters['paymentMethod'][0] 
-                    : selectedFilters['paymentMethod'];
-                if (value) paymentMethodSelect.value = value;
+        const clientCreatedAtFrom = selectedFilters['clientCreatedAtFrom'];
+        const clientCreatedAtTo = selectedFilters['clientCreatedAtTo'];
+        if (clientCreatedAtFrom) {
+            const input = filterForm.querySelector('#filter-clientCreatedAt-from');
+            if (input) {
+                const value = Array.isArray(clientCreatedAtFrom) ? clientCreatedAtFrom[0] : clientCreatedAtFrom;
+                if (value) input.value = value;
+            }
+        }
+        if (clientCreatedAtTo) {
+            const input = filterForm.querySelector('#filter-clientCreatedAt-to');
+            if (input) {
+                const value = Array.isArray(clientCreatedAtTo) ? clientCreatedAtTo[0] : clientCreatedAtTo;
+                if (value) input.value = value;
+            }
+        }
+
+        const clientUpdatedAtFrom = selectedFilters['clientUpdatedAtFrom'];
+        const clientUpdatedAtTo = selectedFilters['clientUpdatedAtTo'];
+        if (clientUpdatedAtFrom) {
+            const input = filterForm.querySelector('#filter-clientUpdatedAt-from');
+            if (input) {
+                const value = Array.isArray(clientUpdatedAtFrom) ? clientUpdatedAtFrom[0] : clientUpdatedAtFrom;
+                if (value) input.value = value;
+            }
+        }
+        if (clientUpdatedAtTo) {
+            const input = filterForm.querySelector('#filter-clientUpdatedAt-to');
+            if (input) {
+                const value = Array.isArray(clientUpdatedAtTo) ? clientUpdatedAtTo[0] : clientUpdatedAtTo;
+                if (value) input.value = value;
             }
         }
 
         setTimeout(() => {
+            const containerSelect = filterForm.querySelector('#filter-container');
+            if (containerSelect && !customSelects['filter-container'] && availableContainers && availableContainers.length > 0) {
+                const containerData = availableContainers.map(c => ({
+                    id: c.id,
+                    name: c.name
+                }));
+                if (typeof createCustomSelect === 'function') {
+                    const customSelect = createCustomSelect(containerSelect, true);
+                    if (customSelect) {
+                        customSelects['filter-container'] = customSelect;
+                        customSelect.populate(containerData);
+                        
+                        if (selectedFilters['container']) {
+                            const savedContainers = selectedFilters['container'];
+                            if (Array.isArray(savedContainers) && savedContainers.length > 0) {
+                                const validContainers = savedContainers.filter(v => v !== null && v !== undefined && v !== '' && v !== 'null');
+                                if (validContainers.length > 0) {
+                                    customSelect.setValue(validContainers);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             const userSelect = filterForm.querySelector('#filter-user');
             if (userSelect && !customSelects['filter-user'] && availableUsers && availableUsers.length > 0) {
                 const userData = availableUsers.map(u => ({
@@ -651,81 +604,6 @@ const PurchaseFilters = (function() {
                                 const validUsers = savedUsers.filter(v => v !== null && v !== undefined && v !== '' && v !== 'null');
                                 if (validUsers.length > 0) {
                                     customSelect.setValue(validUsers);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            const sourceSelect = filterForm.querySelector('#filter-source');
-            if (sourceSelect && !customSelects['filter-source'] && availableSources && availableSources.length > 0) {
-                const sourceData = availableSources.map(s => ({
-                    id: s.id,
-                    name: s.name
-                }));
-                if (typeof createCustomSelect === 'function') {
-                    const customSelect = createCustomSelect(sourceSelect, true);
-                    if (customSelect) {
-                        customSelects['filter-source'] = customSelect;
-                        customSelect.populate(sourceData);
-                        
-                        if (selectedFilters['source']) {
-                            const savedSources = selectedFilters['source'];
-                            if (Array.isArray(savedSources) && savedSources.length > 0) {
-                                const validSources = savedSources.filter(v => v !== null && v !== undefined && v !== '' && v !== 'null');
-                                if (validSources.length > 0) {
-                                    customSelect.setValue(validSources);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            const productSelect = filterForm.querySelector('#filter-product');
-            if (productSelect && !customSelects['filter-product'] && availableProducts && availableProducts.length > 0) {
-                const productData = availableProducts.map(p => ({
-                    id: p.id,
-                    name: p.name
-                }));
-                if (typeof createCustomSelect === 'function') {
-                    const customSelect = createCustomSelect(productSelect, true);
-                    if (customSelect) {
-                        customSelects['filter-product'] = customSelect;
-                        customSelect.populate(productData);
-                        
-                        if (selectedFilters['product']) {
-                            const savedProducts = selectedFilters['product'];
-                            if (Array.isArray(savedProducts) && savedProducts.length > 0) {
-                                const validProducts = savedProducts.filter(v => v !== null && v !== undefined && v !== '' && v !== 'null');
-                                if (validProducts.length > 0) {
-                                    customSelect.setValue(validProducts);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            const currencySelect = filterForm.querySelector('#filter-currency');
-            if (currencySelect && !customSelects['filter-currency'] && availableCurrencies && availableCurrencies.length > 0) {
-                const currencyData = availableCurrencies.map(c => ({
-                    id: c.id,
-                    name: c.name
-                }));
-                if (typeof createCustomSelect === 'function') {
-                    const customSelect = createCustomSelect(currencySelect, true);
-                    if (customSelect) {
-                        customSelects['filter-currency'] = customSelect;
-                        customSelect.populate(currencyData);
-                        
-                        if (selectedFilters['currency']) {
-                            const savedCurrencies = selectedFilters['currency'];
-                            if (Array.isArray(savedCurrencies) && savedCurrencies.length > 0) {
-                                const validCurrencies = savedCurrencies.filter(v => v !== null && v !== undefined && v !== '' && v !== 'null');
-                                if (validCurrencies.length > 0) {
-                                    customSelect.setValue(validCurrencies);
                                 }
                             }
                         }

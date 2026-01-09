@@ -1,5 +1,6 @@
 package org.example.containerservice.services;
 
+import feign.FeignException;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,10 +19,14 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -50,13 +55,24 @@ public class ClientContainerSearchService {
     public PageResponse<ClientContainerResponseDTO> searchClientContainer(String query,
                                                                           @NonNull Pageable pageable,
                                                                           Map<String, List<String>> filterParams) {
-        ClientData clientData = fetchClientData(query, filterParams);
+        Long clientTypeId = FilterUtils.extractClientTypeId(filterParams);
+        Map<String, List<String>> clientFilterParams = FilterUtils.filterClientParams(filterParams, false);
+        
+        ClientData clientData = fetchClientData(query, clientFilterParams, clientTypeId);
         List<Long> clientIds = clientData.clientIds();
-        Map<Long, ClientDTO> clientMap = clientData.clientMap();
 
         Page<ClientContainer> clientContainerPage = fetchClientContainer(query, filterParams, clientIds, pageable);
 
-        List<ClientContainerResponseDTO> clientContainerResponseDTOs = clientContainerPage.getContent().stream()
+        List<ClientContainer> containers = clientContainerPage.getContent();
+        
+        Set<Long> requiredClientIds = containers.stream()
+                .map(ClientContainer::getClient)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        
+        Map<Long, ClientDTO> clientMap = fetchClientsByIds(requiredClientIds);
+
+        List<ClientContainerResponseDTO> clientContainerResponseDTOs = containers.stream()
                 .map(clientContainer -> mapToClientContainerPageDTO(clientContainer, clientMap))
                 .toList();
 
@@ -68,32 +84,85 @@ public class ClientContainerSearchService {
                 clientContainerResponseDTOs);
     }
 
-    private ClientData fetchClientData(String query, Map<String, List<String>> filterParams) {
-        Long clientTypeId = FilterUtils.extractClientTypeId(filterParams);
-
-        Map<String, List<String>> filteredParams = filterParams != null
-                ? filterParams.entrySet().stream()
-                        .filter(entry -> isClientFilterKey(entry.getKey()))
-                        .collect(Collectors.toMap(
-                                entry -> mapClientFilterKey(entry.getKey()),
-                                Map.Entry::getValue))
-                : Collections.emptyMap();
-
-        ClientSearchRequest clientRequest = new ClientSearchRequest(query, filteredParams, clientTypeId);
-        List<ClientDTO> clients = clientApiClient.searchClients(clientRequest).getBody();
-        if (clients == null) {
-            clients = Collections.emptyList();
+    private ClientData fetchClientData(String query, @NonNull Map<String, List<String>> clientFilterParams, Long clientTypeId) {
+        try {
+            if (hasClientFilters(clientFilterParams, query)) {
+                ClientData clientData = fetchClientIdsWithFilters(query, clientFilterParams, clientTypeId);
+                if (clientData.clientIds() != null && clientData.clientIds().isEmpty() && 
+                    StringUtils.hasText(query) && clientFilterParams.isEmpty()) {
+                    return new ClientData(null, Collections.emptyMap());
+                }
+                return clientData;
+            } else {
+                return new ClientData(null, Collections.emptyMap());
+            }
+        } catch (FeignException e) {
+            log.error("Feign error fetching client data: query={}, status={}, error={}", 
+                    query, e.status(), e.getMessage(), e);
+            if (StringUtils.hasText(query) && clientFilterParams.isEmpty()) {
+                return new ClientData(null, Collections.emptyMap());
+            }
+            return new ClientData(Collections.emptyList(), Collections.emptyMap());
+        } catch (Exception e) {
+            log.error("Unexpected error fetching client data: query={}, error={}", query, e.getMessage(), e);
+            if (StringUtils.hasText(query) && clientFilterParams.isEmpty()) {
+                return new ClientData(null, Collections.emptyMap());
+            }
+            return new ClientData(Collections.emptyList(), Collections.emptyMap());
         }
+    }
 
-        List<Long> clientIds = clients.stream()
-                .map(ClientDTO::getId)
-                .filter(java.util.Objects::nonNull)
-                .toList();
-        Map<Long, ClientDTO> clientMap = clients.stream()
+    private boolean hasClientFilters(@NonNull Map<String, List<String>> clientFilterParams, String query) {
+        boolean hasQuery = query != null && !query.trim().isEmpty();
+        boolean hasClientFilters = !clientFilterParams.isEmpty();
+        return hasClientFilters || hasQuery;
+    }
+
+    private ClientData fetchClientIdsWithFilters(String query, @NonNull Map<String, List<String>> clientFilterParams, Long clientTypeId) {
+        Map<String, List<String>> filteredParams = clientFilterParams.entrySet().stream()
+                .filter(entry -> isClientFilterKey(entry.getKey()))
+                .collect(Collectors.toMap(
+                        entry -> mapClientFilterKey(entry.getKey()),
+                        Map.Entry::getValue));
+        
+        ClientSearchRequest clientRequest = new ClientSearchRequest(query, filteredParams, clientTypeId);
+        List<Long> clientIds = clientApiClient.searchClientIds(clientRequest).getBody();
+        if (clientIds == null) {
+            clientIds = Collections.emptyList();
+        }
+        return new ClientData(clientIds, Collections.emptyMap());
+    }
+
+    private Map<Long, ClientDTO> fetchClientsByIds(@NonNull Set<Long> clientIds) {
+        if (clientIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        
+        try {
+            List<Long> clientIdsList = new ArrayList<>(clientIds);
+            List<ClientDTO> clients = clientApiClient.getClientsByIds(clientIdsList).getBody();
+            if (clients == null) {
+                clients = Collections.emptyList();
+            }
+            return buildClientMap(clients);
+        } catch (FeignException e) {
+            log.error("Feign error fetching clients by IDs: status={}, error={}", e.status(), e.getMessage(), e);
+            return Collections.emptyMap();
+        } catch (Exception e) {
+            log.error("Unexpected error fetching clients by IDs: error={}", e.getMessage(), e);
+            return Collections.emptyMap();
+        }
+    }
+    
+    private Map<Long, ClientDTO> buildClientMap(@NonNull List<ClientDTO> clients) {
+        return clients.stream()
+                .filter(Objects::nonNull)
                 .filter(client -> client.getId() != null)
-                .collect(Collectors.toMap(ClientDTO::getId, client -> client));
-
-        return new ClientData(clientIds, clientMap);
+                .collect(Collectors.toMap(
+                        ClientDTO::getId,
+                        client -> client,
+                        (existing, _) -> existing
+                ));
     }
 
     private boolean isClientFilterKey(String key) {
@@ -131,8 +200,12 @@ public class ClientContainerSearchService {
 
     private Page<ClientContainer> fetchClientContainer(String query,
                                                        Map<String, List<String>> filterParams,
-                                                       @NonNull List<Long> clientIds,
+                                                       List<Long> clientIds,
                                                        @NonNull Pageable pageable) {
+        if (clientIds != null && clientIds.isEmpty()) {
+            return Page.empty(pageable);
+        }
+        
         Map<String, List<String>> containerFilterParams = filterParams != null
                 ? filterParams.entrySet().stream()
                         .filter(entry -> isContainerFilterKey(entry.getKey()))

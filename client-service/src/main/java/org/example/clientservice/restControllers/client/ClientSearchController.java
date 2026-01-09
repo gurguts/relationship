@@ -6,9 +6,9 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.example.clientservice.models.client.PageResponse;
 import org.example.clientservice.models.dto.client.ClientDTO;
-import org.example.clientservice.models.dto.client.ClientIdsRequest;
 import org.example.clientservice.models.dto.client.ClientListDTO;
 import org.example.clientservice.models.dto.client.ClientSearchRequest;
 import org.example.clientservice.services.impl.IClientSearchService;
@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/v1/client")
 @RequiredArgsConstructor
@@ -80,6 +81,22 @@ public class ClientSearchController {
         }
         
         List<Map<Long, String>> result = clientService.searchIdsClient(clientIds);
+        return ResponseEntity.ok(result);
+    }
+
+    @PreAuthorize("hasAuthority('client:view')")
+    @PostMapping("/ids/search")
+    public ResponseEntity<List<Long>> searchClientIds(
+            @RequestBody @Valid ClientSearchRequest request) {
+        List<Long> result = clientService.searchClientIds(request);
+        return ResponseEntity.ok(result);
+    }
+
+    @PreAuthorize("hasAuthority('client:view')")
+    @PostMapping("/by-ids")
+    public ResponseEntity<List<ClientDTO>> getClientsByIds(
+            @RequestBody @Valid List<Long> clientIds) {
+        List<ClientDTO> result = clientService.getClientsByIds(clientIds);
         return ResponseEntity.ok(result);
     }
 }

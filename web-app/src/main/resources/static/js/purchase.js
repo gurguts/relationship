@@ -53,19 +53,19 @@ let filterModalTimeoutId = null;
 const editingState = { editing: false };
 
 if (prevPageButton) {
-    prevPageButton.addEventListener('click', () => {
-        if (currentPage > 0) {
-            currentPage--;
-            loadDataWithSort(currentPage, pageSize, currentSort, currentDirection);
-        }
-    });
+prevPageButton.addEventListener('click', () => {
+    if (currentPage > 0) {
+        currentPage--;
+        loadDataWithSort(currentPage, pageSize, currentSort, currentDirection);
+    }
+});
 }
 
 if (nextPageButton) {
-    nextPageButton.addEventListener('click', () => {
-        currentPage++;
-        loadDataWithSort(currentPage, pageSize, currentSort, currentDirection);
-    });
+nextPageButton.addEventListener('click', () => {
+    currentPage++;
+    loadDataWithSort(currentPage, pageSize, currentSort, currentDirection);
+});
 }
 
 
@@ -90,17 +90,17 @@ async function deletePurchase(id, isReceived) {
     
     if (confirm("Ви впевнені, що хочете видалити цей запис?")) {
         if (loaderBackdrop) {
-            loaderBackdrop.style.display = 'flex';
+        loaderBackdrop.style.display = 'flex';
         }
         try {
             await PurchaseDataLoader.deletePurchase(id);
             if (typeof showMessage === 'function') {
-                showMessage("Збір успішно видалено.", 'info');
-            }
+                    showMessage("Збір успішно видалено.", 'info');
+                }
             loadDataWithSort(0, CLIENT_CONSTANTS.DEFAULT_PAGE_SIZE * 2, currentSort, currentDirection);
         } catch (error) {
-            console.error('Error:', error);
-            handleError(error);
+                console.error('Error:', error);
+                handleError(error);
         } finally {
             if (loaderBackdrop) {
                 loaderBackdrop.style.display = 'none';
@@ -117,9 +117,9 @@ async function loadDataWithSort(page, size, sort, direction) {
     }
     
     if (loaderBackdrop) {
-        loaderBackdrop.style.display = 'flex';
+    loaderBackdrop.style.display = 'flex';
     }
-    
+
     const searchTerm = searchInput ? searchInput.value : '';
     const filters = { ...selectedFilters };
     if (currentClientTypeId) {
@@ -127,6 +127,22 @@ async function loadDataWithSort(page, size, sort, direction) {
     }
 
     const convertedFilters = PurchaseFilters.convertFieldNamesToFieldIds(filters, filterableFields, clientTypeFields);
+    
+    const normalizedFilters = {};
+    Object.keys(convertedFilters).forEach(key => {
+        const lowerKey = key.toLowerCase();
+        if (lowerKey === 'createdatfrom') {
+            normalizedFilters['createdAtFrom'] = convertedFilters[key];
+        } else if (lowerKey === 'createdatto') {
+            normalizedFilters['createdAtTo'] = convertedFilters[key];
+        } else if (lowerKey === 'updatedatfrom') {
+            normalizedFilters['updatedAtFrom'] = convertedFilters[key];
+        } else if (lowerKey === 'updatedatto') {
+            normalizedFilters['updatedAtTo'] = convertedFilters[key];
+        } else {
+            normalizedFilters[key] = convertedFilters[key];
+        }
+    });
     
     const params = {
         page: page,
@@ -139,8 +155,8 @@ async function loadDataWithSort(page, size, sort, direction) {
         params.q = searchTerm;
     }
     
-    if (Object.keys(convertedFilters).length > 0) {
-        params.filters = JSON.stringify(convertedFilters);
+    if (Object.keys(normalizedFilters).length > 0) {
+        params.filters = JSON.stringify(normalizedFilters);
     }
 
     try {
@@ -161,8 +177,8 @@ async function loadDataWithSort(page, size, sort, direction) {
         PurchaseRenderer.setupSortHandlers(currentSort, currentDirection, (newSort, newDirection) => {
             currentSort = newSort;
             currentDirection = newDirection;
-            currentPage = 0;
-            loadDataWithSort(currentPage, pageSize, currentSort, currentDirection);
+    currentPage = 0;
+    loadDataWithSort(currentPage, pageSize, currentSort, currentDirection);
         });
 
         PurchaseRenderer.updatePagination(data.totalElements, data.content.length, data.totalPages, currentPage, prevPageButton, nextPageButton, allClientInfo, paginationInfo);
@@ -221,6 +237,9 @@ async function loadEntitiesAndApplyFilters() {
 
 
 function loadClientDetails(client) {
+    if (!client || !client.id) {
+            return;
+        }
     const enableEditFieldWrapper = (fieldId, fieldType, allowMultiple) => {
         ClientEditor.enableEditField(fieldId, fieldType, allowMultiple, {
             clientTypeFields,
@@ -229,16 +248,16 @@ function loadClientDetails(client) {
         });
     };
     ClientModal.showClientModal(client, {
-        clientModal: clientModal,
-        closeModalClientBtn: closeModalClientBtn,
-        modalClientId: modalClientId,
-        modalClientCompany: modalClientCompany,
-        modalClientSource: modalClientSource,
-        modalClientCreated: modalClientCreated,
-        modalClientUpdated: modalClientUpdated,
-        fullDeleteButton: fullDeleteButton,
-        deleteButton: deleteButton,
-        restoreButton: restoreButton,
+        clientModal: document.getElementById('client-modal'),
+        closeModalClientBtn: document.getElementById('close-modal-client'),
+        modalClientId: document.getElementById('modal-client-id'),
+        modalClientCompany: document.getElementById('modal-client-company'),
+        modalClientSource: document.getElementById('modal-client-source'),
+        modalClientCreated: document.getElementById('modal-client-created'),
+        modalClientUpdated: document.getElementById('modal-client-updated'),
+        fullDeleteButton: document.getElementById('full-delete-client'),
+        deleteButton: document.getElementById('delete-client'),
+        restoreButton: document.getElementById('restore-client'),
         loaderBackdrop: loaderBackdrop,
         currentClientTypeId: currentClientTypeId,
         currentClientType: currentClientType,
@@ -251,10 +270,7 @@ function loadClientDetails(client) {
         currentSort: currentSort,
         currentDirection: currentDirection,
         enableEditField: enableEditFieldWrapper,
-        editingState: editingState,
-        deleteClientFn: PurchaseDataLoader.deleteClient,
-        deleteClientActiveFn: PurchaseDataLoader.deleteClientActive,
-        restoreClientFn: PurchaseDataLoader.restoreClient
+        editingState: editingState
     });
 }
 
@@ -305,10 +321,10 @@ if (filterButton && filterModal) {
     });
 }
 
-if (closeFilter) {
-    closeFilter.addEventListener('click', () => {
-        closeModalFilter();
-    });
+    if (closeFilter) {
+        closeFilter.addEventListener('click', () => {
+            closeModalFilter();
+        });
 }
 
 function closeModalFilter() {
@@ -413,6 +429,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.title = currentClientType.name;
         const fieldsData = await PurchaseDataLoader.loadClientTypeFields(currentClientTypeId);
         clientTypeFields = fieldsData.all || [];
+        window.clientTypeFields = clientTypeFields;
         filterableFields = fieldsData.filterable || [];
     } catch (error) {
         console.error('Error loading client type data:', error);
@@ -432,16 +449,41 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }, 0);
     }
-    
+
     const validFieldNames = new Set(filterableFields.map(f => f.fieldName));
     const cleanedFilters = ClientUtils.normalizeFilterKeys(selectedFilters, staticFilterKeys, validFieldNames);
     Object.keys(selectedFilters).forEach(key => delete selectedFilters[key]);
     Object.assign(selectedFilters, cleanedFilters);
-    if (Object.keys(cleanedFilters).length === 0) {
+    
+    const hasCreatedAtFrom = Object.keys(selectedFilters).some(key => 
+        key.toLowerCase() === 'createdatfrom'
+    );
+    
+    if (!hasCreatedAtFrom) {
+        const oneMonthAgo = new Date();
+        oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+        const year = oneMonthAgo.getFullYear();
+        const month = String(oneMonthAgo.getMonth() + 1).padStart(2, '0');
+        const day = String(oneMonthAgo.getDate()).padStart(2, '0');
+        selectedFilters.createdatfrom = [`${year}-${month}-${day}`];
+    }
+    
+    if (Object.keys(selectedFilters).length === 0) {
         localStorage.removeItem('selectedFilters');
     } else {
-        localStorage.setItem('selectedFilters', JSON.stringify(cleanedFilters));
+        localStorage.setItem('selectedFilters', JSON.stringify(selectedFilters));
     }
+    
+    PurchaseFilters.restoreFilterValues({
+        filterForm: filterForm,
+        selectedFilters: selectedFilters,
+        customSelects: customSelects,
+        filterableFields: filterableFields,
+        availableSources: availableSources,
+        availableUsers: availableUsers,
+        availableProducts: availableProducts,
+        availableCurrencies: availableCurrencies
+    });
     
     PurchaseFilters.restoreDynamicClientFields({
         filterableFields: filterableFields,
@@ -449,7 +491,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         customSelects: customSelects
     });
     updateFilterCounter();
-    
+
     await loadEntitiesAndApplyFilters();
     
     PurchaseEditModal.init({
@@ -458,7 +500,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         productMap: productMap,
         sourceMap: sourceMap,
         onSaveSuccess: () => {
-            loadDataWithSort(currentPage, pageSize, currentSort, currentDirection);
+    loadDataWithSort(currentPage, pageSize, currentSort, currentDirection);
         }
     });
     

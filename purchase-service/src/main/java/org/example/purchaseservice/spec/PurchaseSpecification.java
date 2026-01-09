@@ -77,10 +77,14 @@ public class PurchaseSpecification implements Specification<Purchase> {
         predicates.add(filterPredicate);
 
         if (StringUtils.hasText(this.query)) {
-            List<Predicate> searchPredicates = buildSearchPredicates(root, criteriaBuilder);
-            Predicate searchPredicate = criteriaBuilder.or(searchPredicates.toArray(new Predicate[0]));
-            predicates.add(searchPredicate);
-        } else if (!clientIds.isEmpty()) {
+            if (clientIds != null && !clientIds.isEmpty()) {
+                predicates.add(root.get(FIELD_CLIENT).in(clientIds));
+            } else {
+                List<Predicate> searchPredicates = buildSearchPredicates(root, criteriaBuilder);
+                Predicate searchPredicate = criteriaBuilder.or(searchPredicates.toArray(new Predicate[0]));
+                predicates.add(searchPredicate);
+            }
+        } else if (clientIds != null && !clientIds.isEmpty()) {
             predicates.add(root.get(FIELD_CLIENT).in(clientIds));
         }
 

@@ -39,29 +39,13 @@ let currentWithdrawalItem = null;
 
 let transfersCache = [];
 
-function escapeHtml(text) {
-    if (text == null) return '';
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
-function formatNumber(value, maxDecimals = 6) {
-    if (value === null || value === undefined || value === '') return '0';
-    const num = parseFloat(value);
-    if (isNaN(num)) return '0';
-    return parseFloat(num.toFixed(maxDecimals)).toString();
-}
+const escapeHtml = StockUtils.escapeHtml;
+const formatNumber = StockUtils.formatNumber;
+const findNameByIdFromMap = StockUtils.findNameByIdFromMap;
 
 async function fetchProducts() {
     try {
-        const response = await fetch('/api/v1/product');
-        if (!response.ok) {
-            const errorData = await response.json();
-            handleError(new Error(errorData.message || 'Failed to fetch products'));
-            return;
-        }
-        const products = await response.json();
+        const products = await StockDataLoader.fetchProducts();
         productMap = new Map(products.map(product => [product.id, product.name]));
         populateSelect('product-id-filter', products);
         populateSelect('product-id', products);
@@ -73,30 +57,19 @@ async function fetchProducts() {
 
 async function fetchWarehouses() {
     try {
-        const response = await fetch('/api/v1/warehouse');
-        if (!response.ok) {
-            const errorData = await response.json();
-            handleError(new Error(errorData.message || 'Failed to fetch products'));
-            return;
-        }
-        const warehouses = await response.json();
+        const warehouses = await StockDataLoader.fetchWarehouses();
         warehouseMap = new Map(warehouses.map(warehouse => [warehouse.id, warehouse.name]));
         populateSelect('warehouse-id-filter', warehouses);
         populateSelect('warehouse-id', warehouses);
     } catch (error) {
-        console.error('Error fetching products:', error);
+        console.error('Error fetching warehouses:', error);
         handleError(error);
     }
 }
 
 async function fetchUsers() {
     try {
-        const response = await fetch('/api/v1/user');
-        if (!response.ok) {
-            handleError(new Error('Failed to load users'));
-            return;
-        }
-        const users = await response.json();
+        const users = await StockDataLoader.fetchUsers();
         userMap = new Map(users.map(user => [user.id, user.name]));
         populateSelect('move-executor-id', users);
     } catch (error) {
@@ -107,31 +80,17 @@ async function fetchUsers() {
 
 async function fetchWithdrawalReasons() {
     try {
-        const response = await fetch('/api/v1/withdrawal-reason');
-        if (!response.ok) {
-            const errorData = await response.json();
-            handleError(new Error(errorData.message || 'Failed to fetch withdrawal reasons'));
-            return;
-        }
-        withdrawalReasons = await response.json();
-
+        withdrawalReasons = await StockDataLoader.fetchWithdrawalReasons();
         withdrawalReasonMap = new Map(withdrawalReasons.map(reason => [reason.id, reason]));
-
         const removingReasons = getWithdrawalReasonsByPurpose('REMOVING');
         populateSelect('withdrawal-reason-id-filter', removingReasons);
         populateSelect('edit-withdrawal-reason-id', removingReasons);
-
         return withdrawalReasons;
     } catch (error) {
         console.error('Error fetching withdrawal reasons:', error);
         handleError(error);
     }
 }
-
-const findNameByIdFromMap = (map, id) => {
-    const numericId = Number(id);
-    return map.get(numericId) || '';
-};
 
 function getWithdrawalReasonsByPurpose(purpose) {
     if (!withdrawalReasonMap) {
@@ -176,81 +135,23 @@ function populateEntryTypes() {
     populateSelect('entry-type-id', entryTypes);
 }
 
-function setDefaultHistoryDates() {
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('history-withdrawal-date-from-filter').value = today;
-    document.getElementById('history-withdrawal-date-to-filter').value = today;
-}
-
-function setDefaultEntriesDates() {
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('entries-entry-date-from-filter').value = today;
-    document.getElementById('entries-entry-date-to-filter').value = today;
-}
-
-function setDefaultTransfersDates() {
-    const today = new Date();
-    const fromDate = new Date();
-    fromDate.setDate(today.getDate() - 30);
-    const formattedToday = today.toISOString().split('T')[0];
-    const formattedFrom = fromDate.toISOString().split('T')[0];
-
-    const fromInput = document.getElementById('transfer-date-from-filter');
-    const toInput = document.getElementById('transfer-date-to-filter');
-
-    if (fromInput && !fromInput.value) {
-        fromInput.value = formattedFrom;
-    }
-    if (toInput && !toInput.value) {
-        toInput.value = formattedToday;
-    }
-}
+const setDefaultHistoryDates = StockFilters.setDefaultHistoryDates;
+const setDefaultEntriesDates = StockFilters.setDefaultEntriesDates;
+const setDefaultTransfersDates = StockFilters.setDefaultTransfersDates;
 
 function updateHistorySelectedFilters() {
     Object.keys(historyFilters).forEach(key => delete historyFilters[key]);
-
-    Object.keys(historyCustomSelects).forEach(selectId => {
-        const name = document.getElementById(selectId).name;
-        const values = historyCustomSelects[selectId].getValue();
-        if (values.length > 0) {
-            historyFilters[name] = values;
-        }
-    });
-
-    const withdrawalDateFrom = document.getElementById('history-withdrawal-date-from-filter').value;
-    const withdrawalDateTo = document.getElementById('history-withdrawal-date-to-filter').value;
-
-    if (withdrawalDateFrom) {
-        historyFilters['withdrawal_date_from'] = [withdrawalDateFrom];
-    }
-    if (withdrawalDateTo) {
-        historyFilters['withdrawal_date_to'] = [withdrawalDateTo];
-    }
-
+    Object.assign(historyFilters, StockFilters.buildHistoryFilters(historyCustomSelects));
     updateHistoryFilterCounter();
 }
 
 function updateHistoryFilterCounter() {
-    const counterElement = document.getElementById('history-filter-counter');
-    const countElement = document.getElementById('history-filter-count');
+    StockFilters.updateFilterCounter(historyFilters, 'history-filter-counter', 'history-filter-count');
     const filterButton = document.getElementById('open-history-filter-modal');
     const exportButton = document.getElementById('export-excel-history');
-
-    let totalFilters = 0;
-    totalFilters += Object.values(historyFilters)
-        .filter(value => Array.isArray(value))
-        .reduce((count, values) => count + values.length, 0);
-
-    if (totalFilters > 0) {
-        countElement.textContent = totalFilters;
-        counterElement.style.display = 'inline-flex';
-    } else {
-        counterElement.style.display = 'none';
-    }
-
-    if (historyContainer.style.display === 'block') {
-        filterButton.style.display = 'inline-block';
-        exportButton.style.display = 'inline-block';
+    if (historyContainer && historyContainer.style.display === 'block') {
+        if (filterButton) filterButton.style.display = 'inline-block';
+        if (exportButton) exportButton.style.display = 'inline-block';
     }
 }
 
@@ -272,49 +173,17 @@ function clearHistoryFilters() {
 
 function updateEntriesSelectedFilters() {
     Object.keys(entriesFilters).forEach(key => delete entriesFilters[key]);
-
-    Object.keys(entriesCustomSelects).forEach(selectId => {
-        const name = document.getElementById(selectId).name;
-        const values = entriesCustomSelects[selectId].getValue();
-        if (values.length > 0) {
-            entriesFilters[name] = values;
-        }
-    });
-
-    const entryDateFrom = document.getElementById('entries-entry-date-from-filter').value;
-    const entryDateTo = document.getElementById('entries-entry-date-to-filter').value;
-
-    if (entryDateFrom) {
-        entriesFilters['entry_date_from'] = [entryDateFrom];
-    }
-    if (entryDateTo) {
-        entriesFilters['entry_date_to'] = [entryDateTo];
-    }
-
+    Object.assign(entriesFilters, StockFilters.buildEntriesFilters(entriesCustomSelects));
     updateEntriesFilterCounter();
 }
 
 function updateEntriesFilterCounter() {
-    const counterElement = document.getElementById('entries-filter-counter');
-    const countElement = document.getElementById('entries-filter-count');
+    StockFilters.updateFilterCounter(entriesFilters, 'entries-filter-counter', 'entries-filter-count');
     const filterButton = document.getElementById('open-entries-filter-modal');
     const exportButton = document.getElementById('export-excel-entries');
-
-    let totalFilters = 0;
-    totalFilters += Object.values(entriesFilters)
-        .filter(value => Array.isArray(value))
-        .reduce((count, values) => count + values.length, 0);
-
-    if (totalFilters > 0) {
-        countElement.textContent = totalFilters;
-        counterElement.style.display = 'inline-flex';
-    } else {
-        counterElement.style.display = 'none';
-    }
-
-    if (entriesContainer.style.display === 'block') {
-        filterButton.style.display = 'inline-block';
-        exportButton.style.display = 'inline-block';
+    if (entriesContainer && entriesContainer.style.display === 'block') {
+        if (filterButton) filterButton.style.display = 'inline-block';
+        if (exportButton) exportButton.style.display = 'inline-block';
     }
 }
 
@@ -336,156 +205,10 @@ function clearEntriesFilters() {
 
 async function loadBalance() {
     try {
-        const response = await fetch('/api/v1/warehouse/balances/active');
-        if (!response.ok) {
-            handleError(new Error('Failed to load balance'));
-            return;
-        }
-        const balances = await response.json();
-        
-        const balancesByWarehouse = {};
-        balances.forEach(balance => {
-            if (!balancesByWarehouse[balance.warehouseId]) {
-                balancesByWarehouse[balance.warehouseId] = [];
-            }
-            balancesByWarehouse[balance.warehouseId].push(balance);
+        const balances = await StockDataLoader.loadBalance();
+        StockRenderer.renderBalance(balances, productMap, warehouseMap, (data) => {
+            openBalanceEditModal(data);
         });
-        
-        const sortedWarehouseIds = Object.keys(balancesByWarehouse).sort((a, b) => Number(a) - Number(b));
-        
-        const container = document.getElementById('balance-container');
-        if (!container) return;
-        container.textContent = '';
-        
-        if (sortedWarehouseIds.length === 0) {
-            const emptyMessage = document.createElement('p');
-            emptyMessage.textContent = 'Немає активних балансів на складі';
-            container.appendChild(emptyMessage);
-            return;
-        }
-        
-        for (const warehouseId of sortedWarehouseIds) {
-            const warehouseBalances = balancesByWarehouse[warehouseId];
-            warehouseBalances.sort((a, b) => Number(a.productId) - Number(b.productId));
-            
-            const warehouseName = findNameByIdFromMap(warehouseMap, warehouseId) || '';
-            
-            const warehouseHeading = document.createElement('h3');
-            warehouseHeading.textContent = `Склад: ${warehouseName}`;
-            container.appendChild(warehouseHeading);
-            
-            const table = document.createElement('table');
-            table.className = 'balance-table';
-            
-            const thead = document.createElement('thead');
-            const headerRow = document.createElement('tr');
-            
-            const th1 = document.createElement('th');
-            th1.textContent = 'Товар';
-            headerRow.appendChild(th1);
-            
-            const th2 = document.createElement('th');
-            th2.textContent = 'Кількість (кг)';
-            headerRow.appendChild(th2);
-            
-            const th3 = document.createElement('th');
-            th3.textContent = 'Середня ціна (EUR/кг)';
-            headerRow.appendChild(th3);
-            
-            const th4 = document.createElement('th');
-            th4.textContent = 'Загальна вартість (EUR)';
-            headerRow.appendChild(th4);
-            
-            thead.appendChild(headerRow);
-            table.appendChild(thead);
-            
-            const tbody = document.createElement('tbody');
-            let warehouseTotal = 0;
-            let warehouseTotalQuantity = 0;
-            
-            for (const balance of warehouseBalances) {
-                const productName = findNameByIdFromMap(productMap, balance.productId) || '';
-                const quantity = formatNumber(balance.quantity, 2);
-                const avgPrice = formatNumber(balance.averagePriceEur, 6);
-                const totalCost = formatNumber(balance.totalCostEur, 6);
-                warehouseTotal += parseFloat(balance.totalCostEur);
-                warehouseTotalQuantity += parseFloat(balance.quantity);
-                
-                const row = document.createElement('tr');
-                row.className = 'balance-row';
-                row.setAttribute('data-warehouse-id', warehouseId);
-                row.setAttribute('data-product-id', balance.productId);
-                row.setAttribute('data-warehouse-name', warehouseName);
-                row.setAttribute('data-product-name', productName);
-                row.setAttribute('data-quantity', balance.quantity);
-                row.setAttribute('data-total-cost', balance.totalCostEur);
-                row.setAttribute('data-average-price', balance.averagePriceEur);
-                
-                const productCell = document.createElement('td');
-                productCell.setAttribute('data-label', 'Товар');
-                productCell.textContent = productName;
-                row.appendChild(productCell);
-                
-                const quantityCell = document.createElement('td');
-                quantityCell.setAttribute('data-label', 'Кількість (кг)');
-                quantityCell.textContent = quantity;
-                row.appendChild(quantityCell);
-                
-                const avgPriceCell = document.createElement('td');
-                avgPriceCell.setAttribute('data-label', 'Середня ціна (EUR/кг)');
-                avgPriceCell.textContent = avgPrice;
-                row.appendChild(avgPriceCell);
-                
-                const totalCostCell = document.createElement('td');
-                totalCostCell.setAttribute('data-label', 'Загальна вартість (EUR)');
-                totalCostCell.textContent = totalCost;
-                row.appendChild(totalCostCell);
-                
-                tbody.appendChild(row);
-            }
-            
-            table.appendChild(tbody);
-            
-            const tfoot = document.createElement('tfoot');
-            const footerRow = document.createElement('tr');
-            footerRow.className = 'balance-tfoot-row';
-            
-            const footerCell1 = document.createElement('td');
-            footerCell1.setAttribute('data-label', 'Загалом');
-            const strong1 = document.createElement('strong');
-            strong1.textContent = 'Загалом:';
-            footerCell1.appendChild(strong1);
-            footerRow.appendChild(footerCell1);
-            
-            const footerCell2 = document.createElement('td');
-            footerCell2.setAttribute('data-label', 'Кількість (кг)');
-            const strong2 = document.createElement('strong');
-            strong2.textContent = formatNumber(warehouseTotalQuantity, 2);
-            footerCell2.appendChild(strong2);
-            footerRow.appendChild(footerCell2);
-            
-            const footerCell3 = document.createElement('td');
-            footerCell3.setAttribute('data-label', 'Середня ціна (EUR/кг)');
-            const strong3 = document.createElement('strong');
-            const averagePrice = warehouseTotalQuantity > 0 ? warehouseTotal / warehouseTotalQuantity : 0;
-            strong3.textContent = formatNumber(averagePrice, 6);
-            footerCell3.appendChild(strong3);
-            footerRow.appendChild(footerCell3);
-            
-            const footerCell4 = document.createElement('td');
-            footerCell4.setAttribute('data-label', 'Загальна вартість (EUR)');
-            const strong4 = document.createElement('strong');
-            strong4.textContent = `${formatNumber(warehouseTotal, 6)} EUR`;
-            footerCell4.appendChild(strong4);
-            footerRow.appendChild(footerCell4);
-            
-            tfoot.appendChild(footerRow);
-            table.appendChild(tfoot);
-            
-            container.appendChild(table);
-        }
-        
-        attachBalanceRowListeners();
     } catch (error) {
         console.error('Error loading balance:', error);
         handleError(error);
@@ -546,93 +269,15 @@ function populateWarehouses(selectId) {
 }
 
 async function loadWithdrawalHistory(page) {
-    const activeFilters = Object.keys(historyFilters).length > 0 ? historyFilters : filters;
-
-    Object.keys(activeFilters).forEach(key => {
-        if (Array.isArray(activeFilters[key]) && activeFilters[key].length === 0) {
-            delete activeFilters[key];
-        }
-    });
-    const queryParams = `page=${page}&size=${pageSize}&sort=withdrawalDate&direction=DESC&filters=
-    ${encodeURIComponent(JSON.stringify(activeFilters))}`;
     try {
-        const response = await fetch(`/api/v1/warehouse/withdrawals?${queryParams}`);
-        if (!response.ok) {
-            const errorData = await response.json();
-            handleError(new Error(errorData.message || 'Failed to load withdrawals'));
-            return;
-        }
-        const data = await response.json();
-        const container = document.getElementById('history-content');
-        if (!container) return;
-        container.textContent = '';
+        const activeFilters = Object.keys(historyFilters).length > 0 ? historyFilters : filters;
+        const normalizedFilters = StockFilters.normalizeFilters(activeFilters);
         
-        for (const withdrawal of data.content) {
-            const productName = findNameByIdFromMap(productMap, withdrawal.productId) || 'Не вказано';
-            const warehouseName = findNameByIdFromMap(warehouseMap, withdrawal.warehouseId) || 'Не вказано';
-            const reason = withdrawal.withdrawalReason ? withdrawal.withdrawalReason.name : 'Невідома причина';
-            const unitPrice = withdrawal.unitPriceEur ? formatNumber(withdrawal.unitPriceEur, 6) + ' EUR' : '-';
-            const totalCost = withdrawal.totalCostEur ? formatNumber(withdrawal.totalCostEur, 6) + ' EUR' : '-';
-            
-            const row = document.createElement('tr');
-            row.setAttribute('data-id', withdrawal.id);
-            
-            const warehouseCell = document.createElement('td');
-            warehouseCell.setAttribute('data-label', 'Склад');
-            warehouseCell.textContent = warehouseName;
-            row.appendChild(warehouseCell);
-            
-            const productCell = document.createElement('td');
-            productCell.setAttribute('data-label', 'Товар');
-            productCell.textContent = productName;
-            row.appendChild(productCell);
-            
-            const reasonCell = document.createElement('td');
-            reasonCell.setAttribute('data-label', 'Причина');
-            reasonCell.textContent = reason;
-            row.appendChild(reasonCell);
-            
-            const quantityCell = document.createElement('td');
-            quantityCell.setAttribute('data-label', 'Кількість');
-            quantityCell.textContent = `${withdrawal.quantity} кг`;
-            row.appendChild(quantityCell);
-            
-            const unitPriceCell = document.createElement('td');
-            unitPriceCell.setAttribute('data-label', 'Ціна за кг');
-            unitPriceCell.style.textAlign = 'right';
-            unitPriceCell.textContent = unitPrice;
-            row.appendChild(unitPriceCell);
-            
-            const totalCostCell = document.createElement('td');
-            totalCostCell.setAttribute('data-label', 'Загальна вартість');
-            totalCostCell.style.textAlign = 'right';
-            totalCostCell.style.fontWeight = 'bold';
-            totalCostCell.textContent = totalCost;
-            row.appendChild(totalCostCell);
-            
-            const withdrawalDateCell = document.createElement('td');
-            withdrawalDateCell.setAttribute('data-label', 'Дата списання');
-            withdrawalDateCell.textContent = withdrawal.withdrawalDate || '';
-            row.appendChild(withdrawalDateCell);
-            
-            const descriptionCell = document.createElement('td');
-            descriptionCell.setAttribute('data-label', 'Опис');
-            descriptionCell.textContent = withdrawal.description || '';
-            row.appendChild(descriptionCell);
-            
-            const createdAtCell = document.createElement('td');
-            createdAtCell.setAttribute('data-label', 'Створено');
-            createdAtCell.textContent = withdrawal.createdAt ? new Date(withdrawal.createdAt).toLocaleString() : '';
-            row.appendChild(createdAtCell);
-            
-            if (row._clickHandler) {
-                row.removeEventListener('click', row._clickHandler);
-            }
-            row._clickHandler = () => openEditModal(row.dataset.id, data.content);
-            row.addEventListener('click', row._clickHandler);
-            container.appendChild(row);
-        }
-        updatePagination(data.totalPages, page);
+        const data = await StockDataLoader.loadWithdrawalHistory(page, pageSize, normalizedFilters);
+        StockRenderer.renderWithdrawalHistory(data.content, productMap, warehouseMap, (id, withdrawals) => {
+            openEditModal(id, withdrawals);
+        });
+        StockRenderer.updatePagination(data.totalPages, page, 'page-info', 'prev-page', 'next-page');
     } catch (error) {
         console.error('Error loading withdrawals:', error);
         handleError(error);
@@ -640,95 +285,13 @@ async function loadWithdrawalHistory(page) {
 }
 
 async function loadWarehouseEntries(page) {
-    const activeFilters = Object.keys(entriesFilters).length > 0 ? entriesFilters : filters;
-
-    Object.keys(activeFilters).forEach(key => {
-        if (Array.isArray(activeFilters[key]) && activeFilters[key].length === 0) {
-            delete activeFilters[key];
-        }
-    });
-
-    const queryParams = `page=${page}&size=${pageSize}&sort=entryDate&direction=DESC&filters=${encodeURIComponent(JSON.stringify(activeFilters))}`;
-
     try {
-        const response = await fetch(`/api/v1/warehouse/receipts?${queryParams}`, {
-            method: 'GET',
-            headers: {'Content-Type': 'application/json'}
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            handleError(new Error(errorData.message || 'Failed to load entries'));
-            return;
-        }
-
-        const data = await response.json();
-        const container = document.getElementById('entries-body');
-        if (!container) return;
-        container.textContent = '';
+        const activeFilters = Object.keys(entriesFilters).length > 0 ? entriesFilters : filters;
+        const normalizedFilters = StockFilters.normalizeFilters(activeFilters);
         
-        for (const entry of data.content) {
-            const productName = findNameByIdFromMap(productMap, entry.productId) || '';
-            const warehouseName = findNameByIdFromMap(warehouseMap, entry.warehouseId) || '';
-            const userName = findNameByIdFromMap(userMap, entry.userId) || '';
-            const typeName = entry.type ? entry.type.name : 'Невідомий тип';
-            const driverBalance = entry.driverBalanceQuantity || 0;
-            const receivedQuantity = entry.quantity || 0;
-            const difference = receivedQuantity - driverBalance;
-            const totalCost = formatNumber(entry.totalCostEur, 6);
-            
-            const row = document.createElement('tr');
-            row.setAttribute('data-id', entry.id);
-            
-            const warehouseCell = document.createElement('td');
-            warehouseCell.setAttribute('data-label', 'Склад');
-            warehouseCell.textContent = warehouseName;
-            row.appendChild(warehouseCell);
-            
-            const entryDateCell = document.createElement('td');
-            entryDateCell.setAttribute('data-label', 'Дата');
-            entryDateCell.textContent = entry.entryDate || '';
-            row.appendChild(entryDateCell);
-            
-            const userCell = document.createElement('td');
-            userCell.setAttribute('data-label', 'Водій');
-            userCell.textContent = userName;
-            row.appendChild(userCell);
-            
-            const productCell = document.createElement('td');
-            productCell.setAttribute('data-label', 'Товар');
-            productCell.textContent = productName;
-            row.appendChild(productCell);
-            
-            const typeCell = document.createElement('td');
-            typeCell.setAttribute('data-label', 'Тип');
-            typeCell.textContent = typeName;
-            row.appendChild(typeCell);
-            
-            const receivedCell = document.createElement('td');
-            receivedCell.setAttribute('data-label', 'Привезено');
-            receivedCell.textContent = `${receivedQuantity} кг`;
-            row.appendChild(receivedCell);
-            
-            const purchasedCell = document.createElement('td');
-            purchasedCell.setAttribute('data-label', 'Закуплено');
-            purchasedCell.textContent = `${driverBalance} кг`;
-            row.appendChild(purchasedCell);
-            
-            const differenceCell = document.createElement('td');
-            differenceCell.setAttribute('data-label', 'Різниця');
-            differenceCell.textContent = `${difference} кг`;
-            row.appendChild(differenceCell);
-            
-            const totalCostCell = document.createElement('td');
-            totalCostCell.setAttribute('data-label', 'Вартість');
-            totalCostCell.textContent = `${totalCost} EUR`;
-            row.appendChild(totalCostCell);
-            
-            container.appendChild(row);
-        }
-
-        updateEntriesPagination(data.totalPages, page);
+        const data = await StockDataLoader.loadWarehouseEntries(page, pageSize, normalizedFilters);
+        StockRenderer.renderWarehouseEntries(data.content, productMap, warehouseMap, userMap);
+        StockRenderer.updatePagination(data.totalPages, page, 'entries-page-info', 'entries-prev-page', 'entries-next-page');
     } catch (error) {
         console.error('Error loading entries:', error);
         handleError(error);
@@ -738,17 +301,13 @@ async function loadWarehouseEntries(page) {
 function updateEntriesPagination(total, page) {
     entriesTotalPages = total;
     entriesCurrentPage = page;
-    document.getElementById('entries-page-info').textContent = `Сторінка ${entriesCurrentPage + 1} з ${entriesTotalPages}`;
-    document.getElementById('entries-prev-page').disabled = entriesCurrentPage === 0;
-    document.getElementById('entries-next-page').disabled = entriesCurrentPage >= entriesTotalPages - 1;
+    StockRenderer.updatePagination(total, page, 'entries-page-info', 'entries-prev-page', 'entries-next-page');
 }
 
 function updatePagination(total, page) {
     totalPages = total;
     currentPage = page;
-    document.getElementById('page-info').textContent = `Сторінка ${currentPage + 1} з ${totalPages}`;
-    document.getElementById('prev-page').disabled = currentPage === 0;
-    document.getElementById('next-page').disabled = currentPage >= totalPages - 1;
+    StockRenderer.updatePagination(total, page, 'page-info', 'prev-page', 'next-page');
 }
 
 document.getElementById('withdraw-form').addEventListener('submit',
@@ -763,20 +322,13 @@ document.getElementById('withdraw-form').addEventListener('submit',
             description: document.getElementById('description').value,
         };
         try {
-            const response = await fetch('/api/v1/warehouse/withdraw', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(withdrawal)
-            });
-            if (!response.ok) {
-                const errorData = await response.json();
-                handleError(new Error(errorData.message || 'Failed to create withdrawal'));
-                return;
+            await StockDataLoader.createWithdrawal(withdrawal);
+            if (typeof showMessage === 'function') {
+                showMessage('Списання успішно створено', 'info');
             }
-            showMessage('Списання успішно створено', 'info');
             closeModal('withdraw-modal');
-            loadBalance();
-            if (historyContainer.style.display === 'block') {
+            await loadBalance();
+            if (historyContainer && historyContainer.style.display === 'block') {
                 loadWithdrawalHistory(currentPage);
             }
         } catch (error) {
@@ -800,26 +352,17 @@ document.getElementById('move-form').addEventListener('submit',
         };
 
         try {
-            const response = await fetch('/api/v1/warehouse/transfer', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(transfer)
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                handleError(new Error(errorData.message || 'Помилка переміщення товару'));
-                return;
+            await StockDataLoader.createTransfer(transfer);
+            if (typeof showMessage === 'function') {
+                showMessage('Товар успішно переміщено', 'success');
             }
-
-            await response.json().catch(() => null);
-            showMessage('Товар успішно переміщено', 'success');
             closeModal('move-modal');
-            loadBalance();
-            if (historyContainer.style.display === 'block') {
+            await loadBalance();
+            if (historyContainer && historyContainer.style.display === 'block') {
                 loadWithdrawalHistory(currentPage);
             }
         } catch (error) {
+            console.error('Error creating transfer:', error);
             handleError(error);
         }
     });
@@ -838,22 +381,13 @@ document.getElementById('entry-form').addEventListener('submit',
         };
 
         try {
-        const response = await fetch('/api/v1/warehouse/receipts', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(entry)
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                handleError(new Error(errorData.message || 'Failed to create entry'));
-                return;
+            await StockDataLoader.createEntry(entry);
+            if (typeof showMessage === 'function') {
+                showMessage('Надходження успішно створено', 'info');
             }
-
-            showMessage('Надходження успішно створено', 'info');
             closeModal('entry-modal');
-            loadBalance();
-            if (entriesContainer.style.display === 'block') {
+            await loadBalance();
+            if (entriesContainer && entriesContainer.style.display === 'block') {
                 loadWarehouseEntries(0);
             }
         } catch (error) {
@@ -892,10 +426,7 @@ function openEditModal(id, withdrawals) {
 
     document.getElementById('edit-description').value = withdrawal.description || '';
 
-    const editModal = document.getElementById('edit-modal');
-    editModal.style.display = 'flex';
-    editModal.classList.add('open');
-    document.body.classList.add('modal-open');
+    StockModal.openModal('edit-modal');
 }
 
 document.getElementById('edit-form').addEventListener('submit',
@@ -960,30 +491,17 @@ document.getElementById('edit-form').addEventListener('submit',
         };
 
         try {
-            const response = await fetch(`/api/v1/warehouse/withdraw/${id}`, {
-                method: 'PATCH',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(withdrawalUpdate)
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                handleError(new Error(errorData.message || 'Failed to update withdrawal'));
-                return;
+            await StockDataLoader.updateWithdrawal(id, withdrawalUpdate);
+            if (typeof showMessage === 'function') {
+                showMessage('Списання успішно оновлено', 'info');
             }
-
-            const successMessage = response.status === 204
-                ? 'Списання успішно видалено'
-                : 'Списання успішно оновлено';
-
-            showMessage(successMessage, 'info');
             closeModal('edit-modal');
             await loadBalance();
             await loadWithdrawalHistory(currentPage);
         } catch (error) {
             console.error('Error updating withdrawal:', error);
-        handleError(error);
-    }
+            handleError(error);
+        }
 });
 
 function createCustomSelect(selectElement) {
@@ -1269,18 +787,7 @@ function updateSelectedFilters() {
 }
 
 function updateFilterCounter() {
-    const counterElement = document.getElementById('filter-counter');
-    const countElement = document.getElementById('filter-count');
-    let totalFilters = 0;
-    totalFilters += Object.values(filters)
-        .filter(value => Array.isArray(value))
-        .reduce((count, values) => count + values.length, 0);
-    if (totalFilters > 0) {
-        countElement.textContent = totalFilters;
-        counterElement.style.display = 'inline-flex';
-    } else {
-        counterElement.style.display = 'none';
-    }
+    StockFilters.updateFilterCounter(filters, 'filter-counter', 'filter-count');
 }
 
 function clearFilters() {
@@ -1352,9 +859,7 @@ withdrawBtn.addEventListener('click', () => {
     populateProducts('product-id');
     populateWarehouses('warehouse-id');
     populateWithdrawalReasonsForWithdrawal();
-    withdrawModal.style.display = 'flex';
-    withdrawModal.classList.add('open');
-    document.body.classList.add('modal-open');
+    StockModal.openModal('withdraw-modal');
 });
 
 moveBtn.addEventListener('click', () => {
@@ -1363,9 +868,7 @@ moveBtn.addEventListener('click', () => {
     populateWarehouses('move-warehouse-id');
     populateSelect('move-executor-id', Array.from(userMap.entries()).map(([id, name]) => ({id, name})));
     populateMoveTypes();
-    moveModal.style.display = 'flex';
-    moveModal.classList.add('open');
-    document.body.classList.add('modal-open');
+    StockModal.openModal('move-modal');
 });
 
 entriesBtn.addEventListener('click', async () => {
@@ -1394,19 +897,8 @@ addEntryBtn.addEventListener('click', () => {
     populateWarehouses('entry-warehouse-id');
     populateSelect('entry-user-id', Array.from(userMap.entries()).map(([id, name]) => ({id, name})));
     populateEntryTypes();
-    entryModal.style.display = 'flex';
-    entryModal.classList.add('open');
-    document.body.classList.add('modal-open');
-    
-    // Hide driver balance info and warning when opening modal
-    const driverBalanceInfo = document.getElementById('driver-balance-info');
-    const driverNoBalanceWarning = document.getElementById('driver-no-balance-warning');
-    if (driverBalanceInfo) {
-        driverBalanceInfo.style.display = 'none';
-    }
-    if (driverNoBalanceWarning) {
-        driverNoBalanceWarning.style.display = 'none';
-    }
+    StockModal.hideDriverBalanceInfo();
+    StockModal.openModal('entry-modal');
 });
 
 // Use event delegation on entry form for driver and product selection
@@ -1455,50 +947,44 @@ function initializeModalClickHandlers() {
 }
 
 function closeModal(modalId) {
-    const modal = document.getElementById(modalId);
-    modal.classList.remove('open');
-    modal.style.display = 'none';
-    document.body.classList.remove('modal-open');
-    if (modalId === 'withdraw-modal') {
-        document.getElementById('withdraw-form').reset();
-    } else if (modalId === 'edit-modal') {
-        document.getElementById('edit-form').reset();
-        currentWithdrawalItem = null;
-    } else if (modalId === 'move-modal') {
-        document.getElementById('move-form').reset();
-    } else if (modalId === 'entry-modal') {
-        document.getElementById('entry-form').reset();
-        // Hide driver balance info and warning when closing modal
-        const driverBalanceInfo = document.getElementById('driver-balance-info');
-        const driverNoBalanceWarning = document.getElementById('driver-no-balance-warning');
-        if (driverBalanceInfo) {
-            driverBalanceInfo.style.display = 'none';
+    const onClose = () => {
+        if (modalId === 'withdraw-modal') {
+            document.getElementById('withdraw-form')?.reset();
+        } else if (modalId === 'edit-modal') {
+            document.getElementById('edit-form')?.reset();
+            currentWithdrawalItem = null;
+        } else if (modalId === 'move-modal') {
+            document.getElementById('move-form')?.reset();
+        } else if (modalId === 'entry-modal') {
+            document.getElementById('entry-form')?.reset();
+            StockModal.hideDriverBalanceInfo();
+        } else if (modalId === 'create-vehicle-modal') {
+            document.getElementById('create-vehicle-form')?.reset();
+        } else if (modalId === 'add-product-to-vehicle-modal') {
+            document.getElementById('add-product-to-vehicle-form')?.reset();
+        } else if (modalId === 'vehicle-details-modal') {
+            StockModal.resetVehicleFormState(currentVehicleDetails);
+        } else if (modalId === 'edit-vehicle-item-modal') {
+            const editVehicleItemForm = document.getElementById('edit-vehicle-item-form');
+            if (editVehicleItemForm) {
+                editVehicleItemForm.reset();
+            }
+            currentVehicleItemId = null;
+        } else if (modalId === 'edit-transfer-modal') {
+            const editTransferForm = document.getElementById('edit-transfer-form');
+            if (editTransferForm) {
+                editTransferForm.reset();
+            }
+            currentTransferItem = null;
+        } else if (modalId === 'balance-edit-modal') {
+            StockModal.resetBalanceEditModal();
+            currentBalanceEditData = null;
+        } else if (modalId === 'balance-history-modal') {
+            StockModal.resetBalanceHistoryModal();
         }
-        if (driverNoBalanceWarning) {
-            driverNoBalanceWarning.style.display = 'none';
-        }
-    } else if (modalId === 'create-vehicle-modal') {
-        document.getElementById('create-vehicle-form').reset();
-    } else if (modalId === 'add-product-to-vehicle-modal') {
-        document.getElementById('add-product-to-vehicle-form').reset();
-    } else if (modalId === 'vehicle-details-modal') {
-        resetVehicleFormState();
-    } else if (modalId === 'edit-vehicle-item-modal') {
-        if (editVehicleItemForm) {
-            editVehicleItemForm.reset();
-        }
-        currentVehicleItemId = null;
-        updateVehicleItemMode();
-    } else if (modalId === 'edit-transfer-modal') {
-        if (editTransferForm) {
-            editTransferForm.reset();
-        }
-        currentTransferItem = null;
-    } else if (modalId === 'balance-edit-modal') {
-        resetBalanceEditModal();
-    } else if (modalId === 'balance-history-modal') {
-        resetBalanceHistoryModal();
-    }
+    };
+    
+    StockModal.closeModal(modalId, onClose);
 }
 
 const historyBtn = document.getElementById('history-btn');
@@ -1526,9 +1012,7 @@ historyBtn.addEventListener('click', () => {
 if (driverBalancesBtn) {
     driverBalancesBtn.addEventListener('click', async () => {
         await loadDriverBalances();
-        driverBalancesModal.style.display = 'flex';
-        driverBalancesModal.classList.add('open');
-        document.body.classList.add('modal-open');
+    StockModal.openModal('driver-balances-modal');
     });
     
     discrepanciesBtn.addEventListener('click', async () => {
@@ -1580,7 +1064,7 @@ if (transfersBtn) {
             if (exportButton) exportButton.style.display = 'inline-block';
 
             await initializeTransfersFilters();
-            updateTransfersFilterCounter();
+            StockFilters.updateTransfersFilterCounter(transfersFilters);
             currentTransfersPage = 0;
             await loadTransfers();
         }
@@ -1769,210 +1253,25 @@ async function initializeEntriesFilters() {
 async function loadDriverBalanceForEntry() {
     const driverId = document.getElementById('entry-user-id')?.value;
     const productId = document.getElementById('entry-product-id')?.value;
-    const driverBalanceInfo = document.getElementById('driver-balance-info');
-    const driverNoBalanceWarning = document.getElementById('driver-no-balance-warning');
     
-    // Hide both info and warning if driver or product is not selected
     if (!driverId || !productId) {
-        if (driverBalanceInfo) {
-            driverBalanceInfo.style.display = 'none';
-        }
-        if (driverNoBalanceWarning) {
-            driverNoBalanceWarning.style.display = 'none';
-        }
+        StockModal.hideDriverBalanceInfo();
         return;
     }
     
     try {
-        const response = await fetch(`/api/v1/driver/balances/${driverId}/product/${productId}`);
-        
-        if (response.status === 404) {
-            // No balance found for this driver/product combination
-            if (driverBalanceInfo) {
-                driverBalanceInfo.style.display = 'none';
-            }
-            if (driverNoBalanceWarning) {
-                driverNoBalanceWarning.style.display = 'block';
-            }
-            return;
-        }
-        
-        if (!response.ok) {
-            console.error('Failed to load driver balance');
-            if (driverBalanceInfo) {
-                driverBalanceInfo.style.display = 'none';
-            }
-            if (driverNoBalanceWarning) {
-                driverNoBalanceWarning.style.display = 'none';
-            }
-            return;
-        }
-        
-        const balance = await response.json();
-        
-        // Check if balance quantity is zero or null
-        if (!balance.quantity || parseFloat(balance.quantity) === 0) {
-            // No balance (quantity is 0)
-            if (driverBalanceInfo) {
-                driverBalanceInfo.style.display = 'none';
-            }
-            if (driverNoBalanceWarning) {
-                driverNoBalanceWarning.style.display = 'block';
-            }
-            return;
-        }
-        
-        // Display balance info
-        if (driverBalanceInfo) {
-            document.getElementById('driver-balance-quantity').textContent = formatNumber(balance.quantity, 2);
-            document.getElementById('driver-balance-price').textContent = formatNumber(balance.averagePriceEur, 6);
-            document.getElementById('driver-balance-total').textContent = formatNumber(balance.totalCostEur, 6);
-            driverBalanceInfo.style.display = 'block';
-        }
-        if (driverNoBalanceWarning) {
-            driverNoBalanceWarning.style.display = 'none';
-        }
+        const balance = await StockDataLoader.loadDriverBalance(driverId, productId);
+        StockModal.showDriverBalanceInfo(balance);
     } catch (error) {
         console.error('Error loading driver balance:', error);
-        if (driverBalanceInfo) {
-            driverBalanceInfo.style.display = 'none';
-        }
-        if (driverNoBalanceWarning) {
-            driverNoBalanceWarning.style.display = 'none';
-        }
+        StockModal.hideDriverBalanceInfo();
     }
 }
 
 async function loadDriverBalances() {
     try {
-        const response = await fetch('/api/v1/driver/balances/active');
-        if (!response.ok) {
-            handleError(new Error('Failed to load driver balances'));
-            return;
-        }
-        const balances = await response.json();
-        
-        // Group balances by driver
-        const balancesByDriver = {};
-        balances.forEach(balance => {
-            if (!balancesByDriver[balance.driverId]) {
-                balancesByDriver[balance.driverId] = [];
-            }
-            balancesByDriver[balance.driverId].push(balance);
-        });
-        
-        const container = document.getElementById('driver-balances-container');
-        if (!container) return;
-        container.textContent = '';
-        
-        const driverIds = Object.keys(balancesByDriver);
-        if (driverIds.length === 0) {
-            const emptyMessage = document.createElement('p');
-            emptyMessage.textContent = 'Немає активних балансів водіїв';
-            container.appendChild(emptyMessage);
-            return;
-        }
-        
-        for (const [driverId, driverBalances] of Object.entries(balancesByDriver)) {
-            const driverName = findNameByIdFromMap(userMap, driverId) || '';
-            
-            const driverHeading = document.createElement('h4');
-            driverHeading.textContent = `Водій: ${driverName}`;
-            container.appendChild(driverHeading);
-            
-            const table = document.createElement('table');
-            table.className = 'balance-table';
-            
-            const thead = document.createElement('thead');
-            const headerRow = document.createElement('tr');
-            
-            const th1 = document.createElement('th');
-            th1.textContent = 'Товар';
-            headerRow.appendChild(th1);
-            
-            const th2 = document.createElement('th');
-            th2.textContent = 'Кількість (кг)';
-            headerRow.appendChild(th2);
-            
-            const th3 = document.createElement('th');
-            th3.textContent = 'Середня ціна (EUR/кг)';
-            headerRow.appendChild(th3);
-            
-            const th4 = document.createElement('th');
-            th4.textContent = 'Загальна вартість (EUR)';
-            headerRow.appendChild(th4);
-            
-            thead.appendChild(headerRow);
-            table.appendChild(thead);
-            
-            const tbody = document.createElement('tbody');
-            let driverTotal = 0;
-            
-            for (const balance of driverBalances) {
-                const productName = findNameByIdFromMap(productMap, balance.productId) || '';
-                const quantity = formatNumber(balance.quantity, 2);
-                const avgPrice = formatNumber(balance.averagePriceEur, 6);
-                const totalCost = formatNumber(balance.totalCostEur, 6);
-                driverTotal += parseFloat(totalCost);
-                
-                const row = document.createElement('tr');
-                
-                const productCell = document.createElement('td');
-                productCell.setAttribute('data-label', 'Товар');
-                productCell.textContent = productName;
-                row.appendChild(productCell);
-                
-                const quantityCell = document.createElement('td');
-                quantityCell.setAttribute('data-label', 'Кількість (кг)');
-                quantityCell.textContent = quantity;
-                row.appendChild(quantityCell);
-                
-                const avgPriceCell = document.createElement('td');
-                avgPriceCell.setAttribute('data-label', 'Середня ціна (EUR/кг)');
-                avgPriceCell.textContent = avgPrice;
-                row.appendChild(avgPriceCell);
-                
-                const totalCostCell = document.createElement('td');
-                totalCostCell.setAttribute('data-label', 'Загальна вартість (EUR)');
-                totalCostCell.textContent = totalCost;
-                row.appendChild(totalCostCell);
-                
-                tbody.appendChild(row);
-            }
-            
-            table.appendChild(tbody);
-            
-            const tfoot = document.createElement('tfoot');
-            const footerRow = document.createElement('tr');
-            footerRow.className = 'balance-tfoot-row';
-            
-            const footerCell1 = document.createElement('td');
-            footerCell1.setAttribute('data-label', 'Загальна вартість товару водія');
-            const strong1 = document.createElement('strong');
-            strong1.textContent = 'Загальна вартість товару водія:';
-            footerCell1.appendChild(strong1);
-            footerRow.appendChild(footerCell1);
-            
-            const footerCell2 = document.createElement('td');
-            footerCell2.setAttribute('data-label', '');
-            footerRow.appendChild(footerCell2);
-            
-            const footerCell3 = document.createElement('td');
-            footerCell3.setAttribute('data-label', '');
-            footerRow.appendChild(footerCell3);
-            
-            const footerCell4 = document.createElement('td');
-            footerCell4.setAttribute('data-label', 'Сума');
-            const strong2 = document.createElement('strong');
-            strong2.textContent = `${formatNumber(driverTotal, 6)} EUR`;
-            footerCell4.appendChild(strong2);
-            footerRow.appendChild(footerCell4);
-            
-            tfoot.appendChild(footerRow);
-            table.appendChild(tfoot);
-            
-            container.appendChild(table);
-        }
+        const balances = await StockDataLoader.loadDriverBalances();
+        StockRenderer.renderDriverBalances(balances, productMap, userMap);
     } catch (error) {
         console.error('Error loading driver balances:', error);
         handleError(error);
@@ -2025,47 +1324,10 @@ let currentVehicleItemId = null;
 let currentTransferItem = null;
 let currentBalanceEditData = null;
 
-function populateVehicleForm(vehicle) {
-    if (!vehicle) {
-        if (detailVehicleDateInput) detailVehicleDateInput.value = '';
-        if (detailVehicleVehicleInput) detailVehicleVehicleInput.value = '';
-        if (detailVehicleDescriptionInput) detailVehicleDescriptionInput.value = '';
-        return;
-    }
-
-    if (detailVehicleDateInput) detailVehicleDateInput.value = vehicle.shipmentDate || '';
-    if (detailVehicleVehicleInput) detailVehicleVehicleInput.value = vehicle.vehicleNumber || '';
-    if (detailVehicleDescriptionInput) detailVehicleDescriptionInput.value = vehicle.description || '';
-}
-
-function setVehicleFormEditable(isEditable) {
-    const fields = [
-        detailVehicleDateInput,
-        detailVehicleVehicleInput,
-        detailVehicleDescriptionInput
-    ];
-
-    fields.forEach(field => {
-        if (field) {
-            field.disabled = !isEditable;
-        }
-    });
-
-    if (saveVehicleBtn) {
-        saveVehicleBtn.style.display = isEditable ? 'inline-flex' : 'none';
-    }
-    if (editVehicleBtn) {
-        editVehicleBtn.style.display = isEditable ? 'none' : 'block';
-    }
-}
-
-function resetVehicleFormState() {
-    populateVehicleForm(currentVehicleDetails);
-    setVehicleFormEditable(false);
-}
+const resetVehicleFormState = () => StockModal.resetVehicleFormState(currentVehicleDetails);
 
 if (updateVehicleForm) {
-    setVehicleFormEditable(false);
+    StockModal.setVehicleFormEditable(false);
 }
 
 if (editVehicleBtn) {
@@ -2073,9 +1335,12 @@ if (editVehicleBtn) {
         if (!currentVehicleDetails) {
             return;
         }
-        populateVehicleForm(currentVehicleDetails);
-        setVehicleFormEditable(true);
-        detailVehicleDateInput?.focus();
+        StockModal.populateVehicleForm(currentVehicleDetails);
+        StockModal.setVehicleFormEditable(true);
+        const detailVehicleDateInput = document.getElementById('detail-vehicle-date');
+        if (detailVehicleDateInput) {
+            detailVehicleDateInput.focus();
+        }
     });
 }
 
@@ -2100,9 +1365,7 @@ if (vehiclesBtn) {
 if (createVehicleBtn) {
     createVehicleBtn.addEventListener('click', () => {
         document.getElementById('vehicle-date').valueAsDate = new Date();
-        createVehicleModal.style.display = 'flex';
-        createVehicleModal.classList.add('open');
-        document.body.classList.add('modal-open');
+        StockModal.openModal('create-vehicle-modal');
     });
 }
 
@@ -2119,125 +1382,40 @@ if (createVehicleForm) {
         };
         
         try {
-            const response = await fetch('/api/v1/vehicles', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(vehicleData)
-            });
-            
-            if (!response.ok) {
-                throw new Error('Failed to create vehicle');
+            await StockDataLoader.createVehicle(vehicleData);
+            if (typeof showMessage === 'function') {
+                showMessage('Машину успішно створено', 'success');
             }
-            
-            const result = await response.json();
-            showMessage('Машину успішно створено', 'success');
-            
             closeModal('create-vehicle-modal');
             createVehicleForm.reset();
-            
             await loadVehicles();
         } catch (error) {
-            showMessage('Помилка при створенні машини', 'error');
+            console.error('Error creating vehicle:', error);
+            if (typeof showMessage === 'function') {
+                showMessage('Помилка при створенні машини', 'error');
+            }
+            handleError(error);
         }
     });
 }
 
 // Load vehicles list
 async function loadVehicles() {
-    const dateFrom = document.getElementById('vehicles-date-from')?.value;
-    const dateTo = document.getElementById('vehicles-date-to')?.value;
-    
     try {
-        let url = '/api/v1/vehicles/by-date-range?';
+        const dateFrom = document.getElementById('vehicles-date-from')?.value;
+        const dateTo = document.getElementById('vehicles-date-to')?.value;
         
-        if (dateFrom && dateTo) {
-            url += `fromDate=${dateFrom}&toDate=${dateTo}`;
-        } else {
-            // Default: last 30 days
-            const today = new Date();
-            const last30Days = new Date();
-            last30Days.setDate(today.getDate() - 30);
-            url += `fromDate=${last30Days.toISOString().split('T')[0]}&toDate=${today.toISOString().split('T')[0]}`;
-        }
-        
-        const response = await fetch(url);
-        
-        if (!response.ok) {
-            throw new Error('Failed to load vehicles');
-        }
-        
-        vehiclesCache = await response.json();
-        renderVehicles(vehiclesCache);
+        vehiclesCache = await StockDataLoader.loadVehicles(dateFrom, dateTo);
+        StockRenderer.renderVehicles(vehiclesCache, (vehicleId) => {
+            viewVehicleDetails(vehicleId);
+        });
     } catch (error) {
-        showMessage('Помилка завантаження машин', 'error');
-        
-        const tbody = document.getElementById('vehicles-tbody');
-        if (tbody) {
-            tbody.textContent = '';
-            const errorRow = document.createElement('tr');
-            const errorCell = document.createElement('td');
-            errorCell.setAttribute('colspan', '4');
-            errorCell.style.textAlign = 'center';
-            errorCell.textContent = 'Помилка завантаження даних';
-            errorRow.appendChild(errorCell);
-            tbody.appendChild(errorRow);
+        console.error('Error loading vehicles:', error);
+        if (typeof showMessage === 'function') {
+            showMessage('Помилка завантаження машин', 'error');
         }
+        handleError(error);
     }
-}
-
-function renderVehicles(vehicles) {
-    const tbody = document.getElementById('vehicles-tbody');
-    
-    if (!tbody) {
-        return;
-    }
-    
-    tbody.textContent = '';
-    
-    if (!vehicles || vehicles.length === 0) {
-        const emptyRow = document.createElement('tr');
-        const emptyCell = document.createElement('td');
-        emptyCell.setAttribute('colspan', '4');
-        emptyCell.style.textAlign = 'center';
-        emptyCell.textContent = 'Немає даних';
-        emptyRow.appendChild(emptyCell);
-        tbody.appendChild(emptyRow);
-        return;
-    }
-    
-    vehicles.forEach(vehicle => {
-        const row = document.createElement('tr');
-        row.style.cursor = 'pointer';
-        if (row._clickHandler) {
-            row.removeEventListener('click', row._clickHandler);
-        }
-        row._clickHandler = () => viewVehicleDetails(vehicle.id);
-        row.addEventListener('click', row._clickHandler);
-        
-        const shipmentDateCell = document.createElement('td');
-        shipmentDateCell.setAttribute('data-label', 'Дата відвантаження');
-        shipmentDateCell.textContent = vehicle.shipmentDate || '';
-        row.appendChild(shipmentDateCell);
-        
-        const vehicleNumberCell = document.createElement('td');
-        vehicleNumberCell.setAttribute('data-label', 'Номер машини');
-        vehicleNumberCell.textContent = vehicle.vehicleNumber || '-';
-        row.appendChild(vehicleNumberCell);
-        
-        const totalCostCell = document.createElement('td');
-        totalCostCell.setAttribute('data-label', 'Загальна вартість');
-        totalCostCell.style.fontWeight = 'bold';
-        totalCostCell.style.color = '#FF6F00';
-        totalCostCell.textContent = `${formatNumber(vehicle.totalCostEur, 2)} EUR`;
-        row.appendChild(totalCostCell);
-        
-        const descriptionCell = document.createElement('td');
-        descriptionCell.setAttribute('data-label', 'Коментар');
-        descriptionCell.textContent = vehicle.description || '-';
-        row.appendChild(descriptionCell);
-        
-        tbody.appendChild(row);
-    });
 }
 
 // View vehicle details
@@ -2245,97 +1423,26 @@ async function viewVehicleDetails(vehicleId) {
     currentVehicleId = vehicleId;
     
     try {
-        const response = await fetch(`/api/v1/vehicles/${vehicleId}`);
+        const vehicle = await StockDataLoader.loadVehicleDetails(vehicleId);
+        currentVehicleDetails = vehicle;
+        currentVehicleItems = new Map();
         
-        if (!response.ok) {
-            throw new Error('Failed to load vehicle details');
+        StockModal.populateVehicleForm(vehicle);
+        StockModal.setVehicleFormEditable(false);
+        
+        StockRenderer.renderVehicleDetails(vehicle, productMap, warehouseMap);
+        
+        const vehicleDetailsModal = document.getElementById('vehicle-details-modal');
+        if (vehicleDetailsModal) {
+            StockModal.openModal('vehicle-details-modal');
         }
-        
-        const vehicle = await response.json();
-        renderVehicleDetails(vehicle);
-        
-        vehicleDetailsModal.style.display = 'flex';
-        vehicleDetailsModal.classList.add('open');
-        document.body.classList.add('modal-open');
     } catch (error) {
-        showMessage('Помилка завантаження деталей машини', 'error');
+        console.error('Error loading vehicle details:', error);
+        if (typeof showMessage === 'function') {
+            showMessage('Помилка завантаження деталей машини', 'error');
+        }
+        handleError(error);
     }
-}
-
-// Render vehicle details
-function renderVehicleDetails(vehicle) {
-    currentVehicleDetails = vehicle;
-    currentVehicleItems = new Map();
-    populateVehicleForm(vehicle);
-    setVehicleFormEditable(false);
-    
-    const itemsTbody = document.getElementById('vehicle-items-tbody');
-    if (!itemsTbody) return;
-    
-    itemsTbody.textContent = '';
-    
-    if (!vehicle.items || vehicle.items.length === 0) {
-        const emptyRow = document.createElement('tr');
-        const emptyCell = document.createElement('td');
-        emptyCell.setAttribute('colspan', '6');
-        emptyCell.style.textAlign = 'center';
-        emptyCell.textContent = 'Товари ще не додані';
-        emptyRow.appendChild(emptyCell);
-        itemsTbody.appendChild(emptyRow);
-    } else {
-        vehicle.items.forEach(item => {
-            const productName = findNameByIdFromMap(productMap, item.productId) || 'Невідомий товар';
-            const warehouseName = findNameByIdFromMap(warehouseMap, item.warehouseId) || 'Невідомий склад';
-
-            currentVehicleItems.set(Number(item.withdrawalId), {
-                ...item,
-                productName,
-                warehouseName
-            });
-
-            const row = document.createElement('tr');
-            row.className = 'vehicle-item-row';
-            row.setAttribute('data-item-id', item.withdrawalId);
-            row.style.cursor = 'pointer';
-            
-            const productCell = document.createElement('td');
-            productCell.setAttribute('data-label', 'Товар');
-            productCell.textContent = productName;
-            row.appendChild(productCell);
-            
-            const warehouseCell = document.createElement('td');
-            warehouseCell.setAttribute('data-label', 'Склад');
-            warehouseCell.textContent = warehouseName;
-            row.appendChild(warehouseCell);
-            
-            const quantityCell = document.createElement('td');
-            quantityCell.setAttribute('data-label', 'Кількість');
-            quantityCell.textContent = `${formatNumber(item.quantity, 2)} кг`;
-            row.appendChild(quantityCell);
-            
-            const unitPriceCell = document.createElement('td');
-            unitPriceCell.setAttribute('data-label', 'Ціна за кг');
-            unitPriceCell.style.textAlign = 'right';
-            unitPriceCell.textContent = `${formatNumber(item.unitPriceEur, 6)} EUR`;
-            row.appendChild(unitPriceCell);
-            
-            const totalCostCell = document.createElement('td');
-            totalCostCell.setAttribute('data-label', 'Загальна вартість');
-            totalCostCell.style.textAlign = 'right';
-            totalCostCell.style.fontWeight = 'bold';
-            totalCostCell.textContent = `${formatNumber(item.totalCostEur, 6)} EUR`;
-            row.appendChild(totalCostCell);
-            
-            const withdrawalDateCell = document.createElement('td');
-            withdrawalDateCell.setAttribute('data-label', 'Дата списання');
-            withdrawalDateCell.textContent = item.withdrawalDate || vehicle.shipmentDate || '';
-            row.appendChild(withdrawalDateCell);
-            
-            itemsTbody.appendChild(row);
-        });
-    }
-    
-    document.getElementById('vehicle-total-cost').textContent = formatNumber(vehicle.totalCostEur, 2);
 }
 
 // Add product to vehicle button
@@ -2344,9 +1451,7 @@ document.getElementById('add-product-to-vehicle-btn')?.addEventListener('click',
     populateWarehouses('vehicle-warehouse-id');
     populateProducts('vehicle-product-id');
     
-    addProductToVehicleModal.style.display = 'flex';
-    addProductToVehicleModal.classList.add('open');
-    document.body.classList.add('modal-open');
+    StockModal.openModal('add-product-to-vehicle-modal');
 });
 
 // Add product to vehicle form submit
@@ -2361,33 +1466,25 @@ if (addProductToVehicleForm) {
         };
         
         try {
-            const response = await fetch(`/api/v1/vehicles/${currentVehicleId}/products`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(data)
-            });
-            
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Failed to add product to vehicle');
+            const updatedVehicle = await StockDataLoader.addProductToVehicle(currentVehicleId, data);
+            if (typeof showMessage === 'function') {
+                showMessage('Товар успішно додано до машини', 'success');
             }
-            
-            const updatedVehicle = await response.json();
-            
-            showMessage('Товар успішно додано до машини', 'success');
             closeModal('add-product-to-vehicle-modal');
             addProductToVehicleForm.reset();
-            
-            // Refresh vehicle details
-            renderVehicleDetails(updatedVehicle);
-            
-            // Refresh vehicles list in table
+            currentVehicleDetails = updatedVehicle;
+            currentVehicleItems = new Map();
+            StockModal.populateVehicleForm(updatedVehicle);
+            StockModal.setVehicleFormEditable(false);
+            StockRenderer.renderVehicleDetails(updatedVehicle, productMap, warehouseMap);
             await loadVehicles();
-            
-            // Reload balance
-    loadBalance();
+            await loadBalance();
         } catch (error) {
-            showMessage(error.message || 'Помилка при додаванні товару до машини', 'error');
+            console.error('Error adding product to vehicle:', error);
+            if (typeof showMessage === 'function') {
+                showMessage(error.message || 'Помилка при додаванні товару до машини', 'error');
+            }
+            handleError(error);
         }
     });
 }
@@ -2399,20 +1496,19 @@ document.getElementById('delete-vehicle-btn')?.addEventListener('click', async (
     }
     
     try {
-        const response = await fetch(`/api/v1/vehicles/${currentVehicleId}`, {
-            method: 'DELETE'
-        });
-        
-        if (!response.ok) {
-            throw new Error('Failed to delete vehicle');
+        await StockDataLoader.deleteVehicle(currentVehicleId);
+        if (typeof showMessage === 'function') {
+            showMessage('Машину успішно видалено', 'success');
         }
-        
-        showMessage('Машину успішно видалено', 'success');
         closeModal('vehicle-details-modal');
         await loadVehicles();
         await loadBalance();
     } catch (error) {
-        showMessage('Помилка при видаленні машини', 'error');
+        console.error('Error deleting vehicle:', error);
+        if (typeof showMessage === 'function') {
+            showMessage('Помилка при видаленні машини', 'error');
+        }
+        handleError(error);
     }
 });
 
@@ -2421,24 +1517,7 @@ document.getElementById('apply-vehicles-filters')?.addEventListener('click', asy
     await loadVehicles();
 });
 
-function exportTableToExcel(tableId, filename = 'withdrawal_data') {
-    const table = document.getElementById(tableId);
-    const worksheet = XLSX.utils.table_to_sheet(table);
-    const workbook = XLSX.utils.book_new();
-
-    const maxWidths = [];
-    const rows = XLSX.utils.sheet_to_json(worksheet, {header: 1});
-    rows.forEach(row => {
-        row.forEach((cell, i) => {
-            const cellLength = cell ? String(cell).length : 10;
-            maxWidths[i] = Math.max(maxWidths[i] || 10, cellLength);
-        });
-    });
-    worksheet['!cols'] = maxWidths.map(w => ({wch: w}));
-
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet1');
-    XLSX.writeFile(workbook, `${filename}.xlsx`);
-}
+const exportTableToExcel = StockRenderer.exportTableToExcel;
 
 document.getElementById('export-excel-withdrawal').addEventListener('click', () => {
     exportTableToExcel('history-table', 'withdrawal_export');
@@ -2458,43 +1537,8 @@ document.getElementById('export-excel-entries').addEventListener('click', () => 
 
 async function loadDiscrepanciesStatistics() {
     try {
-        // Build query params from current filters
-        const params = new URLSearchParams();
-        
-        if (discrepanciesFilters.type) {
-            params.append('type', discrepanciesFilters.type);
-        }
-        if (discrepanciesFilters.dateFrom) {
-            params.append('dateFrom', discrepanciesFilters.dateFrom);
-        }
-        if (discrepanciesFilters.dateTo) {
-            params.append('dateTo', discrepanciesFilters.dateTo);
-        }
-        
-        const url = `/api/v1/warehouse/discrepancies/statistics${params.toString() ? '?' + params.toString() : ''}`;
-        const response = await fetch(url);
-        
-        if (!response.ok) {
-            throw new Error('Failed to load statistics');
-        }
-        
-        const stats = await response.json();
-        
-        document.getElementById('total-losses-value').textContent = `${formatNumber(stats.totalLossesValue, 6)} EUR`;
-        document.getElementById('total-losses-count').textContent = `${stats.lossCount} записів`;
-        document.getElementById('total-gains-value').textContent = `${formatNumber(stats.totalGainsValue, 6)} EUR`;
-        document.getElementById('total-gains-count').textContent = `${stats.gainCount} записів`;
-        document.getElementById('net-value').textContent = `${formatNumber(stats.netValue, 6)} EUR`;
-        
-        // Change color based on positive/negative net value
-        const netValueElement = document.getElementById('net-value');
-        if (stats.netValue < 0) {
-            netValueElement.style.color = '#d32f2f';
-        } else if (stats.netValue > 0) {
-            netValueElement.style.color = '#388e3c';
-        } else {
-            netValueElement.style.color = '#1976d2';
-        }
+        const stats = await StockDataLoader.loadDiscrepanciesStatistics(discrepanciesFilters);
+        StockRenderer.renderDiscrepanciesStatistics(stats);
     } catch (error) {
         console.error('Error loading discrepancies statistics:', error);
     }
@@ -2502,188 +1546,54 @@ async function loadDiscrepanciesStatistics() {
 
 async function loadDiscrepancies() {
     try {
-        const params = new URLSearchParams({
-            page: currentDiscrepanciesPage,
-            size: discrepanciesPageSize,
-            sort: 'receiptDate',
-            direction: 'DESC',
-            ...discrepanciesFilters
-        });
+        const data = await StockDataLoader.loadDiscrepancies(currentDiscrepanciesPage, discrepanciesPageSize, discrepanciesFilters);
+        StockRenderer.renderDiscrepancies(data.content, productMap, warehouseMap, userMap);
+        StockRenderer.updateDiscrepanciesPagination(data);
         
-        const response = await fetch(`/api/v1/warehouse/discrepancies?${params}`);
-        
-        if (!response.ok) {
-            throw new Error('Failed to load discrepancies');
-        }
-        
-        const data = await response.json();
-        
-        const tbody = document.getElementById('discrepancies-table-body');
-        if (!tbody) return;
-        tbody.textContent = '';
-        
-        if (data.content.length === 0) {
-            const emptyRow = document.createElement('tr');
-            const emptyCell = document.createElement('td');
-            emptyCell.setAttribute('colspan', '10');
-            emptyCell.style.textAlign = 'center';
-            emptyCell.style.padding = '30px';
-            emptyCell.style.color = '#999';
-            emptyCell.textContent = 'Немає даних';
-            emptyRow.appendChild(emptyCell);
-            tbody.appendChild(emptyRow);
-        } else {
-            for (const item of data.content) {
-                const row = document.createElement('tr');
+        const pageNumbersContainer = document.getElementById('discrepancies-page-numbers');
+        if (pageNumbersContainer) {
+            const existingButtons = pageNumbersContainer.querySelectorAll('button');
+            existingButtons.forEach(btn => {
+                if (btn._clickHandler) {
+                    btn.removeEventListener('click', btn._clickHandler);
+                }
+            });
+            pageNumbersContainer.textContent = '';
+            
+            const maxPagesToShow = 5;
+            let startPage = Math.max(0, data.page - Math.floor(maxPagesToShow / 2));
+            let endPage = Math.min(data.totalPages, startPage + maxPagesToShow);
+            
+            if (endPage - startPage < maxPagesToShow) {
+                startPage = Math.max(0, endPage - maxPagesToShow);
+            }
+            
+            for (let i = startPage; i < endPage; i++) {
+                const pageBtn = document.createElement('button');
+                pageBtn.textContent = i + 1;
+                pageBtn.className = 'button';
                 
-                const driverName = findNameByIdFromMap(userMap, item.driverId) || '';
-                const productName = findNameByIdFromMap(productMap, item.productId) || '';
-                const warehouseName = findNameByIdFromMap(warehouseMap, item.warehouseId) || '';
+                if (i === data.page) {
+                    pageBtn.classList.add('active');
+                }
                 
-                const typeLabel = item.type === 'LOSS' ? 'Втрата' : 'Придбання';
-                const typeClass = item.type === 'LOSS' ? 'loss' : 'gain';
-                const typeColor = item.type === 'LOSS' ? '#d32f2f' : '#388e3c';
+                pageBtn._clickHandler = async () => {
+                    currentDiscrepanciesPage = i;
+                    await loadDiscrepancies();
+                };
+                pageBtn.addEventListener('click', pageBtn._clickHandler);
                 
-                const receiptDateCell = document.createElement('td');
-                receiptDateCell.setAttribute('data-label', 'Дата');
-                receiptDateCell.textContent = formatDate(item.receiptDate);
-                row.appendChild(receiptDateCell);
-                
-                const driverCell = document.createElement('td');
-                driverCell.setAttribute('data-label', 'Водій');
-                driverCell.textContent = driverName;
-                row.appendChild(driverCell);
-                
-                const productCell = document.createElement('td');
-                productCell.setAttribute('data-label', 'Товар');
-                productCell.textContent = productName;
-                row.appendChild(productCell);
-                
-                const warehouseCell = document.createElement('td');
-                warehouseCell.setAttribute('data-label', 'Склад');
-                warehouseCell.textContent = warehouseName;
-                row.appendChild(warehouseCell);
-                
-                const purchasedCell = document.createElement('td');
-                purchasedCell.setAttribute('data-label', 'Закуплено');
-                purchasedCell.style.textAlign = 'center';
-                purchasedCell.textContent = `${item.purchasedQuantity} кг`;
-                row.appendChild(purchasedCell);
-                
-                const receivedCell = document.createElement('td');
-                receivedCell.setAttribute('data-label', 'Прийнято');
-                receivedCell.style.textAlign = 'center';
-                receivedCell.textContent = `${item.receivedQuantity} кг`;
-                row.appendChild(receivedCell);
-                
-                const discrepancyCell = document.createElement('td');
-                discrepancyCell.setAttribute('data-label', 'Різниця');
-                discrepancyCell.style.textAlign = 'center';
-                discrepancyCell.style.fontWeight = 'bold';
-                discrepancyCell.style.color = typeColor;
-                discrepancyCell.textContent = `${item.discrepancyQuantity > 0 ? '+' : ''}${item.discrepancyQuantity} кг`;
-                row.appendChild(discrepancyCell);
-                
-                const unitPriceCell = document.createElement('td');
-                unitPriceCell.setAttribute('data-label', 'Ціна/кг');
-                unitPriceCell.style.textAlign = 'right';
-                unitPriceCell.textContent = `${formatNumber(item.unitPriceEur, 6)} EUR`;
-                row.appendChild(unitPriceCell);
-                
-                const valueCell = document.createElement('td');
-                valueCell.setAttribute('data-label', 'Вартість');
-                valueCell.style.textAlign = 'right';
-                valueCell.style.fontWeight = 'bold';
-                valueCell.textContent = `${formatNumber(Math.abs(item.discrepancyValueEur), 6)} EUR`;
-                row.appendChild(valueCell);
-                
-                const typeCell = document.createElement('td');
-                typeCell.setAttribute('data-label', 'Тип');
-                typeCell.style.textAlign = 'center';
-                const typeBadge = document.createElement('span');
-                typeBadge.className = `discrepancy-type-badge ${typeClass}`;
-                typeBadge.textContent = typeLabel;
-                typeCell.appendChild(typeBadge);
-                row.appendChild(typeCell);
-                
-                tbody.appendChild(row);
+                pageNumbersContainer.appendChild(pageBtn);
             }
         }
-        
-        // Update pagination
-        updateDiscrepanciesPagination(data);
-        
     } catch (error) {
         console.error('Error loading discrepancies:', error);
-        const tbody = document.getElementById('discrepancies-table-body');
-        if (tbody) {
-            tbody.textContent = '';
-            const errorRow = document.createElement('tr');
-            const errorCell = document.createElement('td');
-            errorCell.setAttribute('colspan', '10');
-            errorCell.style.textAlign = 'center';
-            errorCell.style.padding = '30px';
-            errorCell.style.color = '#d32f2f';
-            errorCell.textContent = 'Помилка завантаження даних';
-            errorRow.appendChild(errorCell);
-            tbody.appendChild(errorRow);
-        }
+        handleError(error);
     }
 }
 
-function updateDiscrepanciesPagination(data) {
-    const start = data.page * data.size + 1;
-    const end = Math.min((data.page + 1) * data.size, data.totalElements);
-    document.getElementById('discrepancies-info').textContent = `Показано ${start}-${end} з ${data.totalElements}`;
-    
-    const prevBtn = document.getElementById('discrepancies-prev');
-    const nextBtn = document.getElementById('discrepancies-next');
-    
-    prevBtn.disabled = data.page === 0;
-    nextBtn.disabled = data.page >= data.totalPages - 1;
-    
-    const pageNumbersContainer = document.getElementById('discrepancies-page-numbers');
-    if (!pageNumbersContainer) return;
-    pageNumbersContainer.textContent = '';
-    
-    const maxPagesToShow = 5;
-    let startPage = Math.max(0, data.page - Math.floor(maxPagesToShow / 2));
-    let endPage = Math.min(data.totalPages, startPage + maxPagesToShow);
-    
-    if (endPage - startPage < maxPagesToShow) {
-        startPage = Math.max(0, endPage - maxPagesToShow);
-    }
-    
-    for (let i = startPage; i < endPage; i++) {
-        const pageBtn = document.createElement('button');
-        pageBtn.textContent = i + 1;
-        pageBtn.className = 'button';
-        
-        if (i === data.page) {
-            pageBtn.classList.add('active');
-        }
-        
-        if (pageBtn._clickHandler) {
-            pageBtn.removeEventListener('click', pageBtn._clickHandler);
-        }
-        pageBtn._clickHandler = async () => {
-            currentDiscrepanciesPage = i;
-            await loadDiscrepancies();
-        };
-        pageBtn.addEventListener('click', pageBtn._clickHandler);
-        
-        pageNumbersContainer.appendChild(pageBtn);
-    }
-}
 
-function formatDate(dateString) {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const year = date.getFullYear();
-    return `${day}.${month}.${year}`;
-}
+const formatDate = StockUtils.formatDate;
 
 // Event listeners for discrepancies pagination
 document.getElementById('discrepancies-prev').addEventListener('click', async () => {
@@ -2698,103 +1608,33 @@ document.getElementById('discrepancies-next').addEventListener('click', async ()
     await loadDiscrepancies();
 });
 
-// Event listeners for discrepancies filters
 document.getElementById('apply-discrepancy-filters').addEventListener('click', async () => {
-    discrepanciesFilters = {};
-    
-    const type = document.getElementById('discrepancy-type-filter').value;
-    const dateFrom = document.getElementById('discrepancy-date-from').value;
-    const dateTo = document.getElementById('discrepancy-date-to').value;
-    
-    if (type) discrepanciesFilters.type = type;
-    if (dateFrom) discrepanciesFilters.dateFrom = dateFrom;
-    if (dateTo) discrepanciesFilters.dateTo = dateTo;
-    
+    discrepanciesFilters = StockFilters.buildDiscrepanciesFilters();
     currentDiscrepanciesPage = 0;
     await loadDiscrepancies();
-    await loadDiscrepanciesStatistics(); // Reload statistics with filters
+    await loadDiscrepanciesStatistics();
 });
 
 document.getElementById('reset-discrepancy-filters').addEventListener('click', async () => {
-    document.getElementById('discrepancy-type-filter').value = '';
-    document.getElementById('discrepancy-date-from').value = '';
-    document.getElementById('discrepancy-date-to').value = '';
+    const typeFilter = document.getElementById('discrepancy-type-filter');
+    const dateFromFilter = document.getElementById('discrepancy-date-from');
+    const dateToFilter = document.getElementById('discrepancy-date-to');
+    if (typeFilter) typeFilter.value = '';
+    if (dateFromFilter) dateFromFilter.value = '';
+    if (dateToFilter) dateToFilter.value = '';
     
     discrepanciesFilters = {};
     currentDiscrepanciesPage = 0;
     await loadDiscrepancies();
-    await loadDiscrepanciesStatistics(); // Reload statistics without filters
+    await loadDiscrepanciesStatistics();
 });
 
-// Export discrepancies to Excel
 document.getElementById('export-discrepancies-excel').addEventListener('click', async () => {
     try {
-        // Build query params from current filters
-        const params = new URLSearchParams();
-        
-        if (discrepanciesFilters.type) {
-            params.append('type', discrepanciesFilters.type);
-        }
-        if (discrepanciesFilters.dateFrom) {
-            params.append('dateFrom', discrepanciesFilters.dateFrom);
-        }
-        if (discrepanciesFilters.dateTo) {
-            params.append('dateTo', discrepanciesFilters.dateTo);
-        }
-        
-        const url = `/api/v1/warehouse/discrepancies/export?${params.toString()}`;
-        
-        // Fetch the file
-        const response = await fetch(url, {
-            method: 'GET'
-        });
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        // Get filename from Content-Disposition header or use default with current date
-        const contentDisposition = response.headers.get('Content-Disposition');
+        const blob = await StockDataLoader.exportDiscrepancies(discrepanciesFilters);
         const today = new Date().toISOString().split('T')[0];
         let filename = `vtrati_ta_pridbanna_${today}.xlsx`;
         
-        if (contentDisposition) {
-            // Try multiple patterns to extract filename
-            let extractedFilename = null;
-            
-            // Pattern 1: filename="something.xlsx"
-            let match = contentDisposition.match(/filename="([^"]+)"/);
-            if (match && match[1]) {
-                extractedFilename = match[1];
-            }
-            
-            // Pattern 2: filename=something.xlsx (without quotes)
-            if (!extractedFilename) {
-                match = contentDisposition.match(/filename=([^;]+)/);
-                if (match && match[1]) {
-                    extractedFilename = match[1].trim();
-                }
-            }
-            
-            // Pattern 3: filename*=UTF-8''something.xlsx
-            if (!extractedFilename) {
-                match = contentDisposition.match(/filename\*=UTF-8''([^;]+)/);
-                if (match && match[1]) {
-                    extractedFilename = decodeURIComponent(match[1]);
-                }
-            }
-            
-            if (extractedFilename) {
-                // Remove any trailing special characters and ensure .xlsx extension
-                filename = extractedFilename.replace(/['";\s]+$/, '').replace(/_+$/, '');
-                if (!filename.endsWith('.xlsx')) {
-                    filename += '.xlsx';
-                }
-            }
-        }
-        
-        // Create blob and download
-        const blob = await response.blob();
         const downloadUrl = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = downloadUrl;
@@ -2804,10 +1644,15 @@ document.getElementById('export-discrepancies-excel').addEventListener('click', 
         window.URL.revokeObjectURL(downloadUrl);
         document.body.removeChild(a);
         
-        showMessage('Excel файл успішно завантажено!', 'info');
+        if (typeof showMessage === 'function') {
+            showMessage('Excel файл успішно завантажено!', 'info');
+        }
     } catch (error) {
         console.error('Error exporting to Excel:', error);
-        showMessage('Помилка при експорті в Excel', 'error');
+        if (typeof showMessage === 'function') {
+            showMessage('Помилка при експорті в Excel', 'error');
+        }
+        handleError(error);
     }
 });
 
@@ -2818,152 +1663,18 @@ document.getElementById('export-discrepancies-excel').addEventListener('click', 
 // Load transfers with pagination
 async function loadTransfers() {
     try {
-        const params = new URLSearchParams({
-            page: currentTransfersPage,
-            size: transfersPageSize,
-            sort: 'transferDate',
-            direction: 'desc'
+        const data = await StockDataLoader.loadTransfers(currentTransfersPage, transfersPageSize, transfersFilters);
+        transfersCache = data.content.slice();
+        StockRenderer.renderTransfers(data.content, productMap, warehouseMap, userMap, withdrawalReasonMap, (id) => {
+            openEditTransferModal(Number(id));
         });
-        
-        if (transfersFilters.dateFrom) params.append('dateFrom', transfersFilters.dateFrom);
-        if (transfersFilters.dateTo) params.append('dateTo', transfersFilters.dateTo);
-        if (transfersFilters.warehouseId) params.append('warehouseId', transfersFilters.warehouseId);
-        if (transfersFilters.fromProductId) params.append('fromProductId', transfersFilters.fromProductId);
-        if (transfersFilters.toProductId) params.append('toProductId', transfersFilters.toProductId);
-        if (transfersFilters.userId) params.append('userId', transfersFilters.userId);
-        if (transfersFilters.reasonId) params.append('reasonId', transfersFilters.reasonId);
-        
-        const response = await fetch(`/api/v1/warehouse/transfers?${params}`);
-        
-        if (!response.ok) {
-            throw new Error('Failed to load transfers');
-        }
-        
-        const data = await response.json();
-        
-        renderTransfers(data.content);
-        updateTransfersPagination(data);
-        
+        StockRenderer.updateTransfersPagination(data);
     } catch (error) {
         console.error('Error loading transfers:', error);
-        showMessage('Помилка завантаження переміщень', 'error');
-    }
-}
-
-function renderTransfers(transfers) {
-    const tbody = document.getElementById('transfers-body');
-    if (!tbody) return;
-    
-    tbody.textContent = '';
-    
-    if (!Array.isArray(transfers) || transfers.length === 0) {
-        transfersCache = [];
-        const emptyRow = document.createElement('tr');
-        const emptyCell = document.createElement('td');
-        emptyCell.setAttribute('colspan', '10');
-        emptyCell.style.textAlign = 'center';
-        emptyCell.textContent = 'Немає даних';
-        emptyRow.appendChild(emptyCell);
-        tbody.appendChild(emptyRow);
-        return;
-    }
-    
-    transfersCache = transfers.slice();
-    
-    transfers.forEach(item => {
-        const fromProductName = findNameByIdFromMap(productMap, item.fromProductId) || 'Не вказано';
-        const toProductName = findNameByIdFromMap(productMap, item.toProductId) || 'Не вказано';
-        const warehouseName = findNameByIdFromMap(warehouseMap, item.warehouseId) || 'Не вказано';
-        const userName = findNameByIdFromMap(userMap, item.userId) || 'Не вказано';
-        const reasonObj = withdrawalReasonMap.get(Number(item.reasonId));
-        const reasonName = reasonObj ? reasonObj.name : 'Не вказано';
-        
-        const row = document.createElement('tr');
-        row.setAttribute('data-id', item.id);
-        if (row._clickHandler) {
-            row.removeEventListener('click', row._clickHandler);
+        if (typeof showMessage === 'function') {
+            showMessage('Помилка завантаження переміщень', 'error');
         }
-        row._clickHandler = () => openEditTransferModal(Number(item.id));
-        row.addEventListener('click', row._clickHandler);
-        
-        const transferDateCell = document.createElement('td');
-        transferDateCell.setAttribute('data-label', 'Дата');
-        transferDateCell.style.textAlign = 'center';
-        transferDateCell.textContent = item.transferDate || '';
-        row.appendChild(transferDateCell);
-        
-        const warehouseCell = document.createElement('td');
-        warehouseCell.setAttribute('data-label', 'Склад');
-        warehouseCell.textContent = warehouseName;
-        row.appendChild(warehouseCell);
-        
-        const fromProductCell = document.createElement('td');
-        fromProductCell.setAttribute('data-label', 'З товару');
-        fromProductCell.textContent = fromProductName;
-        row.appendChild(fromProductCell);
-        
-        const toProductCell = document.createElement('td');
-        toProductCell.setAttribute('data-label', 'До товару');
-        toProductCell.textContent = toProductName;
-        row.appendChild(toProductCell);
-        
-        const quantityCell = document.createElement('td');
-        quantityCell.setAttribute('data-label', 'Кількість');
-        quantityCell.style.textAlign = 'center';
-        quantityCell.textContent = `${formatNumber(item.quantity, 2)} кг`;
-        row.appendChild(quantityCell);
-        
-        const unitPriceCell = document.createElement('td');
-        unitPriceCell.setAttribute('data-label', 'Ціна за кг');
-        unitPriceCell.style.textAlign = 'right';
-        unitPriceCell.textContent = `${formatNumber(item.unitPriceEur, 6)} EUR`;
-        row.appendChild(unitPriceCell);
-        
-        const totalCostCell = document.createElement('td');
-        totalCostCell.setAttribute('data-label', 'Загальна вартість');
-        totalCostCell.style.textAlign = 'right';
-        totalCostCell.style.fontWeight = 'bold';
-        totalCostCell.textContent = `${formatNumber(item.totalCostEur, 6)} EUR`;
-        row.appendChild(totalCostCell);
-        
-        const userCell = document.createElement('td');
-        userCell.setAttribute('data-label', 'Виконавець');
-        userCell.textContent = userName;
-        row.appendChild(userCell);
-        
-        const reasonCell = document.createElement('td');
-        reasonCell.setAttribute('data-label', 'Причина');
-        reasonCell.textContent = reasonName;
-        row.appendChild(reasonCell);
-        
-        const descriptionCell = document.createElement('td');
-        descriptionCell.setAttribute('data-label', 'Опис');
-        descriptionCell.textContent = item.description || '';
-        row.appendChild(descriptionCell);
-        
-        tbody.appendChild(row);
-    });
-}
-
-// Update transfers pagination
-function updateTransfersPagination(data) {
-    const totalPages = data.totalPages || 1;
-    const currentPage = data.number || 0;
-    
-    const infoSpan = document.getElementById('transfers-page-info');
-    if (infoSpan) {
-        infoSpan.textContent = `Сторінка ${currentPage + 1} з ${totalPages}`;
-    }
-    
-    const prevBtn = document.getElementById('transfers-prev-page');
-    const nextBtn = document.getElementById('transfers-next-page');
-    
-    if (prevBtn) {
-        prevBtn.disabled = currentPage === 0;
-    }
-    
-    if (nextBtn) {
-        nextBtn.disabled = currentPage >= totalPages - 1;
+        handleError(error);
     }
 }
 
@@ -3004,46 +1715,18 @@ document.getElementById('transfers-next-page').addEventListener('click', async (
     await loadTransfers();
 });
 
-// Export transfers to Excel
 async function exportTransfersToExcel() {
     try {
-        const params = new URLSearchParams();
-        
-        if (transfersFilters.dateFrom) params.append('dateFrom', transfersFilters.dateFrom);
-        if (transfersFilters.dateTo) params.append('dateTo', transfersFilters.dateTo);
-        if (transfersFilters.warehouseId) params.append('warehouseId', transfersFilters.warehouseId);
-        if (transfersFilters.fromProductId) params.append('fromProductId', transfersFilters.fromProductId);
-        if (transfersFilters.toProductId) params.append('toProductId', transfersFilters.toProductId);
-        if (transfersFilters.userId) params.append('userId', transfersFilters.userId);
-        if (transfersFilters.reasonId) params.append('reasonId', transfersFilters.reasonId);
-        
-        const response = await fetch(`/api/v1/warehouse/transfers/export?${params}`);
-        
-        if (!response.ok) {
-            throw new Error('Failed to export transfers');
+        await StockDataLoader.exportTransfers(transfersFilters);
+        if (typeof showMessage === 'function') {
+            showMessage('Експорт переміщень успішно виконано', 'success');
         }
-        
-        let filename = 'product_transfers.xlsx';
-        const contentDisposition = response.headers.get('Content-Disposition');
-        if (contentDisposition) {
-            const filenameMatch = contentDisposition.match(/filename\*=UTF-8''([^;]+)|filename="?([^";]+)"?/i);
-            if (filenameMatch) {
-                filename = decodeURIComponent(filenameMatch[1] || filenameMatch[2]);
-            }
-        }
-        
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const anchor = document.createElement('a');
-        anchor.href = url;
-        anchor.download = filename.endsWith('.xlsx') ? filename : `${filename}.xlsx`;
-        document.body.appendChild(anchor);
-        anchor.click();
-        document.body.removeChild(anchor);
-        window.URL.revokeObjectURL(url);
     } catch (error) {
         console.error('Error exporting transfers:', error);
-        showMessage('Помилка експорту переміщень', 'error');
+        if (typeof showMessage === 'function') {
+            showMessage('Помилка експорту переміщень', 'error');
+        }
+        handleError(error);
     }
 }
 
@@ -3079,95 +1762,31 @@ if (updateVehicleForm) {
         }
         
         try {
-            const response = await fetch(`/api/v1/vehicles/${currentVehicleId}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-            
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Не вдалося оновити машину');
+            const updatedVehicle = await StockDataLoader.updateVehicle(currentVehicleId, payload);
+            if (typeof showMessage === 'function') {
+                showMessage('Дані машини оновлено', 'success');
             }
-            
-            const updatedVehicle = await response.json();
-            showMessage('Дані машини оновлено', 'success');
-            renderVehicleDetails(updatedVehicle);
+            currentVehicleDetails = updatedVehicle;
+            currentVehicleItems = new Map();
+            StockModal.populateVehicleForm(updatedVehicle);
+            StockModal.setVehicleFormEditable(false);
+            StockRenderer.renderVehicleDetails(updatedVehicle, productMap, warehouseMap);
             await loadVehicles();
             await loadBalance();
             closeModal('edit-vehicle-item-modal');
         } catch (error) {
-            showMessage(error.message || 'Помилка при оновленні машини', 'error');
+            console.error('Error updating vehicle:', error);
+            if (typeof showMessage === 'function') {
+                showMessage(error.message || 'Помилка при оновленні машини', 'error');
+            }
+            handleError(error);
         }
     });
 }
 
-function setDefaultTransfersDates() {
-    const today = new Date();
-    const fromDate = new Date();
-    fromDate.setDate(today.getDate() - 30);
-    const formattedToday = today.toISOString().split('T')[0];
-    const formattedFrom = fromDate.toISOString().split('T')[0];
-
-    const fromInput = document.getElementById('transfer-date-from-filter');
-    const toInput = document.getElementById('transfer-date-to-filter');
-
-    if (fromInput && !fromInput.value) {
-        fromInput.value = formattedFrom;
-    }
-    if (toInput && !toInput.value) {
-        toInput.value = formattedToday;
-    }
-}
-
 function updateTransfersSelectedFilters() {
-    const dateFromInput = document.getElementById('transfer-date-from-filter');
-    const dateToInput = document.getElementById('transfer-date-to-filter');
-
-    const warehouseValues = transfersCustomSelects['transfer-warehouse-filter']
-        ? transfersCustomSelects['transfer-warehouse-filter'].getValue()
-        : [];
-    const fromProductValues = transfersCustomSelects['transfer-from-product-filter']
-        ? transfersCustomSelects['transfer-from-product-filter'].getValue()
-        : [];
-    const toProductValues = transfersCustomSelects['transfer-to-product-filter']
-        ? transfersCustomSelects['transfer-to-product-filter'].getValue()
-        : [];
-    const userValues = transfersCustomSelects['transfer-user-filter']
-        ? transfersCustomSelects['transfer-user-filter'].getValue()
-        : [];
-    const reasonValues = transfersCustomSelects['transfer-reason-filter']
-        ? transfersCustomSelects['transfer-reason-filter'].getValue()
-        : [];
-
-    transfersFilters = {
-        dateFrom: dateFromInput?.value || null,
-        dateTo: dateToInput?.value || null,
-        warehouseId: warehouseValues[0] || null,
-        fromProductId: fromProductValues[0] || null,
-        toProductId: toProductValues[0] || null,
-        userId: userValues[0] || null,
-        reasonId: reasonValues[0] || null
-    };
-
-    updateTransfersFilterCounter();
-}
-
-function updateTransfersFilterCounter() {
-    const counterElement = document.getElementById('transfers-filter-counter');
-    const countElement = document.getElementById('transfers-filter-count');
-
-    if (!counterElement || !countElement) {
-        return;
-    }
-
-    const activeFilters = Object.values(transfersFilters).filter(Boolean);
-    if (activeFilters.length > 0) {
-        countElement.textContent = activeFilters.length;
-        counterElement.style.display = 'inline-flex';
-    } else {
-        counterElement.style.display = 'none';
-    }
+    transfersFilters = StockFilters.buildTransfersFilters(transfersCustomSelects);
+    StockFilters.updateTransfersFilterCounter(transfersFilters);
 }
 
 function clearTransfersFilters(closeModal = false) {
@@ -3183,16 +1802,11 @@ function clearTransfersFilters(closeModal = false) {
     transfersFilters = {};
     setDefaultTransfersDates();
     updateTransfersSelectedFilters();
-    updateTransfersFilterCounter();
     currentTransfersPage = 0;
     loadTransfers();
  
     if (closeModal) {
-        const modal = document.getElementById('transfers-filter-modal');
-        if (modal) {
-            modal.classList.remove('open');
-        }
-        document.body.classList.remove('modal-open');
+        StockModal.closeModal('transfers-filter-modal');
     }
 }
 
@@ -3309,11 +1923,7 @@ function openEditVehicleItemModal(itemId) {
     }
     updateVehicleItemMode();
 
-    if (editVehicleItemModal) {
-        editVehicleItemModal.style.display = 'flex';
-        editVehicleItemModal.classList.add('open');
-    }
-    document.body.classList.add('modal-open');
+    StockModal.openModal('edit-vehicle-item-modal');
 }
 
 const vehicleItemsTbody = document.getElementById('vehicle-items-tbody');
@@ -3397,25 +2007,24 @@ if (editVehicleItemForm) {
         }
 
         try {
-            const response = await fetch(`/api/v1/vehicles/${currentVehicleId}/products/${currentVehicleItemId}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.message || 'Не вдалося оновити товар у машині');
+            const updatedVehicle = await StockDataLoader.updateVehicleProduct(currentVehicleId, currentVehicleItemId, payload);
+            if (typeof showMessage === 'function') {
+                showMessage('Дані товару у машині оновлено', 'success');
             }
-
-            const updatedVehicle = await response.json();
-            showMessage('Дані товару у машині оновлено', 'success');
-            renderVehicleDetails(updatedVehicle);
+            currentVehicleDetails = updatedVehicle;
+            currentVehicleItems = new Map();
+            StockModal.populateVehicleForm(updatedVehicle);
+            StockModal.setVehicleFormEditable(false);
+            StockRenderer.renderVehicleDetails(updatedVehicle, productMap, warehouseMap);
             await loadVehicles();
             closeModal('edit-vehicle-item-modal');
             await loadBalance();
         } catch (error) {
-            showMessage(error.message || 'Помилка при оновленні товару у машині', 'error');
+            console.error('Error updating vehicle product:', error);
+            if (typeof showMessage === 'function') {
+                showMessage(error.message || 'Помилка при оновленні товару у машині', 'error');
+            }
+            handleError(error);
         }
     });
 }
@@ -3463,11 +2072,7 @@ function openEditTransferModal(id) {
         editTransferToProductSpan.textContent = findNameByIdFromMap(productMap, transfer.toProductId) || '—';
     }
 
-    if (editTransferModal) {
-        editTransferModal.style.display = 'flex';
-        editTransferModal.classList.add('open');
-        document.body.classList.add('modal-open');
-    }
+    StockModal.openModal('edit-transfer-modal');
 }
 
 if (editTransferForm) {
@@ -3531,28 +2136,10 @@ if (editTransferForm) {
         };
 
         try {
-            const response = await fetch(`/api/v1/warehouse/transfers/${id}`, {
-                method: 'PATCH',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(payload)
-            });
-
-            if (response.status === 204) {
-                showMessage('Переміщення успішно видалено', 'info');
-                closeModal('edit-transfer-modal');
-                await loadBalance();
-                await loadTransfers();
-                return;
+            await StockDataLoader.updateTransfer(id, payload);
+            if (typeof showMessage === 'function') {
+                showMessage('Переміщення успішно оновлено', 'info');
             }
-
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                handleError(new Error(errorData.message || 'Не вдалося оновити переміщення'));
-                return;
-            }
-
-            await response.json().catch(() => null);
-            showMessage('Переміщення успішно оновлено', 'info');
             closeModal('edit-transfer-modal');
             await loadBalance();
             await loadTransfers();
@@ -3563,208 +2150,24 @@ if (editTransferForm) {
     });
 }
 
-function attachBalanceRowListeners() {
-    const rows = document.querySelectorAll('.balance-row');
-    rows.forEach(row => {
-        if (row._clickHandler) {
-            row.removeEventListener('click', row._clickHandler);
-        }
-        row._clickHandler = () => {
-            const data = row.dataset;
-            openBalanceEditModal({
-                warehouseId: Number(data.warehouseId),
-                productId: Number(data.productId),
-                warehouseName: data.warehouseName,
-                productName: data.productName,
-                quantity: parseFloat(data.quantity ?? '0') || 0,
-                totalCost: parseFloat(data.totalCost ?? '0') || 0,
-                averagePrice: parseFloat(data.averagePrice ?? '0') || 0
-            });
-        };
-        row.addEventListener('click', row._clickHandler);
-    });
-}
-
-function resetBalanceEditModal() {
-    if (balanceEditForm) {
-        balanceEditForm.reset();
-    }
-    currentBalanceEditData = null;
-    balanceEditQuantityInput?.removeAttribute('disabled');
-    balanceEditTotalCostInput?.setAttribute('disabled', 'disabled');
-    balanceEditTotalCostInput && (balanceEditTotalCostInput.value = '');
-    balanceEditQuantityInput && (balanceEditQuantityInput.value = '');
-    balanceEditDescriptionInput && (balanceEditDescriptionInput.value = '');
-    balanceEditModeRadios.forEach(radio => {
-        radio.checked = radio.value === 'quantity';
-        const label = radio.closest('label');
-        if (label) {
-            label.classList.toggle('active', radio.checked);
-        }
-    });
-    if (balanceHistoryBody) {
-        balanceHistoryBody.textContent = '';
-    }
-    if (balanceHistoryEmpty) {
-        balanceHistoryEmpty.style.display = 'none';
-    }
-
-    updateBalanceEditMode();
-}
-
-function updateBalanceEditMode() {
-    const selected = document.querySelector('input[name="balance-edit-mode"]:checked');
-    if (!selected) {
-        return;
-    }
-    balanceEditModeRadios.forEach(radio => {
-        const label = radio.closest('label');
-        if (label) {
-            label.classList.toggle('active', radio === selected);
-        }
-    });
-
-    if (selected.value === 'quantity') {
-        balanceEditQuantityInput?.removeAttribute('disabled');
-        balanceEditTotalCostInput?.setAttribute('disabled', 'disabled');
-        balanceEditQuantityInput?.focus();
-    } else {
-        balanceEditTotalCostInput?.removeAttribute('disabled');
-        balanceEditQuantityInput?.setAttribute('disabled', 'disabled');
-        balanceEditTotalCostInput?.focus();
-    }
-}
-
 balanceEditModeRadios.forEach(radio => {
-    radio.addEventListener('change', updateBalanceEditMode);
+    radio.addEventListener('change', StockModal.updateBalanceEditMode);
 });
 
 function openBalanceEditModal(data) {
-    if (!balanceEditModal) {
-        return;
-    }
-
-    resetBalanceEditModal();
     currentBalanceEditData = data;
-
-    balanceEditWarehouseIdInput && (balanceEditWarehouseIdInput.value = data.warehouseId || '');
-    balanceEditProductIdInput && (balanceEditProductIdInput.value = data.productId || '');
-
-    if (balanceEditQuantityInput && Number.isFinite(data.quantity)) {
-        balanceEditQuantityInput.value = Number(data.quantity).toFixed(2);
-    }
-    if (balanceEditTotalCostInput && Number.isFinite(data.totalCost)) {
-        balanceEditTotalCostInput.value = Number(data.totalCost).toFixed(6);
-    }
-
-    updateBalanceEditMode();
-
-    balanceEditModal.style.display = 'flex';
-    balanceEditModal.classList.add('open');
-    document.body.classList.add('modal-open');
-
-    loadBalanceHistory(data.warehouseId, data.productId).catch(error => {
-        console.error('Error loading balance history:', error);
+    StockModal.openBalanceEditModal(data, (warehouseId, productId) => {
+        StockDataLoader.loadBalanceHistory(warehouseId, productId)
+            .then(history => {
+                StockRenderer.renderBalanceHistory(history, userMap);
+            })
+            .catch(error => {
+                console.error('Error loading balance history:', error);
+                handleError(error);
+            });
     });
 }
 
-async function loadBalanceHistory(warehouseId, productId) {
-    if (!balanceHistoryBody || !balanceHistoryEmpty) {
-        return;
-    }
-
-    balanceHistoryBody.textContent = '';
-    const loadingRow = document.createElement('tr');
-    const loadingCell = document.createElement('td');
-    loadingCell.setAttribute('colspan', '7');
-    loadingCell.style.textAlign = 'center';
-    loadingCell.textContent = 'Завантаження...';
-    loadingRow.appendChild(loadingCell);
-    balanceHistoryBody.appendChild(loadingRow);
-    balanceHistoryEmpty.style.display = 'none';
-
-    try {
-        const response = await fetch(`/api/v1/warehouse/balances/${warehouseId}/product/${productId}/history`);
-        if (!response.ok) {
-            throw new Error('Не вдалося завантажити історію змін');
-        }
-        const history = await response.json();
-
-        balanceHistoryBody.textContent = '';
-
-        if (!Array.isArray(history) || history.length === 0) {
-            balanceHistoryEmpty.style.display = 'block';
-            return;
-        }
-
-        const typeLabels = {
-            QUANTITY: 'Кількість',
-            TOTAL_COST: 'Загальна вартість',
-            BOTH: 'Кількість та вартість'
-        };
-
-        history.forEach(item => {
-            const userName = findNameByIdFromMap(userMap, item.userId) || '—';
-            const typeLabel = typeLabels[item.adjustmentType] || item.adjustmentType || '—';
-            const createdAt = item.createdAt ? new Date(item.createdAt).toLocaleString() : '—';
-            const quantityChange = `${formatNumber(item.previousQuantity, 2)} → ${formatNumber(item.newQuantity, 2)} кг`;
-            const totalChange = `${formatNumber(item.previousTotalCostEur, 6)} → ${formatNumber(item.newTotalCostEur, 6)} EUR`;
-            const averageChange = `${formatNumber(item.previousAveragePriceEur, 6)} → ${formatNumber(item.newAveragePriceEur, 6)} EUR/кг`;
-            const description = item.description || '—';
-
-            const row = document.createElement('tr');
-            
-            const createdAtCell = document.createElement('td');
-            createdAtCell.setAttribute('data-label', 'Дата');
-            createdAtCell.textContent = createdAt;
-            row.appendChild(createdAtCell);
-            
-            const userCell = document.createElement('td');
-            userCell.setAttribute('data-label', 'Користувач');
-            userCell.textContent = userName;
-            row.appendChild(userCell);
-            
-            const typeCell = document.createElement('td');
-            typeCell.setAttribute('data-label', 'Тип');
-            typeCell.textContent = typeLabel;
-            row.appendChild(typeCell);
-            
-            const quantityCell = document.createElement('td');
-            quantityCell.setAttribute('data-label', 'Кількість');
-            quantityCell.textContent = quantityChange;
-            row.appendChild(quantityCell);
-            
-            const totalCell = document.createElement('td');
-            totalCell.setAttribute('data-label', 'Загальна вартість');
-            totalCell.textContent = totalChange;
-            row.appendChild(totalCell);
-            
-            const averageCell = document.createElement('td');
-            averageCell.setAttribute('data-label', 'Середня ціна');
-            averageCell.textContent = averageChange;
-            row.appendChild(averageCell);
-            
-            const descriptionCell = document.createElement('td');
-            descriptionCell.setAttribute('data-label', 'Коментар');
-            descriptionCell.textContent = description;
-            row.appendChild(descriptionCell);
-            
-            balanceHistoryBody.appendChild(row);
-        });
-    } catch (error) {
-        console.error('Error loading balance history:', error);
-        balanceHistoryBody.textContent = '';
-        const errorRow = document.createElement('tr');
-        const errorCell = document.createElement('td');
-        errorCell.setAttribute('colspan', '7');
-        errorCell.style.textAlign = 'center';
-        errorCell.style.color = '#e53935';
-        errorCell.textContent = 'Помилка завантаження історії';
-        errorRow.appendChild(errorCell);
-        balanceHistoryBody.appendChild(errorRow);
-        balanceHistoryEmpty.style.display = 'none';
-    }
-}
 
 if (balanceEditForm) {
     balanceEditForm.addEventListener('submit', async (e) => {
@@ -3830,20 +2233,10 @@ if (balanceEditForm) {
         const productId = currentBalanceEditData.productId;
 
         try {
-            const response = await fetch(`/api/v1/warehouse/balances/${warehouseId}/product/${productId}`, {
-                method: 'PUT',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(payload)
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                handleError(new Error(errorData.message || 'Не вдалося оновити баланс'));
-                return;
+            await StockDataLoader.updateBalance(warehouseId, productId, payload);
+            if (typeof showMessage === 'function') {
+                showMessage('Баланс успішно оновлено', 'info');
             }
-
-            await response.json().catch(() => null);
-            showMessage('Баланс успішно оновлено', 'info');
             closeModal('balance-edit-modal');
             await loadBalance();
         } catch (error) {
@@ -3875,14 +2268,6 @@ if (balanceHistoryBtn) {
     });
 }
 
-function resetBalanceHistoryModal() {
-    if (balanceHistoryBody) {
-        balanceHistoryBody.textContent = '';
-    }
-    if (balanceHistoryEmpty) {
-        balanceHistoryEmpty.style.display = 'none';
-    }
-}
 
 document.addEventListener('click', async (event) => {
     const historyButton = event.target.closest('#balance-history-btn');
@@ -3895,16 +2280,13 @@ document.addEventListener('click', async (event) => {
         return;
     }
 
-    resetBalanceHistoryModal();
-    if (balanceHistoryModal) {
-        balanceHistoryModal.style.display = 'flex';
-        balanceHistoryModal.classList.add('open');
-        document.body.classList.add('modal-open');
-    }
-
+    StockModal.openBalanceHistoryModal();
+    
     try {
-        await loadBalanceHistory(currentBalanceEditData.warehouseId, currentBalanceEditData.productId);
+        const history = await StockDataLoader.loadBalanceHistory(currentBalanceEditData.warehouseId, currentBalanceEditData.productId);
+        StockRenderer.renderBalanceHistory(history, userMap);
     } catch (error) {
         console.error('Error loading balance history:', error);
+        handleError(error);
     }
 });

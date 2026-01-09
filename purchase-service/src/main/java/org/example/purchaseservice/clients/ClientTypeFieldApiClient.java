@@ -20,5 +20,5 @@ public interface ClientTypeFieldApiClient {
     ResponseEntity<ClientTypeFieldDTO> getFieldById(@PathVariable @NonNull Long fieldId);
 
     @PostMapping("/field/ids")
-    ResponseEntity<List<ClientTypeFieldDTO>> getFieldsByIds(@RequestBody @NonNull List<Long> fieldIds);
+    ResponseEntity<List<ClientTypeFieldDTO>> getFieldsByIds(@RequestBody @NonNull org.example.purchaseservice.models.dto.clienttype.FieldIdsRequest request);
 }

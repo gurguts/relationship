@@ -142,8 +142,17 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
         FilterIds updatedFilterIds = buildUpdatedFilterIds(purchaseList, createFilterIds());
         Map<Long, ClientDTO> clientMap = fetchClientMap(clients);
         Map<Long, List<ClientFieldValueDTO>> clientFieldValuesMap = fetchClientFieldValues(searchContext.clientIds());
+        List<SourceDTO> clientSourceDTOs = fetchClientSourceDTOs(clients);
+        FilterIds filterIdsWithClientSources = new FilterIds(
+                mergeSourceDTOs(updatedFilterIds.sourceDTOs(), clientSourceDTOs),
+                updatedFilterIds.sourceIds(),
+                updatedFilterIds.productDTOs(),
+                updatedFilterIds.productIds(),
+                updatedFilterIds.userDTOs(),
+                updatedFilterIds.userIds()
+        );
 
-        Workbook workbook = generateWorkbook(purchaseList, selectedFields, updatedFilterIds, 
+        Workbook workbook = generateWorkbook(purchaseList, selectedFields, filterIdsWithClientSources, 
                 clientMap, clientFieldValuesMap);
         sendExcelFileResponse(workbook, response);
     }
@@ -407,9 +416,21 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
                 Long fieldId = parseFieldId(field);
                 if (fieldId != null) {
                     ClientTypeFieldDTO fieldDTO = fieldMap.get(fieldId);
-                    String header = fieldDTO != null && fieldDTO.getFieldLabel() != null
-                            ? fieldDTO.getFieldLabel() + HEADER_CLIENT_SUFFIX
-                            : field + HEADER_CLIENT_SUFFIX;
+                    String header;
+                    if (fieldDTO != null) {
+                        String label = fieldDTO.getFieldLabel();
+                        if (label != null && !label.trim().isEmpty()) {
+                            header = label + HEADER_CLIENT_SUFFIX;
+                        } else {
+                            String name = fieldDTO.getFieldName();
+                            header = (name != null && !name.trim().isEmpty()) 
+                                    ? name + HEADER_CLIENT_SUFFIX 
+                                    : field + HEADER_CLIENT_SUFFIX;
+                        }
+                    } else {
+                        log.warn("ClientTypeFieldDTO not found for fieldId: {}", fieldId);
+                        header = field + HEADER_CLIENT_SUFFIX;
+                    }
                     headerMap.put(field, header);
                 } else {
                     headerMap.put(field, field + HEADER_CLIENT_SUFFIX);
@@ -451,21 +472,107 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
         }
         
         if (field.endsWith(CLIENT_SUFFIX) && client != null) {
-            return getClientFieldValue(client, field);
+            return getClientFieldValue(client, field, filterIds);
         }
         
         return getPurchaseFieldValue(purchase, field, filterIds);
     }
 
-    private String getClientFieldValue(@NonNull ClientDTO client, @NonNull String field) {
+    private String getClientFieldValue(@NonNull ClientDTO client, @NonNull String field, @NonNull FilterIds filterIds) {
         return switch (field) {
             case "id-client" -> client.getId() != null ? String.valueOf(client.getId()) : "";
             case "company-client" -> client.getCompany() != null ? client.getCompany() : "";
             case "createdAt-client" -> client.getCreatedAt() != null ? client.getCreatedAt() : "";
             case "updatedAt-client" -> client.getUpdatedAt() != null ? client.getUpdatedAt() : "";
-            case "source-client" -> client.getSourceId() != null ? client.getSourceId() : "";
+            case "source-client" -> getClientSourceName(client, filterIds.sourceDTOs());
             default -> "";
         };
+    }
+
+    private String getClientSourceName(@NonNull ClientDTO client, @NonNull List<SourceDTO> sourceDTOs) {
+        try {
+            java.lang.reflect.Method getSourceMethod = client.getClass().getMethod("getSource");
+            Object sourceObj = getSourceMethod.invoke(client);
+            if (sourceObj != null) {
+                java.lang.reflect.Method getNameMethod = sourceObj.getClass().getMethod("getName");
+                Object sourceName = getNameMethod.invoke(sourceObj);
+                if (sourceName != null) {
+                    return sourceName.toString();
+                }
+            }
+        } catch (NoSuchMethodException | java.lang.reflect.InvocationTargetException | IllegalAccessException e) {
+        }
+        
+        String sourceId = client.getSourceId();
+        if (sourceId == null || sourceId.trim().isEmpty()) {
+            return "";
+        }
+        try {
+            Long sourceIdLong = Long.parseLong(sourceId.trim());
+            String name = getNameFromDTOList(sourceDTOs, sourceIdLong);
+            if (name.isEmpty() && !sourceDTOs.isEmpty()) {
+                log.debug("Source name not found for sourceId: {} in {} sources", sourceIdLong, sourceDTOs.size());
+            }
+            return name;
+        } catch (NumberFormatException e) {
+            log.warn("Invalid sourceId format: {}", sourceId);
+            return "";
+        }
+    }
+
+    private List<SourceDTO> fetchClientSourceDTOs(@NonNull List<ClientDTO> clients) {
+        Map<Long, SourceDTO> uniqueSources = new HashMap<>();
+        
+        for (ClientDTO client : clients) {
+            try {
+                java.lang.reflect.Method getSourceMethod = client.getClass().getMethod("getSource");
+                Object sourceObj = getSourceMethod.invoke(client);
+                if (sourceObj != null) {
+                    SourceDTO sourceDTO = (SourceDTO) sourceObj;
+                    if (sourceDTO.getId() != null) {
+                        uniqueSources.put(sourceDTO.getId(), sourceDTO);
+                    }
+                }
+            } catch (NoSuchMethodException | java.lang.reflect.InvocationTargetException | IllegalAccessException | ClassCastException e) {
+            }
+            
+            String sourceId = client.getSourceId();
+            if (sourceId != null && !sourceId.trim().isEmpty()) {
+                try {
+                    Long sourceIdLong = Long.parseLong(sourceId.trim());
+                    if (!uniqueSources.containsKey(sourceIdLong)) {
+                        SourceDTO sourceDTO = sourceService.getSourceName(sourceIdLong);
+                        if (sourceDTO != null) {
+                            uniqueSources.put(sourceIdLong, sourceDTO);
+                        }
+                    }
+                } catch (NumberFormatException e) {
+                    log.warn("Invalid sourceId format in client: {}", sourceId);
+                } catch (PurchaseException e) {
+                    log.warn("Source not found for sourceId {}: {}", sourceId, e.getMessage());
+                } catch (Exception e) {
+                    log.error("Failed to get source name for sourceId {}: {}", sourceId, e.getMessage(), e);
+                }
+            }
+        }
+
+        log.debug("Fetched {} unique source names for clients", uniqueSources.size());
+        return new ArrayList<>(uniqueSources.values());
+    }
+
+    private List<SourceDTO> mergeSourceDTOs(@NonNull List<SourceDTO> purchaseSources, @NonNull List<SourceDTO> clientSources) {
+        Map<Long, SourceDTO> mergedMap = new HashMap<>();
+        purchaseSources.forEach(source -> {
+            if (source != null && source.getId() != null) {
+                mergedMap.put(source.getId(), source);
+            }
+        });
+        clientSources.forEach(source -> {
+            if (source != null && source.getId() != null) {
+                mergedMap.putIfAbsent(source.getId(), source);
+            }
+        });
+        return new ArrayList<>(mergedMap.values());
     }
 
     private String getPurchaseFieldValue(@NonNull Purchase purchase, @NonNull String field, @NonNull FilterIds filterIds) {
@@ -556,17 +663,29 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
             return Collections.emptyMap();
         }
         
-        try {
-            Map<Long, List<ClientFieldValueDTO>> result = clientApiClient.getClientFieldValuesBatch(clientIds).getBody();
-            return result != null ? result : Collections.emptyMap();
-        } catch (FeignException e) {
-            log.error("Feign error fetching field values batch for clients: status={}, error={}", 
-                    e.status(), e.getMessage(), e);
-            return Collections.emptyMap();
-        } catch (Exception e) {
-            log.error("Unexpected error fetching field values batch for clients: error={}", e.getMessage(), e);
-            return Collections.emptyMap();
+        Map<Long, List<ClientFieldValueDTO>> result = new HashMap<>();
+        int batchSize = 100;
+        
+        for (int i = 0; i < clientIds.size(); i += batchSize) {
+            int endIndex = Math.min(i + batchSize, clientIds.size());
+            List<Long> batch = clientIds.subList(i, endIndex);
+            
+            try {
+                org.example.purchaseservice.models.dto.client.ClientIdsRequest request = 
+                        new org.example.purchaseservice.models.dto.client.ClientIdsRequest(batch);
+                Map<Long, List<ClientFieldValueDTO>> batchResult = clientApiClient.getClientFieldValuesBatch(request).getBody();
+                if (batchResult != null) {
+                    result.putAll(batchResult);
+                }
+            } catch (FeignException e) {
+                log.error("Feign error fetching field values batch for clients: status={}, error={}", 
+                        e.status(), e.getMessage(), e);
+            } catch (Exception e) {
+                log.error("Unexpected error fetching field values batch for clients: error={}", e.getMessage(), e);
+            }
         }
+        
+        return result;
     }
 
     private <T extends IdNameDTO> String getNameFromDTOList(@NonNull List<T> dtoList, Long id) {
@@ -1028,20 +1147,32 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
         if (fieldIds.isEmpty()) {
             return Collections.emptyMap();
         }
-        try {
-            List<ClientTypeFieldDTO> fields = clientTypeFieldApiClient.getFieldsByIds(fieldIds).getBody();
-            if (fields != null) {
-                return fields.stream()
-                        .filter(Objects::nonNull)
-                        .collect(Collectors.toMap(ClientTypeFieldDTO::getId, field -> field, (existing, _) -> existing));
+        
+        Map<Long, ClientTypeFieldDTO> result = new HashMap<>();
+        int batchSize = 100;
+        
+        for (int i = 0; i < fieldIds.size(); i += batchSize) {
+            int endIndex = Math.min(i + batchSize, fieldIds.size());
+            List<Long> batch = fieldIds.subList(i, endIndex);
+            
+            try {
+                org.example.purchaseservice.models.dto.clienttype.FieldIdsRequest request = 
+                        new org.example.purchaseservice.models.dto.clienttype.FieldIdsRequest(batch);
+                List<ClientTypeFieldDTO> fields = clientTypeFieldApiClient.getFieldsByIds(request).getBody();
+                if (fields != null) {
+                    fields.stream()
+                            .filter(Objects::nonNull)
+                            .forEach(field -> result.putIfAbsent(field.getId(), field));
+                }
+            } catch (FeignException e) {
+                log.error("Feign error fetching client type fields: status={}, error={}", 
+                        e.status(), e.getMessage(), e);
+            } catch (Exception e) {
+                log.error("Unexpected error fetching client type fields: error={}", e.getMessage(), e);
             }
-        } catch (FeignException e) {
-            log.error("Feign error fetching client type fields: status={}, error={}", 
-                    e.status(), e.getMessage(), e);
-        } catch (Exception e) {
-            log.error("Unexpected error fetching client type fields: error={}", e.getMessage(), e);
         }
-        return Collections.emptyMap();
+        
+        return result;
     }
 
     private List<ClientDTO> fetchAllClients() {

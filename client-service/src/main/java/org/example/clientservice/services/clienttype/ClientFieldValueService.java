@@ -48,8 +48,6 @@ public class ClientFieldValueService implements IClientFieldValueService {
     public Map<Long, List<ClientFieldValueDTO>> getFieldValuesByClientIds(@NonNull List<Long> clientIds) {
         validateClientIds(clientIds);
         
-        log.info("Getting field values for {} clients", clientIds.size());
-        
         try {
             List<ClientFieldValue> allFieldValues = fieldValueRepository.findByClientIdInWithFieldAndValueList(clientIds);
             

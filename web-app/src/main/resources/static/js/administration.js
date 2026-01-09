@@ -218,7 +218,7 @@ document.getElementById('savePermissionsButton').addEventListener('click',
 
     try {
         const response = await fetch(`/api/v1/user/${userId}/permissions`, {
-            method: 'PUT',
+            method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json'
             },
@@ -343,7 +343,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             try {
                 const response = await fetch(`/api/v1/user/${user.id}`, {
-                    method: 'PUT',
+                    method: 'PATCH',
                     headers: {
                         'Content-Type': 'application/json'
                     },
@@ -397,7 +397,7 @@ document.addEventListener('DOMContentLoaded', function () {
             };
             
             const response = await fetch(`/api/v1/user/${userId}`, {
-                method: 'PUT',
+                method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json'
                 },

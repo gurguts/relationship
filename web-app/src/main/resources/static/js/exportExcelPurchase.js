@@ -125,14 +125,31 @@ function initExcelExportPurchase(config) {
                 queryParams += `&q=${encodeURIComponent(searchTerm)}`;
             }
 
-            // Подготавливаем фильтры, добавляя clientTypeId если нужно
-            const cleanedFilters = Object.assign({}, selectedFilters);
+            const filters = { ...selectedFilters };
             if (typeof currentClientTypeId !== 'undefined' && currentClientTypeId) {
-                cleanedFilters.clientTypeId = [currentClientTypeId.toString()];
+                filters.clientTypeId = [currentClientTypeId.toString()];
             }
+
+            const convertedFilters = PurchaseFilters.convertFieldNamesToFieldIds(filters, filterableFields, clientTypeFields);
             
-            if (Object.keys(cleanedFilters).length > 0) {
-                queryParams += `&filters=${encodeURIComponent(JSON.stringify(cleanedFilters))}`;
+            const normalizedFilters = {};
+            Object.keys(convertedFilters).forEach(key => {
+                const lowerKey = key.toLowerCase();
+                if (lowerKey === 'createdatfrom') {
+                    normalizedFilters['createdAtFrom'] = convertedFilters[key];
+                } else if (lowerKey === 'createdatto') {
+                    normalizedFilters['createdAtTo'] = convertedFilters[key];
+                } else if (lowerKey === 'updatedatfrom') {
+                    normalizedFilters['updatedAtFrom'] = convertedFilters[key];
+                } else if (lowerKey === 'updatedatto') {
+                    normalizedFilters['updatedAtTo'] = convertedFilters[key];
+                } else {
+                    normalizedFilters[key] = convertedFilters[key];
+                }
+            });
+            
+            if (Object.keys(normalizedFilters).length > 0) {
+                queryParams += `&filters=${encodeURIComponent(JSON.stringify(normalizedFilters))}`;
             }
 
             try {
