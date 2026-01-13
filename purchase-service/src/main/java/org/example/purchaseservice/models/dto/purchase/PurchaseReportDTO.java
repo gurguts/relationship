@@ -1,18 +1,44 @@
 package org.example.purchaseservice.models.dto.purchase;
 
-import lombok.Builder;
 import lombok.Data;
 
+import java.math.BigDecimal;
+import java.util.List;
 import java.util.Map;
 
 @Data
-@Builder
 public class PurchaseReportDTO {
-    private Map<Long, Double> totalCollectedByProduct;
-    private Map<Long, Double> totalDeliveredByProduct;
-    private Map<String, Map<Long, Double>> byAttractors;
-    private Map<String, Map<Long, Double>> byDrivers;
-    private Map<String, Double> totalSpentByCurrency;
-    private Map<String, Double> averagePriceByCurrency;
-    private Map<Long, Double> averageCollectedPerTimeByProduct;
+    private List<DriverReport> drivers;
+    private List<SourceReport> sources;
+    private List<ProductTotal> totals;
+
+    @Data
+    public static class DriverReport {
+        private Long userId;
+        private String userName;
+        private List<ProductInfo> products;
+    }
+
+    @Data
+    public static class SourceReport {
+        private Long sourceId;
+        private String sourceName;
+        private List<ProductInfo> products;
+    }
+
+    @Data
+    public static class ProductInfo {
+        private Long productId;
+        private String productName;
+        private BigDecimal quantity;
+        private BigDecimal totalPriceEur;
+    }
+
+    @Data
+    public static class ProductTotal {
+        private Long productId;
+        private String productName;
+        private BigDecimal quantity;
+        private BigDecimal totalPriceEur;
+    }
 }

@@ -17,6 +17,9 @@ public interface AccountBalanceRepository extends CrudRepository<AccountBalance,
     @NonNull
     List<AccountBalance> findByAccountId(@NonNull Long accountId);
     
+    @NonNull
+    List<AccountBalance> findByAccountIdIn(@NonNull List<Long> accountIds);
+    
     @Modifying
     @Query("UPDATE AccountBalance ab SET ab.amount = ab.amount + :amount WHERE ab.accountId = :accountId AND ab.currency = :currency")
     void addAmount(@Param("accountId") @NonNull Long accountId, @Param("currency") @NonNull String currency, @Param("amount") @NonNull BigDecimal amount);

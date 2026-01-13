@@ -6,6 +6,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.purchaseservice.exceptions.PurchaseException;
 import org.example.purchaseservice.models.balance.*;
+import org.example.purchaseservice.models.balance.VehicleTerminal;
+import org.example.purchaseservice.models.balance.VehicleDestinationCountry;
+import org.example.purchaseservice.models.balance.VehicleDestinationPlace;
 import org.example.purchaseservice.models.dto.balance.VehicleUpdateDTO;
 import org.example.purchaseservice.clients.TransactionApiClient;
 import org.example.purchaseservice.repositories.CarrierRepository;
@@ -13,6 +16,9 @@ import org.example.purchaseservice.repositories.VehicleReceiverRepository;
 import org.example.purchaseservice.repositories.VehicleRepository;
 import org.example.purchaseservice.repositories.VehicleSenderRepository;
 import org.example.purchaseservice.repositories.VehicleProductRepository;
+import org.example.purchaseservice.repositories.VehicleTerminalRepository;
+import org.example.purchaseservice.repositories.VehicleDestinationCountryRepository;
+import org.example.purchaseservice.repositories.VehicleDestinationPlaceRepository;
 import org.example.purchaseservice.spec.VehicleSpecification;
 import org.example.purchaseservice.utils.StringUtils;
 import org.springframework.data.domain.Page;
@@ -44,6 +50,9 @@ public class VehicleService implements IVehicleService {
     private final CarrierRepository carrierRepository;
     private final VehicleSenderRepository vehicleSenderRepository;
     private final VehicleReceiverRepository vehicleReceiverRepository;
+    private final VehicleTerminalRepository vehicleTerminalRepository;
+    private final VehicleDestinationCountryRepository vehicleDestinationCountryRepository;
+    private final VehicleDestinationPlaceRepository vehicleDestinationPlaceRepository;
     private final TransactionApiClient transactionApiClient;
     @Getter
     private final VehicleExpenseService vehicleExpenseService;
@@ -317,7 +326,7 @@ public class VehicleService implements IVehicleService {
         Vehicle vehicle = getVehicleById(vehicleId);
         
         updateBasicFields(vehicle, dto);
-        updateVehicleRelations(vehicle, dto.getSenderId(), dto.getReceiverId(), dto.getCarrierId());
+        updateVehicleRelations(vehicle, dto.getSenderId(), dto.getReceiverId(), dto.getCarrierId(), dto.getTerminalId(), dto.getDestinationCountryId(), dto.getDestinationPlaceId());
         updateInvoicePrices(vehicle);
         
         Vehicle saved = vehicleRepository.save(vehicle);
@@ -340,12 +349,9 @@ public class VehicleService implements IVehicleService {
         vehicle.setInvoiceUa(normalizeString(dto.getInvoiceUa()));
         vehicle.setInvoiceEu(normalizeString(dto.getInvoiceEu()));
         vehicle.setDescription(normalizeString(dto.getDescription()));
-        vehicle.setDestinationCountry(normalizeString(dto.getDestinationCountry()));
-        vehicle.setDestinationPlace(normalizeString(dto.getDestinationPlace()));
         vehicle.setProduct(normalizeString(dto.getProduct()));
         vehicle.setProductQuantity(normalizeString(dto.getProductQuantity()));
         vehicle.setDeclarationNumber(normalizeString(dto.getDeclarationNumber()));
-        vehicle.setTerminal(normalizeString(dto.getTerminal()));
         vehicle.setDriverFullName(normalizeString(dto.getDriverFullName()));
     }
     
@@ -599,10 +605,13 @@ public class VehicleService implements IVehicleService {
         }
     }
     
-    private void updateVehicleRelations(Vehicle vehicle, Long senderId, Long receiverId, Long carrierId) {
+    private void updateVehicleRelations(Vehicle vehicle, Long senderId, Long receiverId, Long carrierId, Long terminalId, Long destinationCountryId, Long destinationPlaceId) {
         updateVehicleSender(vehicle, senderId);
         updateVehicleReceiver(vehicle, receiverId);
         updateVehicleCarrier(vehicle, carrierId);
+        updateVehicleTerminal(vehicle, terminalId);
+        updateVehicleDestinationCountry(vehicle, destinationCountryId);
+        updateVehicleDestinationPlace(vehicle, destinationPlaceId);
     }
     
     private void updateVehicleSender(Vehicle vehicle, Long senderId) {
@@ -635,6 +644,39 @@ public class VehicleService implements IVehicleService {
             vehicle.setCarrier(carrier);
         } else if (vehicle.getCarrier() != null) {
             vehicle.setCarrier(null);
+        }
+    }
+
+    private void updateVehicleTerminal(Vehicle vehicle, Long terminalId) {
+        if (terminalId != null) {
+            VehicleTerminal terminal = vehicleTerminalRepository.findById(terminalId)
+                    .orElseThrow(() -> new PurchaseException("VEHICLE_TERMINAL_NOT_FOUND",
+                            String.format("Vehicle terminal not found: id=%d", terminalId)));
+            vehicle.setTerminal(terminal);
+        } else {
+            vehicle.setTerminal(null);
+        }
+    }
+
+    private void updateVehicleDestinationCountry(Vehicle vehicle, Long destinationCountryId) {
+        if (destinationCountryId != null) {
+            VehicleDestinationCountry country = vehicleDestinationCountryRepository.findById(destinationCountryId)
+                    .orElseThrow(() -> new PurchaseException("VEHICLE_DESTINATION_COUNTRY_NOT_FOUND",
+                            String.format("Vehicle destination country not found: id=%d", destinationCountryId)));
+            vehicle.setDestinationCountry(country);
+        } else {
+            vehicle.setDestinationCountry(null);
+        }
+    }
+
+    private void updateVehicleDestinationPlace(Vehicle vehicle, Long destinationPlaceId) {
+        if (destinationPlaceId != null) {
+            VehicleDestinationPlace place = vehicleDestinationPlaceRepository.findById(destinationPlaceId)
+                    .orElseThrow(() -> new PurchaseException("VEHICLE_DESTINATION_PLACE_NOT_FOUND",
+                            String.format("Vehicle destination place not found: id=%d", destinationPlaceId)));
+            vehicle.setDestinationPlace(place);
+        } else {
+            vehicle.setDestinationPlace(null);
         }
     }
     

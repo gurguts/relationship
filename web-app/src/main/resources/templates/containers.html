@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Containers</title>
 
+    <link rel="stylesheet" href="/css/common.css">
     <link rel="stylesheet" href="/css/clients.css">
     <link rel="stylesheet" href="/css/purchase.css">
-    <link rel="stylesheet" href="/css/common.css">
 
     <link rel="icon" type="image/png" href="/favicon/favicon-96x96.png" sizes="96x96"/>
     <link rel="icon" type="image/svg+xml" href="/favicon/favicon.svg"/>
@@ -234,7 +234,7 @@
         <p>
             <strong>Компанія:</strong>
             <span id="modal-client-company"></span>
-            <button class="edit-icon" onclick="enableEdit('company')" title="Редагувати">
+            <button id="edit-company" class="edit-icon" data-field-id="company" title="Редагувати">
                 <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
                 </svg>
@@ -243,7 +243,7 @@
         <p class="modal-content-p-source">
             <strong>Залучення:</strong>
             <span id="modal-client-source"></span>
-            <button id="edit-source" class="edit-icon" onclick="enableSelect('source', availableSources)" title="Редагувати">
+            <button id="edit-source" class="edit-icon" data-field-id="source" data-field-type="select" title="Редагувати">
                 <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
                 </svg>
@@ -256,8 +256,8 @@
         <div class="section-client-buttons">
 
             <div class="section-client-buttons-block">
-                <button id="save-client" onclick="saveClientChanges()">Зберегти зміни</button>
-                <button id="cancel-client" onclick="cancelClientChanges()" style="display: none;">Відмінити</button>
+                <button id="save-client">Зберегти зміни</button>
+                <button id="cancel-client" style="display: none;">Відмінити</button>
             </div>
 
             <div class="section-client-buttons-block">

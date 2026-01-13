@@ -43,20 +43,23 @@ public class VehicleSpecification implements Specification<Vehicle> {
     private static final String FIELD_VEHICLE_NUMBER = "vehicleNumber";
     private static final String FIELD_INVOICE_UA = "invoiceUa";
     private static final String FIELD_INVOICE_EU = "invoiceEu";
-    private static final String FIELD_DESTINATION_COUNTRY = "destinationCountry";
-    private static final String FIELD_DESTINATION_PLACE = "destinationPlace";
     private static final String FIELD_PRODUCT = "product";
     private static final String FIELD_PRODUCT_QUANTITY = "productQuantity";
     private static final String FIELD_DECLARATION_NUMBER = "declarationNumber";
-    private static final String FIELD_TERMINAL = "terminal";
     private static final String FIELD_DRIVER_FULL_NAME = "driverFullName";
     private static final String FIELD_DESCRIPTION = "description";
     private static final String FIELD_SENDER = "sender";
     private static final String FIELD_RECEIVER = "receiver";
     private static final String FIELD_CARRIER = "carrier";
+    private static final String FIELD_TERMINAL = "terminal";
+    private static final String FIELD_DESTINATION_COUNTRY = "destinationCountry";
+    private static final String FIELD_DESTINATION_PLACE = "destinationPlace";
     private static final String FIELD_SENDER_NAME = "name";
     private static final String FIELD_RECEIVER_NAME = "name";
     private static final String FIELD_CARRIER_COMPANY_NAME = "companyName";
+    private static final String FIELD_TERMINAL_NAME = "name";
+    private static final String FIELD_DESTINATION_COUNTRY_NAME = "name";
+    private static final String FIELD_DESTINATION_PLACE_NAME = "name";
     
     private final String query;
     private final Map<String, List<String>> filterParams;
@@ -91,18 +94,18 @@ public class VehicleSpecification implements Specification<Vehicle> {
         addStringFieldSearchPredicate(searchPredicates, root, criteriaBuilder, FIELD_VEHICLE_NUMBER, searchTerm);
         addStringFieldSearchPredicate(searchPredicates, root, criteriaBuilder, FIELD_INVOICE_UA, searchTerm);
         addStringFieldSearchPredicate(searchPredicates, root, criteriaBuilder, FIELD_INVOICE_EU, searchTerm);
-        addStringFieldSearchPredicate(searchPredicates, root, criteriaBuilder, FIELD_DESTINATION_COUNTRY, searchTerm);
-        addStringFieldSearchPredicate(searchPredicates, root, criteriaBuilder, FIELD_DESTINATION_PLACE, searchTerm);
         addStringFieldSearchPredicate(searchPredicates, root, criteriaBuilder, FIELD_PRODUCT, searchTerm);
         addStringFieldSearchPredicate(searchPredicates, root, criteriaBuilder, FIELD_PRODUCT_QUANTITY, searchTerm);
         addStringFieldSearchPredicate(searchPredicates, root, criteriaBuilder, FIELD_DECLARATION_NUMBER, searchTerm);
-        addStringFieldSearchPredicate(searchPredicates, root, criteriaBuilder, FIELD_TERMINAL, searchTerm);
         addStringFieldSearchPredicate(searchPredicates, root, criteriaBuilder, FIELD_DRIVER_FULL_NAME, searchTerm);
         addStringFieldSearchPredicate(searchPredicates, root, criteriaBuilder, FIELD_DESCRIPTION, searchTerm);
 
         addJoinFieldSearchPredicate(searchPredicates, root, criteriaBuilder, FIELD_SENDER, FIELD_SENDER_NAME, searchTerm);
         addJoinFieldSearchPredicate(searchPredicates, root, criteriaBuilder, FIELD_RECEIVER, FIELD_RECEIVER_NAME, searchTerm);
         addJoinFieldSearchPredicate(searchPredicates, root, criteriaBuilder, FIELD_CARRIER, FIELD_CARRIER_COMPANY_NAME, searchTerm);
+        addJoinFieldSearchPredicate(searchPredicates, root, criteriaBuilder, FIELD_TERMINAL, FIELD_TERMINAL_NAME, searchTerm);
+        addJoinFieldSearchPredicate(searchPredicates, root, criteriaBuilder, FIELD_DESTINATION_COUNTRY, FIELD_DESTINATION_COUNTRY_NAME, searchTerm);
+        addJoinFieldSearchPredicate(searchPredicates, root, criteriaBuilder, FIELD_DESTINATION_PLACE, FIELD_DESTINATION_PLACE_NAME, searchTerm);
 
         return searchPredicates;
     }

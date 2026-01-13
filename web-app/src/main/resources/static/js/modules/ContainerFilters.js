@@ -75,7 +75,7 @@ const ContainerFilters = (function() {
             existingFilters.forEach(el => {
                 const selects = el.querySelectorAll('select');
                 selects.forEach(sel => {
-                    sel.innerHTML = '';
+                    sel.textContent = '';
                 });
                 el.remove();
             });
@@ -86,22 +86,38 @@ const ContainerFilters = (function() {
 
             const containerSelectItem = document.createElement('div');
             containerSelectItem.className = 'select-section-item';
-            containerSelectItem.innerHTML = `
-                <br>
-                <label class="select-label-style" for="filter-container">Тип тари:</label>
-                <select id="filter-container" name="container" multiple>
-                </select>
-            `;
+            containerSelectItem.appendChild(document.createElement('br'));
+            
+            const containerLabel = document.createElement('label');
+            containerLabel.className = 'select-label-style';
+            containerLabel.setAttribute('for', 'filter-container');
+            containerLabel.textContent = 'Тип тари:';
+            containerSelectItem.appendChild(containerLabel);
+            
+            const containerSelect = document.createElement('select');
+            containerSelect.id = 'filter-container';
+            containerSelect.name = 'container';
+            containerSelect.multiple = true;
+            containerSelectItem.appendChild(containerSelect);
+            
             filterForm.appendChild(containerSelectItem);
 
             const userSelectItem = document.createElement('div');
             userSelectItem.className = 'select-section-item';
-            userSelectItem.innerHTML = `
-                <br>
-                <label class="select-label-style" for="filter-user">Власник:</label>
-                <select id="filter-user" name="user" multiple>
-                </select>
-            `;
+            userSelectItem.appendChild(document.createElement('br'));
+            
+            const userLabel = document.createElement('label');
+            userLabel.className = 'select-label-style';
+            userLabel.setAttribute('for', 'filter-user');
+            userLabel.textContent = 'Власник:';
+            userSelectItem.appendChild(userLabel);
+            
+            const userSelect = document.createElement('select');
+            userSelect.id = 'filter-user';
+            userSelect.name = 'user';
+            userSelect.multiple = true;
+            userSelectItem.appendChild(userSelect);
+            
             filterForm.appendChild(userSelectItem);
 
             const quantityH2 = document.createElement('h2');
@@ -110,12 +126,35 @@ const ContainerFilters = (function() {
             
             const quantityBlock = document.createElement('div');
             quantityBlock.className = 'filter-block';
-            quantityBlock.innerHTML = `
-                <label class="from-to-style" for="filter-quantity-from">Від:</label>
-                <input type="number" id="filter-quantity-from" name="quantityFrom" step="0.01" placeholder="Мінімум">
-                <label class="from-to-style" for="filter-quantity-to">До:</label>
-                <input type="number" id="filter-quantity-to" name="quantityTo" step="0.01" placeholder="Максимум">
-            `;
+            
+            const quantityFromLabel = document.createElement('label');
+            quantityFromLabel.className = 'from-to-style';
+            quantityFromLabel.setAttribute('for', 'filter-quantity-from');
+            quantityFromLabel.textContent = 'Від:';
+            quantityBlock.appendChild(quantityFromLabel);
+            
+            const quantityFromInput = document.createElement('input');
+            quantityFromInput.type = 'number';
+            quantityFromInput.id = 'filter-quantity-from';
+            quantityFromInput.name = 'quantityFrom';
+            quantityFromInput.step = '0.01';
+            quantityFromInput.placeholder = 'Мінімум';
+            quantityBlock.appendChild(quantityFromInput);
+            
+            const quantityToLabel = document.createElement('label');
+            quantityToLabel.className = 'from-to-style';
+            quantityToLabel.setAttribute('for', 'filter-quantity-to');
+            quantityToLabel.textContent = 'До:';
+            quantityBlock.appendChild(quantityToLabel);
+            
+            const quantityToInput = document.createElement('input');
+            quantityToInput.type = 'number';
+            quantityToInput.id = 'filter-quantity-to';
+            quantityToInput.name = 'quantityTo';
+            quantityToInput.step = '0.01';
+            quantityToInput.placeholder = 'Максимум';
+            quantityBlock.appendChild(quantityToInput);
+            
             filterForm.appendChild(quantityBlock);
 
             const updatedAtH2 = document.createElement('h2');
@@ -124,12 +163,31 @@ const ContainerFilters = (function() {
             
             const updatedAtBlock = document.createElement('div');
             updatedAtBlock.className = 'filter-block';
-            updatedAtBlock.innerHTML = `
-                <label class="from-to-style" for="filter-updatedAt-from">Від:</label>
-                <input type="date" id="filter-updatedAt-from" name="updatedAtFrom">
-                <label class="from-to-style" for="filter-updatedAt-to">До:</label>
-                <input type="date" id="filter-updatedAt-to" name="updatedAtTo">
-            `;
+            
+            const updatedAtFromLabel = document.createElement('label');
+            updatedAtFromLabel.className = 'from-to-style';
+            updatedAtFromLabel.setAttribute('for', 'filter-updatedAt-from');
+            updatedAtFromLabel.textContent = 'Від:';
+            updatedAtBlock.appendChild(updatedAtFromLabel);
+            
+            const updatedAtFromInput = document.createElement('input');
+            updatedAtFromInput.type = 'date';
+            updatedAtFromInput.id = 'filter-updatedAt-from';
+            updatedAtFromInput.name = 'updatedAtFrom';
+            updatedAtBlock.appendChild(updatedAtFromInput);
+            
+            const updatedAtToLabel = document.createElement('label');
+            updatedAtToLabel.className = 'from-to-style';
+            updatedAtToLabel.setAttribute('for', 'filter-updatedAt-to');
+            updatedAtToLabel.textContent = 'До:';
+            updatedAtBlock.appendChild(updatedAtToLabel);
+            
+            const updatedAtToInput = document.createElement('input');
+            updatedAtToInput.type = 'date';
+            updatedAtToInput.id = 'filter-updatedAt-to';
+            updatedAtToInput.name = 'updatedAtTo';
+            updatedAtBlock.appendChild(updatedAtToInput);
+            
             filterForm.appendChild(updatedAtBlock);
 
             const clientH2 = document.createElement('h2');
@@ -142,12 +200,31 @@ const ContainerFilters = (function() {
             
             const clientCreatedAtBlock = document.createElement('div');
             clientCreatedAtBlock.className = 'filter-block';
-            clientCreatedAtBlock.innerHTML = `
-                <label class="from-to-style" for="filter-clientCreatedAt-from">Від:</label>
-                <input type="date" id="filter-clientCreatedAt-from" name="clientCreatedAtFrom">
-                <label class="from-to-style" for="filter-clientCreatedAt-to">До:</label>
-                <input type="date" id="filter-clientCreatedAt-to" name="clientCreatedAtTo">
-            `;
+            
+            const clientCreatedAtFromLabel = document.createElement('label');
+            clientCreatedAtFromLabel.className = 'from-to-style';
+            clientCreatedAtFromLabel.setAttribute('for', 'filter-clientCreatedAt-from');
+            clientCreatedAtFromLabel.textContent = 'Від:';
+            clientCreatedAtBlock.appendChild(clientCreatedAtFromLabel);
+            
+            const clientCreatedAtFromInput = document.createElement('input');
+            clientCreatedAtFromInput.type = 'date';
+            clientCreatedAtFromInput.id = 'filter-clientCreatedAt-from';
+            clientCreatedAtFromInput.name = 'clientCreatedAtFrom';
+            clientCreatedAtBlock.appendChild(clientCreatedAtFromInput);
+            
+            const clientCreatedAtToLabel = document.createElement('label');
+            clientCreatedAtToLabel.className = 'from-to-style';
+            clientCreatedAtToLabel.setAttribute('for', 'filter-clientCreatedAt-to');
+            clientCreatedAtToLabel.textContent = 'До:';
+            clientCreatedAtBlock.appendChild(clientCreatedAtToLabel);
+            
+            const clientCreatedAtToInput = document.createElement('input');
+            clientCreatedAtToInput.type = 'date';
+            clientCreatedAtToInput.id = 'filter-clientCreatedAt-to';
+            clientCreatedAtToInput.name = 'clientCreatedAtTo';
+            clientCreatedAtBlock.appendChild(clientCreatedAtToInput);
+            
             filterForm.appendChild(clientCreatedAtBlock);
 
             const clientUpdatedAtH2 = document.createElement('h2');
@@ -156,22 +233,49 @@ const ContainerFilters = (function() {
             
             const clientUpdatedAtBlock = document.createElement('div');
             clientUpdatedAtBlock.className = 'filter-block';
-            clientUpdatedAtBlock.innerHTML = `
-                <label class="from-to-style" for="filter-clientUpdatedAt-from">Від:</label>
-                <input type="date" id="filter-clientUpdatedAt-from" name="clientUpdatedAtFrom">
-                <label class="from-to-style" for="filter-clientUpdatedAt-to">До:</label>
-                <input type="date" id="filter-clientUpdatedAt-to" name="clientUpdatedAtTo">
-            `;
+            
+            const clientUpdatedAtFromLabel = document.createElement('label');
+            clientUpdatedAtFromLabel.className = 'from-to-style';
+            clientUpdatedAtFromLabel.setAttribute('for', 'filter-clientUpdatedAt-from');
+            clientUpdatedAtFromLabel.textContent = 'Від:';
+            clientUpdatedAtBlock.appendChild(clientUpdatedAtFromLabel);
+            
+            const clientUpdatedAtFromInput = document.createElement('input');
+            clientUpdatedAtFromInput.type = 'date';
+            clientUpdatedAtFromInput.id = 'filter-clientUpdatedAt-from';
+            clientUpdatedAtFromInput.name = 'clientUpdatedAtFrom';
+            clientUpdatedAtBlock.appendChild(clientUpdatedAtFromInput);
+            
+            const clientUpdatedAtToLabel = document.createElement('label');
+            clientUpdatedAtToLabel.className = 'from-to-style';
+            clientUpdatedAtToLabel.setAttribute('for', 'filter-clientUpdatedAt-to');
+            clientUpdatedAtToLabel.textContent = 'До:';
+            clientUpdatedAtBlock.appendChild(clientUpdatedAtToLabel);
+            
+            const clientUpdatedAtToInput = document.createElement('input');
+            clientUpdatedAtToInput.type = 'date';
+            clientUpdatedAtToInput.id = 'filter-clientUpdatedAt-to';
+            clientUpdatedAtToInput.name = 'clientUpdatedAtTo';
+            clientUpdatedAtBlock.appendChild(clientUpdatedAtToInput);
+            
             filterForm.appendChild(clientUpdatedAtBlock);
 
             const clientSourceSelectItem = document.createElement('div');
             clientSourceSelectItem.className = 'select-section-item';
-            clientSourceSelectItem.innerHTML = `
-                <br>
-                <label class="select-label-style" for="filter-clientSource">Залучення клієнта:</label>
-                <select id="filter-clientSource" name="clientSource" multiple>
-                </select>
-            `;
+            clientSourceSelectItem.appendChild(document.createElement('br'));
+            
+            const clientSourceLabel = document.createElement('label');
+            clientSourceLabel.className = 'select-label-style';
+            clientSourceLabel.setAttribute('for', 'filter-clientSource');
+            clientSourceLabel.textContent = 'Залучення клієнта:';
+            clientSourceSelectItem.appendChild(clientSourceLabel);
+            
+            const clientSourceSelect = document.createElement('select');
+            clientSourceSelect.id = 'filter-clientSource';
+            clientSourceSelect.name = 'clientSource';
+            clientSourceSelect.multiple = true;
+            clientSourceSelectItem.appendChild(clientSourceSelect);
+            
             filterForm.appendChild(clientSourceSelectItem);
 
             setTimeout(() => {
@@ -231,12 +335,31 @@ const ContainerFilters = (function() {
                         
                         const filterBlock = document.createElement('div');
                         filterBlock.className = 'filter-block';
-                        filterBlock.innerHTML = `
-                            <label class="from-to-style" for="filter-${ClientUtils.escapeHtml(field.fieldName)}-from">Від:</label>
-                            <input type="date" id="filter-${ClientUtils.escapeHtml(field.fieldName)}-from" name="${ClientUtils.escapeHtml(field.fieldName)}From">
-                            <label class="from-to-style" for="filter-${ClientUtils.escapeHtml(field.fieldName)}-to">До:</label>
-                            <input type="date" id="filter-${ClientUtils.escapeHtml(field.fieldName)}-to" name="${ClientUtils.escapeHtml(field.fieldName)}To">
-                        `;
+                        
+                        const fromLabel = document.createElement('label');
+                        fromLabel.className = 'from-to-style';
+                        fromLabel.setAttribute('for', `filter-${field.fieldName}-from`);
+                        fromLabel.textContent = 'Від:';
+                        filterBlock.appendChild(fromLabel);
+                        
+                        const fromInput = document.createElement('input');
+                        fromInput.type = 'date';
+                        fromInput.id = `filter-${field.fieldName}-from`;
+                        fromInput.name = `${field.fieldName}From`;
+                        filterBlock.appendChild(fromInput);
+                        
+                        const toLabel = document.createElement('label');
+                        toLabel.className = 'from-to-style';
+                        toLabel.setAttribute('for', `filter-${field.fieldName}-to`);
+                        toLabel.textContent = 'До:';
+                        filterBlock.appendChild(toLabel);
+                        
+                        const toInput = document.createElement('input');
+                        toInput.type = 'date';
+                        toInput.id = `filter-${field.fieldName}-to`;
+                        toInput.name = `${field.fieldName}To`;
+                        filterBlock.appendChild(toInput);
+                        
                         filterForm.appendChild(filterBlock);
                     } else if (field.fieldType === 'NUMBER') {
                         const h2 = document.createElement('h2');
@@ -245,12 +368,35 @@ const ContainerFilters = (function() {
                         
                         const filterBlock = document.createElement('div');
                         filterBlock.className = 'filter-block';
-                        filterBlock.innerHTML = `
-                            <label class="from-to-style" for="filter-${ClientUtils.escapeHtml(field.fieldName)}-from">Від:</label>
-                            <input type="number" id="filter-${ClientUtils.escapeHtml(field.fieldName)}-from" name="${ClientUtils.escapeHtml(field.fieldName)}From" step="any" placeholder="Мінімум">
-                            <label class="from-to-style" for="filter-${ClientUtils.escapeHtml(field.fieldName)}-to">До:</label>
-                            <input type="number" id="filter-${ClientUtils.escapeHtml(field.fieldName)}-to" name="${ClientUtils.escapeHtml(field.fieldName)}To" step="any" placeholder="Максимум">
-                        `;
+                        
+                        const fromLabel = document.createElement('label');
+                        fromLabel.className = 'from-to-style';
+                        fromLabel.setAttribute('for', `filter-${field.fieldName}-from`);
+                        fromLabel.textContent = 'Від:';
+                        filterBlock.appendChild(fromLabel);
+                        
+                        const fromInput = document.createElement('input');
+                        fromInput.type = 'number';
+                        fromInput.id = `filter-${field.fieldName}-from`;
+                        fromInput.name = `${field.fieldName}From`;
+                        fromInput.step = 'any';
+                        fromInput.placeholder = 'Мінімум';
+                        filterBlock.appendChild(fromInput);
+                        
+                        const toLabel = document.createElement('label');
+                        toLabel.className = 'from-to-style';
+                        toLabel.setAttribute('for', `filter-${field.fieldName}-to`);
+                        toLabel.textContent = 'До:';
+                        filterBlock.appendChild(toLabel);
+                        
+                        const toInput = document.createElement('input');
+                        toInput.type = 'number';
+                        toInput.id = `filter-${field.fieldName}-to`;
+                        toInput.name = `${field.fieldName}To`;
+                        toInput.step = 'any';
+                        toInput.placeholder = 'Максимум';
+                        filterBlock.appendChild(toInput);
+                        
                         filterForm.appendChild(filterBlock);
                     } else if (field.fieldType === 'LIST') {
                         const selectId = `filter-${field.fieldName}`;
@@ -336,27 +482,53 @@ const ContainerFilters = (function() {
                     } else if (field.fieldType === 'TEXT' || field.fieldType === 'PHONE') {
                         const selectItem = document.createElement('div');
                         selectItem.className = 'select-section-item';
-                        selectItem.innerHTML = `
-                            <br>
-                            <label class="select-label-style" for="filter-${ClientUtils.escapeHtml(field.fieldName)}">${ClientUtils.escapeHtml(field.fieldLabel)}:</label>
-                            <input type="text" 
-                                   id="filter-${ClientUtils.escapeHtml(field.fieldName)}" 
-                                   name="${ClientUtils.escapeHtml(field.fieldName)}" 
-                                   placeholder="Пошук...">
-                        `;
+                        selectItem.appendChild(document.createElement('br'));
+                        
+                        const label = document.createElement('label');
+                        label.className = 'select-label-style';
+                        label.setAttribute('for', `filter-${field.fieldName}`);
+                        label.textContent = field.fieldLabel + ':';
+                        selectItem.appendChild(label);
+                        
+                        const input = document.createElement('input');
+                        input.type = 'text';
+                        input.id = `filter-${field.fieldName}`;
+                        input.name = field.fieldName;
+                        input.placeholder = 'Пошук...';
+                        selectItem.appendChild(input);
+                        
                         filterForm.appendChild(selectItem);
                     } else if (field.fieldType === 'BOOLEAN') {
                         const selectItem = document.createElement('div');
                         selectItem.className = 'select-section-item';
-                        selectItem.innerHTML = `
-                            <br>
-                            <label class="select-label-style" for="filter-${ClientUtils.escapeHtml(field.fieldName)}">${ClientUtils.escapeHtml(field.fieldLabel)}:</label>
-                            <select id="filter-${ClientUtils.escapeHtml(field.fieldName)}" name="${ClientUtils.escapeHtml(field.fieldName)}">
-                                <option value="">Всі</option>
-                                <option value="true">Так</option>
-                                <option value="false">Ні</option>
-                            </select>
-                        `;
+                        selectItem.appendChild(document.createElement('br'));
+                        
+                        const label = document.createElement('label');
+                        label.className = 'select-label-style';
+                        label.setAttribute('for', `filter-${field.fieldName}`);
+                        label.textContent = field.fieldLabel + ':';
+                        selectItem.appendChild(label);
+                        
+                        const select = document.createElement('select');
+                        select.id = `filter-${field.fieldName}`;
+                        select.name = field.fieldName;
+                        
+                        const allOption = document.createElement('option');
+                        allOption.value = '';
+                        allOption.textContent = 'Всі';
+                        select.appendChild(allOption);
+                        
+                        const yesOption = document.createElement('option');
+                        yesOption.value = 'true';
+                        yesOption.textContent = 'Так';
+                        select.appendChild(yesOption);
+                        
+                        const noOption = document.createElement('option');
+                        noOption.value = 'false';
+                        noOption.textContent = 'Ні';
+                        select.appendChild(noOption);
+                        
+                        selectItem.appendChild(select);
                         filterForm.appendChild(selectItem);
                     }
                 });

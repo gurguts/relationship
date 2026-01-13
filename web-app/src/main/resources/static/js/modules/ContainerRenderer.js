@@ -68,7 +68,7 @@ const ContainerRenderer = (function() {
         const thead = document.querySelector('#client-list table thead tr');
         if (!thead) return;
         
-        thead.innerHTML = '';
+        thead.textContent = '';
         
         const headers = [
             { text: 'Назва клієнта', sort: null },
@@ -120,7 +120,7 @@ const ContainerRenderer = (function() {
         
         if (!tableBody) return;
         
-        tableBody.innerHTML = '';
+        tableBody.textContent = '';
         
         containers.forEach(container => {
             const row = document.createElement('tr');

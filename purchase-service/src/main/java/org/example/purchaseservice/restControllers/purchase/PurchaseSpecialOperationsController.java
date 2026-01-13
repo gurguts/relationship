@@ -63,31 +63,6 @@ public class PurchaseSpecialOperationsController {
         }
     }
 
-    @PreAuthorize("hasAuthority('purchase:view')")
-    @GetMapping("/report")
-    public ResponseEntity<PurchaseReportDTO> generateReportPurchase(
-            @RequestParam(name = "q", required = false) String query,
-            @RequestParam(name = "filters", required = false) String filters) {
-
-        Map<String, List<String>> filterParams;
-
-        try {
-            if (filters != null && !filters.isEmpty()) {
-                filterParams = objectMapper.readValue(filters, objectMapper.getTypeFactory()
-                        .constructMapType(Map.class, String.class, List.class));
-            } else {
-                filterParams = Collections.emptyMap();
-            }
-        } catch (Exception e) {
-            log.error("Failed to parse filters: {}", filters, e);
-            throw new PurchaseException("INVALID_FILTERS", "Invalid filters format");
-        }
-
-        PurchaseReportDTO report = purchaseService.generateReport(query, filterParams);
-
-        return ResponseEntity.ok(report);
-    }
-
     @PreAuthorize("hasAuthority('purchase:excel')")
     @PostMapping("/comparison/excel")
     public void exportComparisonToExcel(

@@ -33,7 +33,7 @@
     <nav>
         <ul>
             <li id="nav-clients" class="dropdown">
-                <a href="#" onclick="return false;">
+                <a href="#">
                     Клієнти
                     <span class="dropdown-arrow">▼</span>
                 </a>
@@ -41,7 +41,7 @@
                 </ul>
             </li>
             <li id="nav-routes" class="dropdown">
-                <a href="#" onclick="return false;">
+                <a href="#">
                     Маршрути
                     <span class="dropdown-arrow">▼</span>
                 </a>
@@ -49,7 +49,7 @@
                 </ul>
             </li>
             <li id="nav-purchase" class="dropdown">
-                <a href="#" onclick="return false;">
+                <a href="#">
                     Закупівлі
                     <span class="dropdown-arrow">▼</span>
                 </a>
@@ -57,7 +57,7 @@
                 </ul>
             </li>
             <li id="nav-containers" class="dropdown">
-                <a href="#" onclick="return false;">
+                <a href="#">
                     Тари
                     <span class="dropdown-arrow">▼</span>
                 </a>
@@ -110,7 +110,6 @@
         <button id="showStoragesBtn" class="tab-btn">Склади</button>
         <button id="showWithdrawalReasonsBtn" class="tab-btn">Причини списання</button>
         <button id="show-products" class="tab-btn">Продукти</button>
-        <button id="show-client-products" class="tab-btn">Продукти клієнтів</button>
         <button id="showSourcesBtn" class="tab-btn">Джерела</button>
         <button id="showBranchPermissionsBtn" class="tab-btn">Права доступу до філій</button>
     </div>
@@ -128,30 +127,32 @@
 
             <div id="addUserContainer" class="admin-card" style="display: none;">
                 <h3>Створити нового користувача</h3>
-                <div class="form-field">
-                    <label for="newFullName">ПІБ:</label>
-                    <input type="text" id="newFullName" required>
-                </div>
-                <div class="form-field">
-                    <label for="newLogin">Логін:</label>
-                    <input type="text" id="newLogin" required>
-                </div>
-                <div class="form-field">
-                    <label for="newPassword">Пароль:</label>
-                    <input type="password" id="newPassword" required>
-                </div>
-                <div class="form-field">
-                    <label for="newRole">Роль:</label>
-                    <select id="newRole">
-                        <option value="MANAGER">Менеджер</option>
-                        <option value="DRIVER">Водій</option>
-                        <option value="STOREKEEPER">Комірник</option>
-                        <option value="LEADER">Керівник</option>
-                        <option value="ACCOUNTANT">Бухгалтер</option>
-                        <option value="DECLARANT">Декларант</option>
-                    </select>
-                </div>
-                <button id="createUserBtn" class="btn-primary">Створити користувача</button>
+                <form id="create-user-form">
+                    <div class="form-field">
+                        <label for="newFullName">ПІБ:</label>
+                        <input type="text" id="newFullName" required>
+                    </div>
+                    <div class="form-field">
+                        <label for="newLogin">Логін:</label>
+                        <input type="text" id="newLogin" autocomplete="username" required>
+                    </div>
+                    <div class="form-field">
+                        <label for="newPassword">Пароль:</label>
+                        <input type="password" id="newPassword" autocomplete="new-password" required>
+                    </div>
+                    <div class="form-field">
+                        <label for="newRole">Роль:</label>
+                        <select id="newRole">
+                            <option value="MANAGER">Менеджер</option>
+                            <option value="DRIVER">Водій</option>
+                            <option value="STOREKEEPER">Комірник</option>
+                            <option value="LEADER">Керівник</option>
+                            <option value="ACCOUNTANT">Бухгалтер</option>
+                            <option value="DECLARANT">Декларант</option>
+                        </select>
+                    </div>
+                    <button type="button" id="createUserBtn" class="btn-primary">Створити користувача</button>
+                </form>
             </div>
 
             <div id="userPermissionsModal" class="modal userPermissionsModal" style="display: none;">
@@ -296,53 +297,6 @@
                                 <option value="PURCHASE_ONLY">Тільки закупівля</option>
                                 <option value="BOTH">Обидва</option>
                             </select>
-                        </div>
-                        <div class="modal-actions">
-                            <button type="submit" class="btn-primary">Зберегти</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </section>
-
-        <!-- Client Products -->
-        <section id="client-products-section" class="admin-section">
-            <div id="client-product-list" class="admin-card" style="display: none;">
-                <h3>Список продуктів клієнтів</h3>
-                <div class="table-container">
-                    <table class="data-table">
-                        <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Назва</th>
-                            <th>Дії</th>
-                        </tr>
-                        </thead>
-                        <tbody id="client-products-table-body"></tbody>
-                    </table>
-                </div>
-            </div>
-
-            <div id="client-create-product" class="admin-card" style="display: none;">
-                <h3>Створити новий продукт клієнта</h3>
-                <form id="client-create-product-form">
-                    <div class="form-group">
-                        <label for="client-create-name">Назва:</label>
-                        <input type="text" id="client-create-name" name="name" required>
-                    </div>
-                    <button type="submit" class="btn-primary">Створити</button>
-                </form>
-            </div>
-
-            <div id="client-edit-product-modal" class="modal" style="display: none;">
-                <div class="modal-content">
-                    <span class="close-modal">&times;</span>
-                    <h2>Редагувати продукт клієнта</h2>
-                    <form id="client-edit-product-form">
-                        <input type="hidden" id="client-edit-id" name="id">
-                        <div class="form-group">
-                            <label for="client-edit-name">Назва:</label>
-                            <input type="text" id="client-edit-name" name="name" required>
                         </div>
                         <div class="modal-actions">
                             <button type="submit" class="btn-primary">Зберегти</button>
@@ -710,6 +664,72 @@
     </div>
 </div>
 
+<!-- Edit Container Modal -->
+<div id="edit-container-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <span class="close-modal">&times;</span>
+        <h2>Редагувати тип тари</h2>
+        <form id="edit-container-form">
+            <input type="hidden" id="edit-container-id">
+            <div class="form-group">
+                <label for="edit-container-name">Назва:</label>
+                <input type="text" id="edit-container-name" required>
+            </div>
+            <div class="modal-actions">
+                <button type="submit" class="btn-primary">Зберегти</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Storage Modal -->
+<div id="edit-storage-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <span class="close-modal">&times;</span>
+        <h2>Редагувати склад</h2>
+        <form id="edit-storage-form">
+            <input type="hidden" id="edit-storage-id">
+            <div class="form-group">
+                <label for="edit-storage-name">Назва:</label>
+                <input type="text" id="edit-storage-name" required>
+            </div>
+            <div class="form-group">
+                <label for="edit-storage-description">Опис:</label>
+                <input type="text" id="edit-storage-description">
+            </div>
+            <div class="modal-actions">
+                <button type="submit" class="btn-primary">Зберегти</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Withdrawal Reason Modal -->
+<div id="edit-withdrawal-reason-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <span class="close-modal">&times;</span>
+        <h2>Редагувати причину списання</h2>
+        <form id="edit-withdrawal-reason-form">
+            <input type="hidden" id="edit-withdrawal-reason-id">
+            <div class="form-group">
+                <label for="edit-withdrawal-reason-name">Назва:</label>
+                <input type="text" id="edit-withdrawal-reason-name" required>
+            </div>
+            <div class="form-group">
+                <label for="edit-withdrawal-reason-purpose">Призначення:</label>
+                <select id="edit-withdrawal-reason-purpose" required>
+                    <option value="ADDING">Поповнення</option>
+                    <option value="REMOVING">Списання</option>
+                    <option value="BOTH">Обидва</option>
+                </select>
+            </div>
+            <div class="modal-actions">
+                <button type="submit" class="btn-primary">Зберегти</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <!-- Static Fields Configuration Modal -->
 <div id="static-fields-config-modal" class="modal" style="display: none;">
     <div class="modal-content">
@@ -805,9 +825,16 @@
     </div>
 </div>
 
-<script src="/js/administration.js"></script>
+<script src="/js/utils/constants.js"></script>
+<script src="/js/utils/dropdownLoader.js"></script>
 <script src="/js/common.js"></script>
 <script src="/js/error.js"></script>
+<script src="/js/modules/ConfirmationModal.js"></script>
+<script src="/js/modules/AdministrationUtils.js"></script>
+<script src="/js/modules/AdministrationDataLoader.js"></script>
+<script src="/js/modules/AdministrationRenderer.js"></script>
+<script src="/js/modules/AdministrationModal.js"></script>
+<script src="/js/administration.js"></script>
 
 </body>
 </html>

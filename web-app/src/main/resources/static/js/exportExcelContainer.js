@@ -27,9 +27,18 @@ function populateExportFormContainer(formId) {
                 const fieldLabel = field.fieldLabel || field.fieldName;
                 
                 if (!form.querySelector(`input[value="${fieldValue}"]`)) {
-                const label = document.createElement('label');
-                label.innerHTML = `<input type="checkbox" name="fields" value="${fieldValue}" checked> ${fieldLabel}`;
-                clientSection.appendChild(label);
+                    const label = document.createElement('label');
+                    
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.name = 'fields';
+                    checkbox.value = fieldValue;
+                    checkbox.checked = true;
+                    label.appendChild(checkbox);
+                    
+                    label.appendChild(document.createTextNode(' ' + (fieldLabel || '')));
+                    
+                    clientSection.appendChild(label);
                 }
             });
         }

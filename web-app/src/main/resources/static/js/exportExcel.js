@@ -31,7 +31,16 @@ function populateExportForm(formId) {
     baseFields.forEach(field => {
         if (!existingBaseFields.has(field.value)) {
             const label = document.createElement('label');
-            label.innerHTML = `<input type="checkbox" name="fields" value="${field.value}" checked> ${field.label}`;
+            
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.name = 'fields';
+            checkbox.value = field.value;
+            checkbox.checked = true;
+            label.appendChild(checkbox);
+            
+            label.appendChild(document.createTextNode(' ' + field.label));
+            
             form.appendChild(label);
         }
     });
@@ -54,10 +63,18 @@ function populateExportForm(formId) {
             const fieldValue = `field_${field.id}`;
             const fieldLabel = field.fieldLabel || field.fieldName;
             
-            // Проверяем, не добавлено ли уже это поле
             if (!form.querySelector(`input[value="${fieldValue}"]`)) {
                 const label = document.createElement('label');
-                label.innerHTML = `<input type="checkbox" name="fields" value="${fieldValue}" checked> ${fieldLabel}`;
+                
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.name = 'fields';
+                checkbox.value = fieldValue;
+                checkbox.checked = true;
+                label.appendChild(checkbox);
+                
+                label.appendChild(document.createTextNode(' ' + (fieldLabel || '')));
+                
                 form.appendChild(label);
             }
         });

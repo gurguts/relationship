@@ -252,9 +252,7 @@ h1 {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    padding: 8px;
     background-color: #fff;
-    border: 1px solid #ccc;
     border-radius: 4px;
     cursor: pointer;
     width: 100%;

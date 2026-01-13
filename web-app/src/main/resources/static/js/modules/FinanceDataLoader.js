@@ -40,6 +40,82 @@ const FinanceDataLoader = (function() {
         }
     }
     
+    async function loadAccountBalancesBatch(accountIds) {
+        if (!accountIds || accountIds.length === 0) {
+            return new Map();
+        }
+        
+        try {
+            const response = await fetch(`${API_BASE}/accounts/balances/batch`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(accountIds)
+            });
+            
+            if (!response.ok) {
+                console.warn('Failed to load balances batch, falling back to individual requests');
+                return await loadAccountBalancesBatchFallback(accountIds);
+            }
+            
+            const balancesMapData = await response.json();
+            const balancesMap = new Map();
+            
+            if (balancesMapData && typeof balancesMapData === 'object' && !Array.isArray(balancesMapData)) {
+                for (const accountIdStr in balancesMapData) {
+                    if (balancesMapData.hasOwnProperty(accountIdStr)) {
+                        const accountIdNum = Number(accountIdStr);
+                        if (!isNaN(accountIdNum)) {
+                            const balances = balancesMapData[accountIdStr];
+                            const balancesArray = Array.isArray(balances) ? balances : [];
+                            balancesMap.set(accountIdNum, balancesArray);
+                        }
+                    }
+                }
+            }
+            
+            accountIds.forEach(accountId => {
+                const accountIdNum = Number(accountId);
+                if (!isNaN(accountIdNum) && !balancesMap.has(accountIdNum)) {
+                    balancesMap.set(accountIdNum, []);
+                }
+            });
+            
+            return balancesMap;
+        } catch (error) {
+            console.error('Error loading account balances batch:', error);
+            return await loadAccountBalancesBatchFallback(accountIds);
+        }
+    }
+    
+    async function loadAccountBalancesBatchFallback(accountIds) {
+        try {
+            const balancePromises = accountIds.map(async (accountId) => {
+                try {
+                    const balances = await loadAccountBalances(accountId);
+                    return { accountId, balances };
+                } catch (error) {
+                    console.warn(`Failed to load balances for account ${accountId}`, error);
+                    return { accountId, balances: [] };
+                }
+            });
+            
+            const results = await Promise.all(balancePromises);
+            const balancesMap = new Map();
+            
+            results.forEach(({ accountId, balances }) => {
+                const accountIdNum = Number(accountId);
+                if (!isNaN(accountIdNum)) {
+                    balancesMap.set(accountIdNum, Array.isArray(balances) ? balances : []);
+                }
+            });
+            
+            return balancesMap;
+        } catch (error) {
+            console.error('Error loading account balances batch fallback:', error);
+            return new Map();
+        }
+    }
+    
     async function loadBranchAccounts(branchId) {
         try {
             const response = await fetch(`${API_BASE}/accounts/branch/${branchId}`);
@@ -296,10 +372,33 @@ const FinanceDataLoader = (function() {
         }
     }
     
+    async function searchClients(query, size = 20) {
+        try {
+            const params = new URLSearchParams({
+                q: query || '',
+                size: size.toString(),
+                page: '0',
+                sort: 'updatedAt',
+                direction: 'DESC'
+            });
+            
+            const response = await fetch(`/api/v1/client/search?${params}`);
+            if (!response.ok) {
+                return [];
+            }
+            const data = await response.json();
+            return data.content || [];
+        } catch (error) {
+            console.error('Error searching clients:', error);
+            return [];
+        }
+    }
+    
     return {
         loadAccounts,
         loadBranches,
         loadAccountBalances,
+        loadAccountBalancesBatch,
         loadBranchAccounts,
         loadTransactions,
         loadTransaction,
@@ -313,6 +412,7 @@ const FinanceDataLoader = (function() {
         loadExchangeRates,
         updateExchangeRate,
         loadUsers,
-        loadClients
+        loadClients,
+        searchClients
     };
 })();

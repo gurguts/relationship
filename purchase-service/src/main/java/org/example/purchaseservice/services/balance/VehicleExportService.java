@@ -563,10 +563,10 @@ public class VehicleExportService {
         setCellValue(row, columnIndex++, formatBoolean(vehicleDTO.getIsOurVehicle()), styles.dataStyle());
         setCellValue(row, columnIndex++, vehicleDTO.getSenderName(), styles.dataStyle());
         setCellValue(row, columnIndex++, vehicleDTO.getReceiverName(), styles.dataStyle());
-        setCellValue(row, columnIndex++, vehicleDTO.getDestinationCountry(), styles.dataStyle());
-        setCellValue(row, columnIndex++, vehicleDTO.getDestinationPlace(), styles.dataStyle());
+        setCellValue(row, columnIndex++, vehicleDTO.getTerminalName(), styles.dataStyle());
+        setCellValue(row, columnIndex++, vehicleDTO.getDestinationCountryName(), styles.dataStyle());
+        setCellValue(row, columnIndex++, vehicleDTO.getDestinationPlaceName(), styles.dataStyle());
         setCellValue(row, columnIndex++, vehicleDTO.getDeclarationNumber(), styles.dataStyle());
-        setCellValue(row, columnIndex++, vehicleDTO.getTerminal(), styles.dataStyle());
         setCellValue(row, columnIndex++, vehicleDTO.getDriverFullName(), styles.dataStyle());
         setCellValue(row, columnIndex++, formatBoolean(vehicleDTO.getEur1()), styles.dataStyle());
         setCellValue(row, columnIndex++, formatBoolean(vehicleDTO.getFito()), styles.dataStyle());

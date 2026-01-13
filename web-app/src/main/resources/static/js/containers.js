@@ -38,19 +38,19 @@ let filterModalTimeoutId = null;
 const editingState = { editing: false };
 
 if (prevPageButton) {
-    prevPageButton.addEventListener('click', () => {
-        if (currentPage > 0) {
-            currentPage--;
-            loadDataWithSort(currentPage, pageSize, currentSort, currentDirection);
-        }
-    });
+prevPageButton.addEventListener('click', () => {
+    if (currentPage > 0) {
+        currentPage--;
+        loadDataWithSort(currentPage, pageSize, currentSort, currentDirection);
+    }
+});
 }
 
 if (nextPageButton) {
-    nextPageButton.addEventListener('click', () => {
-        currentPage++;
-        loadDataWithSort(currentPage, pageSize, currentSort, currentDirection);
-    });
+nextPageButton.addEventListener('click', () => {
+    currentPage++;
+    loadDataWithSort(currentPage, pageSize, currentSort, currentDirection);
+});
 }
 
 async function loadDataWithSort(page, size, sort, direction) {
@@ -59,7 +59,7 @@ async function loadDataWithSort(page, size, sort, direction) {
     }
     
     if (loaderBackdrop) {
-        loaderBackdrop.style.display = 'flex';
+    loaderBackdrop.style.display = 'flex';
     }
 
     const searchTerm = searchInput ? searchInput.value : '';
@@ -77,7 +77,7 @@ async function loadDataWithSort(page, size, sort, direction) {
             normalizedFilters['updatedAtFrom'] = convertedFilters[key];
         } else if (lowerKey === 'updatedatto') {
             normalizedFilters['updatedAtTo'] = convertedFilters[key];
-        } else {
+            } else {
             normalizedFilters[key] = convertedFilters[key];
         }
     });
@@ -116,12 +116,12 @@ async function loadDataWithSort(page, size, sort, direction) {
         });
 
         ContainerRenderer.updatePagination(data.totalElements, data.content.length, data.totalPages, currentPage, prevPageButton, nextPageButton, allClientInfo, paginationInfo);
-    } catch (error) {
+        } catch (error) {
         console.error('Ошибка:', error);
-        handleError(error);
-    } finally {
+            handleError(error);
+            } finally {
         if (loaderBackdrop) {
-            loaderBackdrop.style.display = 'none';
+                loaderBackdrop.style.display = 'none';
         }
     }
 }
@@ -213,8 +213,8 @@ const performSearch = async () => {
 const debouncedSearch = ClientUtils.debounce(performSearch, CLIENT_CONSTANTS.SEARCH_DEBOUNCE_DELAY);
 
 if (searchInput) {
-    searchInput.addEventListener('keypress', async (event) => {
-        if (event.key === 'Enter') {
+searchInput.addEventListener('keypress', async (event) => {
+    if (event.key === 'Enter') {
             event.preventDefault();
             performSearch();
         } else {
@@ -228,22 +228,22 @@ if (searchInput) {
 }
 
 if (filterButton && filterModal) {
-    filterButton.addEventListener('click', () => {
+filterButton.addEventListener('click', () => {
         if (filterModalTimeoutId !== null) {
             clearTimeout(filterModalTimeoutId);
         }
-        filterModal.style.display = 'block';
+    filterModal.style.display = 'block';
         filterModalTimeoutId = setTimeout(() => {
-            filterModal.classList.add('show');
+        filterModal.classList.add('show');
             filterModalTimeoutId = null;
         }, CLIENT_CONSTANTS.MODAL_ANIMATION_DELAY);
-    });
+});
 }
 
 if (closeFilter) {
-    closeFilter.addEventListener('click', () => {
-        closeModalFilter();
-    });
+closeFilter.addEventListener('click', () => {
+    closeModalFilter();
+});
 }
 
 function closeModalFilter() {
@@ -295,7 +295,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
             parsedFilters = JSON.parse(savedFilters);
             parsedFilters = ClientUtils.normalizeFilterKeys(parsedFilters);
-        } catch (e) {
+                        } catch (e) {
             console.error('Invalid selectedFilters in localStorage:', e);
             parsedFilters = {};
         }
@@ -317,9 +317,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         const modal = document.getElementById('clientTypeSelectionModal');
         const list = document.getElementById('client-types-selection-list');
         await ContainerTypeManager.showClientTypeSelectionModal(modal, list);
-        return;
-    }
-    
+                        return;
+                    }
+
     const newClientTypeId = parseInt(typeId);
     const savedClientTypeId = localStorage.getItem('currentClientTypeId');
     const staticFilterKeys = ['updatedAtFrom', 'updatedAtTo', 'source', 'user', 'container', 'quantityFrom', 'quantityTo', 'clientCreatedAtFrom', 'clientCreatedAtTo', 'clientUpdatedAtFrom', 'clientUpdatedAtTo', 'clientSource'];
@@ -331,7 +331,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 cleanedFilters[key] = selectedFilters[key];
             }
         });
-        Object.keys(selectedFilters).forEach(key => delete selectedFilters[key]);
+    Object.keys(selectedFilters).forEach(key => delete selectedFilters[key]);
         Object.assign(selectedFilters, cleanedFilters);
         localStorage.setItem('selectedFilters', JSON.stringify(cleanedFilters));
     }
@@ -339,10 +339,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     localStorage.setItem('currentClientTypeId', newClientTypeId.toString());
     currentClientTypeId = newClientTypeId;
     
-    await ContainerTypeManager.updateNavigationWithCurrentType(newClientTypeId);
-    
     try {
         currentClientType = await ContainerDataLoader.loadClientType(currentClientTypeId);
+        await ContainerTypeManager.updateNavigationWithCurrentType(newClientTypeId, currentClientType);
         document.title = currentClientType.name;
         const fieldsData = await ContainerDataLoader.loadClientTypeFields(currentClientTypeId);
         clientTypeFields = fieldsData.all || [];
@@ -403,7 +402,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         ]);
 
         availableContainers = containersRes || [];
-        containerMap = new Map(availableContainers.map(item => [item.id, item.name]));
+            containerMap = new Map(availableContainers.map(item => [item.id, item.name]));
 
         if (entitiesRes) {
             availableSources = entitiesRes.sources || [];
@@ -414,9 +413,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         await loadEntitiesAndApplyFilters();
-        
+
         ClientDetailsModals.init();
-        
+
         await loadDataWithSort(currentPage, pageSize, currentSort, currentDirection);
         
         if (typeof initExcelExportContainer === 'function') {
@@ -430,8 +429,48 @@ document.addEventListener('DOMContentLoaded', async () => {
                 apiPath: '/api/v1/containers/client'
             });
         }
+        
+        const saveClientBtn = document.getElementById('save-client');
+        if (saveClientBtn && !saveClientBtn.hasAttribute('data-listener-attached')) {
+            saveClientBtn.setAttribute('data-listener-attached', 'true');
+            saveClientBtn.addEventListener('click', () => {
+                if (typeof saveClientChanges === 'function') {
+                    saveClientChanges();
+                }
+            });
+        }
+        
+        const cancelClientBtn = document.getElementById('cancel-client');
+        if (cancelClientBtn && !cancelClientBtn.hasAttribute('data-listener-attached')) {
+            cancelClientBtn.setAttribute('data-listener-attached', 'true');
+            cancelClientBtn.addEventListener('click', () => {
+                if (typeof cancelClientChanges === 'function') {
+                    cancelClientChanges();
+                }
+            });
+        }
+        
+        const editCompanyBtn = document.getElementById('edit-company');
+        if (editCompanyBtn && !editCompanyBtn.hasAttribute('data-listener-attached')) {
+            editCompanyBtn.setAttribute('data-listener-attached', 'true');
+            editCompanyBtn.addEventListener('click', () => {
+                if (typeof enableEdit === 'function') {
+                    enableEdit('company');
+                }
+            });
+        }
+        
+        const editSourceBtn = document.getElementById('edit-source');
+        if (editSourceBtn && !editSourceBtn.hasAttribute('data-listener-attached')) {
+            editSourceBtn.setAttribute('data-listener-attached', 'true');
+            editSourceBtn.addEventListener('click', () => {
+                if (typeof enableSelect === 'function' && typeof availableSources !== 'undefined') {
+                    enableSelect('source', availableSources);
+                }
+            });
+        }
     } catch (error) {
         console.error('Error loading initial data:', error);
-        handleError(error);
+            handleError(error);
     }
 });

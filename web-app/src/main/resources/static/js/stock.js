@@ -475,14 +475,6 @@ document.getElementById('edit-form').addEventListener('submit',
             return;
         }
 
-        if (roundedQuantity === 0) {
-            const productLabel = findNameByIdFromMap(productMap, currentWithdrawalItem.productId) || 'товар';
-            const confirmRemoval = confirm(`Ви впевнені, що хочете повністю видалити списання для ${productLabel}?`);
-            if (!confirmRemoval) {
-                return;
-            }
-        }
-
         const withdrawalUpdate = {
             withdrawalReasonId: reasonId,
             quantity: roundedQuantity,
@@ -490,18 +482,32 @@ document.getElementById('edit-form').addEventListener('submit',
             withdrawalDate: withdrawalDateValue
         };
 
-        try {
-            await StockDataLoader.updateWithdrawal(id, withdrawalUpdate);
-            if (typeof showMessage === 'function') {
+        const performUpdate = async () => {
+            try {
+                await StockDataLoader.updateWithdrawal(id, withdrawalUpdate);
                 showMessage('Списання успішно оновлено', 'info');
+                closeModal('edit-modal');
+                await loadBalance();
+                await loadWithdrawalHistory(currentPage);
+            } catch (error) {
+                console.error('Error updating withdrawal:', error);
+                handleError(error);
             }
-            closeModal('edit-modal');
-            await loadBalance();
-            await loadWithdrawalHistory(currentPage);
-        } catch (error) {
-            console.error('Error updating withdrawal:', error);
-            handleError(error);
+        };
+
+        if (roundedQuantity === 0) {
+            const productLabel = findNameByIdFromMap(productMap, currentWithdrawalItem.productId) || 'товар';
+            const message = `Ви впевнені, що хочете повністю видалити списання для ${productLabel}?`;
+            ConfirmationModal.show(
+                message,
+                CONFIRMATION_MESSAGES.CONFIRMATION_TITLE,
+                performUpdate,
+                () => {}
+            );
+            return;
         }
+
+        await performUpdate();
 });
 
 function createCustomSelect(selectElement) {
@@ -1489,27 +1495,25 @@ if (addProductToVehicleForm) {
     });
 }
 
-// Delete vehicle button
-document.getElementById('delete-vehicle-btn')?.addEventListener('click', async () => {
-    if (!confirm('Ви впевнені, що хочете видалити цю машину?')) {
-        return;
-    }
-    
-    try {
-        await StockDataLoader.deleteVehicle(currentVehicleId);
-        if (typeof showMessage === 'function') {
-            showMessage('Машину успішно видалено', 'success');
-        }
-        closeModal('vehicle-details-modal');
-        await loadVehicles();
-        await loadBalance();
-    } catch (error) {
-        console.error('Error deleting vehicle:', error);
-        if (typeof showMessage === 'function') {
-            showMessage('Помилка при видаленні машини', 'error');
-        }
-        handleError(error);
-    }
+document.getElementById('delete-vehicle-btn')?.addEventListener('click', () => {
+    ConfirmationModal.show(
+        CONFIRMATION_MESSAGES.DELETE_VEHICLE,
+        CONFIRMATION_MESSAGES.CONFIRMATION_TITLE,
+        async () => {
+            try {
+                await StockDataLoader.deleteVehicle(currentVehicleId);
+                showMessage('Машину успішно видалено', 'success');
+                closeModal('vehicle-details-modal');
+                await loadVehicles();
+                await loadBalance();
+            } catch (error) {
+                console.error('Error deleting vehicle:', error);
+                showMessage('Помилка при видаленні машини', 'error');
+                handleError(error);
+            }
+        },
+        () => {}
+    );
 });
 
 // Apply vehicles filters
@@ -1978,15 +1982,39 @@ if (editVehicleItemForm) {
                 return;
             }
 
+            const performVehicleItemUpdate = async () => {
+                try {
+                    payload.quantity = roundedQuantity;
+                    const updatedVehicle = await StockDataLoader.updateVehicleProduct(currentVehicleId, currentVehicleItemId, payload);
+                    showMessage('Дані товару у машині оновлено', 'success');
+                    currentVehicleDetails = updatedVehicle;
+                    currentVehicleItems = new Map();
+                    StockModal.populateVehicleForm(updatedVehicle);
+                    StockModal.setVehicleFormEditable(false);
+                    StockRenderer.renderVehicleDetails(updatedVehicle, productMap, warehouseMap);
+                    await loadVehicles();
+                    closeModal('edit-vehicle-item-modal');
+                    await loadBalance();
+                } catch (error) {
+                    console.error('Error updating vehicle product:', error);
+                    showMessage(error.message || 'Помилка при оновленні товару у машині', 'error');
+                    handleError(error);
+                }
+            };
+
             if (roundedQuantity === 0) {
                 const productLabel = item.productName || 'товар';
-                const confirmRemoval = confirm(`Ви впевнені, що хочете повністю видалити ${productLabel} з машини?`);
-                if (!confirmRemoval) {
-                    return;
-                }
+                const message = `Ви впевнені, що хочете повністю видалити ${productLabel} з машини?`;
+                ConfirmationModal.show(
+                    message,
+                    CONFIRMATION_MESSAGES.CONFIRMATION_TITLE,
+                    performVehicleItemUpdate,
+                    () => {}
+                );
+                return;
             }
 
-            payload.quantity = roundedQuantity;
+            await performVehicleItemUpdate();
         } else if (mode === 'totalCost') {
             const newTotalValue = parseFloat(editVehicleItemTotalCostInput.value);
             if (newTotalValue === undefined || newTotalValue === null || isNaN(newTotalValue) || newTotalValue <= 0) {
@@ -2001,30 +2029,26 @@ if (editVehicleItemForm) {
             }
 
             payload.totalCostEur = roundedTotal;
+
+            try {
+                const updatedVehicle = await StockDataLoader.updateVehicleProduct(currentVehicleId, currentVehicleItemId, payload);
+                showMessage('Дані товару у машині оновлено', 'success');
+                currentVehicleDetails = updatedVehicle;
+                currentVehicleItems = new Map();
+                StockModal.populateVehicleForm(updatedVehicle);
+                StockModal.setVehicleFormEditable(false);
+                StockRenderer.renderVehicleDetails(updatedVehicle, productMap, warehouseMap);
+                await loadVehicles();
+                closeModal('edit-vehicle-item-modal');
+                await loadBalance();
+            } catch (error) {
+                console.error('Error updating vehicle product:', error);
+                showMessage(error.message || 'Помилка при оновленні товару у машині', 'error');
+                handleError(error);
+            }
         } else {
             showMessage('Оберіть параметр для редагування', 'error');
             return;
-        }
-
-        try {
-            const updatedVehicle = await StockDataLoader.updateVehicleProduct(currentVehicleId, currentVehicleItemId, payload);
-            if (typeof showMessage === 'function') {
-                showMessage('Дані товару у машині оновлено', 'success');
-            }
-            currentVehicleDetails = updatedVehicle;
-            currentVehicleItems = new Map();
-            StockModal.populateVehicleForm(updatedVehicle);
-            StockModal.setVehicleFormEditable(false);
-            StockRenderer.renderVehicleDetails(updatedVehicle, productMap, warehouseMap);
-            await loadVehicles();
-            closeModal('edit-vehicle-item-modal');
-            await loadBalance();
-        } catch (error) {
-            console.error('Error updating vehicle product:', error);
-            if (typeof showMessage === 'function') {
-                showMessage(error.message || 'Помилка при оновленні товару у машині', 'error');
-            }
-            handleError(error);
         }
     });
 }
@@ -2112,14 +2136,6 @@ if (editTransferForm) {
         const originalReasonId = currentTransferItem.reasonId || null;
         const originalDescription = currentTransferItem.description || '';
 
-        if (roundedQuantity === 0) {
-            const fromProductName = findNameByIdFromMap(productMap, currentTransferItem.fromProductId) || 'товару';
-            const confirmRemoval = confirm(`Ви впевнені, що хочете повністю скасувати переміщення з ${fromProductName}?`);
-            if (!confirmRemoval) {
-                return;
-            }
-        }
-
         const hasQuantityChange = Math.abs(roundedQuantity - originalQuantity) > 0.0001;
         const hasReasonChange = reasonId !== originalReasonId;
         const hasDescriptionChange = (descriptionValue || '') !== (originalDescription || '');
@@ -2135,18 +2151,32 @@ if (editTransferForm) {
             description: descriptionValue
         };
 
-        try {
-            await StockDataLoader.updateTransfer(id, payload);
-            if (typeof showMessage === 'function') {
+        const performTransferUpdate = async () => {
+            try {
+                await StockDataLoader.updateTransfer(id, payload);
                 showMessage('Переміщення успішно оновлено', 'info');
+                closeModal('edit-transfer-modal');
+                await loadBalance();
+                await loadTransfers();
+            } catch (error) {
+                console.error('Error updating transfer:', error);
+                handleError(error);
             }
-            closeModal('edit-transfer-modal');
-            await loadBalance();
-            await loadTransfers();
-        } catch (error) {
-            console.error('Error updating transfer:', error);
-            handleError(error);
+        };
+
+        if (roundedQuantity === 0) {
+            const fromProductName = findNameByIdFromMap(productMap, currentTransferItem.fromProductId) || 'товару';
+            const message = `Ви впевнені, що хочете повністю скасувати переміщення з ${fromProductName}?`;
+            ConfirmationModal.show(
+                message,
+                CONFIRMATION_MESSAGES.CONFIRMATION_TITLE,
+                performTransferUpdate,
+                () => {}
+            );
+            return;
         }
+
+        await performTransferUpdate();
     });
 }
 

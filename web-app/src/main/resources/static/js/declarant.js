@@ -1,37 +1,21 @@
-function escapeHtml(text) {
-    if (text == null) return '';
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
+const escapeHtml = DeclarantUtils.escapeHtml;
+const formatNumber = DeclarantUtils.formatNumber;
+const formatDate = DeclarantUtils.formatDate;
+const formatBoolean = DeclarantUtils.formatBoolean;
+const findNameByIdFromMap = DeclarantUtils.findNameByIdFromMap;
 
 let productMap = new Map();
 let warehouseMap = new Map();
 let carrierMap = new Map();
 let vehicleSenderMap = new Map();
 let vehicleReceiverMap = new Map();
-
-function formatNumber(value, maxDecimals = 6) {
-    if (value === null || value === undefined || value === '') return '0';
-    const num = parseFloat(value);
-    if (isNaN(num)) return '0';
-    return parseFloat(num.toFixed(maxDecimals)).toString();
-}
-
-const findNameByIdFromMap = (map, id) => {
-    const numericId = Number(id);
-    return map.get(numericId) || '';
-};
+let vehicleTerminalMap = new Map();
+let vehicleDestinationCountryMap = new Map();
+let vehicleDestinationPlaceMap = new Map();
 
 async function fetchProducts() {
     try {
-        const response = await fetch('/api/v1/product');
-        if (!response.ok) {
-            const errorData = await response.json();
-            handleError(new Error(errorData.message || 'Failed to fetch products'));
-            return;
-        }
-        const products = await response.json();
+        const products = await DeclarantDataLoader.fetchProducts();
         productMap = new Map(products.map(product => [product.id, product.name]));
     } catch (error) {
         console.error('Error fetching products:', error);
@@ -41,13 +25,7 @@ async function fetchProducts() {
 
 async function fetchWarehouses() {
     try {
-        const response = await fetch('/api/v1/warehouse');
-        if (!response.ok) {
-            const errorData = await response.json();
-            handleError(new Error(errorData.message || 'Failed to fetch warehouses'));
-            return;
-        }
-        const warehouses = await response.json();
+        const warehouses = await DeclarantDataLoader.fetchWarehouses();
         warehouseMap = new Map(warehouses.map(warehouse => [warehouse.id, warehouse.name]));
     } catch (error) {
         console.error('Error fetching warehouses:', error);
@@ -55,16 +33,9 @@ async function fetchWarehouses() {
     }
 }
 
-
 async function fetchCarriers() {
     try {
-        const response = await fetch('/api/v1/carriers');
-        if (!response.ok) {
-            const errorData = await response.json();
-            handleError(new Error(errorData.message || 'Failed to fetch carriers'));
-            return;
-        }
-        const carriers = await response.json();
+        const carriers = await DeclarantDataLoader.fetchCarriers();
         carrierMap = new Map(carriers.map(carrier => [carrier.id, carrier]));
         return carriers;
     } catch (error) {
@@ -76,13 +47,7 @@ async function fetchCarriers() {
 
 async function fetchVehicleSenders() {
     try {
-        const response = await fetch('/api/v1/vehicle-senders');
-        if (!response.ok) {
-            const errorData = await response.json();
-            handleError(new Error(errorData.message || 'Failed to fetch vehicle senders'));
-            return;
-        }
-        const senders = await response.json();
+        const senders = await DeclarantDataLoader.fetchVehicleSenders();
         vehicleSenderMap = new Map(senders.map(sender => [sender.id, sender]));
         return senders;
     } catch (error) {
@@ -94,13 +59,7 @@ async function fetchVehicleSenders() {
 
 async function fetchVehicleReceivers() {
     try {
-        const response = await fetch('/api/v1/vehicle-receivers');
-        if (!response.ok) {
-            const errorData = await response.json();
-            handleError(new Error(errorData.message || 'Failed to fetch vehicle receivers'));
-            return;
-        }
-        const receivers = await response.json();
+        const receivers = await DeclarantDataLoader.fetchVehicleReceivers();
         vehicleReceiverMap = new Map(receivers.map(receiver => [receiver.id, receiver]));
         return receivers;
     } catch (error) {
@@ -110,53 +69,48 @@ async function fetchVehicleReceivers() {
     }
 }
 
-function populateCarriers(selectId) {
-    const select = document.getElementById(selectId);
-    if (!select) return;
-    select.textContent = '';
-    const defaultOption = document.createElement('option');
-    defaultOption.value = '';
-    defaultOption.textContent = 'Оберіть перевізника';
-    select.appendChild(defaultOption);
-    for (const [id, carrier] of carrierMap.entries()) {
-        const option = document.createElement('option');
-        option.value = id;
-        option.textContent = carrier.companyName;
-        select.appendChild(option);
+async function fetchVehicleTerminals() {
+    try {
+        const terminals = await DeclarantDataLoader.fetchVehicleTerminals();
+        vehicleTerminalMap = new Map(terminals.map(terminal => [terminal.id, terminal]));
+        return terminals;
+    } catch (error) {
+        console.error('Error fetching vehicle terminals:', error);
+        handleError(error);
+        return [];
     }
 }
 
-function populateVehicleSenders(selectId) {
-    const select = document.getElementById(selectId);
-    if (!select) return;
-    select.textContent = '';
-    const defaultOption = document.createElement('option');
-    defaultOption.value = '';
-    defaultOption.textContent = 'Оберіть відправника';
-    select.appendChild(defaultOption);
-    for (const [id, sender] of vehicleSenderMap.entries()) {
-        const option = document.createElement('option');
-        option.value = id;
-        option.textContent = sender.name;
-        select.appendChild(option);
+async function fetchVehicleDestinationCountries() {
+    try {
+        const countries = await DeclarantDataLoader.fetchVehicleDestinationCountries();
+        vehicleDestinationCountryMap = new Map(countries.map(country => [country.id, country]));
+        return countries;
+    } catch (error) {
+        console.error('Error fetching vehicle destination countries:', error);
+        handleError(error);
+        return [];
     }
 }
 
-function populateVehicleReceivers(selectId) {
-    const select = document.getElementById(selectId);
-    if (!select) return;
-    select.textContent = '';
-    const defaultOption = document.createElement('option');
-    defaultOption.value = '';
-    defaultOption.textContent = 'Оберіть отримувача';
-    select.appendChild(defaultOption);
-    for (const [id, receiver] of vehicleReceiverMap.entries()) {
-        const option = document.createElement('option');
-        option.value = id;
-        option.textContent = receiver.name;
-        select.appendChild(option);
+async function fetchVehicleDestinationPlaces() {
+    try {
+        const places = await DeclarantDataLoader.fetchVehicleDestinationPlaces();
+        vehicleDestinationPlaceMap = new Map(places.map(place => [place.id, place]));
+        return places;
+    } catch (error) {
+        console.error('Error fetching vehicle destination places:', error);
+        handleError(error);
+        return [];
     }
 }
+
+const populateCarriers = (selectId) => DeclarantRenderer.populateCarriers(selectId, carrierMap);
+const populateVehicleSenders = (selectId) => DeclarantRenderer.populateVehicleSenders(selectId, vehicleSenderMap);
+const populateVehicleReceivers = (selectId) => DeclarantRenderer.populateVehicleReceivers(selectId, vehicleReceiverMap);
+const populateVehicleTerminals = (selectId) => DeclarantRenderer.populateVehicleTerminals(selectId, vehicleTerminalMap);
+const populateVehicleDestinationCountries = (selectId) => DeclarantRenderer.populateVehicleDestinationCountries(selectId, vehicleDestinationCountryMap);
+const populateVehicleDestinationPlaces = (selectId) => DeclarantRenderer.populateVehicleDestinationPlaces(selectId, vehicleDestinationPlaceMap);
 
 const createVehicleBtn = document.getElementById('create-vehicle-btn');
 const createVehicleForm = document.getElementById('create-vehicle-form');
@@ -217,12 +171,12 @@ const vehicleReclamation = document.getElementById('vehicle-reclamation');
 const vehicleDescription = document.getElementById('vehicle-description');
 const vehicleSenderSelect = document.getElementById('vehicle-sender');
 const vehicleReceiverSelect = document.getElementById('vehicle-receiver');
-const vehicleDestinationCountry = document.getElementById('vehicle-destination-country');
-const vehicleDestinationPlace = document.getElementById('vehicle-destination-place');
+const vehicleDestinationCountrySelect = document.getElementById('vehicle-destination-country');
+const vehicleDestinationPlaceSelect = document.getElementById('vehicle-destination-place');
 const vehicleProduct = document.getElementById('vehicle-product');
 const vehicleProductQuantity = document.getElementById('vehicle-product-quantity');
 const vehicleDeclarationNumber = document.getElementById('vehicle-declaration-number');
-const vehicleTerminal = document.getElementById('vehicle-terminal');
+const vehicleTerminalSelect = document.getElementById('vehicle-terminal');
 const vehicleDriverFullName = document.getElementById('vehicle-driver-full-name');
 const vehicleEur1 = document.getElementById('vehicle-eur1');
 const vehicleFito = document.getElementById('vehicle-fito');
@@ -248,14 +202,6 @@ const vehicleTotalExpenses = document.getElementById('vehicle-total-expenses');
 const vehicleTotalIncome = document.getElementById('vehicle-total-income');
 const vehicleMargin = document.getElementById('vehicle-margin');
 
-const carrierForm = document.getElementById('carrier-form');
-const carrierId = document.getElementById('carrier-id');
-const carrierCompanyName = document.getElementById('carrier-company-name');
-const carrierRegistrationAddress = document.getElementById('carrier-registration-address');
-const carrierPhoneNumber = document.getElementById('carrier-phone-number');
-const carrierCode = document.getElementById('carrier-code');
-const carrierAccount = document.getElementById('carrier-account');
-const carrierFormTitle = document.getElementById('carrier-form-title');
 
 const expenseFromAccount = document.getElementById('expense-from-account');
 const expenseCategory = document.getElementById('expense-category');
@@ -278,130 +224,15 @@ let currentVehicleId = null;
 let vehiclesCache = [];
 let currentVehicleDetails = null;
 let currentPage = 0;
-let pageSize = 20;
+const pageSize = CLIENT_CONSTANTS.DEFAULT_PAGE_SIZE;
 let totalPages = 0;
 let totalElements = 0;
 let currentVehicleItems = new Map();
 let currentVehicleItemId = null;
 
-function populateVehicleForm(vehicle) {
-    if (!vehicle) {
-        if (detailVehicleDateInput) detailVehicleDateInput.value = '';
-        if (detailVehicleVehicleInput) detailVehicleVehicleInput.value = '';
-        if (detailVehicleInvoiceUaInput) detailVehicleInvoiceUaInput.value = '';
-        if (detailVehicleInvoiceEuInput) detailVehicleInvoiceEuInput.value = '';
-        if (detailVehicleDescriptionInput) detailVehicleDescriptionInput.value = '';
-        if (detailVehicleSenderSelect) detailVehicleSenderSelect.value = '';
-        if (detailVehicleReceiverSelect) detailVehicleReceiverSelect.value = '';
-        if (detailVehicleDestinationCountryInput) detailVehicleDestinationCountryInput.value = '';
-        if (detailVehicleDestinationPlaceInput) detailVehicleDestinationPlaceInput.value = '';
-        if (detailVehicleProductInput) detailVehicleProductInput.value = '';
-        if (detailVehicleProductQuantityInput) detailVehicleProductQuantityInput.value = '';
-        if (detailVehicleDeclarationNumberInput) detailVehicleDeclarationNumberInput.value = '';
-        if (detailVehicleTerminalInput) detailVehicleTerminalInput.value = '';
-        if (detailVehicleDriverFullNameInput) detailVehicleDriverFullNameInput.value = '';
-        if (detailVehicleIsOurVehicleInput) detailVehicleIsOurVehicleInput.checked = false;
-        if (detailVehicleEur1Input) detailVehicleEur1Input.checked = false;
-        if (detailVehicleFitoInput) detailVehicleFitoInput.checked = false;
-        if (detailVehicleCustomsDateInput) detailVehicleCustomsDateInput.value = '';
-        if (detailVehicleCustomsClearanceDateInput) detailVehicleCustomsClearanceDateInput.value = '';
-        if (detailVehicleUnloadingDateInput) detailVehicleUnloadingDateInput.value = '';
-        if (detailVehicleCarrierSelect) detailVehicleCarrierSelect.value = '';
-        if (detailVehicleInvoiceUaDateInput) detailVehicleInvoiceUaDateInput.value = '';
-        if (detailVehicleInvoiceUaPricePerTonInput) detailVehicleInvoiceUaPricePerTonInput.value = '';
-        if (detailVehicleInvoiceUaTotalPriceInput) detailVehicleInvoiceUaTotalPriceInput.value = '';
-        if (detailVehicleInvoiceEuDateInput) detailVehicleInvoiceEuDateInput.value = '';
-        if (detailVehicleInvoiceEuPricePerTonInput) detailVehicleInvoiceEuPricePerTonInput.value = '';
-        if (detailVehicleInvoiceEuTotalPriceInput) detailVehicleInvoiceEuTotalPriceInput.value = '';
-        if (detailVehicleReclamationInput) detailVehicleReclamationInput.value = '';
-        if (detailVehicleFullReclamationInput) detailVehicleFullReclamationInput.value = '';
-        return;
-    }
-
-    if (detailVehicleDateInput) detailVehicleDateInput.value = vehicle.shipmentDate || '';
-    if (detailVehicleVehicleInput) detailVehicleVehicleInput.value = vehicle.vehicleNumber || '';
-    if (detailVehicleInvoiceUaInput) detailVehicleInvoiceUaInput.value = vehicle.invoiceUa || '';
-    if (detailVehicleInvoiceEuInput) detailVehicleInvoiceEuInput.value = vehicle.invoiceEu || '';
-    if (detailVehicleDescriptionInput) detailVehicleDescriptionInput.value = vehicle.description || '';
-    if (detailVehicleSenderSelect) detailVehicleSenderSelect.value = vehicle.senderId || '';
-    if (detailVehicleReceiverSelect) detailVehicleReceiverSelect.value = vehicle.receiverId || '';
-    if (detailVehicleDestinationCountryInput) detailVehicleDestinationCountryInput.value = vehicle.destinationCountry || '';
-    if (detailVehicleDestinationPlaceInput) detailVehicleDestinationPlaceInput.value = vehicle.destinationPlace || '';
-    if (detailVehicleProductInput) detailVehicleProductInput.value = vehicle.product || '';
-    if (detailVehicleProductQuantityInput) detailVehicleProductQuantityInput.value = vehicle.productQuantity || '';
-    if (detailVehicleDeclarationNumberInput) detailVehicleDeclarationNumberInput.value = vehicle.declarationNumber || '';
-    if (detailVehicleTerminalInput) detailVehicleTerminalInput.value = vehicle.terminal || '';
-    if (detailVehicleDriverFullNameInput) detailVehicleDriverFullNameInput.value = vehicle.driverFullName || '';
-    if (detailVehicleIsOurVehicleInput) detailVehicleIsOurVehicleInput.checked = vehicle.isOurVehicle || false;
-    if (detailVehicleEur1Input) detailVehicleEur1Input.checked = vehicle.eur1 || false;
-    if (detailVehicleFitoInput) detailVehicleFitoInput.checked = vehicle.fito || false;
-    if (detailVehicleCustomsDateInput) detailVehicleCustomsDateInput.value = vehicle.customsDate || '';
-    if (detailVehicleCustomsClearanceDateInput) detailVehicleCustomsClearanceDateInput.value = vehicle.customsClearanceDate || '';
-    if (detailVehicleUnloadingDateInput) detailVehicleUnloadingDateInput.value = vehicle.unloadingDate || '';
-    if (detailVehicleCarrierSelect) detailVehicleCarrierSelect.value = vehicle.carrier?.id || '';
-    if (detailVehicleInvoiceUaDateInput) detailVehicleInvoiceUaDateInput.value = vehicle.invoiceUaDate || '';
-    if (detailVehicleInvoiceUaPricePerTonInput) detailVehicleInvoiceUaPricePerTonInput.value = vehicle.invoiceUaPricePerTon || '';
-    if (detailVehicleInvoiceUaTotalPriceInput) detailVehicleInvoiceUaTotalPriceInput.value = vehicle.invoiceUaTotalPrice || '';
-    if (detailVehicleInvoiceEuDateInput) detailVehicleInvoiceEuDateInput.value = vehicle.invoiceEuDate || '';
-    if (detailVehicleInvoiceEuPricePerTonInput) detailVehicleInvoiceEuPricePerTonInput.value = vehicle.invoiceEuPricePerTon || '';
-    if (detailVehicleInvoiceEuTotalPriceInput) detailVehicleInvoiceEuTotalPriceInput.value = vehicle.invoiceEuTotalPrice || '';
-    if (detailVehicleReclamationInput) detailVehicleReclamationInput.value = vehicle.reclamation || '';
-    
-    // Calculate and display full reclamation
-    const fullReclamation = calculateFullReclamation(vehicle);
-    if (detailVehicleFullReclamationInput) {
-        detailVehicleFullReclamationInput.value = fullReclamation > 0 ? fullReclamation.toFixed(6) : '';
-    }
-}
-
-function setVehicleFormEditable(isEditable) {
-    const fields = [
-        detailVehicleDateInput,
-        detailVehicleVehicleInput,
-        detailVehicleInvoiceUaInput,
-        detailVehicleInvoiceEuInput,
-        detailVehicleInvoiceUaDateInput,
-        detailVehicleInvoiceUaPricePerTonInput,
-        detailVehicleInvoiceEuDateInput,
-        detailVehicleInvoiceEuPricePerTonInput,
-        detailVehicleReclamationInput,
-        detailVehicleDescriptionInput,
-        detailVehicleSenderSelect,
-        detailVehicleReceiverSelect,
-        detailVehicleDestinationCountryInput,
-        detailVehicleDestinationPlaceInput,
-        detailVehicleProductInput,
-        detailVehicleProductQuantityInput,
-        detailVehicleDeclarationNumberInput,
-        detailVehicleTerminalInput,
-        detailVehicleDriverFullNameInput,
-        detailVehicleIsOurVehicleInput,
-        detailVehicleEur1Input,
-        detailVehicleFitoInput,
-        detailVehicleCustomsDateInput,
-        detailVehicleCustomsClearanceDateInput,
-        detailVehicleUnloadingDateInput,
-        detailVehicleCarrierSelect
-    ];
-
-    fields.forEach(field => {
-        if (field) {
-            field.disabled = !isEditable;
-        }
-    });
-
-    if (saveVehicleBtn) {
-        saveVehicleBtn.style.display = isEditable ? 'inline-flex' : 'none';
-    }
-    if (editVehicleBtn) {
-        editVehicleBtn.style.display = isEditable ? 'none' : 'inline-flex';
-    }
-}
-
-function resetVehicleFormState() {
-    populateVehicleForm(currentVehicleDetails);
-    setVehicleFormEditable(false);
-}
+const populateVehicleForm = (vehicle) => DeclarantModal.populateVehicleForm(vehicle);
+const setVehicleFormEditable = DeclarantModal.setVehicleFormEditable;
+const resetVehicleFormState = () => DeclarantModal.resetVehicleFormState(currentVehicleDetails);
 
 if (updateVehicleForm) {
     setVehicleFormEditable(false);
@@ -423,6 +254,9 @@ if (createVehicleBtn) {
         populateCarriers('vehicle-carrier-id');
         populateVehicleSenders('vehicle-sender');
         populateVehicleReceivers('vehicle-receiver');
+        populateVehicleTerminals('vehicle-terminal');
+        populateVehicleDestinationCountries('vehicle-destination-country');
+        populateVehicleDestinationPlaces('vehicle-destination-place');
         openModal('create-vehicle-modal');
     });
 }
@@ -444,12 +278,12 @@ if (createVehicleForm) {
             description: vehicleDescription?.value || '',
             senderId: vehicleSenderSelect?.value ? parseInt(vehicleSenderSelect.value) : null,
             receiverId: vehicleReceiverSelect?.value ? parseInt(vehicleReceiverSelect.value) : null,
-            destinationCountry: vehicleDestinationCountry?.value || '',
-            destinationPlace: vehicleDestinationPlace?.value || '',
+            destinationCountryId: vehicleDestinationCountrySelect?.value ? parseInt(vehicleDestinationCountrySelect.value) : null,
+            destinationPlaceId: vehicleDestinationPlaceSelect?.value ? parseInt(vehicleDestinationPlaceSelect.value) : null,
             product: vehicleProduct?.value || '',
             productQuantity: vehicleProductQuantity?.value || '',
             declarationNumber: vehicleDeclarationNumber?.value || '',
-            terminal: vehicleTerminal?.value || '',
+            terminalId: vehicleTerminalSelect?.value ? parseInt(vehicleTerminalSelect.value) : null,
             driverFullName: vehicleDriverFullName?.value || '',
             eur1: vehicleEur1?.checked || false,
             fito: vehicleFito?.checked || false,
@@ -461,18 +295,7 @@ if (createVehicleForm) {
         };
         
         try {
-            const response = await fetch('/api/v1/vehicles', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(vehicleData)
-            });
-            
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Failed to create vehicle');
-            }
-            
-            await response.json();
+            await DeclarantDataLoader.createVehicle(vehicleData);
             showMessage('Машину успішно створено', 'success');
             
             closeModal('create-vehicle-modal');
@@ -486,97 +309,38 @@ if (createVehicleForm) {
 }
 
 
-function buildFilters() {
-    const filters = {};
-    
-    const dateFrom = vehiclesDateFromFilter?.value;
-    const dateTo = vehiclesDateToFilter?.value;
-    if (dateFrom) {
-        filters.shipmentDateFrom = [dateFrom];
-    }
-    if (dateTo) {
-        filters.shipmentDateTo = [dateTo];
-    }
-    
-    const isOurVehicleFilter = vehiclesIsOurVehicleFilter?.checked;
-    if (isOurVehicleFilter !== undefined && isOurVehicleFilter) {
-        filters.isOurVehicle = ['true'];
-    }
-    
-    const customsDateFrom = vehiclesCustomsDateFromFilter?.value;
-    const customsDateTo = vehiclesCustomsDateToFilter?.value;
-    if (customsDateFrom) {
-        filters.customsDateFrom = [customsDateFrom];
-    }
-    if (customsDateTo) {
-        filters.customsDateTo = [customsDateTo];
-    }
-    
-    const customsClearanceDateFrom = vehiclesCustomsClearanceDateFromFilter?.value;
-    const customsClearanceDateTo = vehiclesCustomsClearanceDateToFilter?.value;
-    if (customsClearanceDateFrom) {
-        filters.customsClearanceDateFrom = [customsClearanceDateFrom];
-    }
-    if (customsClearanceDateTo) {
-        filters.customsClearanceDateTo = [customsClearanceDateTo];
-    }
-    
-    const unloadingDateFrom = vehiclesUnloadingDateFromFilter?.value;
-    const unloadingDateTo = vehiclesUnloadingDateToFilter?.value;
-    if (unloadingDateFrom) {
-        filters.unloadingDateFrom = [unloadingDateFrom];
-    }
-    if (unloadingDateTo) {
-        filters.unloadingDateTo = [unloadingDateTo];
-    }
-    
-    return filters;
-}
+const buildFilters = DeclarantFilters.buildFilters;
 
 async function loadVehicles(page = 0) {
     currentPage = page;
     
+    const vehiclesSearchInput = document.getElementById('vehicles-search-input');
     const searchTerm = vehiclesSearchInput?.value || '';
     const filters = buildFilters();
     const filtersJson = Object.keys(filters).length > 0 ? JSON.stringify(filters) : '';
     
     try {
-        let url = `/api/v1/vehicles/search?page=${page}&size=${pageSize}&sort=id&direction=DESC`;
-        
-        if (searchTerm) {
-            url += `&q=${encodeURIComponent(searchTerm)}`;
-        }
-        
-        if (filtersJson) {
-            url += `&filters=${encodeURIComponent(filtersJson)}`;
-        }
-        
-        const response = await fetch(url);
-        
-        if (!response.ok) {
-            throw new Error('Failed to load vehicles');
-        }
-        
-        const data = await response.json();
+        const data = await DeclarantDataLoader.loadVehicles(page, pageSize, 'id', 'DESC', searchTerm, filtersJson);
         vehiclesCache = data.content || [];
         totalPages = data.totalPages || 0;
         totalElements = data.totalElements || 0;
         
-        renderVehicles(vehiclesCache);
+        await renderVehicles(vehiclesCache, currentPage, pageSize, totalElements, totalPages, productMap, warehouseMap, carrierMap, viewVehicleDetails);
         renderPagination();
     } catch (error) {
         console.error('Error loading vehicles:', error);
         showMessage('Помилка завантаження машин', 'error');
         
+        const vehiclesTbody = document.getElementById('vehicles-tbody');
         if (vehiclesTbody) {
             vehiclesTbody.textContent = '';
             const row = document.createElement('tr');
             row.className = 'loading-row';
-        const cell = document.createElement('td');
-        cell.colSpan = 26;
-        cell.style.textAlign = 'center';
-        cell.style.color = 'var(--text-muted)';
-        cell.textContent = 'Помилка завантаження даних';
+            const cell = document.createElement('td');
+            cell.colSpan = 26;
+            cell.style.textAlign = 'center';
+            cell.style.color = 'var(--text-muted)';
+            cell.textContent = CLIENT_MESSAGES.LOAD_ERROR;
             row.appendChild(cell);
             vehiclesTbody.appendChild(row);
         }
@@ -584,234 +348,13 @@ async function loadVehicles(page = 0) {
 }
 
 function renderPagination() {
-    if (!vehiclesPagination) return;
-    
-    if (totalPages <= 1) {
-        vehiclesPagination.textContent = '';
-        return;
-    }
-    
-    vehiclesPagination.textContent = '';
-    const paginationDiv = document.createElement('div');
-    paginationDiv.className = 'pagination';
-    
-    const firstBtn = document.createElement('button');
-    firstBtn.className = 'pagination-btn';
-    firstBtn.disabled = currentPage === 0;
-    const firstSpan = document.createElement('span');
-    firstSpan.textContent = '«';
-    firstBtn.appendChild(firstSpan);
-    const firstBtnHandler = () => loadVehicles(0);
-    firstBtn.addEventListener('click', firstBtnHandler);
-    firstBtn._clickHandler = firstBtnHandler;
-    paginationDiv.appendChild(firstBtn);
-    
-    const prevBtn = document.createElement('button');
-    prevBtn.className = 'pagination-btn';
-    prevBtn.disabled = currentPage === 0;
-    const prevSpan = document.createElement('span');
-    prevSpan.textContent = '‹';
-    prevBtn.appendChild(prevSpan);
-    const prevBtnHandler = () => loadVehicles(currentPage - 1);
-    prevBtn.addEventListener('click', prevBtnHandler);
-    prevBtn._clickHandler = prevBtnHandler;
-    paginationDiv.appendChild(prevBtn);
-    
-    const startPage = Math.max(0, currentPage - 2);
-    const endPage = Math.min(totalPages - 1, currentPage + 2);
-    
-    if (startPage > 0) {
-        const firstPageBtn = document.createElement('button');
-        firstPageBtn.className = 'pagination-btn';
-        firstPageBtn.textContent = '1';
-        const firstPageBtnHandler = () => loadVehicles(0);
-        firstPageBtn.addEventListener('click', firstPageBtnHandler);
-        firstPageBtn._clickHandler = firstPageBtnHandler;
-        paginationDiv.appendChild(firstPageBtn);
-        if (startPage > 1) {
-            const ellipsis1 = document.createElement('span');
-            ellipsis1.className = 'pagination-ellipsis';
-            ellipsis1.textContent = '...';
-            paginationDiv.appendChild(ellipsis1);
-        }
-    }
-    
-    for (let i = startPage; i <= endPage; i++) {
-        const pageBtn = document.createElement('button');
-        pageBtn.className = 'pagination-btn';
-        if (i === currentPage) {
-            pageBtn.classList.add('active');
-        }
-        pageBtn.textContent = (i + 1).toString();
-        const pageBtnHandler = () => loadVehicles(i);
-        pageBtn.addEventListener('click', pageBtnHandler);
-        pageBtn._clickHandler = pageBtnHandler;
-        paginationDiv.appendChild(pageBtn);
-    }
-    
-    if (endPage < totalPages - 1) {
-        if (endPage < totalPages - 2) {
-            const ellipsis2 = document.createElement('span');
-            ellipsis2.className = 'pagination-ellipsis';
-            ellipsis2.textContent = '...';
-            paginationDiv.appendChild(ellipsis2);
-        }
-        const lastPageBtn = document.createElement('button');
-        lastPageBtn.className = 'pagination-btn';
-        lastPageBtn.textContent = totalPages.toString();
-        const lastPageBtnHandler = () => loadVehicles(totalPages - 1);
-        lastPageBtn.addEventListener('click', lastPageBtnHandler);
-        lastPageBtn._clickHandler = lastPageBtnHandler;
-        paginationDiv.appendChild(lastPageBtn);
-    }
-    
-    const nextBtn = document.createElement('button');
-    nextBtn.className = 'pagination-btn';
-    nextBtn.disabled = currentPage >= totalPages - 1;
-    const nextSpan = document.createElement('span');
-    nextSpan.textContent = '›';
-    nextBtn.appendChild(nextSpan);
-    const nextBtnHandler = () => loadVehicles(currentPage + 1);
-    nextBtn.addEventListener('click', nextBtnHandler);
-    nextBtn._clickHandler = nextBtnHandler;
-    paginationDiv.appendChild(nextBtn);
-    
-    const lastBtn = document.createElement('button');
-    lastBtn.className = 'pagination-btn';
-    lastBtn.disabled = currentPage >= totalPages - 1;
-    const lastSpan = document.createElement('span');
-    lastSpan.textContent = '»';
-    lastBtn.appendChild(lastSpan);
-    const lastBtnHandler = () => loadVehicles(totalPages - 1);
-    lastBtn.addEventListener('click', lastBtnHandler);
-    lastBtn._clickHandler = lastBtnHandler;
-    paginationDiv.appendChild(lastBtn);
-    
-    vehiclesPagination.appendChild(paginationDiv);
+    DeclarantRenderer.renderPagination(currentPage, totalPages, loadVehicles);
 }
 
-function formatDate(dateString) {
-    if (!dateString) return '-';
-    return dateString;
-}
+const formatCarrier = DeclarantRenderer.formatCarrier;
 
-function formatBoolean(value) {
-    return value ? '✓' : '-';
-}
-
-function formatCarrier(carrier) {
-    return carrier?.companyName || '-';
-}
-
-async function renderVehicles(vehicles) {
-    if (!vehiclesTbody) {
-        return;
-    }
-    
-    if (vehiclesCount) {
-        const start = currentPage * pageSize + 1;
-        const end = Math.min((currentPage + 1) * pageSize, totalElements);
-        vehiclesCount.textContent = totalElements > 0 
-            ? `Показано ${start}-${end} з ${totalElements} ${totalElements === 1 ? 'машини' : 'машин'}`
-            : '0 машин';
-    }
-    
-    if (!vehicles || vehicles.length === 0) {
-        vehiclesTbody.textContent = '';
-        const row = document.createElement('tr');
-        row.className = 'loading-row';
-        const cell = document.createElement('td');
-        cell.colSpan = 26;
-        cell.style.textAlign = 'center';
-        cell.style.color = 'var(--text-muted)';
-        cell.textContent = 'Немає даних';
-        row.appendChild(cell);
-        vehiclesTbody.appendChild(row);
-        return;
-    }
-    
-    vehiclesTbody.textContent = '';
-    
-    const expensesPromises = vehicles.map(async (vehicle) => {
-        try {
-            const response = await fetch(`/api/v1/vehicles/${vehicle.id}/expenses`);
-            if (!response.ok) return 0;
-            const expenses = await response.json();
-            return expenses.reduce((sum, e) => sum + (parseFloat(e.convertedAmount) || 0), 0);
-        } catch (error) {
-            return 0;
-        }
-    });
-    
-    const itemsPromises = vehicles.map(async (vehicle) => {
-        if (vehicle.items && vehicle.items.length > 0) {
-            return calculateProductsTotalCost(vehicle);
-        }
-        try {
-            const response = await fetch(`/api/v1/vehicles/${vehicle.id}`);
-            if (!response.ok) return 0;
-            const vehicleDetails = await response.json();
-            return calculateProductsTotalCost(vehicleDetails);
-        } catch (error) {
-            return 0;
-        }
-    });
-    
-    const [expensesTotals, productsTotals] = await Promise.all([
-        Promise.all(expensesPromises),
-        Promise.all(itemsPromises)
-    ]);
-    
-    vehicles.forEach((vehicle, index) => {
-        const row = document.createElement('tr');
-        const rowClickHandler = () => viewVehicleDetails(vehicle.id);
-        row.addEventListener('click', rowClickHandler);
-        row._clickHandler = rowClickHandler;
-        
-        const createCell = (text, label, style) => {
-            const cell = document.createElement('td');
-            cell.setAttribute('data-label', label);
-            if (style) {
-                Object.assign(cell.style, style);
-            }
-            cell.textContent = text;
-            return cell;
-        };
-        
-        const productsTotalCost = productsTotals[index] || 0;
-        const expensesTotal = expensesTotals[index] || 0;
-        
-        row.appendChild(createCell(vehicle.vehicleNumber || '-', 'Номер машини'));
-        row.appendChild(createCell(`${formatNumber(productsTotalCost, 2)} EUR`, 'Витрати на товар', { fontWeight: '600', color: 'var(--primary)' }));
-        row.appendChild(createCell(`${formatNumber(expensesTotal, 2)} EUR`, 'Витрати на машину', { fontWeight: '600', color: 'var(--primary)' }));
-        row.appendChild(createCell(`${formatNumber(vehicle.totalExpenses, 2)} EUR`, 'Загальні витрати', { fontWeight: '600', color: 'var(--primary)' }));
-        row.appendChild(createCell(`${formatNumber(vehicle.totalIncome, 2)} EUR`, 'Загальний дохід', { fontWeight: '600', color: 'var(--success)' }));
-        const marginValue = vehicle.margin != null ? parseFloat(vehicle.margin) : 0;
-        row.appendChild(createCell(`${formatNumber(vehicle.margin, 2)} EUR`, 'Маржа', { fontWeight: '600', color: marginValue >= 0 ? 'var(--success)' : 'var(--danger)' }));
-        row.appendChild(createCell(formatDate(vehicle.shipmentDate), 'Дата відвантаження'));
-        row.appendChild(createCell(vehicle.invoiceUa || '-', 'Інвойс УА'));
-        row.appendChild(createCell(vehicle.invoiceEu || '-', 'Інвойс ЄС'));
-        row.appendChild(createCell(formatBoolean(vehicle.isOurVehicle), 'Наше завантаження'));
-        row.appendChild(createCell(vehicle.senderName || '-', 'Відправник'));
-        row.appendChild(createCell(vehicle.receiverName || '-', 'Отримувач'));
-        row.appendChild(createCell(vehicle.destinationCountry || '-', 'Країна призначення'));
-        row.appendChild(createCell(vehicle.destinationPlace || '-', 'Місце призначення'));
-        row.appendChild(createCell(vehicle.product || '-', 'Товар'));
-        row.appendChild(createCell(vehicle.productQuantity || '-', 'Кількість товару'));
-        row.appendChild(createCell(vehicle.declarationNumber || '-', 'Номер декларації'));
-        row.appendChild(createCell(vehicle.terminal || '-', 'Термінал'));
-        row.appendChild(createCell(vehicle.driverFullName || '-', 'Водій (ПІБ)'));
-        row.appendChild(createCell(formatBoolean(vehicle.eur1), 'EUR1'));
-        row.appendChild(createCell(formatBoolean(vehicle.fito), 'FITO'));
-        row.appendChild(createCell(formatDate(vehicle.customsDate), 'Дата замитнення'));
-        row.appendChild(createCell(formatDate(vehicle.customsClearanceDate), 'Дата розмитнення'));
-        row.appendChild(createCell(formatDate(vehicle.unloadingDate), 'Дата вивантаження'));
-        row.appendChild(createCell(formatCarrier(vehicle.carrier), 'Перевізник'));
-        row.appendChild(createCell(vehicle.description || '-', 'Коментар'));
-        
-        vehiclesTbody.appendChild(row);
-    });
-    
+async function renderVehicles(vehicles, currentPage, pageSize, totalElements, totalPages, productMap, warehouseMap, carrierMap, onVehicleClick) {
+    await DeclarantRenderer.renderVehicles(vehicles, currentPage, pageSize, totalElements, totalPages, productMap, warehouseMap, carrierMap, onVehicleClick);
     applySavedColumnWidths();
     initializeColumnResize();
 }
@@ -849,16 +392,13 @@ async function viewVehicleDetails(vehicleId) {
     currentVehicleId = vehicleId;
     
     try {
-        const response = await fetch(`/api/v1/vehicles/${vehicleId}`);
-        
-        if (!response.ok) {
-            throw new Error('Failed to load vehicle details');
-        }
-        
-        const vehicle = await response.json();
+        const vehicle = await DeclarantDataLoader.loadVehicleDetails(vehicleId);
         populateCarriers('detail-vehicle-carrier-id');
         populateVehicleSenders('detail-vehicle-sender');
         populateVehicleReceivers('detail-vehicle-receiver');
+        populateVehicleTerminals('detail-vehicle-terminal');
+        populateVehicleDestinationCountries('detail-vehicle-destination-country');
+        populateVehicleDestinationPlaces('detail-vehicle-destination-place');
         renderVehicleDetails(vehicle);
         
         document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
@@ -871,7 +411,7 @@ async function viewVehicleDetails(vehicleId) {
         
         await loadVehicleExpenses(vehicleId);
         
-        const expensesTotal = parseFloat(await getVehicleExpensesTotal()) || 0;
+        const expensesTotal = parseFloat(await getVehicleExpensesTotal(vehicleId)) || 0;
         const productsTotalCost = calculateProductsTotalCost(vehicle);
         const totalExpenses = productsTotalCost + expensesTotal;
         
@@ -879,6 +419,10 @@ async function viewVehicleDetails(vehicleId) {
         const fullReclamation = calculateFullReclamation(vehicle);
         const totalIncome = invoiceEuTotalPrice - fullReclamation;
         const margin = totalIncome - totalExpenses;
+        
+        const vehicleTotalExpenses = document.getElementById('vehicle-total-expenses');
+        const vehicleTotalIncome = document.getElementById('vehicle-total-income');
+        const vehicleMargin = document.getElementById('vehicle-margin');
         
         if (vehicleTotalExpenses) {
             vehicleTotalExpenses.textContent = formatNumber(totalExpenses, 2);
@@ -902,151 +446,16 @@ function renderVehicleDetails(vehicle) {
     populateVehicleForm(vehicle);
     setVehicleFormEditable(false);
     
-    if (!vehicleItemsTbody) return;
-    
-    vehicleItemsTbody.textContent = '';
-    
-    if (!vehicle.items || vehicle.items.length === 0) {
-        const row = document.createElement('tr');
-        row.className = 'loading-row';
-        const cell = document.createElement('td');
-        cell.colSpan = 6;
-        cell.style.textAlign = 'center';
-        cell.style.color = 'var(--text-muted)';
-        cell.textContent = 'Товари ще не додані';
-        row.appendChild(cell);
-        vehicleItemsTbody.appendChild(row);
-    } else {
-        vehicle.items.forEach(item => {
-            const productName = findNameByIdFromMap(productMap, item.productId) || 'Невідомий товар';
-            const warehouseName = findNameByIdFromMap(warehouseMap, item.warehouseId) || 'Невідомий склад';
-
-            currentVehicleItems.set(Number(item.withdrawalId), {
-                ...item,
-                productName,
-                warehouseName
-            });
-
-            const row = document.createElement('tr');
-            row.className = 'vehicle-item-row';
-            row.setAttribute('data-item-id', item.withdrawalId.toString());
-            
-            const createCell = (text, label, style) => {
-                const cell = document.createElement('td');
-                cell.setAttribute('data-label', label);
-                if (style) {
-                    Object.assign(cell.style, style);
-                }
-                cell.textContent = text;
-                return cell;
-            };
-            
-            row.appendChild(createCell(productName, 'Товар'));
-            row.appendChild(createCell(warehouseName, 'Склад'));
-            row.appendChild(createCell(`${formatNumber(item.quantity, 2)} кг`, 'Кількість'));
-            row.appendChild(createCell(`${formatNumber(item.unitPriceEur, 6)} EUR`, 'Ціна за кг', { textAlign: 'right' }));
-            row.appendChild(createCell(`${formatNumber(item.totalCostEur, 6)} EUR`, 'Загальна вартість', { textAlign: 'right', fontWeight: '600', color: 'var(--primary)' }));
-            row.appendChild(createCell(item.withdrawalDate || vehicle.shipmentDate || '-', 'Дата списання'));
-            
-            vehicleItemsTbody.appendChild(row);
-        });
-    }
-    
+    DeclarantRenderer.renderVehicleDetails(vehicle, productMap, warehouseMap, currentVehicleItems);
 }
 
-async function getVehicleExpensesTotal() {
-    if (!currentVehicleId) return 0;
-    try {
-        const response = await fetch(`/api/v1/vehicles/${currentVehicleId}/expenses`);
-        if (!response.ok) return 0;
-        const expenses = await response.json();
-        return expenses.reduce((sum, e) => sum + (parseFloat(e.convertedAmount) || 0), 0);
-    } catch (error) {
-        return 0;
-    }
-}
-
-function calculateProductsTotalCost(vehicle) {
-    if (!vehicle || !vehicle.items || vehicle.items.length === 0) {
-        return 0;
-    }
-    return vehicle.items.reduce((sum, item) => {
-        const itemTotalCost = parseFloat(item.totalCostEur) || 0;
-        return sum + itemTotalCost;
-    }, 0);
-}
-
-function calculateFullReclamation(vehicle) {
-    const reclamationPerTon = parseFloat(vehicle.reclamation) || 0;
-    if (reclamationPerTon === 0) {
-        return 0;
-    }
-    
-    const productQuantityStr = vehicle.productQuantity;
-    if (!productQuantityStr || productQuantityStr.trim() === '') {
-        return 0;
-    }
-    
-    try {
-        const quantityInTons = parseFloat(productQuantityStr.replace(',', '.')) || 0;
-        return reclamationPerTon * quantityInTons;
-        } catch (error) {
-        console.warn('Failed to parse productQuantity for reclamation calculation:', productQuantityStr, error);
-        return 0;
-    }
-}
-
-function calculateInvoiceUaTotalPrice() {
-    const quantity = parseFloat(vehicleProductQuantity?.value?.replace(',', '.') || '0');
-    const pricePerTon = parseFloat(vehicleInvoiceUaPricePerTon?.value || '0');
-    if (quantity > 0 && pricePerTon > 0) {
-        const total = quantity * pricePerTon;
-        if (vehicleInvoiceUaTotalPrice) {
-            vehicleInvoiceUaTotalPrice.value = total.toFixed(6);
-        }
-    } else if (vehicleInvoiceUaTotalPrice) {
-        vehicleInvoiceUaTotalPrice.value = '';
-    }
-}
-
-function calculateInvoiceEuTotalPrice() {
-    const quantity = parseFloat(vehicleProductQuantity?.value?.replace(',', '.') || '0');
-    const pricePerTon = parseFloat(vehicleInvoiceEuPricePerTon?.value || '0');
-    if (quantity > 0 && pricePerTon > 0) {
-        const total = quantity * pricePerTon;
-        if (vehicleInvoiceEuTotalPrice) {
-            vehicleInvoiceEuTotalPrice.value = total.toFixed(6);
-        }
-    } else if (vehicleInvoiceEuTotalPrice) {
-        vehicleInvoiceEuTotalPrice.value = '';
-    }
-}
-
-function calculateDetailInvoiceUaTotalPrice() {
-    const quantity = parseFloat(detailVehicleProductQuantityInput?.value?.replace(',', '.') || '0');
-    const pricePerTon = parseFloat(detailVehicleInvoiceUaPricePerTonInput?.value || '0');
-    if (quantity > 0 && pricePerTon > 0) {
-        const total = quantity * pricePerTon;
-        if (detailVehicleInvoiceUaTotalPriceInput) {
-            detailVehicleInvoiceUaTotalPriceInput.value = total.toFixed(6);
-        }
-    } else if (detailVehicleInvoiceUaTotalPriceInput) {
-        detailVehicleInvoiceUaTotalPriceInput.value = '';
-    }
-}
-
-function calculateDetailInvoiceEuTotalPrice() {
-    const quantity = parseFloat(detailVehicleProductQuantityInput?.value?.replace(',', '.') || '0');
-    const pricePerTon = parseFloat(detailVehicleInvoiceEuPricePerTonInput?.value || '0');
-    if (quantity > 0 && pricePerTon > 0) {
-        const total = quantity * pricePerTon;
-        if (detailVehicleInvoiceEuTotalPriceInput) {
-            detailVehicleInvoiceEuTotalPriceInput.value = total.toFixed(6);
-        }
-    } else if (detailVehicleInvoiceEuTotalPriceInput) {
-        detailVehicleInvoiceEuTotalPriceInput.value = '';
-    }
-}
+const getVehicleExpensesTotal = (vehicleId) => DeclarantCalculations.getVehicleExpensesTotal(vehicleId);
+const calculateProductsTotalCost = DeclarantCalculations.calculateProductsTotalCost;
+const calculateFullReclamation = DeclarantCalculations.calculateFullReclamation;
+const calculateInvoiceUaTotalPrice = DeclarantCalculations.calculateInvoiceUaTotalPrice;
+const calculateInvoiceEuTotalPrice = DeclarantCalculations.calculateInvoiceEuTotalPrice;
+const calculateDetailInvoiceUaTotalPrice = DeclarantCalculations.calculateDetailInvoiceUaTotalPrice;
+const calculateDetailInvoiceEuTotalPrice = DeclarantCalculations.calculateDetailInvoiceEuTotalPrice;
 
 if (vehicleProductQuantity) {
     vehicleProductQuantity.addEventListener('input', () => {
@@ -1085,27 +494,22 @@ function deleteVehicle() {
         return;
     }
     
-    if (!confirm('Ви впевнені, що хочете видалити цю машину?')) {
-        return;
-    }
-    
-    (async () => {
-    try {
-        const response = await fetch(`/api/v1/vehicles/${currentVehicleId}`, {
-            method: 'DELETE'
-        });
-        
-        if (!response.ok) {
-            throw new Error('Failed to delete vehicle');
-        }
-        
-        showMessage('Машину успішно видалено', 'success');
-        closeModal('vehicle-details-modal');
-            await loadVehicles(0);
-    } catch (error) {
-        showMessage('Помилка при видаленні машини', 'error');
-    }
-    })();
+    ConfirmationModal.show(
+        CONFIRMATION_MESSAGES.DELETE_VEHICLE,
+        CONFIRMATION_MESSAGES.CONFIRMATION_TITLE,
+        async () => {
+            try {
+                await DeclarantDataLoader.deleteVehicle(currentVehicleId);
+                showMessage('Машину успішно видалено', 'success');
+                closeModal('vehicle-details-modal');
+                await loadVehicles(0);
+            } catch (error) {
+                showMessage('Помилка при видаленні машини', 'error');
+                handleError(error);
+            }
+        },
+        () => {}
+    );
 }
 
 document.getElementById('delete-vehicle-btn')?.addEventListener('click', deleteVehicle);
@@ -1139,7 +543,7 @@ if (vehiclesSearchInput) {
         clearTimeout(searchTimeout);
         searchTimeout = setTimeout(() => {
             loadVehicles(0);
-        }, 500);
+        }, CLIENT_CONSTANTS.SEARCH_DEBOUNCE_DELAY);
     });
 }
 
@@ -1173,12 +577,12 @@ if (updateVehicleForm) {
             description: detailVehicleDescriptionInput?.value ?? null,
             senderId: detailVehicleSenderSelect?.value ? parseInt(detailVehicleSenderSelect.value) : null,
             receiverId: detailVehicleReceiverSelect?.value ? parseInt(detailVehicleReceiverSelect.value) : null,
-            destinationCountry: detailVehicleDestinationCountryInput?.value ?? null,
-            destinationPlace: detailVehicleDestinationPlaceInput?.value ?? null,
+            destinationCountryId: detailVehicleDestinationCountryInput?.value ? parseInt(detailVehicleDestinationCountryInput.value) : null,
+            destinationPlaceId: detailVehicleDestinationPlaceInput?.value ? parseInt(detailVehicleDestinationPlaceInput.value) : null,
             product: detailVehicleProductInput?.value ?? null,
             productQuantity: detailVehicleProductQuantityInput?.value ?? null,
             declarationNumber: detailVehicleDeclarationNumberInput?.value ?? null,
-            terminal: detailVehicleTerminalInput?.value ?? null,
+            terminalId: detailVehicleTerminalInput?.value ? parseInt(detailVehicleTerminalInput.value) : null,
             driverFullName: detailVehicleDriverFullNameInput?.value ?? null,
             isOurVehicle: detailVehicleIsOurVehicleInput?.checked || false,
             eur1: detailVehicleEur1Input?.checked || false,
@@ -1202,38 +606,33 @@ if (updateVehicleForm) {
         }
         
         try {
-            const response = await fetch(`/api/v1/vehicles/${currentVehicleId}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-            
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Не вдалося оновити машину');
-            }
-            
-            const updatedVehicle = await response.json();
-            currentVehicleDetails = updatedVehicle;
-            renderVehicleDetails(updatedVehicle);
-            
-            const expensesTotal = parseFloat(await getVehicleExpensesTotal()) || 0;
-            const productsTotalCost = calculateProductsTotalCost(updatedVehicle);
-            const totalExpenses = productsTotalCost + expensesTotal;
-            
-            const invoiceEuTotalPrice = updatedVehicle.invoiceEuTotalPrice || 0;
-            const fullReclamation = calculateFullReclamation(updatedVehicle);
-            const totalIncome = invoiceEuTotalPrice - fullReclamation;
-            const margin = totalIncome - totalExpenses;
-            
-            if (vehicleTotalExpenses) {
-                vehicleTotalExpenses.textContent = formatNumber(totalExpenses, 2);
-            }
-            if (vehicleTotalIncome) {
-                vehicleTotalIncome.textContent = formatNumber(totalIncome, 2);
-            }
-            if (vehicleMargin) {
-                vehicleMargin.textContent = formatNumber(margin, 2);
+            const updatedVehicle = await DeclarantDataLoader.updateVehicle(currentVehicleId, payload);
+            if (updatedVehicle && typeof updatedVehicle === 'object') {
+                currentVehicleDetails = updatedVehicle;
+                renderVehicleDetails(updatedVehicle);
+                
+                const expensesTotal = parseFloat(await getVehicleExpensesTotal(currentVehicleId)) || 0;
+                const productsTotalCost = calculateProductsTotalCost(updatedVehicle);
+                const totalExpenses = productsTotalCost + expensesTotal;
+                
+                const invoiceEuTotalPrice = updatedVehicle.invoiceEuTotalPrice || 0;
+                const fullReclamation = calculateFullReclamation(updatedVehicle);
+                const totalIncome = invoiceEuTotalPrice - fullReclamation;
+                const margin = totalIncome - totalExpenses;
+                
+                const vehicleTotalExpenses = document.getElementById('vehicle-total-expenses');
+                const vehicleTotalIncome = document.getElementById('vehicle-total-income');
+                const vehicleMargin = document.getElementById('vehicle-margin');
+                
+                if (vehicleTotalExpenses) {
+                    vehicleTotalExpenses.textContent = formatNumber(totalExpenses, 2);
+                }
+                if (vehicleTotalIncome) {
+                    vehicleTotalIncome.textContent = formatNumber(totalIncome, 2);
+                }
+                if (vehicleMargin) {
+                    vehicleMargin.textContent = formatNumber(margin, 2);
+                }
             }
             
             showMessage('Дані машини оновлено', 'success');
@@ -1271,7 +670,7 @@ function updateVehicleItemMode() {
     }
 }
 
-function openEditVehicleItemModal(itemId) {
+window.openEditVehicleItemModal = function openEditVehicleItemModal(itemId) {
     if (!currentVehicleDetails) {
         showMessage('Неможливо відредагувати товар: машина не вибрана', 'error');
         return;
@@ -1299,7 +698,7 @@ function openEditVehicleItemModal(itemId) {
     updateVehicleItemMode();
 
     openModal('edit-vehicle-item-modal');
-}
+};
 
 
 if (editVehicleItemModeRadios.length > 0) {
@@ -1340,15 +739,62 @@ if (editVehicleItemForm) {
                 return;
             }
 
+            const performVehicleItemUpdate = async () => {
+                try {
+                    payload.quantity = roundedQuantity;
+                    const updatedVehicle = await DeclarantDataLoader.updateVehicleProduct(currentVehicleId, currentVehicleItemId, payload);
+                    currentVehicleDetails = updatedVehicle;
+                    currentVehicleItems = new Map();
+                    DeclarantModal.populateVehicleForm(updatedVehicle);
+                    DeclarantModal.setVehicleFormEditable(false);
+                    renderVehicleDetails(updatedVehicle);
+                    
+                    const expensesTotal = parseFloat(await getVehicleExpensesTotal(currentVehicleId)) || 0;
+                    const productsTotalCost = calculateProductsTotalCost(updatedVehicle);
+                    const totalExpenses = productsTotalCost + expensesTotal;
+                    
+                    const invoiceEuTotalPrice = updatedVehicle.invoiceEuTotalPrice || 0;
+                    const fullReclamation = calculateFullReclamation(updatedVehicle);
+                    const totalIncome = invoiceEuTotalPrice - fullReclamation;
+                    const margin = totalIncome - totalExpenses;
+                    
+                    const vehicleTotalExpenses = document.getElementById('vehicle-total-expenses');
+                    const vehicleTotalIncome = document.getElementById('vehicle-total-income');
+                    const vehicleMargin = document.getElementById('vehicle-margin');
+                    
+                    if (vehicleTotalExpenses) {
+                        vehicleTotalExpenses.textContent = formatNumber(totalExpenses, 2);
+                    }
+                    if (vehicleTotalIncome) {
+                        vehicleTotalIncome.textContent = formatNumber(totalIncome, 2);
+                    }
+                    if (vehicleMargin) {
+                        vehicleMargin.textContent = formatNumber(margin, 2);
+                    }
+                    
+                    showMessage('Дані товару у машині оновлено', 'success');
+                    await loadVehicles(0);
+                    closeModal('edit-vehicle-item-modal');
+                } catch (error) {
+                    console.error('Error updating vehicle product:', error);
+                    showMessage(error.message || 'Помилка при оновленні товару у машині', 'error');
+                    handleError(error);
+                }
+            };
+
             if (roundedQuantity === 0) {
                 const productLabel = item.productName || 'товар';
-                const confirmRemoval = confirm(`Ви впевнені, що хочете повністю видалити ${productLabel} з машини?`);
-                if (!confirmRemoval) {
-                    return;
-                }
+                const message = `Ви впевнені, що хочете повністю видалити ${productLabel} з машини?`;
+                ConfirmationModal.show(
+                    message,
+                    CONFIRMATION_MESSAGES.CONFIRMATION_TITLE,
+                    performVehicleItemUpdate,
+                    () => {}
+                );
+                return;
             }
 
-            payload.quantity = roundedQuantity;
+            await performVehicleItemUpdate();
         } else if (mode === 'totalCost') {
             const newTotalValue = parseFloat(editVehicleItemTotalCostInput.value);
             if (newTotalValue === undefined || newTotalValue === null || isNaN(newTotalValue) || newTotalValue <= 0) {
@@ -1363,130 +809,88 @@ if (editVehicleItemForm) {
             }
 
             payload.totalCostEur = roundedTotal;
+
+            try {
+                const updatedVehicle = await DeclarantDataLoader.updateVehicleProduct(currentVehicleId, currentVehicleItemId, payload);
+                currentVehicleDetails = updatedVehicle;
+                currentVehicleItems = new Map();
+                DeclarantModal.populateVehicleForm(updatedVehicle);
+                DeclarantModal.setVehicleFormEditable(false);
+                renderVehicleDetails(updatedVehicle);
+                
+                const expensesTotal = parseFloat(await getVehicleExpensesTotal(currentVehicleId)) || 0;
+                const productsTotalCost = calculateProductsTotalCost(updatedVehicle);
+                const totalExpenses = productsTotalCost + expensesTotal;
+                
+                const invoiceEuTotalPrice = updatedVehicle.invoiceEuTotalPrice || 0;
+                const fullReclamation = calculateFullReclamation(updatedVehicle);
+                const totalIncome = invoiceEuTotalPrice - fullReclamation;
+                const margin = totalIncome - totalExpenses;
+                
+                const vehicleTotalExpenses = document.getElementById('vehicle-total-expenses');
+                const vehicleTotalIncome = document.getElementById('vehicle-total-income');
+                const vehicleMargin = document.getElementById('vehicle-margin');
+                
+                if (vehicleTotalExpenses) {
+                    vehicleTotalExpenses.textContent = formatNumber(totalExpenses, 2);
+                }
+                if (vehicleTotalIncome) {
+                    vehicleTotalIncome.textContent = formatNumber(totalIncome, 2);
+                }
+                if (vehicleMargin) {
+                    vehicleMargin.textContent = formatNumber(margin, 2);
+                }
+                
+                showMessage('Дані товару у машині оновлено', 'success');
+                await loadVehicles(0);
+                closeModal('edit-vehicle-item-modal');
+            } catch (error) {
+                console.error('Error updating vehicle product:', error);
+                showMessage(error.message || 'Помилка при оновленні товару у машині', 'error');
+                handleError(error);
+            }
         } else {
             showMessage('Оберіть параметр для редагування', 'error');
             return;
-        }
-
-        try {
-            const response = await fetch(`/api/v1/vehicles/${currentVehicleId}/products/${currentVehicleItemId}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.message || 'Не вдалося оновити товар у машині');
-            }
-
-            const updatedVehicle = await response.json();
-            currentVehicleDetails = updatedVehicle;
-            renderVehicleDetails(updatedVehicle);
-            
-            const expensesTotal = parseFloat(await getVehicleExpensesTotal()) || 0;
-            const productsTotalCost = calculateProductsTotalCost(updatedVehicle);
-            const totalExpenses = productsTotalCost + expensesTotal;
-            
-            const invoiceEuTotalPrice = updatedVehicle.invoiceEuTotalPrice || 0;
-            const fullReclamation = calculateFullReclamation(updatedVehicle);
-            const totalIncome = invoiceEuTotalPrice - fullReclamation;
-            const margin = totalIncome - totalExpenses;
-            
-            if (vehicleTotalExpenses) {
-                vehicleTotalExpenses.textContent = formatNumber(totalExpenses, 2);
-            }
-            if (vehicleTotalIncome) {
-                vehicleTotalIncome.textContent = formatNumber(totalIncome, 2);
-            }
-            if (vehicleMargin) {
-                vehicleMargin.textContent = formatNumber(margin, 2);
-            }
-            
-            showMessage('Дані товару у машині оновлено', 'success');
-            await loadVehicles(0);
-            closeModal('edit-vehicle-item-modal');
-        } catch (error) {
-            showMessage(error.message || 'Помилка при оновленні товару у машині', 'error');
         }
     });
 }
 
 function openModal(modalId) {
-    const modal = document.getElementById(modalId);
-    if (modal) {
-        modal.classList.add('open');
-        document.body.classList.add('modal-open');
-    }
+    DeclarantModal.openModal(modalId);
 }
 
 window.openModal = openModal;
 
 function closeModal(modalId) {
-    const modal = document.getElementById(modalId);
-    if (!modal) return;
-    
-    modal.classList.remove('open');
-    document.body.classList.remove('modal-open');
-    
-    if (modalId === 'create-vehicle-modal') {
-        createVehicleForm?.reset();
-    } else if (modalId === 'vehicle-details-modal') {
-        resetVehicleFormState();
-    } else if (modalId === 'edit-vehicle-item-modal') {
-        if (editVehicleItemForm) {
-            editVehicleItemForm.reset();
+    const onClose = () => {
+        if (modalId === 'create-vehicle-modal') {
+            const createVehicleForm = document.getElementById('create-vehicle-form');
+            if (createVehicleForm) createVehicleForm.reset();
+        } else if (modalId === 'vehicle-details-modal') {
+            resetVehicleFormState();
+        } else if (modalId === 'edit-vehicle-item-modal') {
+            const editVehicleItemForm = document.getElementById('edit-vehicle-item-form');
+            if (editVehicleItemForm) {
+                editVehicleItemForm.reset();
+            }
+            currentVehicleItemId = null;
+            updateVehicleItemMode();
+        } else if (modalId === 'edit-vehicle-expense-modal') {
+            const editVehicleExpenseForm = document.getElementById('edit-vehicle-expense-form');
+            if (editVehicleExpenseForm) {
+                editVehicleExpenseForm.reset();
+            }
+            currentExpenseId = null;
         }
-        currentVehicleItemId = null;
-        updateVehicleItemMode();
-    } else if (modalId === 'edit-vehicle-expense-modal') {
-        if (editVehicleExpenseForm) {
-            editVehicleExpenseForm.reset();
-        }
-        currentExpenseId = null;
-    } else if (modalId === 'carrier-form-modal') {
-        carrierForm?.reset();
-    }
+    };
+    
+    DeclarantModal.closeModal(modalId, onClose);
 }
 
 window.closeModal = closeModal;
 
-function initializeModalClickHandlers() {
-    const modals = [
-        document.getElementById('vehicles-filter-modal'),
-        document.getElementById('create-vehicle-modal'),
-        document.getElementById('vehicle-details-modal'),
-        document.getElementById('create-vehicle-expense-modal'),
-        document.getElementById('edit-vehicle-expense-modal'),
-        document.getElementById('edit-vehicle-item-modal'),
-        document.getElementById('manage-carriers-modal'),
-        document.getElementById('carrier-form-modal')
-    ];
-
-    modals.forEach(modal => {
-        if (!modal) return;
-
-        if (modal._modalClickHandler) {
-            modal.removeEventListener('click', modal._modalClickHandler);
-            modal._modalClickHandler = null;
-        }
-    });
-
-    document.querySelectorAll('.modal-close').forEach(btn => {
-        if (btn._closeModalHandler) {
-            btn.removeEventListener('click', btn._closeModalHandler);
-        }
-
-        btn._closeModalHandler = () => {
-            const modal = btn.closest('.modal-overlay');
-            if (modal) {
-                closeModal(modal.id);
-            }
-        };
-
-        btn.addEventListener('click', btn._closeModalHandler);
-    });
-}
+const initializeModalClickHandlers = DeclarantModal.initializeModalClickHandlers;
 
 document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -1505,193 +909,7 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     });
 });
 
-function setDefaultVehicleDates() {
-    const today = new Date();
-    const last30Days = new Date();
-    last30Days.setDate(today.getDate() - 30);
-    const formattedToday = today.toISOString().split('T')[0];
-    const formattedFrom = last30Days.toISOString().split('T')[0];
-
-    if (vehiclesDateFromFilter && !vehiclesDateFromFilter.value) {
-        vehiclesDateFromFilter.value = formattedFrom;
-    }
-    if (vehiclesDateToFilter && !vehiclesDateToFilter.value) {
-        vehiclesDateToFilter.value = formattedToday;
-    }
-}
-
-async function loadCarriers() {
-    const carriers = await fetchCarriers();
-    const tbody = document.getElementById('carriers-tbody');
-    if (!tbody) return;
-    
-    tbody.textContent = '';
-    
-    if (!carriers || carriers.length === 0) {
-        const row = document.createElement('tr');
-        row.className = 'loading-row';
-        const cell = document.createElement('td');
-        cell.colSpan = 6;
-        cell.style.textAlign = 'center';
-        cell.style.color = 'var(--text-muted)';
-        cell.textContent = 'Немає перевізників';
-        row.appendChild(cell);
-        tbody.appendChild(row);
-        return;
-    }
-    
-    carriers.forEach(carrier => {
-        const row = document.createElement('tr');
-        
-        const createCell = (text, label) => {
-            const cell = document.createElement('td');
-            cell.setAttribute('data-label', label);
-            cell.textContent = text || '-';
-            return cell;
-        };
-        
-        row.appendChild(createCell(carrier.companyName, 'Назва компанії'));
-        row.appendChild(createCell(carrier.registrationAddress, 'Адреса реєстрації'));
-        row.appendChild(createCell(carrier.phoneNumber, 'Телефон'));
-        row.appendChild(createCell(carrier.code, 'Код'));
-        row.appendChild(createCell(carrier.account, 'Рахунок'));
-        
-        const actionsCell = document.createElement('td');
-        actionsCell.setAttribute('data-label', 'Дії');
-        const actionsDiv = document.createElement('div');
-        actionsDiv.className = 'action-buttons';
-        
-        const editBtn = document.createElement('button');
-        editBtn.className = 'btn btn-secondary btn-sm';
-        editBtn.textContent = '✏️ Редагувати';
-        const editBtnHandler = () => editCarrier(carrier.id);
-        editBtn.addEventListener('click', editBtnHandler);
-        editBtn._clickHandler = editBtnHandler;
-        actionsDiv.appendChild(editBtn);
-        
-        const deleteBtn = document.createElement('button');
-        deleteBtn.className = 'btn btn-danger btn-sm';
-        deleteBtn.textContent = '🗑️ Видалити';
-        const deleteBtnHandler = () => deleteCarrier(carrier.id);
-        deleteBtn.addEventListener('click', deleteBtnHandler);
-        deleteBtn._clickHandler = deleteBtnHandler;
-        actionsDiv.appendChild(deleteBtn);
-        
-        actionsCell.appendChild(actionsDiv);
-        row.appendChild(actionsCell);
-        
-        tbody.appendChild(row);
-    });
-}
-
-document.getElementById('manage-carriers-btn')?.addEventListener('click', async () => {
-    await loadCarriers();
-    openModal('manage-carriers-modal');
-});
-
-document.getElementById('create-carrier-btn')?.addEventListener('click', () => {
-    if (carrierFormTitle) carrierFormTitle.textContent = '➕ Створити перевізника';
-    if (carrierForm) carrierForm.reset();
-    if (carrierId) carrierId.value = '';
-    openModal('carrier-form-modal');
-});
-
-async function editCarrier(id) {
-    const carrier = carrierMap.get(id);
-    if (!carrier) {
-        showMessage('Перевізник не знайдений', 'error');
-        return;
-    }
-    
-    if (carrierFormTitle) carrierFormTitle.textContent = '✏️ Редагувати перевізника';
-    if (carrierId) carrierId.value = carrier.id;
-    if (carrierCompanyName) carrierCompanyName.value = carrier.companyName || '';
-    if (carrierRegistrationAddress) carrierRegistrationAddress.value = carrier.registrationAddress || '';
-    if (carrierPhoneNumber) carrierPhoneNumber.value = carrier.phoneNumber || '';
-    if (carrierCode) carrierCode.value = carrier.code || '';
-    if (carrierAccount) carrierAccount.value = carrier.account || '';
-    openModal('carrier-form-modal');
-}
-
-async function deleteCarrier(carrierId) {
-    if (!confirm('Ви впевнені, що хочете видалити цього перевізника?')) {
-        return;
-    }
-    
-    try {
-        const response = await fetch(`/api/v1/carriers/${carrierId}`, {
-            method: 'DELETE'
-        });
-        
-        if (!response.ok) {
-            throw new Error('Failed to delete carrier');
-        }
-        
-        showMessage('Перевізника успішно видалено', 'success');
-        await loadCarriers();
-        await fetchCarriers();
-        await fetchVehicleSenders();
-        await fetchVehicleReceivers();
-        populateCarriers('vehicle-carrier-id');
-        populateCarriers('detail-vehicle-carrier-id');
-        populateVehicleSenders('vehicle-sender');
-        populateVehicleSenders('detail-vehicle-sender');
-        populateVehicleReceivers('vehicle-receiver');
-        populateVehicleReceivers('detail-vehicle-receiver');
-    } catch (error) {
-        showMessage('Помилка при видаленні перевізника', 'error');
-    }
-}
-
-if (carrierForm) {
-    carrierForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        const id = carrierId?.value;
-        const carrierData = {
-            companyName: carrierCompanyName?.value || '',
-            registrationAddress: carrierRegistrationAddress?.value || '',
-            phoneNumber: carrierPhoneNumber?.value || '',
-            code: carrierCode?.value || '',
-            account: carrierAccount?.value || ''
-        };
-    
-        try {
-            let response;
-            if (id) {
-                response = await fetch(`/api/v1/carriers/${id}`, {
-                    method: 'PATCH',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(carrierData)
-                });
-            } else {
-                response = await fetch('/api/v1/carriers', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(carrierData)
-                });
-            }
-            
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Failed to save carrier');
-            }
-            
-            showMessage(id ? 'Перевізника успішно оновлено' : 'Перевізника успішно створено', 'success');
-            closeModal('carrier-form-modal');
-            await loadCarriers();
-            await fetchCarriers();
-            populateCarriers('vehicle-carrier-id');
-            populateCarriers('detail-vehicle-carrier-id');
-        } catch (error) {
-            showMessage(error.message || 'Помилка при збереженні перевізника', 'error');
-        }
-    });
-}
-
-document.getElementById('cancel-carrier-btn')?.addEventListener('click', () => {
-    closeModal('carrier-form-modal');
-});
+const setDefaultVehicleDates = DeclarantFilters.setDefaultVehicleDates;
 
 document.getElementById('cancel-create-vehicle-btn')?.addEventListener('click', () => {
     closeModal('create-vehicle-modal');
@@ -1751,7 +969,7 @@ function initializeColumnResize() {
             if (!currentResizeHeader) return;
             
             const diff = e.pageX - startX;
-            const newWidth = Math.max(50, startWidth + diff);
+            const newWidth = Math.max(CLIENT_CONSTANTS.MIN_COLUMN_WIDTH, startWidth + diff);
             const column = currentResizeHeader.dataset.column;
             
             currentResizeHeader.style.minWidth = newWidth + 'px';
@@ -1767,7 +985,7 @@ function initializeColumnResize() {
         const mouseupHandler = () => {
             if (currentResizeHeader) {
                 const column = currentResizeHeader.dataset.column;
-                const width = Math.max(50, currentResizeHeader.offsetWidth);
+                const width = Math.max(CLIENT_CONSTANTS.MIN_COLUMN_WIDTH, currentResizeHeader.offsetWidth);
                 localStorage.setItem(`vehicle-column-width-${column}`, width.toString());
                 currentResizeHeader.classList.remove('resizing');
                 currentResizeHeader = null;
@@ -1793,12 +1011,21 @@ async function initialize() {
     await fetchCarriers();
     await fetchVehicleSenders();
     await fetchVehicleReceivers();
+    await fetchVehicleTerminals();
+    await fetchVehicleDestinationCountries();
+    await fetchVehicleDestinationPlaces();
     populateCarriers('vehicle-carrier-id');
     populateCarriers('detail-vehicle-carrier-id');
     populateVehicleSenders('vehicle-sender');
     populateVehicleSenders('detail-vehicle-sender');
     populateVehicleReceivers('vehicle-receiver');
     populateVehicleReceivers('detail-vehicle-receiver');
+    populateVehicleTerminals('vehicle-terminal');
+    populateVehicleTerminals('detail-vehicle-terminal');
+    populateVehicleDestinationCountries('vehicle-destination-country');
+    populateVehicleDestinationCountries('detail-vehicle-destination-country');
+    populateVehicleDestinationPlaces('vehicle-destination-place');
+    populateVehicleDestinationPlaces('detail-vehicle-destination-place');
     await loadAccounts();
     setDefaultVehicleDates();
     await loadVehicles(0);
@@ -1812,40 +1039,18 @@ let categoryNameMap = new Map();
 
 async function loadAccounts() {
     try {
-        const response = await fetch('/api/v1/accounts');
-        if (!response.ok) {
-            throw new Error('Failed to load accounts');
-        }
-        accountsCache = await response.json();
+        accountsCache = await DeclarantDataLoader.loadAccounts();
     } catch (error) {
         console.error('Error loading accounts:', error);
         handleError(error);
     }
 }
 
-function populateAccounts(selectId) {
-    const select = document.getElementById(selectId);
-    if (!select) return;
-    select.textContent = '';
-    const defaultOption = document.createElement('option');
-    defaultOption.value = '';
-    defaultOption.textContent = 'Оберіть рахунок';
-    select.appendChild(defaultOption);
-    accountsCache.forEach(account => {
-        const option = document.createElement('option');
-        option.value = account.id;
-        option.textContent = account.name || `Рахунок #${account.id}`;
-        select.appendChild(option);
-    });
-}
+const populateAccounts = (selectId) => DeclarantRenderer.populateAccounts(selectId, accountsCache);
 
 async function loadCategoriesForVehicleExpense() {
     try {
-        const response = await fetch('/api/v1/transaction-categories/type/VEHICLE_EXPENSE');
-        if (!response.ok) {
-            throw new Error('Failed to load categories');
-        }
-        const categories = await response.json();
+        const categories = await DeclarantDataLoader.loadCategoriesForVehicleExpense();
         categoriesCache.set('VEHICLE_EXPENSE', categories);
         categoryNameMap.clear();
         categories.forEach(cat => {
@@ -1858,47 +1063,11 @@ async function loadCategoriesForVehicleExpense() {
     }
 }
 
-function populateCategories(selectId, categories) {
-    const select = document.getElementById(selectId);
-    if (!select) return;
-    select.textContent = '';
-    const defaultOption = document.createElement('option');
-    defaultOption.value = '';
-    defaultOption.textContent = 'Оберіть категорію';
-    select.appendChild(defaultOption);
-    if (categories && categories.length > 0) {
-        categories.forEach(category => {
-            const option = document.createElement('option');
-            option.value = category.id;
-            option.textContent = category.name;
-            select.appendChild(option);
-        });
-    }
-}
-
-function populateCurrencies(selectId, accountId) {
-    const select = document.getElementById(selectId);
-    if (!select) return;
-    select.textContent = '';
-    const defaultOption = document.createElement('option');
-    defaultOption.value = '';
-    defaultOption.textContent = 'Оберіть валюту';
-    select.appendChild(defaultOption);
-    
-    if (!accountId) return;
-    
-    const account = accountsCache.find(a => a.id === parseInt(accountId));
-    if (account && account.currencies) {
-        account.currencies.forEach(currency => {
-            const option = document.createElement('option');
-            option.value = currency;
-            option.textContent = currency;
-            select.appendChild(option);
-        });
-    }
-}
+const populateCategories = DeclarantRenderer.populateCategories;
+const populateCurrencies = (selectId, accountId) => DeclarantRenderer.populateCurrencies(selectId, accountId, accountsCache);
 
 async function loadVehicleExpenses(vehicleId) {
+    const vehicleExpensesTbody = document.getElementById('vehicle-expenses-tbody');
     if (!vehicleExpensesTbody) return;
     
     try {
@@ -1906,67 +1075,8 @@ async function loadVehicleExpenses(vehicleId) {
             await loadCategoriesForVehicleExpense();
         }
         
-        const response = await fetch(`/api/v1/vehicles/${vehicleId}/expenses`);
-        if (!response.ok) {
-            throw new Error('Failed to load vehicle expenses');
-        }
-        
-        const expenses = await response.json();
-        
-        vehicleExpensesTbody.textContent = '';
-        
-        if (!expenses || expenses.length === 0) {
-            const row = document.createElement('tr');
-            row.className = 'loading-row';
-            const cell = document.createElement('td');
-            cell.colSpan = 9;
-            cell.style.textAlign = 'center';
-            cell.style.color = 'var(--text-muted)';
-            cell.textContent = 'Немає витрат';
-            row.appendChild(cell);
-            vehicleExpensesTbody.appendChild(row);
-            return;
-        }
-        
-        const accountMap = new Map(accountsCache.map(a => [a.id, a]));
-        
-        expenses.forEach(expense => {
-            const account = accountMap.get(expense.fromAccountId);
-            const accountName = account ? (account.name || `Рахунок #${account.id}`) : '-';
-            const date = expense.createdAt ? new Date(expense.createdAt).toLocaleDateString('uk-UA') : '-';
-            const categoryName = expense.categoryId ? (categoryNameMap.get(expense.categoryId) || 'Категорія') : '-';
-            const exchangeRate = expense.exchangeRate ? formatNumber(expense.exchangeRate, 6) : '-';
-            const convertedAmount = expense.convertedAmount ? formatNumber(expense.convertedAmount, 2) : '-';
-            
-            const row = document.createElement('tr');
-            
-            const createCell = (text, label) => {
-                const cell = document.createElement('td');
-                cell.setAttribute('data-label', label);
-                cell.textContent = text || '-';
-                return cell;
-            };
-            
-            row.appendChild(createCell(date, 'Дата'));
-            row.appendChild(createCell(formatNumber(expense.amount, 2), 'Сума'));
-            row.appendChild(createCell(expense.currency, 'Валюта'));
-            row.appendChild(createCell(exchangeRate, 'Курс'));
-            row.appendChild(createCell(convertedAmount, 'Сума в EUR'));
-            row.appendChild(createCell(categoryName, 'Категорія'));
-            row.appendChild(createCell(accountName, 'Рахунок'));
-            row.appendChild(createCell(expense.description, 'Опис'));
-            
-            const actionsCell = document.createElement('td');
-            actionsCell.setAttribute('data-label', 'Дії');
-            const editBtn = document.createElement('button');
-            editBtn.className = 'btn btn-sm btn-primary';
-            editBtn.textContent = 'Редагувати';
-            editBtn.onclick = () => openEditVehicleExpenseModal(expense);
-            actionsCell.appendChild(editBtn);
-            row.appendChild(actionsCell);
-            
-            vehicleExpensesTbody.appendChild(row);
-        });
+        const expenses = await DeclarantDataLoader.loadVehicleExpenses(vehicleId);
+        DeclarantRenderer.renderVehicleExpenses(expenses, accountsCache, categoryNameMap);
     } catch (error) {
         console.error('Error loading vehicle expenses:', error);
         vehicleExpensesTbody.textContent = '';
@@ -1976,51 +1086,13 @@ async function loadVehicleExpenses(vehicleId) {
         cell.colSpan = 9;
         cell.style.textAlign = 'center';
         cell.style.color = 'var(--danger)';
-        cell.textContent = 'Помилка завантаження витрат';
+        cell.textContent = CLIENT_MESSAGES.LOAD_ERROR;
         row.appendChild(cell);
         vehicleExpensesTbody.appendChild(row);
     }
 }
 
-async function checkExchangeRatesFreshness() {
-    try {
-        const response = await fetch('/api/v1/exchange-rates');
-        if (!response.ok) {
-            return false;
-        }
-        const rates = await response.json();
-        
-        if (!rates || rates.length === 0) {
-            return false;
-        }
-        
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        
-        for (const rate of rates) {
-            let rateDate = null;
-            
-            if (rate.updatedAt) {
-                rateDate = new Date(rate.updatedAt);
-            } else if (rate.createdAt) {
-                rateDate = new Date(rate.createdAt);
-            } else {
-                return false;
-            }
-            
-            rateDate.setHours(0, 0, 0, 0);
-            
-            if (rateDate.getTime() < today.getTime()) {
-                return false;
-            }
-        }
-        
-        return true;
-    } catch (error) {
-        console.error('Error checking exchange rates freshness:', error);
-        return false;
-    }
-}
+const checkExchangeRatesFreshness = DeclarantDataLoader.checkExchangeRatesFreshness;
 
 document.getElementById('create-vehicle-expense-btn')?.addEventListener('click', async () => {
     if (!currentVehicleId) {
@@ -2080,17 +1152,7 @@ if (createVehicleExpenseForm) {
         };
         
         try {
-            const response = await fetch(`/api/v1/vehicles/${currentVehicleId}/expenses`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(formData)
-            });
-            
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Failed to create vehicle expense');
-            }
-            
+            await DeclarantDataLoader.createVehicleExpense(currentVehicleId, formData);
             showMessage('Витрату успішно створено', 'success');
             closeModal('create-vehicle-expense-modal');
             createVehicleExpenseForm.reset();
@@ -2098,7 +1160,7 @@ if (createVehicleExpenseForm) {
             await loadVehicleExpenses(currentVehicleId);
             
             if (currentVehicleDetails) {
-                const expensesTotal = parseFloat(await getVehicleExpensesTotal()) || 0;
+                const expensesTotal = parseFloat(await getVehicleExpensesTotal(currentVehicleId)) || 0;
                 const productsTotalCost = calculateProductsTotalCost(currentVehicleDetails);
                 const totalExpenses = productsTotalCost + expensesTotal;
                 
@@ -2106,6 +1168,10 @@ if (createVehicleExpenseForm) {
                 const fullReclamation = calculateFullReclamation(currentVehicleDetails);
                 const totalIncome = invoiceEuTotalPrice - fullReclamation;
                 const margin = totalIncome - totalExpenses;
+                
+                const vehicleTotalExpenses = document.getElementById('vehicle-total-expenses');
+                const vehicleTotalIncome = document.getElementById('vehicle-total-income');
+                const vehicleMargin = document.getElementById('vehicle-margin');
                 
                 if (vehicleTotalExpenses) {
                     vehicleTotalExpenses.textContent = formatNumber(totalExpenses, 2);
@@ -2123,7 +1189,7 @@ if (createVehicleExpenseForm) {
     });
 }
 
-async function openEditVehicleExpenseModal(expense) {
+window.openEditVehicleExpenseModal = async function openEditVehicleExpenseModal(expense) {
     if (!currentVehicleId) {
         showMessage('Не вдалося визначити машину', 'error');
         return;
@@ -2174,12 +1240,9 @@ if (editExpenseAmount && editExpenseCurrency) {
         
         if (amount && currency && currency !== 'EUR') {
             try {
-                const response = await fetch(`/api/v1/exchange-rates/${currency}/EUR`);
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data.rate) {
-                        const convertedAmount = amount / data.rate;
-                    }
+                const data = await DeclarantDataLoader.getExchangeRate(currency, 'EUR');
+                if (data && data.rate) {
+                    const convertedAmount = amount / data.rate;
                 }
             } catch (error) {
                 console.error('Error fetching exchange rate:', error);
@@ -2212,17 +1275,7 @@ if (editVehicleExpenseForm) {
         };
         
         try {
-            const response = await fetch(`/api/v1/vehicles/expenses/${currentExpenseId}`, {
-                method: 'PATCH',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(formData)
-            });
-            
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Failed to update vehicle expense');
-            }
-            
+            await DeclarantDataLoader.updateVehicleExpense(currentExpenseId, formData);
             showMessage('Витрату успішно оновлено', 'success');
             closeModal('edit-vehicle-expense-modal');
             editVehicleExpenseForm.reset();
@@ -2231,7 +1284,7 @@ if (editVehicleExpenseForm) {
             await loadVehicleExpenses(currentVehicleId);
             
             if (currentVehicleDetails) {
-                const expensesTotal = parseFloat(await getVehicleExpensesTotal()) || 0;
+                const expensesTotal = parseFloat(await getVehicleExpensesTotal(currentVehicleId)) || 0;
                 const productsTotalCost = calculateProductsTotalCost(currentVehicleDetails);
                 const totalExpenses = productsTotalCost + expensesTotal;
                 
@@ -2239,6 +1292,10 @@ if (editVehicleExpenseForm) {
                 const fullReclamation = calculateFullReclamation(currentVehicleDetails);
                 const totalIncome = invoiceEuTotalPrice - fullReclamation;
                 const margin = totalIncome - totalExpenses;
+                
+                const vehicleTotalExpenses = document.getElementById('vehicle-total-expenses');
+                const vehicleTotalIncome = document.getElementById('vehicle-total-income');
+                const vehicleMargin = document.getElementById('vehicle-margin');
                 
                 if (vehicleTotalExpenses) {
                     vehicleTotalExpenses.textContent = formatNumber(totalExpenses, 2);
@@ -2267,37 +1324,7 @@ document.getElementById('export-vehicles-btn')?.addEventListener('click', async 
         const filters = buildFilters();
         const filtersJson = Object.keys(filters).length > 0 ? JSON.stringify(filters) : '';
         
-        let url = `/api/v1/vehicles/export`;
-        const params = new URLSearchParams();
-        
-        if (searchTerm) {
-            params.append('q', searchTerm);
-        }
-        
-        if (filtersJson) {
-            params.append('filters', filtersJson);
-        }
-        
-        if (params.toString()) {
-            url += '?' + params.toString();
-        }
-        
-        const response = await fetch(url);
-        
-        if (!response.ok) {
-            throw new Error('Failed to export vehicles');
-        }
-        
-        const blob = await response.blob();
-        const downloadUrl = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = downloadUrl;
-        link.download = `vehicles_${new Date().toISOString().split('T')[0]}.xlsx`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(downloadUrl);
-        
+        await DeclarantDataLoader.exportVehicles(filtersJson, searchTerm);
         showMessage('Експорт успішно виконано', 'success');
     } catch (error) {
         console.error('Error exporting vehicles:', error);

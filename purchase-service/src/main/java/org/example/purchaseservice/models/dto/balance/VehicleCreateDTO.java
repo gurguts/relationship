@@ -26,9 +26,9 @@ public class VehicleCreateDTO {
     
     private Long receiverId;
     
-    private String destinationCountry;
+    private Long destinationCountryId;
     
-    private String destinationPlace;
+    private Long destinationPlaceId;
     
     private String product;
     
@@ -36,7 +36,7 @@ public class VehicleCreateDTO {
     
     private String declarationNumber;
     
-    private String terminal;
+    private Long terminalId;
     
     private String driverFullName;
     

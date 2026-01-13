@@ -113,11 +113,11 @@
 
 #filter-counter {
     display: inline-flex;
-    width: 1.3em;
+    width: 3.8em;
     background-color: var(--dark-blue);
     font-size: var(--base-text-size);
     color: white;
-    padding: 0.2em 0.6em 0.2em 1.5em;
+    padding: 0.1em 0.6em 0.1em 1.5em;
     margin-left: -1em;
     z-index: 0;
     border-radius: 0 10px 10px 0;
@@ -333,9 +333,7 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    padding: 0.2em;
     background-color: #fff;
-    border: 1px solid #ccc;
     border-radius: 4px;
     cursor: pointer;
 }
@@ -976,24 +974,6 @@
     animation: slideOutContent 0.3s forwards;
 }
 
-@keyframes slideInContent {
-    from {
-        transform: translateX(100%);
-    }
-    to {
-        transform: translateX(0);
-    }
-}
-
-@keyframes slideOutContent {
-    from {
-        transform: translateX(0);
-    }
-    to {
-        transform: translateX(100%);
-    }
-}
-
 
 .modal-content-client h1 {
     margin: 0;
@@ -1009,9 +989,6 @@
     font-size: 1em;
 }
 
-.modal-content-p-source {
-    display: flex;
-}
 
 .modal-content-client strong {
     font-size: 1em;
@@ -1411,8 +1388,8 @@
     }
 
     .filter-button-block svg {
-        width: 1.5em;
-        height: 1.5em;
+        width: 2em;
+        height: 2em;
         padding: 0.2em;
     }
 

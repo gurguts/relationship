@@ -15,7 +15,7 @@ import java.util.Map;
         configuration = FeignConfig.class, contextId = "transactionApiClient")
 public interface TransactionApiClient {
 
-    @PatchMapping("/{transactionId}/amount")
+    @PutMapping("/{transactionId}/amount")
     ResponseEntity<Void> updateTransactionAmount(@PathVariable("transactionId") @NonNull Long transactionId,
                                                   @RequestBody @NonNull BigDecimal amount);
 

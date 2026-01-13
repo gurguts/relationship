@@ -29,7 +29,7 @@ public class ClientContainerController {
     @PostMapping("/transfer")
     public ResponseEntity<Void> transferContainerToClient(@RequestBody @Valid @NonNull TransferToClientRequest request) {
         clientContainerService.transferContainerToClient(
-                request.getClientId(), request.getContainerId(), request.getQuantity());
+                request.getUserId(), request.getClientId(), request.getContainerId(), request.getQuantity());
         return ResponseEntity.noContent().build();
     }
 
@@ -37,7 +37,7 @@ public class ClientContainerController {
     @PostMapping("/collect")
     public ResponseEntity<Void> collectContainerFromClient(@RequestBody @Valid @NonNull CollectFromClientRequest request) {
         clientContainerService.collectContainerFromClient(
-                request.getClientId(), request.getContainerId(), request.getQuantity());
+                request.getUserId(), request.getClientId(), request.getContainerId(), request.getQuantity());
         return ResponseEntity.noContent().build();
     }
 

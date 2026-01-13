@@ -75,33 +75,6 @@ const RouteRenderer = (function() {
         }
     }
     
-    function formatFieldValueForModal(fieldValue, field) {
-        if (!fieldValue) return '';
-        
-        switch (field.fieldType) {
-            case 'TEXT':
-                return ClientUtils.escapeHtml(fieldValue.valueText || '');
-            case 'PHONE':
-                const phone = fieldValue.valueText || '';
-                if (phone) {
-                    const escapedPhone = ClientUtils.escapeHtml(phone);
-                    return `<a href="tel:${escapedPhone}">${escapedPhone}</a>`;
-                }
-                return '';
-            case 'NUMBER':
-                return ClientUtils.escapeHtml(String(fieldValue.valueNumber || ''));
-            case 'DATE':
-                return ClientUtils.escapeHtml(fieldValue.valueDate || '');
-            case 'BOOLEAN':
-                if (fieldValue.valueBoolean === true) return 'Так';
-                if (fieldValue.valueBoolean === false) return 'Ні';
-                return '';
-            case 'LIST':
-                return ClientUtils.escapeHtml(fieldValue.valueListValue || '');
-            default:
-                return '';
-        }
-    }
     
     function getDefaultSortDirection(sortField) {
         if (sortField === 'updatedAt' || sortField === 'createdAt') {
@@ -156,7 +129,7 @@ const RouteRenderer = (function() {
         const thead = document.querySelector('#client-list table thead tr');
         if (!thead) return;
         
-        thead.innerHTML = '';
+        thead.textContent = '';
 
         const actionsTh = document.createElement('th');
         actionsTh.textContent = 'Дії';
@@ -232,10 +205,7 @@ const RouteRenderer = (function() {
         }
     }
     
-    async function renderClientsWithDynamicFields(clients, tableBody, visibleFields, currentClientType, sourceMap, loadClientFieldValuesFn, loadClientDetailsFn, openCreatePurchaseModalFn, openCreateContainerModalFn) {
-        const fieldValuesPromises = clients.map(client => loadClientFieldValuesFn(client.id));
-        const allFieldValues = await Promise.all(fieldValuesPromises);
-
+    async function renderClientsWithDynamicFields(clients, tableBody, visibleFields, currentClientType, sourceMap, loadClientDetailsFn, openCreatePurchaseModalFn, openCreateContainerModalFn) {
         const staticFields = visibleFields.filter(f => f.isStatic);
         const dynamicFields = visibleFields.filter(f => !f.isStatic);
 
@@ -244,7 +214,7 @@ const RouteRenderer = (function() {
 
         const allFields = [...staticFields, ...dynamicFields].sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
         
-        clients.forEach((client, index) => {
+        clients.forEach((client) => {
             const row = document.createElement('tr');
             row.classList.add('client-row');
             
@@ -274,7 +244,7 @@ const RouteRenderer = (function() {
                 row.appendChild(companyCell);
             }
             
-            const fieldValues = allFieldValues[index];
+            const fieldValues = client.fieldValues || [];
             const fieldValuesMap = new Map();
             fieldValues.forEach(fv => {
                 if (!fieldValuesMap.has(fv.fieldId)) {
@@ -340,13 +310,29 @@ const RouteRenderer = (function() {
                                 }
                                 const value = formatFieldValue(v, field);
                                 if (value) {
-                                    cell.appendChild(document.createTextNode(value));
+                                    if (field.fieldType === 'PHONE' && value) {
+                                        const phoneLink = document.createElement('a');
+                                        const cleanPhone = value.trim().replace(/[^\d+\-\s()]/g, '');
+                                        phoneLink.setAttribute('href', `tel:${cleanPhone}`);
+                                        phoneLink.textContent = value;
+                                        cell.appendChild(phoneLink);
+                                    } else {
+                                        cell.appendChild(document.createTextNode(value));
+                                    }
                                 }
                             });
                         } else {
                             const value = formatFieldValue(values[0], field);
                             if (value) {
-                                cell.textContent = value;
+                                if (field.fieldType === 'PHONE' && value) {
+                                    const phoneLink = document.createElement('a');
+                                    const cleanPhone = value.trim().replace(/[^\d+\-\s()]/g, '');
+                                    phoneLink.setAttribute('href', `tel:${cleanPhone}`);
+                                    phoneLink.textContent = value;
+                                    cell.appendChild(phoneLink);
+                                } else {
+                                    cell.textContent = value;
+                                }
                             } else {
                                 cell.appendChild(ClientUtils.createEmptyCellSpan());
                             }
@@ -410,12 +396,12 @@ const RouteRenderer = (function() {
         });
     }
     
-    async function renderClients(clients, tableBody, currentClientTypeId, visibleFields, currentClientType, sourceMap, loadClientFieldValuesFn, loadClientDetailsFn, openCreatePurchaseModalFn, openCreateContainerModalFn, onColumnResize) {
+    async function renderClients(clients, tableBody, currentClientTypeId, visibleFields, currentClientType, sourceMap, loadClientDetailsFn, openCreatePurchaseModalFn, openCreateContainerModalFn, onColumnResize) {
         if (!tableBody) return;
-        tableBody.innerHTML = '';
+        tableBody.textContent = '';
         
         if (currentClientTypeId && visibleFields && visibleFields.length > 0) {
-            await renderClientsWithDynamicFields(clients, tableBody, visibleFields, currentClientType, sourceMap, loadClientFieldValuesFn, loadClientDetailsFn, openCreatePurchaseModalFn, openCreateContainerModalFn);
+            await renderClientsWithDynamicFields(clients, tableBody, visibleFields, currentClientType, sourceMap, loadClientDetailsFn, openCreatePurchaseModalFn, openCreateContainerModalFn);
         } else {
             renderClientsWithDefaultFields(clients, tableBody, sourceMap, loadClientDetailsFn);
         }
@@ -449,7 +435,6 @@ const RouteRenderer = (function() {
         attachPurchaseButtonHandler,
         attachContainerButtonHandler,
         formatFieldValue,
-        formatFieldValueForModal,
         buildDynamicTable,
         renderClients,
         renderClientsWithDynamicFields,

@@ -70,7 +70,11 @@ function showHideElements(authorities) {
     for (const blockId in accessControl) {
         const element = document.getElementById(blockId);
         if (element) {
-            element.style.display = hasAccess(accessControl[blockId]) ? 'flex' : 'none';
+            if (element.tagName === 'LI' && element.classList.contains('dropdown')) {
+                element.style.display = hasAccess(accessControl[blockId]) ? 'block' : 'none';
+            } else {
+                element.style.display = hasAccess(accessControl[blockId]) ? 'flex' : 'none';
+            }
         }
     }
 
@@ -91,27 +95,53 @@ if (userBalanceElement) {
 }
 
 
-document.addEventListener('DOMContentLoaded', function () {
-    const navLinks = document.querySelectorAll('nav a:not(#logout)');
-
-    navLinks.forEach(link => {
-        link.addEventListener('click', function (e) {
-            const parentLi = this.closest('li');
-            const isDropdown = parentLi && parentLi.classList.contains('dropdown');
-            const isDropdownLink = this.getAttribute('href') === '#' && isDropdown;
-
-            if (!isDropdownLink && !this.classList.contains('selected-nav')) {
-                resetFiltersOnPageChange();
-            }
-        });
-    });
-
-    document.getElementById('logout').addEventListener('click', resetFiltersOnPageChange);
+document.addEventListener('DOMContentLoaded', async function () {
+    const logoutBtn = document.getElementById('logout');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', resetFiltersOnPageChange);
+    }
     
-    loadClientTypesDropdown();
-    loadRouteTypesDropdown();
-    loadPurchaseTypesDropdown();
-    loadContainerTypesDropdown();
+    const navLinks = document.querySelectorAll('nav a:not(#logout)');
+    navLinks.forEach(link => {
+        const parentLi = link.closest('li');
+        const isDropdown = parentLi && parentLi.classList.contains('dropdown');
+        const isDropdownLink = link.getAttribute('href') === '#' && isDropdown;
+
+        if (!isDropdownLink) {
+            link.addEventListener('click', function (e) {
+                if (!this.classList.contains('selected-nav')) {
+                    resetFiltersOnPageChange();
+                }
+            }, false);
+        }
+    });
+    
+    setTimeout(async () => {
+        try {
+            if (typeof loadClientTypesDropdown === 'function') {
+                await loadClientTypesDropdown();
+            } else {
+                console.warn('loadClientTypesDropdown is not a function');
+            }
+            if (typeof loadRouteTypesDropdown === 'function') {
+                await loadRouteTypesDropdown();
+            } else {
+                console.warn('loadRouteTypesDropdown is not a function');
+            }
+            if (typeof loadPurchaseTypesDropdown === 'function') {
+                await loadPurchaseTypesDropdown();
+            } else {
+                console.warn('loadPurchaseTypesDropdown is not a function');
+            }
+            if (typeof loadContainerTypesDropdown === 'function') {
+                await loadContainerTypesDropdown();
+            } else {
+                console.warn('loadContainerTypesDropdown is not a function');
+            }
+        } catch (error) {
+            console.error('Error loading dropdown menus:', error);
+        }
+    }, 200);
 });
 
 async function loadClientTypesDropdown() {
@@ -173,7 +203,7 @@ function showMessage(message, type = 'info') {
     if (type === 'error') {
         const closeButton = document.createElement('span');
         closeButton.className = 'message-close';
-        closeButton.innerHTML = '×';
+        closeButton.textContent = '×';
         closeButton.addEventListener('click', () => {
             messageDiv.classList.add('fade-out');
             setTimeout(() => {

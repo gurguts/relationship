@@ -12,12 +12,17 @@ import org.example.purchaseservice.models.UserProductIds;
 import org.example.purchaseservice.models.dto.client.ClientDTO;
 import org.example.purchaseservice.models.dto.client.ClientSearchRequest;
 import org.example.purchaseservice.models.dto.purchase.PurchasePageDTO;
+import org.example.purchaseservice.models.dto.purchase.PurchaseReportDTO;
 import org.example.purchaseservice.models.dto.fields.SourceDTO;
 import org.example.purchaseservice.clients.ClientApiClient;
 import org.example.purchaseservice.repositories.PurchaseRepository;
+import org.example.purchaseservice.repositories.ProductRepository;
 import org.example.purchaseservice.repositories.WarehouseReceiptRepository;
 import org.example.purchaseservice.models.warehouse.WarehouseReceipt;
+import org.example.purchaseservice.models.Product;
 import org.example.purchaseservice.services.impl.IPurchaseSearchService;
+import org.example.purchaseservice.services.user.UserService;
+import org.example.purchaseservice.models.dto.user.UserDTO;
 import org.example.purchaseservice.spec.PurchaseSpecification;
 import feign.FeignException;
 import jakarta.persistence.criteria.Predicate;
@@ -29,9 +34,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +47,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 @Slf4j
 @Service
@@ -72,6 +80,8 @@ public class PurchaseSearchService implements IPurchaseSearchService {
     private final SourceService sourceService;
     private final WarehouseReceiptRepository warehouseReceiptRepository;
     private final PurchaseMapper purchaseMapper;
+    private final UserService userService;
+    private final ProductRepository productRepository;
 
     private record SearchFilters(
             Long clientTypeId,
@@ -83,45 +93,28 @@ public class PurchaseSearchService implements IPurchaseSearchService {
     @Transactional(readOnly = true)
     public PageResponse<PurchasePageDTO> searchPurchase(String query, @NonNull Pageable pageable,
                                                         Map<String, List<String>> filterParams) {
-        long startTime = System.currentTimeMillis();
-        
         validateSearchRequest(pageable, query);
         
         SearchFilters filters = extractFilters(filterParams);
         
-        long clientDataStart = System.currentTimeMillis();
         ClientData clientData = fetchClientData(query, filters.clientFilterParams(), filters.clientTypeId());
-        log.info("Fetch client IDs completed in {} ms", System.currentTimeMillis() - clientDataStart);
-
-        long sourceDataStart = System.currentTimeMillis();
         List<Long> sourceIds = resolveSourceIds(query, filters.clientFilterParams(), filters.clientTypeId());
-        log.info("Fetch source IDs completed in {} ms", System.currentTimeMillis() - sourceDataStart);
         
-        long fetchPurchasesStart = System.currentTimeMillis();
         Page<Purchase> purchasePage = fetchPurchases(query, filters.purchaseFilterParams(), 
                 clientData.clientIds(), sourceIds, pageable);
-        log.info("Fetch purchases from database completed in {} ms", System.currentTimeMillis() - fetchPurchasesStart);
         
         List<Purchase> purchases = purchasePage.getContent();
         
-        long receivedStatusStart = System.currentTimeMillis();
         Map<String, Boolean> receivedStatusMap = buildReceivedStatusMap(purchases);
-        log.info("Build received status map completed in {} ms", System.currentTimeMillis() - receivedStatusStart);
         
         Set<Long> requiredClientIds = purchases.stream()
                 .map(Purchase::getClient)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
         
-        long fetchClientsStart = System.currentTimeMillis();
         Map<Long, ClientDTO> clientMap = fetchClientsByIds(requiredClientIds);
-        log.info("Fetch clients by IDs completed in {} ms", System.currentTimeMillis() - fetchClientsStart);
         
-        long mappingStart = System.currentTimeMillis();
         List<PurchasePageDTO> purchaseDTOs = mapPurchasesToDTOs(purchases, clientMap, receivedStatusMap);
-        log.info("Map purchases to DTOs completed in {} ms", System.currentTimeMillis() - mappingStart);
-        
-        log.info("Total searchPurchase completed in {} ms", System.currentTimeMillis() - startTime);
         
         return buildPageResponse(purchasePage, purchaseDTOs);
     }
@@ -325,20 +318,11 @@ public class PurchaseSearchService implements IPurchaseSearchService {
                 .min(LocalDateTime::compareTo)
                 .orElse(null);
         
-        long loadReceiptsStart = System.currentTimeMillis();
         List<WarehouseReceipt> receipts = loadWarehouseReceipts(userProductIds.userIds(), userProductIds.productIds(), minPurchaseDate);
-        log.info("Load warehouse receipts completed in {} ms, receipts count: {}", 
-                System.currentTimeMillis() - loadReceiptsStart, receipts.size());
         
-        long groupReceiptsStart = System.currentTimeMillis();
         Map<String, NavigableSet<LocalDateTime>> receiptDatesByKey = groupReceiptsByKey(receipts);
-        log.info("Group receipts by key completed in {} ms", System.currentTimeMillis() - groupReceiptsStart);
-        
-        long buildStatusStart = System.currentTimeMillis();
-        Map<String, Boolean> statusMap = buildStatusMap(purchases, receiptDatesByKey);
-        log.info("Build status map completed in {} ms", System.currentTimeMillis() - buildStatusStart);
-        
-        return statusMap;
+
+        return buildStatusMap(purchases, receiptDatesByKey);
     }
 
     private UserProductIds extractUserAndProductIds(@NonNull List<Purchase> purchases) {
@@ -429,6 +413,231 @@ public class PurchaseSearchService implements IPurchaseSearchService {
     
     private String buildReceiptKey(@NonNull Long userId, @NonNull Long productId) {
         return userId + "_" + productId;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PurchaseReportDTO generateReport(String query, Map<String, List<String>> filterParams) {
+        SearchFilters filters = extractFilters(filterParams);
+        
+        ClientData clientData = fetchClientData(query, filters.clientFilterParams(), filters.clientTypeId());
+        List<Long> sourceIds = resolveSourceIds(query, filters.clientFilterParams(), filters.clientTypeId());
+        
+        Specification<Purchase> spec = new PurchaseSpecification(query, filters.purchaseFilterParams(), 
+                clientData.clientIds(), sourceIds);
+        List<Purchase> purchases = purchaseRepository.findAll(spec);
+        
+        if (purchases.isEmpty()) {
+            return new PurchaseReportDTO();
+        }
+        
+        Set<Long> userIds = purchases.stream()
+                .map(Purchase::getUser)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        
+        Set<Long> productIds = purchases.stream()
+                .map(Purchase::getProduct)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        
+        Set<Long> sourceIdSet = purchases.stream()
+                .map(Purchase::getSource)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        
+        Map<Long, String> userNamesMap = loadUserNames(userIds);
+        Map<Long, String> productNamesMap = loadProductNames(productIds);
+        Map<Long, String> sourceNamesMap = loadSourceNames(sourceIdSet);
+        
+        List<PurchaseReportDTO.DriverReport> driverReports = buildDriverReports(purchases, userNamesMap, productNamesMap);
+        List<PurchaseReportDTO.SourceReport> sourceReports = buildSourceReports(purchases, sourceNamesMap, productNamesMap);
+        List<PurchaseReportDTO.ProductTotal> totals = buildProductTotals(purchases, productNamesMap);
+        
+        PurchaseReportDTO report = new PurchaseReportDTO();
+        report.setDrivers(driverReports);
+        report.setSources(sourceReports);
+        report.setTotals(totals);
+        
+        return report;
+    }
+    
+    private Map<Long, String> loadUserNames(@NonNull Set<Long> userIds) {
+        if (userIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        
+        List<UserDTO> users = userService.getAllUsers();
+        return users.stream()
+                .filter(user -> user != null && user.getId() != null && userIds.contains(user.getId()))
+                .collect(Collectors.toMap(
+                        UserDTO::getId,
+                        user -> user.getName() != null ? user.getName() : "Невідомий",
+                        (existing, _) -> existing
+                ));
+    }
+    
+    private Map<Long, String> loadProductNames(@NonNull Set<Long> productIds) {
+        if (productIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        
+        Iterable<Product> products = productRepository.findAllById(productIds);
+        return StreamSupport.stream(products.spliterator(), false)
+                .filter(product -> product != null && product.getId() != null)
+                .collect(Collectors.toMap(
+                        Product::getId,
+                        product -> product.getName() != null ? product.getName() : "Невідомий",
+                        (existing, _) -> existing
+                ));
+    }
+    
+    private Map<Long, String> loadSourceNames(@NonNull Set<Long> sourceIds) {
+        if (sourceIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        
+        Map<Long, String> sourceNamesMap = new HashMap<>();
+        for (Long sourceId : sourceIds) {
+            try {
+                SourceDTO sourceDTO = sourceService.getSourceName(sourceId);
+                if (sourceDTO != null && sourceDTO.getName() != null) {
+                    sourceNamesMap.put(sourceId, sourceDTO.getName());
+                } else {
+                    sourceNamesMap.put(sourceId, "Невідомий");
+                }
+            } catch (Exception e) {
+                log.warn("Failed to load source name for sourceId={}: {}", sourceId, e.getMessage());
+                sourceNamesMap.put(sourceId, "Невідомий");
+            }
+        }
+        return sourceNamesMap;
+    }
+    
+    private List<PurchaseReportDTO.DriverReport> buildDriverReports(@NonNull List<Purchase> purchases,
+                                                                     @NonNull Map<Long, String> userNamesMap,
+                                                                     @NonNull Map<Long, String> productNamesMap) {
+        Map<Long, Map<Long, PurchaseReportDTO.ProductInfo>> driverProductMap = new HashMap<>();
+        
+        for (Purchase purchase : purchases) {
+            Long userId = purchase.getUser();
+            Long productId = purchase.getProduct();
+            
+            if (userId == null || productId == null) {
+                continue;
+            }
+            
+            driverProductMap.computeIfAbsent(userId, _ -> new HashMap<>());
+            Map<Long, PurchaseReportDTO.ProductInfo> productMap = driverProductMap.get(userId);
+            
+            productMap.computeIfAbsent(productId, _ -> {
+                PurchaseReportDTO.ProductInfo info = new PurchaseReportDTO.ProductInfo();
+                info.setProductId(productId);
+                info.setProductName(productNamesMap.getOrDefault(productId, "Невідомий"));
+                info.setQuantity(BigDecimal.ZERO);
+                info.setTotalPriceEur(BigDecimal.ZERO);
+                return info;
+            });
+            
+            PurchaseReportDTO.ProductInfo info = productMap.get(productId);
+            if (purchase.getQuantity() != null) {
+                info.setQuantity(info.getQuantity().add(purchase.getQuantity()));
+            }
+            if (purchase.getTotalPriceEur() != null) {
+                info.setTotalPriceEur(info.getTotalPriceEur().add(purchase.getTotalPriceEur()));
+            }
+        }
+        
+        return driverProductMap.entrySet().stream()
+                .map(entry -> {
+                    PurchaseReportDTO.DriverReport report = new PurchaseReportDTO.DriverReport();
+                    report.setUserId(entry.getKey());
+                    report.setUserName(userNamesMap.getOrDefault(entry.getKey(), "Невідомий"));
+                    report.setProducts(new ArrayList<>(entry.getValue().values()));
+                    return report;
+                })
+                .sorted(Comparator.comparing(PurchaseReportDTO.DriverReport::getUserName))
+                .collect(Collectors.toList());
+    }
+    
+    private List<PurchaseReportDTO.SourceReport> buildSourceReports(@NonNull List<Purchase> purchases,
+                                                                    @NonNull Map<Long, String> sourceNamesMap,
+                                                                    @NonNull Map<Long, String> productNamesMap) {
+        Map<Long, Map<Long, PurchaseReportDTO.ProductInfo>> sourceProductMap = new HashMap<>();
+        
+        for (Purchase purchase : purchases) {
+            Long sourceId = purchase.getSource();
+            Long productId = purchase.getProduct();
+            
+            if (sourceId == null || productId == null) {
+                continue;
+            }
+            
+            sourceProductMap.computeIfAbsent(sourceId, _ -> new HashMap<>());
+            Map<Long, PurchaseReportDTO.ProductInfo> productMap = sourceProductMap.get(sourceId);
+            
+            productMap.computeIfAbsent(productId, _ -> {
+                PurchaseReportDTO.ProductInfo info = new PurchaseReportDTO.ProductInfo();
+                info.setProductId(productId);
+                info.setProductName(productNamesMap.getOrDefault(productId, "Невідомий"));
+                info.setQuantity(BigDecimal.ZERO);
+                info.setTotalPriceEur(BigDecimal.ZERO);
+                return info;
+            });
+            
+            PurchaseReportDTO.ProductInfo info = productMap.get(productId);
+            if (purchase.getQuantity() != null) {
+                info.setQuantity(info.getQuantity().add(purchase.getQuantity()));
+            }
+            if (purchase.getTotalPriceEur() != null) {
+                info.setTotalPriceEur(info.getTotalPriceEur().add(purchase.getTotalPriceEur()));
+            }
+        }
+        
+        return sourceProductMap.entrySet().stream()
+                .map(entry -> {
+                    PurchaseReportDTO.SourceReport report = new PurchaseReportDTO.SourceReport();
+                    report.setSourceId(entry.getKey());
+                    report.setSourceName(sourceNamesMap.getOrDefault(entry.getKey(), "Невідомий"));
+                    report.setProducts(new ArrayList<>(entry.getValue().values()));
+                    return report;
+                })
+                .sorted(Comparator.comparing(PurchaseReportDTO.SourceReport::getSourceName))
+                .collect(Collectors.toList());
+    }
+    
+    private List<PurchaseReportDTO.ProductTotal> buildProductTotals(@NonNull List<Purchase> purchases,
+                                                                    @NonNull Map<Long, String> productNamesMap) {
+        Map<Long, PurchaseReportDTO.ProductTotal> productTotalMap = new HashMap<>();
+        
+        for (Purchase purchase : purchases) {
+            Long productId = purchase.getProduct();
+            
+            if (productId == null) {
+                continue;
+            }
+            
+            productTotalMap.computeIfAbsent(productId, _ -> {
+                PurchaseReportDTO.ProductTotal total = new PurchaseReportDTO.ProductTotal();
+                total.setProductId(productId);
+                total.setProductName(productNamesMap.getOrDefault(productId, "Невідомий"));
+                total.setQuantity(BigDecimal.ZERO);
+                total.setTotalPriceEur(BigDecimal.ZERO);
+                return total;
+            });
+            
+            PurchaseReportDTO.ProductTotal total = productTotalMap.get(productId);
+            if (purchase.getQuantity() != null) {
+                total.setQuantity(total.getQuantity().add(purchase.getQuantity()));
+            }
+            if (purchase.getTotalPriceEur() != null) {
+                total.setTotalPriceEur(total.getTotalPriceEur().add(purchase.getTotalPriceEur()));
+            }
+        }
+        
+        return productTotalMap.values().stream()
+                .sorted(Comparator.comparing(PurchaseReportDTO.ProductTotal::getProductName))
+                .collect(Collectors.toList());
     }
 
 }

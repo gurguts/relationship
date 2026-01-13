@@ -1,5 +1,5 @@
 const FinanceRenderer = (function() {
-    async function renderAccountsAndBranches(branches, accounts, usersCache, branchesCache) {
+    async function renderAccountsAndBranches(branches, accounts, usersCache, branchesCache, balancesMap = null) {
         const container = document.getElementById('accounts-branches-container');
         if (!container) return;
         container.textContent = '';
@@ -18,22 +18,35 @@ const FinanceRenderer = (function() {
             }
         });
         
+        const allAccountIds = accounts
+            .map(acc => acc.id)
+            .filter(id => id != null && id !== undefined && !isNaN(Number(id)))
+            .map(id => Number(id));
+        
+        if (!balancesMap) {
+            if (allAccountIds.length === 0) {
+                balancesMap = new Map();
+            } else {
+                balancesMap = await FinanceDataLoader.loadAccountBalancesBatch(allAccountIds);
+            }
+        }
+        
         const branchSections = await Promise.all(
             branches.map(async (branch) => {
                 const branchAccounts = accountsByBranch[branch.id] || [];
-                return await createBranchSection(branch, branchAccounts, usersCache, branchesCache);
+                return await createBranchSection(branch, branchAccounts, usersCache, branchesCache, balancesMap);
             })
         );
         branchSections.forEach(section => container.appendChild(section));
         
         if (standaloneAccounts.length > 0) {
-            const standaloneBalance = await calculateAccountsTotalBalance(standaloneAccounts);
-            const standaloneSection = await createStandaloneAccountsSection(standaloneAccounts, standaloneBalance, usersCache, branchesCache);
+            const standaloneBalance = calculateAccountsTotalBalanceFromMap(standaloneAccounts, balancesMap);
+            const standaloneSection = await createStandaloneAccountsSection(standaloneAccounts, standaloneBalance, usersCache, branchesCache, balancesMap);
             container.appendChild(standaloneSection);
         }
     }
     
-    async function createBranchSection(branch, accounts, usersCache, branchesCache) {
+    async function createBranchSection(branch, accounts, usersCache, branchesCache, balancesMap) {
         const section = document.createElement('div');
         section.className = 'branch-section';
         
@@ -68,8 +81,8 @@ const FinanceRenderer = (function() {
         
         const balanceValue = document.createElement('span');
         balanceValue.className = 'balance-value';
-        const balanceHtml = FinanceUtils.formatBranchBalance(branch.totalBalance);
-        balanceValue.innerHTML = balanceHtml;
+        const balanceElement = FinanceUtils.createBranchBalanceElement(branch.totalBalance);
+        balanceValue.appendChild(balanceElement);
         branchBalance.appendChild(balanceValue);
         
         const branchActions = document.createElement('div');
@@ -90,7 +103,7 @@ const FinanceRenderer = (function() {
             accountsContainer.appendChild(noAccounts);
         } else {
             const accountRows = await Promise.all(
-                accounts.map(account => createAccountRow(account, true, usersCache, branchesCache))
+                accounts.map(account => createAccountRow(account, true, usersCache, branchesCache, balancesMap))
             );
             accountRows.forEach(row => accountsContainer.appendChild(row));
         }
@@ -101,7 +114,7 @@ const FinanceRenderer = (function() {
         return section;
     }
     
-    async function createStandaloneAccountsSection(accounts, totalBalance, usersCache, branchesCache) {
+    async function createStandaloneAccountsSection(accounts, totalBalance, usersCache, branchesCache, balancesMap) {
         const section = document.createElement('div');
         section.className = 'branch-section standalone-accounts';
         
@@ -129,8 +142,8 @@ const FinanceRenderer = (function() {
         
         const balanceValue = document.createElement('span');
         balanceValue.className = 'balance-value';
-        const balanceHtml = FinanceUtils.formatBranchBalance(totalBalance);
-        balanceValue.innerHTML = balanceHtml;
+        const balanceElement = FinanceUtils.createBranchBalanceElement(totalBalance);
+        balanceValue.appendChild(balanceElement);
         branchBalance.appendChild(balanceValue);
         
         headerContent.appendChild(branchInfo);
@@ -141,7 +154,7 @@ const FinanceRenderer = (function() {
         accountsContainer.className = 'branch-accounts';
         
         const accountRows = await Promise.all(
-            accounts.map(account => createAccountRow(account, false, usersCache, branchesCache))
+            accounts.map(account => createAccountRow(account, false, usersCache, branchesCache, balancesMap))
         );
         accountRows.forEach(row => accountsContainer.appendChild(row));
         
@@ -151,7 +164,7 @@ const FinanceRenderer = (function() {
         return section;
     }
     
-    async function createAccountRow(account, isInBranch, usersCache, branchesCache) {
+    async function createAccountRow(account, isInBranch, usersCache, branchesCache, balancesMap) {
         const row = document.createElement('div');
         row.className = `account-row ${isInBranch ? 'account-in-branch' : ''}`;
         
@@ -194,16 +207,20 @@ const FinanceRenderer = (function() {
         const accountBalances = document.createElement('div');
         accountBalances.className = 'account-balances';
         
-        const loadingDiv = document.createElement('div');
-        loadingDiv.className = 'account-balances-loading';
-        loadingDiv.textContent = CLIENT_MESSAGES.LOADING;
-        accountBalances.appendChild(loadingDiv);
+        const accountIdNum = (account.id != null && account.id !== undefined) ? Number(account.id) : null;
+        let balances = [];
+        if (balancesMap && accountIdNum != null && !isNaN(accountIdNum)) {
+            balances = balancesMap.get(accountIdNum);
+            if (balances === undefined) {
+                balances = [];
+            } else if (!Array.isArray(balances)) {
+                balances = [];
+            }
+        }
         
-        try {
-            const balances = await FinanceDataLoader.loadAccountBalances(account.id);
-            accountBalances.textContent = '';
-            if (balances && balances.length > 0) {
-                balances.forEach(balance => {
+        if (Array.isArray(balances) && balances.length > 0) {
+            balances.forEach(balance => {
+                if (balance && balance.currency) {
                     const balanceItemRow = document.createElement('div');
                     balanceItemRow.className = 'balance-item-row';
                     
@@ -214,24 +231,28 @@ const FinanceRenderer = (function() {
                     
                     const balanceAmount = document.createElement('span');
                     balanceAmount.className = 'balance-amount';
-                    balanceAmount.textContent = FinanceUtils.formatNumber(balance.amount);
+                    let amountValue = balance.amount;
+                    if (amountValue === null || amountValue === undefined) {
+                        amountValue = 0;
+                    } else if (typeof amountValue === 'string') {
+                        amountValue = parseFloat(amountValue) || 0;
+                    } else if (typeof amountValue !== 'number') {
+                        amountValue = parseFloat(amountValue) || 0;
+                    }
+                    const formattedAmount = FinanceUtils.formatNumber(amountValue);
+                    balanceAmount.textContent = formattedAmount;
                     balanceItemRow.appendChild(balanceAmount);
                     
                     accountBalances.appendChild(balanceItemRow);
-                });
-            } else {
-                const emptyDiv = document.createElement('div');
-                emptyDiv.className = 'account-balances-empty';
-                emptyDiv.textContent = CLIENT_MESSAGES.NO_DATA;
-                accountBalances.appendChild(emptyDiv);
-            }
-        } catch (error) {
-            console.warn(`Failed to load balances for account ${account.id}`, error);
-            accountBalances.textContent = '';
-            const errorDiv = document.createElement('div');
-            errorDiv.className = 'account-balances-error';
-            errorDiv.textContent = CLIENT_MESSAGES.LOAD_ERROR;
-            accountBalances.appendChild(errorDiv);
+                }
+            });
+        }
+        
+        if (accountBalances.children.length === 0) {
+            const emptyDiv = document.createElement('div');
+            emptyDiv.className = 'account-balances-empty';
+            emptyDiv.textContent = CLIENT_MESSAGES.NO_DATA;
+            accountBalances.appendChild(emptyDiv);
         }
         
         accountInfo.appendChild(accountDetails);
@@ -253,34 +274,41 @@ const FinanceRenderer = (function() {
         return row;
     }
     
+    function calculateAccountsTotalBalanceFromMap(accounts, balancesMap) {
+        try {
+            if (!accounts || accounts.length === 0) {
+                return {};
+            }
+            
+            const totalBalance = {};
+            accounts.forEach(account => {
+                const accountIdNum = (account.id != null && account.id !== undefined) ? Number(account.id) : null;
+                const balances = (balancesMap && accountIdNum != null && !isNaN(accountIdNum)) ? (balancesMap.get(accountIdNum) || []) : [];
+                balances.forEach(balance => {
+                    const currency = balance.currency;
+                    if (!totalBalance[currency]) {
+                        totalBalance[currency] = 0;
+                    }
+                    totalBalance[currency] += parseFloat(balance.amount || 0);
+                });
+            });
+            
+            return totalBalance;
+        } catch (error) {
+            console.error('Error calculating accounts total balance:', error);
+            return {};
+        }
+    }
+    
     async function calculateAccountsTotalBalance(accounts) {
         try {
             if (!accounts || accounts.length === 0) {
                 return {};
             }
             
-            const balancePromises = accounts.map(async (account) => {
-                try {
-                    return await FinanceDataLoader.loadAccountBalances(account.id);
-                } catch (error) {
-                    console.warn(`Failed to load balances for account ${account.id}`, error);
-                    return [];
-                }
-            });
-            
-            const allBalances = await Promise.all(balancePromises);
-            const flatBalances = allBalances.flat();
-            
-            const totalBalance = {};
-            flatBalances.forEach(balance => {
-                const currency = balance.currency;
-                if (!totalBalance[currency]) {
-                    totalBalance[currency] = 0;
-                }
-                totalBalance[currency] += parseFloat(balance.amount || 0);
-            });
-            
-            return totalBalance;
+            const accountIds = accounts.map(acc => acc.id).filter(id => id != null);
+            const balancesMap = await FinanceDataLoader.loadAccountBalancesBatch(accountIds);
+            return calculateAccountsTotalBalanceFromMap(accounts, balancesMap);
         } catch (error) {
             console.error('Error calculating accounts total balance:', error);
             return {};
@@ -479,6 +507,7 @@ const FinanceRenderer = (function() {
     return {
         renderAccountsAndBranches,
         calculateAccountsTotalBalance,
+        calculateAccountsTotalBalanceFromMap,
         calculateBranchTotalBalance,
         renderTransactions,
         renderExchangeRates,

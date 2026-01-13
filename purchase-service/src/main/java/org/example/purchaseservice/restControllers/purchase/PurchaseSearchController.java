@@ -11,6 +11,7 @@ import org.example.purchaseservice.models.PageResponse;
 import org.example.purchaseservice.models.Purchase;
 import org.example.purchaseservice.models.dto.purchase.PurchaseModalDTO;
 import org.example.purchaseservice.models.dto.purchase.PurchasePageDTO;
+import org.example.purchaseservice.models.dto.purchase.PurchaseReportDTO;
 import org.example.purchaseservice.models.dto.purchase.PurchaseWarehouseDTO;
 import org.example.purchaseservice.services.impl.IPurchaseSearchService;
 import org.springframework.data.domain.PageRequest;
@@ -106,5 +107,29 @@ public class PurchaseSearchController {
                 .map(purchaseMapper::purchaseToPurchaseWarehouseDTO)
                 .toList();
         return ResponseEntity.ok(purchaseList);
+    }
+
+    @PreAuthorize("hasAuthority('purchase:view')")
+    @GetMapping("/report")
+    public ResponseEntity<PurchaseReportDTO> generateReport(
+            @RequestParam(name = "q", required = false) String query,
+            @RequestParam(name = "filters", required = false) String filters) {
+
+        Map<String, List<String>> filterParams;
+
+        try {
+            if (filters != null && !filters.isEmpty()) {
+                filterParams = objectMapper.readValue(filters, objectMapper.getTypeFactory()
+                        .constructMapType(Map.class, String.class, List.class));
+            } else {
+                filterParams = Collections.emptyMap();
+            }
+        } catch (Exception e) {
+            log.error("Failed to parse filters: {}", filters, e);
+            throw new PurchaseException("INVALID_FILTERS", "Invalid filters format");
+        }
+
+        PurchaseReportDTO report = purchaseSearchService.generateReport(query, filterParams);
+        return ResponseEntity.ok(report);
     }
 }

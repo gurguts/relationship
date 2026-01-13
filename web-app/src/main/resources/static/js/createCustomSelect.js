@@ -69,7 +69,7 @@ function createCustomSelect(selectElement, isFilter = false) {
 
     function updateSelection() {
         requestAnimationFrame(() => {
-            tagsContainer.innerHTML = '';
+            tagsContainer.textContent = '';
             placeholderInput.style.display = 'block';
 
             if (isMultiple) {
@@ -127,7 +127,7 @@ function createCustomSelect(selectElement, isFilter = false) {
             option.textContent = item.name;
             fragment.appendChild(option);
         });
-        dropdown.innerHTML = '';
+        dropdown.textContent = '';
         dropdown.appendChild(fragment);
     }
 
@@ -282,7 +282,7 @@ function createCustomSelect(selectElement, isFilter = false) {
                 nameLower: (item.name || '').toLowerCase()
             }));
             if (currentSelect.options.length === 0) {
-                currentSelect.innerHTML = '';
+                currentSelect.textContent = '';
                 selectData.forEach(item => {
                     const option = document.createElement('option');
                     option.value = item.id;
@@ -327,7 +327,7 @@ function populateSelect(selectId, data) {
         return;
     }
 
-    select.innerHTML = '';
+    select.textContent = '';
 
     if (!selectId.endsWith('-filter')) {
         const defaultOption = document.createElement('option');

@@ -68,7 +68,7 @@ const PurchaseRenderer = (function() {
         const thead = document.querySelector('#client-list table thead tr');
         if (!thead) return;
         
-        thead.innerHTML = '';
+        thead.textContent = '';
         
         const headers = [
             { text: 'Назва клієнта', sort: null },
@@ -132,7 +132,7 @@ const PurchaseRenderer = (function() {
         
         if (!tableBody) return;
         
-        tableBody.innerHTML = '';
+        tableBody.textContent = '';
         
         purchases.forEach(purchase => {
             const row = document.createElement('tr');

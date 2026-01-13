@@ -9,12 +9,18 @@ import org.example.purchaseservice.models.balance.VehicleExpense;
 import org.example.purchaseservice.models.balance.VehicleProduct;
 import org.example.purchaseservice.models.balance.VehicleReceiver;
 import org.example.purchaseservice.models.balance.VehicleSender;
+import org.example.purchaseservice.models.balance.VehicleTerminal;
+import org.example.purchaseservice.models.balance.VehicleDestinationCountry;
+import org.example.purchaseservice.models.balance.VehicleDestinationPlace;
 import org.example.purchaseservice.models.dto.balance.CarrierDetailsDTO;
 import org.example.purchaseservice.models.dto.balance.VehicleCreateDTO;
 import org.example.purchaseservice.models.dto.balance.VehicleDetailsDTO;
 import org.example.purchaseservice.repositories.CarrierRepository;
 import org.example.purchaseservice.repositories.VehicleReceiverRepository;
 import org.example.purchaseservice.repositories.VehicleSenderRepository;
+import org.example.purchaseservice.repositories.VehicleTerminalRepository;
+import org.example.purchaseservice.repositories.VehicleDestinationCountryRepository;
+import org.example.purchaseservice.repositories.VehicleDestinationPlaceRepository;
 import org.example.purchaseservice.services.balance.VehicleExpenseService;
 import org.example.purchaseservice.services.balance.IVehicleService;
 import org.springframework.stereotype.Component;
@@ -32,6 +38,9 @@ public class VehicleMapper {
     private final CarrierRepository carrierRepository;
     private final VehicleSenderRepository vehicleSenderRepository;
     private final VehicleReceiverRepository vehicleReceiverRepository;
+    private final VehicleTerminalRepository vehicleTerminalRepository;
+    private final VehicleDestinationCountryRepository vehicleDestinationCountryRepository;
+    private final VehicleDestinationPlaceRepository vehicleDestinationPlaceRepository;
 
     public VehicleDetailsDTO vehicleToVehicleDetailsDTO(@NonNull Vehicle vehicle) {
         List<VehicleProduct> products = vehicleService.getVehicleProducts(vehicle.getId());
@@ -74,12 +83,15 @@ public class VehicleMapper {
                 .senderName(vehicle.getSender() != null ? vehicle.getSender().getName() : null)
                 .receiverId(vehicle.getReceiver() != null ? vehicle.getReceiver().getId() : null)
                 .receiverName(vehicle.getReceiver() != null ? vehicle.getReceiver().getName() : null)
-                .destinationCountry(vehicle.getDestinationCountry())
-                .destinationPlace(vehicle.getDestinationPlace())
+                .destinationCountryId(vehicle.getDestinationCountry() != null ? vehicle.getDestinationCountry().getId() : null)
+                .destinationCountryName(vehicle.getDestinationCountry() != null ? vehicle.getDestinationCountry().getName() : null)
+                .destinationPlaceId(vehicle.getDestinationPlace() != null ? vehicle.getDestinationPlace().getId() : null)
+                .destinationPlaceName(vehicle.getDestinationPlace() != null ? vehicle.getDestinationPlace().getName() : null)
                 .product(vehicle.getProduct())
                 .productQuantity(vehicle.getProductQuantity())
                 .declarationNumber(vehicle.getDeclarationNumber())
-                .terminal(vehicle.getTerminal())
+                .terminalId(vehicle.getTerminal() != null ? vehicle.getTerminal().getId() : null)
+                .terminalName(vehicle.getTerminal() != null ? vehicle.getTerminal().getName() : null)
                 .driverFullName(vehicle.getDriverFullName())
                 .isOurVehicle(vehicle.getIsOurVehicle())
                 .eur1(vehicle.getEur1())
@@ -124,12 +136,27 @@ public class VehicleMapper {
                             String.format("Vehicle receiver not found: id=%d", dto.getReceiverId())));
             vehicle.setReceiver(receiver);
         }
-        vehicle.setDestinationCountry(normalizeString(dto.getDestinationCountry()));
-        vehicle.setDestinationPlace(normalizeString(dto.getDestinationPlace()));
+        if (dto.getDestinationCountryId() != null) {
+            VehicleDestinationCountry country = vehicleDestinationCountryRepository.findById(dto.getDestinationCountryId())
+                    .orElseThrow(() -> new PurchaseException("VEHICLE_DESTINATION_COUNTRY_NOT_FOUND",
+                            String.format("Vehicle destination country not found: id=%d", dto.getDestinationCountryId())));
+            vehicle.setDestinationCountry(country);
+        }
+        if (dto.getDestinationPlaceId() != null) {
+            VehicleDestinationPlace place = vehicleDestinationPlaceRepository.findById(dto.getDestinationPlaceId())
+                    .orElseThrow(() -> new PurchaseException("VEHICLE_DESTINATION_PLACE_NOT_FOUND",
+                            String.format("Vehicle destination place not found: id=%d", dto.getDestinationPlaceId())));
+            vehicle.setDestinationPlace(place);
+        }
         vehicle.setProduct(normalizeString(dto.getProduct()));
         vehicle.setProductQuantity(normalizeString(dto.getProductQuantity()));
         vehicle.setDeclarationNumber(normalizeString(dto.getDeclarationNumber()));
-        vehicle.setTerminal(normalizeString(dto.getTerminal()));
+        if (dto.getTerminalId() != null) {
+            VehicleTerminal terminal = vehicleTerminalRepository.findById(dto.getTerminalId())
+                    .orElseThrow(() -> new PurchaseException("VEHICLE_TERMINAL_NOT_FOUND",
+                            String.format("Vehicle terminal not found: id=%d", dto.getTerminalId())));
+            vehicle.setTerminal(terminal);
+        }
         vehicle.setDriverFullName(normalizeString(dto.getDriverFullName()));
         vehicle.setEur1(dto.getEur1() != null ? dto.getEur1() : false);
         vehicle.setFito(dto.getFito() != null ? dto.getFito() : false);

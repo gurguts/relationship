@@ -111,10 +111,6 @@
                 <span class="btn-icon">📥</span>
                 Експорт в Excel
             </button>
-            <button class="btn btn-outline" id="manage-carriers-btn">
-                <span class="btn-icon">🚚</span>
-                Перевізники
-            </button>
         </div>
     </div>
     
@@ -286,7 +282,9 @@
                         </div>
                         <div class="form-group">
                             <label for="vehicle-terminal">Термінал</label>
-                            <input type="text" id="vehicle-terminal" class="form-input">
+                            <select id="vehicle-terminal" class="form-input">
+                                <option value="">Оберіть термінал</option>
+                            </select>
                         </div>
                         <div class="form-group checkbox-group">
                             <label class="checkbox-label">
@@ -314,11 +312,15 @@
                                     </div>
                         <div class="form-group">
                             <label for="vehicle-destination-country">Країна призначення</label>
-                            <input type="text" id="vehicle-destination-country" class="form-input">
+                            <select id="vehicle-destination-country" class="form-input">
+                                <option value="">Оберіть країну</option>
+                            </select>
                         </div>
                         <div class="form-group">
                             <label for="vehicle-destination-place">Місце призначення</label>
-                            <input type="text" id="vehicle-destination-place" class="form-input">
+                            <select id="vehicle-destination-place" class="form-input">
+                                <option value="">Оберіть місце</option>
+                            </select>
                         </div>
                     </div>
                 </div>
@@ -476,7 +478,9 @@
                             </div>
                             <div class="form-group">
                                 <label for="detail-vehicle-terminal">Термінал</label>
-                                <input type="text" id="detail-vehicle-terminal" class="form-input" disabled>
+                                <select id="detail-vehicle-terminal" class="form-input" disabled>
+                                    <option value="">Оберіть термінал</option>
+                                </select>
                             </div>
                         </div>
                     </div>
@@ -498,11 +502,15 @@
                                 </div>
                             <div class="form-group">
                                 <label for="detail-vehicle-destination-country">Країна призначення</label>
-                                <input type="text" id="detail-vehicle-destination-country" class="form-input" disabled>
+                                <select id="detail-vehicle-destination-country" class="form-input" disabled>
+                                    <option value="">Оберіть країну</option>
+                                </select>
                             </div>
                             <div class="form-group">
                                 <label for="detail-vehicle-destination-place">Місце призначення</label>
-                                <input type="text" id="detail-vehicle-destination-place" class="form-input" disabled>
+                                <select id="detail-vehicle-destination-place" class="form-input" disabled>
+                                    <option value="">Оберіть місце</option>
+                                </select>
                             </div>
                         </div>
                     </div>
@@ -874,86 +882,22 @@
     </div>
             </div>
 
-<!-- Manage Carriers Modal -->
-<div class="modal-overlay" id="manage-carriers-modal">
-    <div class="modal-container modal-extra-large">
-        <div class="modal-header">
-            <h3>Управління перевізниками</h3>
-            <button class="modal-close">×</button>
-        </div>
-        <div class="modal-body">
-            <div style="margin-bottom: 1.5rem;">
-                <button class="btn btn-primary" id="create-carrier-btn">Створити перевізника</button>
-            </div>
-            <div class="table-wrapper">
-                <table class="modern-table">
-                    <thead>
-                        <tr>
-                            <th>Назва компанії</th>
-                            <th>Адреса реєстрації</th>
-                            <th>Телефон</th>
-                            <th>Код</th>
-                            <th>Рахунок</th>
-                            <th>Дії</th>
-                        </tr>
-                    </thead>
-                    <tbody id="carriers-tbody">
-                        <tr class="loading-row">
-                            <td colspan="6">Завантаження...</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-            </div>
-
-<!-- Create/Edit Carrier Modal -->
-<div class="modal-overlay" id="carrier-form-modal">
-    <div class="modal-container">
-        <div class="modal-header">
-            <h3 id="carrier-form-title">Створити перевізника</h3>
-            <button class="modal-close">×</button>
-        </div>
-        <div class="modal-body">
-            <form id="carrier-form">
-                <input type="hidden" id="carrier-id">
-                <div class="form-group">
-                    <label for="carrier-company-name">Назва компанії перевізника *</label>
-                    <input type="text" id="carrier-company-name" class="form-input" required>
-                </div>
-                <div class="form-group">
-                    <label for="carrier-registration-address">Адреса реєстрації</label>
-                    <textarea id="carrier-registration-address" rows="3" class="form-input"></textarea>
-                </div>
-                <div class="form-group">
-                    <label for="carrier-phone-number">Номер телефону</label>
-                    <input type="text" id="carrier-phone-number" class="form-input">
-                </div>
-                <div class="form-group">
-                    <label for="carrier-code">Код</label>
-                    <input type="text" id="carrier-code" class="form-input">
-                </div>
-                <div class="form-group">
-                    <label for="carrier-account">Рахунок</label>
-                    <input type="text" id="carrier-account" class="form-input">
-            </div>
-        </form>
-        </div>
-        <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" id="cancel-carrier-btn">Скасувати</button>
-            <button type="submit" form="carrier-form" class="btn btn-primary" id="save-carrier-btn">Зберегти</button>
-        </div>
-    </div>
-</div>
-
 <div id="loader-backdrop" class="loader-backdrop">
     <div class="loader"></div>
 </div>
 
-<script src="/js/declarant.js"></script>
+<script src="/js/utils/constants.js"></script>
+<script src="/js/utils/dropdownLoader.js"></script>
 <script src="/js/common.js"></script>
 <script src="/js/error.js"></script>
+<script src="/js/modules/ConfirmationModal.js"></script>
+<script src="/js/modules/DeclarantUtils.js"></script>
+<script src="/js/modules/DeclarantDataLoader.js"></script>
+<script src="/js/modules/DeclarantRenderer.js"></script>
+<script src="/js/modules/DeclarantFilters.js"></script>
+<script src="/js/modules/DeclarantModal.js"></script>
+<script src="/js/modules/DeclarantCalculations.js"></script>
+<script src="/js/declarant.js"></script>
 
 </body>
 </html>

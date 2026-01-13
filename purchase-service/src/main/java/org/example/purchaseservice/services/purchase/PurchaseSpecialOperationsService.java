@@ -3,6 +3,7 @@ package org.example.purchaseservice.services.purchase;
 import feign.FeignException;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.Getter;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,7 +18,6 @@ import org.example.purchaseservice.services.user.UserService;
 import org.example.purchaseservice.models.Product;
 import org.example.purchaseservice.models.Purchase;
 import org.example.purchaseservice.models.PaymentMethod;
-import org.example.purchaseservice.models.warehouse.WarehouseReceipt;
 import org.example.purchaseservice.models.dto.client.ClientDTO;
 import org.example.purchaseservice.models.dto.client.ClientSearchRequest;
 import org.example.purchaseservice.models.dto.clienttype.ClientFieldValueDTO;
@@ -40,13 +40,13 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.Objects;
 
 @Slf4j
 @Service
@@ -54,7 +54,6 @@ import java.util.stream.Collectors;
 public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperationsService {
 
     private static final int MAX_QUERY_LENGTH = 255;
-    private static final int PRICE_SCALE = 6;
     private static final String DATE_PATTERN = "yyyy-MM-dd";
     private static final String FIELD_PREFIX = "field_";
     private static final String CLIENT_SUFFIX = "-client";
@@ -64,8 +63,7 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
     private static final String EXCEL_FILENAME_SUFFIX = ".xlsx";
     private static final String COMPARISON_EXCEL_FILENAME = "purchase_report.xlsx";
     private static final Long DEFAULT_PRODUCT_ID = 1L;
-    private static final RoundingMode PRICE_ROUNDING_MODE = RoundingMode.CEILING;
-    
+
     private static final String HEADER_ID_CLIENT = "Id (клієнта)";
     private static final String HEADER_COMPANY_CLIENT = "Компанія (клієнта)";
     private static final String HEADER_CREATED_AT_CLIENT = "Дата створення (клієнта)";
@@ -110,6 +108,7 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
     private final UserService userService;
     private final SourceService sourceService;
     private final IProductService productService;
+    @Getter
     private final IWarehouseReceiptService warehouseReceiptService;
 
     @Override
@@ -500,7 +499,7 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
                     return sourceName.toString();
                 }
             }
-        } catch (NoSuchMethodException | java.lang.reflect.InvocationTargetException | IllegalAccessException e) {
+        } catch (NoSuchMethodException | java.lang.reflect.InvocationTargetException | IllegalAccessException _) {
         }
         
         String sourceId = client.getSourceId();
@@ -533,7 +532,7 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
                         uniqueSources.put(sourceDTO.getId(), sourceDTO);
                     }
                 }
-            } catch (NoSuchMethodException | java.lang.reflect.InvocationTargetException | IllegalAccessException | ClassCastException e) {
+            } catch (NoSuchMethodException | java.lang.reflect.InvocationTargetException | IllegalAccessException | ClassCastException _) {
             }
             
             String sourceId = client.getSourceId();
@@ -787,30 +786,22 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
         
         List<Purchase> purchaseList = fetchPurchases(query, filterParams, clients, searchContext.sourceIds());
         FilterIds updatedFilterIds = buildUpdatedFilterIds(purchaseList, createFilterIds());
-        List<WarehouseReceipt> warehouseReceipts = fetchWarehouseReceipts(filterParams);
 
-        return buildReportFromData(purchaseList, warehouseReceipts, updatedFilterIds);
+        return buildReportFromData(purchaseList, updatedFilterIds);
     }
 
     private PurchaseReportDTO buildReportFromData(@NonNull List<Purchase> purchaseList,
-                                                  @NonNull List<WarehouseReceipt> warehouseReceipts,
                                                   @NonNull FilterIds filterIds) {
         Map<Long, Double> totalCollectedByProduct = calculateTotalCollectedByProduct(purchaseList);
-        Map<Long, Double> totalDeliveredByProduct = calculateTotalDeliveredByProduct(warehouseReceipts);
         Map<String, Map<Long, Double>> byDrivers = calculateByDrivers(purchaseList, filterIds);
         Map<String, Map<Long, Double>> byAttractors = calculateByAttractors(purchaseList, filterIds);
-        Map<String, Double> totalSpentByCurrency = calculateTotalSpentByCurrency(purchaseList);
-        Map<String, Double> averagePriceByCurrency = calculateAveragePriceByCurrency(purchaseList);
-        Map<Long, Double> averageCollectedPerTimeByProduct = calculateAverageCollectedPerTimeByProduct(purchaseList);
 
         return buildReport(
+                purchaseList,
                 totalCollectedByProduct,
-                totalDeliveredByProduct,
                 byDrivers,
                 byAttractors,
-                totalSpentByCurrency,
-                averagePriceByCurrency,
-                averageCollectedPerTimeByProduct
+                filterIds
         );
     }
 
@@ -825,25 +816,6 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
         );
     }
 
-    private List<WarehouseReceipt> fetchWarehouseReceipts(Map<String, List<String>> filterParams) {
-        Map<String, List<String>> warehouseFilters = new HashMap<>();
-        Map<String, String> filterKeyMapping = new HashMap<>();
-        filterKeyMapping.put("user", "user_id");
-        filterKeyMapping.put("product", "product_id");
-        filterKeyMapping.put("createdAtFrom", "entry_date_from");
-        filterKeyMapping.put("createdAtTo", "entry_date_to");
-
-        for (Map.Entry<String, String> entry : filterKeyMapping.entrySet()) {
-            String frontendKey = entry.getKey();
-            String warehouseKey = entry.getValue();
-            if (filterParams.containsKey(frontendKey)) {
-                warehouseFilters.put(warehouseKey, filterParams.get(frontendKey));
-            }
-        }
-
-        return warehouseReceiptService.findWarehouseReceiptsByFilters(warehouseFilters);
-    }
-
     private Map<Long, Double> calculateTotalCollectedByProduct(List<Purchase> purchaseList) {
         return purchaseList.stream()
                 .filter(p -> p.getProduct() != null && p.getQuantity() != null)
@@ -852,23 +824,6 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
                         Collectors.reducing(
                                 BigDecimal.ZERO,
                                 Purchase::getQuantity,
-                                BigDecimal::add
-                        )
-                )).entrySet().stream()
-                .collect(Collectors.toMap(
-                        Map.Entry::getKey,
-                        e -> e.getValue().doubleValue()
-                ));
-    }
-
-    private Map<Long, Double> calculateTotalDeliveredByProduct(List<WarehouseReceipt> warehouseReceipts) {
-        return warehouseReceipts.stream()
-                .filter(e -> e.getProductId() != null && e.getQuantity() != null)
-                .collect(Collectors.groupingBy(
-                        WarehouseReceipt::getProductId,
-                        Collectors.reducing(
-                                BigDecimal.ZERO,
-                                WarehouseReceipt::getQuantity,
                                 BigDecimal::add
                         )
                 )).entrySet().stream()
@@ -926,69 +881,130 @@ public class PurchaseSpecialOperationsService implements IPurchaseSpecialOperati
                 ));
     }
 
-    private Map<String, Double> calculateTotalSpentByCurrency(List<Purchase> purchaseList) {
-        return purchaseList.stream()
-                .filter(p -> p.getCurrency() != null && p.getTotalPrice() != null)
-                .collect(Collectors.groupingBy(
-                        Purchase::getCurrency,
-                        Collectors.reducing(
-                                BigDecimal.ZERO,
-                                Purchase::getTotalPrice,
-                                BigDecimal::add
-                        )
-                )).entrySet().stream()
-                .collect(Collectors.toMap(
-                        Map.Entry::getKey,
-                        e -> e.getValue().doubleValue()
-                ));
-    }
-
-    private Map<String, Double> calculateAveragePriceByCurrency(List<Purchase> purchaseList) {
-        return purchaseList.stream()
-                .filter(p -> p.getCurrency() != null && p.getTotalPrice() != null && p.getQuantity() != null)
-                .collect(Collectors.groupingBy(
-                        Purchase::getCurrency,
-                        Collectors.collectingAndThen(
-                                Collectors.averagingDouble(p ->
-                                        p.getQuantity().compareTo(BigDecimal.ZERO) > 0
-                                                ? p.getTotalPrice().divide(p.getQuantity(), PRICE_SCALE, PRICE_ROUNDING_MODE).doubleValue()
-                                                : 0.0
-                                ),
-                                avg -> avg
-                        )
-                ));
-    }
-
-    private Map<Long, Double> calculateAverageCollectedPerTimeByProduct(List<Purchase> purchaseList) {
-        return purchaseList.stream()
-                .filter(p -> p.getProduct() != null && p.getQuantity() != null)
-                .collect(Collectors.groupingBy(
-                        Purchase::getProduct,
-                        Collectors.collectingAndThen(
-                                Collectors.averagingDouble(p -> p.getQuantity().doubleValue()),
-                                avg -> avg
-                        )
-                ));
-    }
-
     private PurchaseReportDTO buildReport(
+            @NonNull List<Purchase> purchaseList,
             Map<Long, Double> totalCollectedByProduct,
-            Map<Long, Double> totalDeliveredByProduct,
             Map<String, Map<Long, Double>> byDrivers,
             Map<String, Map<Long, Double>> byAttractors,
-            Map<String, Double> totalSpentByCurrency,
-            Map<String, Double> averagePriceByCurrency,
-            Map<Long, Double> averageCollectedPerTimeByProduct
+            @NonNull FilterIds filterIds
     ) {
-        return PurchaseReportDTO.builder()
-                .totalCollectedByProduct(totalCollectedByProduct)
-                .totalDeliveredByProduct(totalDeliveredByProduct)
-                .byDrivers(byDrivers)
-                .byAttractors(byAttractors)
-                .totalSpentByCurrency(totalSpentByCurrency)
-                .averagePriceByCurrency(averagePriceByCurrency)
-                .averageCollectedPerTimeByProduct(averageCollectedPerTimeByProduct)
-                .build();
+        Map<Long, String> productNamesMap = filterIds.productDTOs().stream()
+                .filter(Objects::nonNull)
+                .collect(Collectors.toMap(
+                        Product::getId,
+                        Product::getName,
+                        (existing, _) -> existing
+                ));
+        
+        Map<Long, Map<Long, BigDecimal>> driverProductPriceMap = purchaseList.stream()
+                .filter(p -> p.getUser() != null && p.getProduct() != null && p.getTotalPriceEur() != null)
+                .collect(Collectors.groupingBy(
+                        Purchase::getUser,
+                        Collectors.groupingBy(
+                                Purchase::getProduct,
+                                Collectors.reducing(
+                                        BigDecimal.ZERO,
+                                        Purchase::getTotalPriceEur,
+                                        BigDecimal::add
+                                )
+                        )
+                ));
+        
+        Map<Long, Map<Long, BigDecimal>> sourceProductPriceMap = purchaseList.stream()
+                .filter(p -> p.getSource() != null && p.getProduct() != null && p.getTotalPriceEur() != null)
+                .collect(Collectors.groupingBy(
+                        Purchase::getSource,
+                        Collectors.groupingBy(
+                                Purchase::getProduct,
+                                Collectors.reducing(
+                                        BigDecimal.ZERO,
+                                        Purchase::getTotalPriceEur,
+                                        BigDecimal::add
+                                )
+                        )
+                ));
+        
+        Map<Long, BigDecimal> totalPriceByProduct = purchaseList.stream()
+                .filter(p -> p.getProduct() != null && p.getTotalPriceEur() != null)
+                .collect(Collectors.groupingBy(
+                        Purchase::getProduct,
+                        Collectors.reducing(
+                                BigDecimal.ZERO,
+                                Purchase::getTotalPriceEur,
+                                BigDecimal::add
+                        )
+                ));
+        
+        PurchaseReportDTO report = new PurchaseReportDTO();
+        
+        List<PurchaseReportDTO.DriverReport> driverReports = new ArrayList<>();
+        for (Map.Entry<String, Map<Long, Double>> driverEntry : byDrivers.entrySet()) {
+            PurchaseReportDTO.DriverReport driverReport = new PurchaseReportDTO.DriverReport();
+            driverReport.setUserName(driverEntry.getKey());
+            
+            Long userId = filterIds.userDTOs().stream()
+                    .filter(u -> u != null && u.getName() != null && u.getName().equals(driverEntry.getKey()))
+                    .map(UserDTO::getId)
+                    .findFirst()
+                    .orElse(null);
+            driverReport.setUserId(userId);
+            
+            List<PurchaseReportDTO.ProductInfo> products = new ArrayList<>();
+            Map<Long, BigDecimal> prices = userId != null ? driverProductPriceMap.getOrDefault(userId, Collections.emptyMap()) : Collections.emptyMap();
+            
+            for (Map.Entry<Long, Double> productEntry : driverEntry.getValue().entrySet()) {
+                PurchaseReportDTO.ProductInfo productInfo = new PurchaseReportDTO.ProductInfo();
+                productInfo.setProductId(productEntry.getKey());
+                productInfo.setProductName(productNamesMap.getOrDefault(productEntry.getKey(), "Невідомий"));
+                productInfo.setQuantity(BigDecimal.valueOf(productEntry.getValue()));
+                productInfo.setTotalPriceEur(prices.getOrDefault(productEntry.getKey(), BigDecimal.ZERO));
+                products.add(productInfo);
+            }
+            driverReport.setProducts(products);
+            driverReports.add(driverReport);
+        }
+        report.setDrivers(driverReports);
+        
+        List<PurchaseReportDTO.SourceReport> sourceReports = new ArrayList<>();
+        for (Map.Entry<String, Map<Long, Double>> sourceEntry : byAttractors.entrySet()) {
+            PurchaseReportDTO.SourceReport sourceReport = new PurchaseReportDTO.SourceReport();
+            sourceReport.setSourceName(sourceEntry.getKey());
+            
+            Long sourceId = filterIds.sourceDTOs().stream()
+                    .filter(s -> s != null && s.getName() != null && s.getName().equals(sourceEntry.getKey()))
+                    .map(SourceDTO::getId)
+                    .findFirst()
+                    .orElse(null);
+            sourceReport.setSourceId(sourceId);
+            
+            List<PurchaseReportDTO.ProductInfo> products = new ArrayList<>();
+            Map<Long, BigDecimal> prices = sourceId != null ? sourceProductPriceMap.getOrDefault(sourceId, Collections.emptyMap()) : Collections.emptyMap();
+            
+            for (Map.Entry<Long, Double> productEntry : sourceEntry.getValue().entrySet()) {
+                PurchaseReportDTO.ProductInfo productInfo = new PurchaseReportDTO.ProductInfo();
+                productInfo.setProductId(productEntry.getKey());
+                productInfo.setProductName(productNamesMap.getOrDefault(productEntry.getKey(), "Невідомий"));
+                productInfo.setQuantity(BigDecimal.valueOf(productEntry.getValue()));
+                productInfo.setTotalPriceEur(prices.getOrDefault(productEntry.getKey(), BigDecimal.ZERO));
+                products.add(productInfo);
+            }
+            sourceReport.setProducts(products);
+            sourceReports.add(sourceReport);
+        }
+        report.setSources(sourceReports);
+        
+        List<PurchaseReportDTO.ProductTotal> totals = new ArrayList<>();
+        for (Map.Entry<Long, Double> productEntry : totalCollectedByProduct.entrySet()) {
+            PurchaseReportDTO.ProductTotal total = new PurchaseReportDTO.ProductTotal();
+            total.setProductId(productEntry.getKey());
+            total.setProductName(productNamesMap.getOrDefault(productEntry.getKey(), "Невідомий"));
+            total.setQuantity(BigDecimal.valueOf(productEntry.getValue()));
+            total.setTotalPriceEur(totalPriceByProduct.getOrDefault(productEntry.getKey(), BigDecimal.ZERO));
+            totals.add(total);
+        }
+        report.setTotals(totals);
+        
+        return report;
     }
 
 

@@ -47,11 +47,7 @@ const PurchaseEditModal = (function() {
     
     function showEditModal(purchase, config) {
         if (purchase.isReceived === true) {
-            if (typeof showMessage === 'function') {
-                showMessage('Неможливо редагувати закупку, оскільки товар вже прийнято кладовщиком.', 'error');
-            } else {
-                alert('Неможливо редагувати закупку, оскільки товар вже прийнято кладовщиком.');
-            }
+            showMessage(CONFIRMATION_MESSAGES.CANNOT_EDIT_PURCHASE, 'error');
             return;
         }
         
@@ -72,7 +68,7 @@ const PurchaseEditModal = (function() {
         }
         
         header.textContent = `ID: ${purchase.id}`;
-        productSelect.innerHTML = '';
+        productSelect.textContent = '';
         const productOptions = generateProductOptions(purchase.productId);
         productSelect.appendChild(productOptions);
         quantityInput.value = purchase.quantity || 0;
@@ -82,14 +78,14 @@ const PurchaseEditModal = (function() {
         createdAtInput.value = purchase.createdAt
             ? new Date(purchase.createdAt.replace(' ', 'T') + 'Z').toISOString().split('T')[0]
             : '';
-        sourceSelect.innerHTML = '';
+        sourceSelect.textContent = '';
         const sourceOptions = generateSourceOptions(purchase.sourceId);
         sourceSelect.appendChild(sourceOptions);
         
         modal.style.display = 'flex';
         setTimeout(() => modal.classList.add('active'), 10);
         
-        form.onsubmit = async (e) => {
+        form.addEventListener('submit', async (e) => {
             e.preventDefault();
             const updatedData = {
                 productId: productSelect.value,
@@ -113,16 +109,12 @@ const PurchaseEditModal = (function() {
                 }
             } catch (error) {
                 if (error.message && error.message.includes('прийнято кладовщиком')) {
-                    if (typeof showMessage === 'function') {
-                        showMessage(error.message, 'error');
-                    } else {
-                        alert(error.message);
-                    }
+                    showMessage(CONFIRMATION_MESSAGES.CANNOT_EDIT_PURCHASE, 'error');
                 } else {
                     handleError(error);
                 }
             }
-        };
+        });
     }
     
     function init(config) {
@@ -139,12 +131,12 @@ const PurchaseEditModal = (function() {
         
         const closeButton = document.getElementById('close-edit-modal');
         if (closeButton) {
-            closeButton.onclick = () => {
+            closeButton.addEventListener('click', () => {
                 modal.classList.remove('active');
                 setTimeout(() => {
                     modal.style.display = 'none';
                 }, 300);
-            };
+            });
         }
     }
     

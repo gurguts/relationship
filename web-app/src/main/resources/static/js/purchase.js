@@ -80,33 +80,32 @@ function showEditModal(purchase) {
 
 async function deletePurchase(id, isReceived) {
     if (isReceived === true) {
-        if (typeof showMessage === 'function') {
-            showMessage('Неможливо видалити закупку, оскільки товар вже прийнято кладовщиком.', 'error');
-        } else {
-            alert('Неможливо видалити закупку, оскільки товар вже прийнято кладовщиком.');
-        }
+        showMessage(CONFIRMATION_MESSAGES.CANNOT_DELETE_PURCHASE, 'error');
         return;
     }
     
-    if (confirm("Ви впевнені, що хочете видалити цей запис?")) {
-        if (loaderBackdrop) {
+    ConfirmationModal.show(
+        CONFIRMATION_MESSAGES.DELETE_PURCHASE,
+        CONFIRMATION_MESSAGES.CONFIRMATION_TITLE,
+        async () => {
+            if (loaderBackdrop) {
         loaderBackdrop.style.display = 'flex';
-        }
-        try {
-            await PurchaseDataLoader.deletePurchase(id);
-            if (typeof showMessage === 'function') {
-                    showMessage("Збір успішно видалено.", 'info');
-                }
-            loadDataWithSort(0, CLIENT_CONSTANTS.DEFAULT_PAGE_SIZE * 2, currentSort, currentDirection);
-        } catch (error) {
+            }
+            try {
+                await PurchaseDataLoader.deletePurchase(id);
+                showMessage("Збір успішно видалено.", 'info');
+                loadDataWithSort(0, CLIENT_CONSTANTS.DEFAULT_PAGE_SIZE * 2, currentSort, currentDirection);
+            } catch (error) {
                 console.error('Error:', error);
                 handleError(error);
-        } finally {
-            if (loaderBackdrop) {
+            } finally {
+                if (loaderBackdrop) {
                 loaderBackdrop.style.display = 'none';
+                }
             }
-        }
-    }
+        },
+        () => {}
+    );
 }
 
 
@@ -139,7 +138,7 @@ async function loadDataWithSort(page, size, sort, direction) {
             normalizedFilters['updatedAtFrom'] = convertedFilters[key];
         } else if (lowerKey === 'updatedatto') {
             normalizedFilters['updatedAtTo'] = convertedFilters[key];
-        } else {
+            } else {
             normalizedFilters[key] = convertedFilters[key];
         }
     });
@@ -193,6 +192,231 @@ async function loadDataWithSort(page, size, sort, direction) {
 }
 
 
+async function loadPurchaseReport() {
+    if (!currentClientTypeId) {
+        return;
+    }
+    
+    if (loaderBackdrop) {
+        loaderBackdrop.style.display = 'flex';
+    }
+    
+    try {
+        const searchTerm = searchInput ? searchInput.value : '';
+        const filters = { ...selectedFilters };
+        if (currentClientTypeId) {
+            filters.clientTypeId = [currentClientTypeId.toString()];
+        }
+        
+        const convertedFilters = PurchaseFilters.convertFieldNamesToFieldIds(filters, filterableFields, clientTypeFields);
+        
+        const normalizedFilters = {};
+        Object.keys(convertedFilters).forEach(key => {
+            const lowerKey = key.toLowerCase();
+            if (lowerKey === 'createdatfrom') {
+                normalizedFilters['createdAtFrom'] = convertedFilters[key];
+            } else if (lowerKey === 'createdatto') {
+                normalizedFilters['createdAtTo'] = convertedFilters[key];
+            } else if (lowerKey === 'updatedatfrom') {
+                normalizedFilters['updatedAtFrom'] = convertedFilters[key];
+            } else if (lowerKey === 'updatedatto') {
+                normalizedFilters['updatedAtTo'] = convertedFilters[key];
+            } else {
+                normalizedFilters[key] = convertedFilters[key];
+            }
+        });
+        
+        const report = await PurchaseDataLoader.loadReport(searchTerm, normalizedFilters);
+        
+        const purchaseReportModalEl = document.getElementById('purchase-report-modal');
+        const purchaseReportContentEl = document.getElementById('purchase-report-content');
+        
+        renderPurchaseReport(report, purchaseReportContentEl);
+        
+        if (purchaseReportModalEl) {
+            purchaseReportModalEl.style.display = 'flex';
+            setTimeout(() => {
+                purchaseReportModalEl.classList.add('show');
+            }, 10);
+            document.body.style.overflow = 'hidden';
+        }
+    } catch (error) {
+        console.error('Error loading report:', error);
+        handleError(error);
+    } finally {
+        if (loaderBackdrop) {
+            loaderBackdrop.style.display = 'none';
+        }
+    }
+}
+
+function renderPurchaseReport(report, purchaseReportContent) {
+    if (!purchaseReportContent) {
+        purchaseReportContent = document.getElementById('purchase-report-content');
+    }
+    
+    if (!purchaseReportContent) {
+        return;
+    }
+    
+    purchaseReportContent.innerHTML = '';
+    
+    if (!report || ((!report.drivers || report.drivers.length === 0) && 
+        (!report.sources || report.sources.length === 0) && 
+        (!report.totals || report.totals.length === 0))) {
+        const emptyMessage = document.createElement('p');
+        emptyMessage.textContent = 'Немає даних для відображення';
+        emptyMessage.style.textAlign = 'center';
+        emptyMessage.style.padding = '20px';
+        purchaseReportContent.appendChild(emptyMessage);
+        return;
+    }
+    
+    if (report.drivers && report.drivers.length > 0) {
+        const driversSection = document.createElement('div');
+        driversSection.className = 'report-section';
+        
+        const driversTitle = document.createElement('h3');
+        driversTitle.textContent = 'По водіях';
+        driversTitle.className = 'report-section-title';
+        driversSection.appendChild(driversTitle);
+        
+        report.drivers.forEach(driver => {
+            const driverCard = document.createElement('div');
+            driverCard.className = 'report-driver-card';
+            
+            const driverName = document.createElement('div');
+            driverName.className = 'report-driver-name';
+            driverName.textContent = driver.userName;
+            driverCard.appendChild(driverName);
+            
+            if (driver.products && driver.products.length > 0) {
+                const productsList = document.createElement('div');
+                productsList.className = 'report-products-list';
+                
+                driver.products.forEach(product => {
+                    const productItem = document.createElement('div');
+                    productItem.className = 'report-product-item';
+                    
+                    const productName = document.createElement('span');
+                    productName.className = 'report-product-name';
+                    productName.textContent = product.productName;
+                    
+                    const productQuantity = document.createElement('span');
+                    productQuantity.className = 'report-product-quantity';
+                    productQuantity.textContent = product.quantity ? parseFloat(product.quantity).toFixed(2) : '0.00';
+                    
+                    const productPrice = document.createElement('span');
+                    productPrice.className = 'report-product-price';
+                    productPrice.textContent = product.totalPriceEur ? parseFloat(product.totalPriceEur).toFixed(2) + ' EUR' : '0.00 EUR';
+                    
+                    productItem.appendChild(productName);
+                    productItem.appendChild(productQuantity);
+                    productItem.appendChild(productPrice);
+                    productsList.appendChild(productItem);
+                });
+                
+                driverCard.appendChild(productsList);
+            }
+            
+            driversSection.appendChild(driverCard);
+        });
+        
+        purchaseReportContent.appendChild(driversSection);
+    }
+    
+    if (report.sources && report.sources.length > 0) {
+        const sourcesSection = document.createElement('div');
+        sourcesSection.className = 'report-section';
+        
+        const sourcesTitle = document.createElement('h3');
+        sourcesTitle.textContent = 'По залученнях';
+        sourcesTitle.className = 'report-section-title';
+        sourcesSection.appendChild(sourcesTitle);
+        
+        report.sources.forEach(source => {
+            const sourceCard = document.createElement('div');
+            sourceCard.className = 'report-source-card';
+            
+            const sourceName = document.createElement('div');
+            sourceName.className = 'report-source-name';
+            sourceName.textContent = source.sourceName;
+            sourceCard.appendChild(sourceName);
+            
+            if (source.products && source.products.length > 0) {
+                const productsList = document.createElement('div');
+                productsList.className = 'report-products-list';
+                
+                source.products.forEach(product => {
+                    const productItem = document.createElement('div');
+                    productItem.className = 'report-product-item';
+                    
+                    const productName = document.createElement('span');
+                    productName.className = 'report-product-name';
+                    productName.textContent = product.productName;
+                    
+                    const productQuantity = document.createElement('span');
+                    productQuantity.className = 'report-product-quantity';
+                    productQuantity.textContent = product.quantity ? parseFloat(product.quantity).toFixed(2) : '0.00';
+                    
+                    const productPrice = document.createElement('span');
+                    productPrice.className = 'report-product-price';
+                    productPrice.textContent = product.totalPriceEur ? parseFloat(product.totalPriceEur).toFixed(2) + ' EUR' : '0.00 EUR';
+                    
+                    productItem.appendChild(productName);
+                    productItem.appendChild(productQuantity);
+                    productItem.appendChild(productPrice);
+                    productsList.appendChild(productItem);
+                });
+                
+                sourceCard.appendChild(productsList);
+            }
+            
+            sourcesSection.appendChild(sourceCard);
+        });
+        
+        purchaseReportContent.appendChild(sourcesSection);
+    }
+    
+    if (report.totals && report.totals.length > 0) {
+        const totalsSection = document.createElement('div');
+        totalsSection.className = 'report-section';
+        
+        const totalsTitle = document.createElement('h3');
+        totalsTitle.textContent = 'Загальна кількість';
+        totalsTitle.className = 'report-section-title';
+        totalsSection.appendChild(totalsTitle);
+        
+        const totalsList = document.createElement('div');
+        totalsList.className = 'report-products-list report-totals-list';
+        
+        report.totals.forEach(total => {
+            const totalItem = document.createElement('div');
+            totalItem.className = 'report-product-item report-total-item';
+            
+            const productName = document.createElement('span');
+            productName.className = 'report-product-name';
+            productName.textContent = total.productName;
+            
+            const productQuantity = document.createElement('span');
+            productQuantity.className = 'report-product-quantity';
+            productQuantity.textContent = total.quantity ? parseFloat(total.quantity).toFixed(2) : '0.00';
+            
+            const productPrice = document.createElement('span');
+            productPrice.className = 'report-product-price';
+            productPrice.textContent = total.totalPriceEur ? parseFloat(total.totalPriceEur).toFixed(2) + ' EUR' : '0.00 EUR';
+            
+            totalItem.appendChild(productName);
+            totalItem.appendChild(productQuantity);
+            totalItem.appendChild(productPrice);
+            totalsList.appendChild(totalItem);
+        });
+        
+        totalsSection.appendChild(totalsList);
+        purchaseReportContent.appendChild(totalsSection);
+    }
+}
+
 function buildDynamicFilters() {
     PurchaseFilters.buildDynamicFilters({
         filterForm: filterForm,
@@ -219,6 +443,10 @@ async function loadEntitiesAndApplyFilters() {
         sourceMap = new Map(availableSources.map(item => [item.id, item.name]));
         userMap = new Map(availableUsers.map(item => [item.id, item.name]));
         productMap = new Map(availableProducts.map(item => [item.id, item.name]));
+        
+        window.sourceMap = sourceMap;
+        window.userMap = userMap;
+        window.productMap = productMap;
 
         PurchaseFilters.restoreFilterValues({
             filterForm: filterForm,
@@ -344,6 +572,7 @@ if (modalFilterButtonSubmit) {
 }
 
 
+
 function updateSelectedFilters() {
     PurchaseFilters.updateSelectedFilters({
         selectedFilters: selectedFilters,
@@ -372,6 +601,39 @@ function clearFilters() {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+    const purchaseReportBtn = document.getElementById('purchase-report-btn');
+    const purchaseReportModal = document.getElementById('purchase-report-modal');
+    const closePurchaseReportModal = document.getElementById('close-purchase-report-modal');
+    const purchaseReportContent = document.getElementById('purchase-report-content');
+    
+    if (purchaseReportBtn) {
+        purchaseReportBtn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            await loadPurchaseReport();
+        });
+    }
+
+    if (closePurchaseReportModal) {
+        closePurchaseReportModal.addEventListener('click', () => {
+            if (purchaseReportModal) {
+                purchaseReportModal.classList.remove('show');
+                setTimeout(() => {
+                    purchaseReportModal.style.display = 'none';
+                }, 300);
+                document.body.style.overflow = '';
+            }
+        });
+    }
+
+    if (purchaseReportModal) {
+        const modalContent = purchaseReportModal.querySelector('.modal-content');
+        if (modalContent) {
+            modalContent.addEventListener('click', (e) => {
+                e.stopPropagation();
+            });
+        }
+    }
     const savedFilters = localStorage.getItem('selectedFilters');
     let parsedFilters;
     if (savedFilters) {
@@ -422,10 +684,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     localStorage.setItem('currentClientTypeId', newClientTypeId.toString());
     currentClientTypeId = newClientTypeId;
     
-    await PurchaseTypeManager.updateNavigationWithCurrentType(newClientTypeId);
-    
     try {
         currentClientType = await PurchaseDataLoader.loadClientType(currentClientTypeId);
+        await PurchaseTypeManager.updateNavigationWithCurrentType(newClientTypeId, currentClientType);
         document.title = currentClientType.name;
         const fieldsData = await PurchaseDataLoader.loadClientTypeFields(currentClientTypeId);
         clientTypeFields = fieldsData.all || [];
@@ -517,6 +778,46 @@ document.addEventListener('DOMContentLoaded', async () => {
             formId: 'exportFieldsForm',
             searchInputId: 'inputSearch',
             apiPath: '/api/v1/purchase'
+        });
+    }
+    
+    const saveClientBtn = document.getElementById('save-client');
+    if (saveClientBtn && !saveClientBtn.hasAttribute('data-listener-attached')) {
+        saveClientBtn.setAttribute('data-listener-attached', 'true');
+        saveClientBtn.addEventListener('click', () => {
+            if (typeof saveClientChanges === 'function') {
+                saveClientChanges();
+            }
+        });
+    }
+    
+    const cancelClientBtn = document.getElementById('cancel-client');
+    if (cancelClientBtn && !cancelClientBtn.hasAttribute('data-listener-attached')) {
+        cancelClientBtn.setAttribute('data-listener-attached', 'true');
+        cancelClientBtn.addEventListener('click', () => {
+            if (typeof cancelClientChanges === 'function') {
+                cancelClientChanges();
+            }
+        });
+    }
+    
+    const editCompanyBtn = document.getElementById('edit-company');
+    if (editCompanyBtn && !editCompanyBtn.hasAttribute('data-listener-attached')) {
+        editCompanyBtn.setAttribute('data-listener-attached', 'true');
+        editCompanyBtn.addEventListener('click', () => {
+            if (typeof enableEdit === 'function') {
+                enableEdit('company');
+            }
+        });
+    }
+    
+    const editSourceBtn = document.getElementById('edit-source');
+    if (editSourceBtn && !editSourceBtn.hasAttribute('data-listener-attached')) {
+        editSourceBtn.setAttribute('data-listener-attached', 'true');
+        editSourceBtn.addEventListener('click', () => {
+            if (typeof enableSelect === 'function' && typeof availableSources !== 'undefined') {
+                enableSelect('source', availableSources);
+            }
         });
     }
 });

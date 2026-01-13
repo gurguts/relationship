@@ -43,11 +43,11 @@ public class ClientContainerService {
     private final IContainerService containerService;
 
     @Transactional
-    public void transferContainerToClient(@NonNull Long clientId,
+    public void transferContainerToClient(@NonNull Long userId,
+                                          @NonNull Long clientId,
                                           @NonNull Long containerId,
                                           @NonNull BigDecimal quantity) {
-        ContainerBalance balance = validateAndGetBalance(containerId, quantity);
-        Long userId = balance.getUserId();
+        ContainerBalance balance = validateAndGetBalance(userId, containerId, quantity);
         Container container = balance.getContainer();
         if (container == null) {
             throw new ContainerException(ERROR_INVALID_BALANCE, MESSAGE_CONTAINER_NULL);
@@ -67,11 +67,11 @@ public class ClientContainerService {
     }
 
     @Transactional
-    public void collectContainerFromClient(@NonNull Long clientId,
+    public void collectContainerFromClient(@NonNull Long userId,
+                                           @NonNull Long clientId,
                                            @NonNull Long containerId,
                                            @NonNull BigDecimal quantity) {
-        ContainerBalance collectorBalance = validateAndGetBalance(containerId, quantity);
-        Long collectingUserId = collectorBalance.getUserId();
+        ContainerBalance collectorBalance = validateAndGetBalance(userId, containerId, quantity);
         Container container = collectorBalance.getContainer();
         if (container == null) {
             throw new ContainerException(ERROR_INVALID_BALANCE, MESSAGE_CONTAINER_NULL);
@@ -123,10 +123,10 @@ public class ClientContainerService {
 
                 collectorBalance.setTotalQuantity(collectorBalance.getTotalQuantity().add(collectedQuantity));
 
-                containerTransactionService.logTransaction(ownerUserId, collectingUserId, clientId, container,
+                containerTransactionService.logTransaction(ownerUserId, userId, clientId, container,
                         collectedQuantity, ContainerTransactionType.COLLECT_FROM_CLIENT);
                 log.info("Collected {} units of container {} from client {} (owner {}) by user {}",
-                        collectedQuantity, containerId, clientId, ownerUserId, collectingUserId);
+                        collectedQuantity, containerId, clientId, ownerUserId, userId);
 
                 remainingQuantity = remainingQuantity.subtract(collectedQuantity);
             }
@@ -134,22 +134,22 @@ public class ClientContainerService {
 
         if (remainingQuantity.compareTo(BigDecimal.ZERO) > 0) {
             collectorBalance.setTotalQuantity(collectorBalance.getTotalQuantity().add(remainingQuantity));
-            containerTransactionService.logTransaction(null, collectingUserId, clientId, container,
+            containerTransactionService.logTransaction(null, userId, clientId, container,
                     remainingQuantity, ContainerTransactionType.COLLECT_FROM_CLIENT);
             log.info("Added {} units of container {} to user {} from client {} (no owner)",
-                    remainingQuantity, containerId, collectingUserId, clientId);
+                    remainingQuantity, containerId, userId, clientId);
         }
 
         containerBalanceRepository.save(collectorBalance);
     }
 
-    private ContainerBalance validateAndGetBalance(@NonNull Long containerId,
+    private ContainerBalance validateAndGetBalance(@NonNull Long userId,
+                                                   @NonNull Long containerId,
                                                    @NonNull BigDecimal quantity) {
         if (quantity.compareTo(BigDecimal.ZERO) <= 0) {
             throw new ContainerException(ERROR_NOT_ENOUGH_DATA, MESSAGE_VALIDATION_REQUIRED);
         }
 
-        Long userId = SecurityUtils.getCurrentUserId();
         if (userId == null) {
             throw new ContainerException(ERROR_AUTHENTICATION_REQUIRED, MESSAGE_AUTHENTICATION_REQUIRED);
         }

@@ -82,8 +82,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
     
-    await ClientTypeManager.updateNavigationWithCurrentType(typeId);
-    
     const savedClientTypeId = localStorage.getItem('currentClientTypeId');
     const staticFilterKeys = ['createdAtFrom', 'createdAtTo', 'updatedAtFrom', 'updatedAtTo', 'source', 'showInactive'];
     
@@ -105,10 +103,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         localStorage.setItem('currentClientTypeId', newClientTypeId.toString());
         currentClientTypeId = newClientTypeId;
         
-        await ClientTypeManager.updateNavigationWithCurrentType(newClientTypeId);
-        
         try {
             currentClientType = await ClientDataLoader.loadClientType(currentClientTypeId);
+            await ClientTypeManager.updateNavigationWithCurrentType(newClientTypeId, currentClientType);
             document.title = currentClientType.name;
             const fieldsData = await ClientDataLoader.loadClientTypeFields(currentClientTypeId);
             clientTypeFields = fieldsData.all || [];
@@ -202,6 +199,34 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadEntitiesAndApplyFilters();
     
     loadDataWithSort(currentPage, pageSize, currentSort, currentDirection);
+    
+    const saveClientBtn = document.getElementById('save-client');
+    if (saveClientBtn && !saveClientBtn.hasAttribute('data-listener-attached')) {
+        saveClientBtn.setAttribute('data-listener-attached', 'true');
+        saveClientBtn.addEventListener('click', saveClientChanges);
+    }
+    
+    const cancelClientBtn = document.getElementById('cancel-client');
+    if (cancelClientBtn && !cancelClientBtn.hasAttribute('data-listener-attached')) {
+        cancelClientBtn.setAttribute('data-listener-attached', 'true');
+        cancelClientBtn.addEventListener('click', cancelClientChanges);
+    }
+    
+    const editCompanyBtn = document.getElementById('edit-company');
+    if (editCompanyBtn && !editCompanyBtn.hasAttribute('data-listener-attached')) {
+        editCompanyBtn.setAttribute('data-listener-attached', 'true');
+        editCompanyBtn.addEventListener('click', () => enableEdit('company'));
+    }
+    
+    const editSourceBtn = document.getElementById('edit-source');
+    if (editSourceBtn && !editSourceBtn.hasAttribute('data-listener-attached')) {
+        editSourceBtn.setAttribute('data-listener-attached', 'true');
+        editSourceBtn.addEventListener('click', () => {
+            if (typeof availableSources !== 'undefined') {
+                enableSelect('source', availableSources);
+            }
+        });
+    }
 });
 
 async function loadEntitiesAndApplyFilters() {
@@ -211,6 +236,10 @@ async function loadEntitiesAndApplyFilters() {
         
         availableSources = data.sources || [];
         sourceMap = new Map(availableSources.map(item => [item.id, item.name]));
+        
+        if (!window.sourceMap || window.sourceMap.size === 0) {
+            window.sourceMap = sourceMap;
+        }
 
         if (filterForm) {
             if (selectedFilters['createdAtFrom']) {
@@ -804,7 +833,7 @@ function cleanupCreateModalTimeouts() {
 }
 
 if (openModalBtn) {
-    openModalBtn.onclick = function () {
+    openModalBtn.addEventListener('click', function () {
         if (!currentClientTypeId) {
             showMessage(CLIENT_MESSAGES.SELECT_CLIENT_TYPE, 'error');
             return;
@@ -819,11 +848,11 @@ if (openModalBtn) {
             }
         }, 10);
         createModalTimeoutIds.push(timeoutId);
-    };
+    });
 }
 
 if (createClientCloseBtn && createClientModal) {
-    createClientCloseBtn.onclick = function () {
+    createClientCloseBtn.addEventListener('click', function () {
         cleanupCreateModalTimeouts();
         createClientModal.classList.remove('show');
         createClientModal.classList.add('hide');
@@ -834,7 +863,7 @@ if (createClientCloseBtn && createClientModal) {
             resetForm();
         }, 300);
         createModalTimeoutIds.push(timeoutId);
-    };
+    });
 }
 
 

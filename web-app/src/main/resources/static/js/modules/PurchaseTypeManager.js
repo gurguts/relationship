@@ -115,18 +115,20 @@ const PurchaseTypeManager = (function() {
         }
     }
 
-    async function updateNavigationWithCurrentType(typeId) {
+    async function updateNavigationWithCurrentType(typeId, clientType = null) {
         try {
-            const response = await fetch(`/api/v1/client-type/${typeId}`);
-            if (!response.ok) {
-                console.error('Failed to load client type:', response.status, response.statusText);
-                return;
+            let clientTypeData = clientType;
+            if (!clientTypeData) {
+                const response = await fetch(`/api/v1/client-type/${typeId}`);
+                if (!response.ok) {
+                    console.error('Failed to load client type:', response.status, response.statusText);
+                    return;
+                }
+                clientTypeData = await response.json();
             }
-            
-            const clientType = await response.json();
             const navLink = document.querySelector('#nav-purchase a');
             
-            if (navLink && clientType.name) {
+            if (navLink && clientTypeData.name) {
                 navLink.textContent = '';
                 
                 const labelSpan = document.createElement('span');
@@ -136,7 +138,7 @@ const PurchaseTypeManager = (function() {
                 
                 const nameSpan = document.createElement('span');
                 nameSpan.className = 'nav-client-type-name';
-                nameSpan.textContent = clientType.name;
+                nameSpan.textContent = clientTypeData.name;
                 navLink.appendChild(nameSpan);
                 
                 const arrowSpan = document.createElement('span');

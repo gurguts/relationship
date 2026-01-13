@@ -62,8 +62,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
     
-    await RouteTypeManager.updateNavigationWithCurrentType(typeId);
-    
     const savedClientTypeId = localStorage.getItem('currentClientTypeId');
     const staticFilterKeys = ['createdAtFrom', 'createdAtTo', 'updatedAtFrom', 'updatedAtTo', 'source', 'showInactive'];
     
@@ -85,10 +83,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         localStorage.setItem('currentClientTypeId', newClientTypeId.toString());
         currentClientTypeId = newClientTypeId;
         
-        await RouteTypeManager.updateNavigationWithCurrentType(newClientTypeId);
-        
         try {
             currentClientType = await RouteDataLoader.loadClientType(currentClientTypeId);
+            await RouteTypeManager.updateNavigationWithCurrentType(newClientTypeId, currentClientType);
             document.title = currentClientType.name;
             const fieldsData = await RouteDataLoader.loadClientTypeFields(currentClientTypeId);
             clientTypeFields = fieldsData.all || [];
@@ -199,6 +196,10 @@ async function loadEntitiesAndApplyFilters() {
         
         availableSources = data.sources || [];
         sourceMap = new Map(availableSources.map(item => [item.id, item.name]));
+        
+        if (!window.sourceMap || window.sourceMap.size === 0) {
+            window.sourceMap = sourceMap;
+        }
 
         if (filterForm) {
             if (selectedFilters['createdAtFrom']) {
@@ -282,7 +283,7 @@ function buildDynamicFilters() {
         existingFilters.forEach(el => {
             const selects = el.querySelectorAll('select');
             selects.forEach(sel => {
-                sel.innerHTML = '';
+                sel.textContent = '';
             });
             el.remove();
         });
@@ -304,12 +305,31 @@ function buildDynamicFilters() {
         
         const createdAtBlock = document.createElement('div');
         createdAtBlock.className = 'filter-block';
-        createdAtBlock.innerHTML = `
-            <label class="from-to-style" for="filter-createdAt-from">Від:</label>
-            <input type="date" id="filter-createdAt-from" name="createdAtFrom">
-            <label class="from-to-style" for="filter-createdAt-to">До:</label>
-            <input type="date" id="filter-createdAt-to" name="createdAtTo">
-        `;
+        
+        const createdAtFromLabel = document.createElement('label');
+        createdAtFromLabel.className = 'from-to-style';
+        createdAtFromLabel.setAttribute('for', 'filter-createdAt-from');
+        createdAtFromLabel.textContent = 'Від:';
+        createdAtBlock.appendChild(createdAtFromLabel);
+        
+        const createdAtFromInput = document.createElement('input');
+        createdAtFromInput.type = 'date';
+        createdAtFromInput.id = 'filter-createdAt-from';
+        createdAtFromInput.name = 'createdAtFrom';
+        createdAtBlock.appendChild(createdAtFromInput);
+        
+        const createdAtToLabel = document.createElement('label');
+        createdAtToLabel.className = 'from-to-style';
+        createdAtToLabel.setAttribute('for', 'filter-createdAt-to');
+        createdAtToLabel.textContent = 'До:';
+        createdAtBlock.appendChild(createdAtToLabel);
+        
+        const createdAtToInput = document.createElement('input');
+        createdAtToInput.type = 'date';
+        createdAtToInput.id = 'filter-createdAt-to';
+        createdAtToInput.name = 'createdAtTo';
+        createdAtBlock.appendChild(createdAtToInput);
+        
         filterForm.appendChild(createdAtBlock);
         
         const updatedAtH2 = document.createElement('h2');
@@ -318,22 +338,49 @@ function buildDynamicFilters() {
         
         const updatedAtBlock = document.createElement('div');
         updatedAtBlock.className = 'filter-block';
-        updatedAtBlock.innerHTML = `
-            <label class="from-to-style" for="filter-updatedAt-from">Від:</label>
-            <input type="date" id="filter-updatedAt-from" name="updatedAtFrom">
-            <label class="from-to-style" for="filter-updatedAt-to">До:</label>
-            <input type="date" id="filter-updatedAt-to" name="updatedAtTo">
-        `;
+        
+        const updatedAtFromLabel = document.createElement('label');
+        updatedAtFromLabel.className = 'from-to-style';
+        updatedAtFromLabel.setAttribute('for', 'filter-updatedAt-from');
+        updatedAtFromLabel.textContent = 'Від:';
+        updatedAtBlock.appendChild(updatedAtFromLabel);
+        
+        const updatedAtFromInput = document.createElement('input');
+        updatedAtFromInput.type = 'date';
+        updatedAtFromInput.id = 'filter-updatedAt-from';
+        updatedAtFromInput.name = 'updatedAtFrom';
+        updatedAtBlock.appendChild(updatedAtFromInput);
+        
+        const updatedAtToLabel = document.createElement('label');
+        updatedAtToLabel.className = 'from-to-style';
+        updatedAtToLabel.setAttribute('for', 'filter-updatedAt-to');
+        updatedAtToLabel.textContent = 'До:';
+        updatedAtBlock.appendChild(updatedAtToLabel);
+        
+        const updatedAtToInput = document.createElement('input');
+        updatedAtToInput.type = 'date';
+        updatedAtToInput.id = 'filter-updatedAt-to';
+        updatedAtToInput.name = 'updatedAtTo';
+        updatedAtBlock.appendChild(updatedAtToInput);
+        
         filterForm.appendChild(updatedAtBlock);
 
         const sourceSelectItem = document.createElement('div');
         sourceSelectItem.className = 'select-section-item';
-        sourceSelectItem.innerHTML = `
-            <br>
-            <label class="select-label-style" for="filter-source">Залучення:</label>
-            <select id="filter-source" name="source" multiple>
-            </select>
-        `;
+        sourceSelectItem.appendChild(document.createElement('br'));
+        
+        const sourceLabel = document.createElement('label');
+        sourceLabel.className = 'select-label-style';
+        sourceLabel.setAttribute('for', 'filter-source');
+        sourceLabel.textContent = 'Залучення:';
+        sourceSelectItem.appendChild(sourceLabel);
+        
+        const sourceSelect = document.createElement('select');
+        sourceSelect.id = 'filter-source';
+        sourceSelect.name = 'source';
+        sourceSelect.multiple = true;
+        sourceSelectItem.appendChild(sourceSelect);
+        
         filterForm.appendChild(sourceSelectItem);
 
 
@@ -347,12 +394,31 @@ function buildDynamicFilters() {
                     
                     const filterBlock = document.createElement('div');
                     filterBlock.className = 'filter-block';
-                    filterBlock.innerHTML = `
-                        <label class="from-to-style" for="filter-${field.fieldName}-from">Від:</label>
-                        <input type="date" id="filter-${field.fieldName}-from" name="${field.fieldName}From">
-                        <label class="from-to-style" for="filter-${field.fieldName}-to">До:</label>
-                        <input type="date" id="filter-${field.fieldName}-to" name="${field.fieldName}To">
-                    `;
+                    
+                    const fromLabel = document.createElement('label');
+                    fromLabel.className = 'from-to-style';
+                    fromLabel.setAttribute('for', `filter-${field.fieldName}-from`);
+                    fromLabel.textContent = 'Від:';
+                    filterBlock.appendChild(fromLabel);
+                    
+                    const fromInput = document.createElement('input');
+                    fromInput.type = 'date';
+                    fromInput.id = `filter-${field.fieldName}-from`;
+                    fromInput.name = `${field.fieldName}From`;
+                    filterBlock.appendChild(fromInput);
+                    
+                    const toLabel = document.createElement('label');
+                    toLabel.className = 'from-to-style';
+                    toLabel.setAttribute('for', `filter-${field.fieldName}-to`);
+                    toLabel.textContent = 'До:';
+                    filterBlock.appendChild(toLabel);
+                    
+                    const toInput = document.createElement('input');
+                    toInput.type = 'date';
+                    toInput.id = `filter-${field.fieldName}-to`;
+                    toInput.name = `${field.fieldName}To`;
+                    filterBlock.appendChild(toInput);
+                    
                     filterForm.appendChild(filterBlock);
                 } else if (field.fieldType === 'NUMBER') {
                     const h2 = document.createElement('h2');
@@ -361,12 +427,35 @@ function buildDynamicFilters() {
                     
                     const filterBlock = document.createElement('div');
                     filterBlock.className = 'filter-block';
-                    filterBlock.innerHTML = `
-                        <label class="from-to-style" for="filter-${field.fieldName}-from">Від:</label>
-                        <input type="number" id="filter-${field.fieldName}-from" name="${field.fieldName}From" step="any" placeholder="Мінімум">
-                        <label class="from-to-style" for="filter-${field.fieldName}-to">До:</label>
-                        <input type="number" id="filter-${field.fieldName}-to" name="${field.fieldName}To" step="any" placeholder="Максимум">
-                    `;
+                    
+                    const fromLabel = document.createElement('label');
+                    fromLabel.className = 'from-to-style';
+                    fromLabel.setAttribute('for', `filter-${field.fieldName}-from`);
+                    fromLabel.textContent = 'Від:';
+                    filterBlock.appendChild(fromLabel);
+                    
+                    const fromInput = document.createElement('input');
+                    fromInput.type = 'number';
+                    fromInput.id = `filter-${field.fieldName}-from`;
+                    fromInput.name = `${field.fieldName}From`;
+                    fromInput.step = 'any';
+                    fromInput.placeholder = 'Мінімум';
+                    filterBlock.appendChild(fromInput);
+                    
+                    const toLabel = document.createElement('label');
+                    toLabel.className = 'from-to-style';
+                    toLabel.setAttribute('for', `filter-${field.fieldName}-to`);
+                    toLabel.textContent = 'До:';
+                    filterBlock.appendChild(toLabel);
+                    
+                    const toInput = document.createElement('input');
+                    toInput.type = 'number';
+                    toInput.id = `filter-${field.fieldName}-to`;
+                    toInput.name = `${field.fieldName}To`;
+                    toInput.step = 'any';
+                    toInput.placeholder = 'Максимум';
+                    filterBlock.appendChild(toInput);
+                    
                     filterForm.appendChild(filterBlock);
                 } else if (field.fieldType === 'LIST') {
                     const selectId = `filter-${field.fieldName}`;
@@ -459,15 +548,34 @@ function buildDynamicFilters() {
                 } else if (field.fieldType === 'BOOLEAN') {
                     const selectItem = document.createElement('div');
                     selectItem.className = 'select-section-item';
-                    selectItem.innerHTML = `
-                        <br>
-                        <label class="select-label-style" for="filter-${field.fieldName}">${field.fieldLabel}:</label>
-                        <select id="filter-${field.fieldName}" name="${field.fieldName}">
-                            <option value="">Всі</option>
-                            <option value="true">Так</option>
-                            <option value="false">Ні</option>
-                        </select>
-                    `;
+                    selectItem.appendChild(document.createElement('br'));
+                    
+                    const label = document.createElement('label');
+                    label.className = 'select-label-style';
+                    label.setAttribute('for', `filter-${field.fieldName}`);
+                    label.textContent = field.fieldLabel + ':';
+                    selectItem.appendChild(label);
+                    
+                    const select = document.createElement('select');
+                    select.id = `filter-${field.fieldName}`;
+                    select.name = field.fieldName;
+                    
+                    const allOption = document.createElement('option');
+                    allOption.value = '';
+                    allOption.textContent = 'Всі';
+                    select.appendChild(allOption);
+                    
+                    const yesOption = document.createElement('option');
+                    yesOption.value = 'true';
+                    yesOption.textContent = 'Так';
+                    select.appendChild(yesOption);
+                    
+                    const noOption = document.createElement('option');
+                    noOption.value = 'false';
+                    noOption.textContent = 'Ні';
+                    select.appendChild(noOption);
+                    
+                    selectItem.appendChild(select);
                     filterForm.appendChild(selectItem);
                 }
             });
@@ -475,12 +583,25 @@ function buildDynamicFilters() {
 
         const isActiveBlock = document.createElement('div');
         isActiveBlock.className = 'filter-block';
-        isActiveBlock.innerHTML = `
-            <label style="display: flex; align-items: center; gap: 0.5em; margin: 0.5em 0;">
-                <input type="checkbox" id="filter-show-inactive" name="showInactive" value="true">
-                <span>Показати неактивних клієнтів</span>
-            </label>
-        `;
+        
+        const label = document.createElement('label');
+        label.style.display = 'flex';
+        label.style.alignItems = 'center';
+        label.style.gap = '0.5em';
+        label.style.margin = '0.5em 0';
+        
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.id = 'filter-show-inactive';
+        checkbox.name = 'showInactive';
+        checkbox.value = 'true';
+        label.appendChild(checkbox);
+        
+        const span = document.createElement('span');
+        span.textContent = 'Показати неактивних клієнтів';
+        label.appendChild(span);
+        
+        isActiveBlock.appendChild(label);
         filterForm.appendChild(isActiveBlock);
     } finally {
         buildDynamicFilters._isBuilding = false;
@@ -541,7 +662,9 @@ async function renderClients(clients) {
             modal: document.getElementById('createContainerModal'),
             form: document.getElementById('createContainerForm'),
             clientIdInput: document.getElementById('containerClientId'),
+            userIdSelect: document.getElementById('containerUserId'),
             containerIdSelect: document.getElementById('containerContainerId'),
+            userId: userId,
             loaderBackdrop: loaderBackdrop
         });
     };
@@ -553,7 +676,6 @@ async function renderClients(clients) {
         visibleFields,
         currentClientType,
         sourceMap,
-        RouteDataLoader.loadClientFieldValues,
         loadClientDetails,
         openCreatePurchaseModalWrapper,
         openCreateContainerModalWrapper,
@@ -727,28 +849,30 @@ var modal = document.getElementById("createClientModal");
 var btn = document.getElementById("open-modal");
 var span = document.getElementsByClassName("create-client-close")[0];
 
-btn.onclick = function () {
-    if (!currentClientTypeId) {
-        showMessage('Будь ласка, виберіть тип клієнта з навігації', 'error');
-        return;
-    }
-    buildDynamicCreateForm();
-    modal.classList.remove('hide');
-    modal.style.display = "flex";
-    setTimeout(() => {
-        modal.classList.add('show');
-    }, 10);
-};
+if (btn) {
+    btn.addEventListener('click', function () {
+        if (!currentClientTypeId) {
+            showMessage('Будь ласка, виберіть тип клієнта з навігації', 'error');
+            return;
+        }
+        buildDynamicCreateForm();
+        modal.classList.remove('hide');
+        modal.style.display = "flex";
+        setTimeout(() => {
+            modal.classList.add('show');
+        }, 10);
+    });
+}
 
 if (span) {
-    span.onclick = function () {
+    span.addEventListener('click', function () {
         modal.classList.remove('show');
         modal.classList.add('hide');
         setTimeout(() => {
             modal.style.display = "none";
             resetForm();
         }, 300);
-    };
+    });
 }
 
 // Removed: create modal click handler to prevent closing on outside click
@@ -980,13 +1104,6 @@ closeFilter.addEventListener('click', () => {
     closeModalFilter();
 });
 
-// Removed: filter modal click handler to prevent closing on outside click
-// filterModal.addEventListener('click', (event) => {
-//     if (!modalContent.contains(event.target)) {
-//         closeModalFilter();
-//     }
-// });
-
 function closeModalFilter() {
     const filterModalTimeoutIdRef = { current: filterModalTimeoutId };
     ClientFilters.closeModalFilter(filterModal, modalContent, filterModalTimeoutIdRef);
@@ -1038,7 +1155,7 @@ function populateSelect(selectId, data) {
         return;
     }
 
-    select.innerHTML = '';
+    select.textContent = '';
 
     if (!selectId.endsWith('-filter')) {
         const defaultOption = document.createElement('option');
@@ -1091,4 +1208,44 @@ document.addEventListener('DOMContentLoaded', () => {
         modal: document.getElementById('createContainerModal'),
         loaderBackdrop: loaderBackdrop
     });
+    
+    const saveClientBtn = document.getElementById('save-client');
+    if (saveClientBtn && !saveClientBtn.hasAttribute('data-listener-attached')) {
+        saveClientBtn.setAttribute('data-listener-attached', 'true');
+        saveClientBtn.addEventListener('click', () => {
+            if (typeof saveClientChanges === 'function') {
+                saveClientChanges();
+            }
+        });
+    }
+    
+    const cancelClientBtn = document.getElementById('cancel-client');
+    if (cancelClientBtn && !cancelClientBtn.hasAttribute('data-listener-attached')) {
+        cancelClientBtn.setAttribute('data-listener-attached', 'true');
+        cancelClientBtn.addEventListener('click', () => {
+            if (typeof cancelClientChanges === 'function') {
+                cancelClientChanges();
+            }
+        });
+    }
+    
+    const editCompanyBtn = document.getElementById('edit-company');
+    if (editCompanyBtn && !editCompanyBtn.hasAttribute('data-listener-attached')) {
+        editCompanyBtn.setAttribute('data-listener-attached', 'true');
+        editCompanyBtn.addEventListener('click', () => {
+            if (typeof enableEdit === 'function') {
+                enableEdit('company');
+            }
+        });
+    }
+    
+    const editSourceBtn = document.getElementById('edit-source');
+    if (editSourceBtn && !editSourceBtn.hasAttribute('data-listener-attached')) {
+        editSourceBtn.setAttribute('data-listener-attached', 'true');
+        editSourceBtn.addEventListener('click', () => {
+            if (typeof enableSelect === 'function' && typeof availableSources !== 'undefined') {
+                enableSelect('source', availableSources);
+            }
+        });
+    }
 });

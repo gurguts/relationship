@@ -97,6 +97,10 @@
     </nav>
 </header>
 
+<div class="loader-backdrop">
+    <div class="loader"></div>
+</div>
+
 <div class="finance-container">
     <div class="finance-header">
         <h1>Фінансове управління</h1>
@@ -121,28 +125,7 @@
     <!-- Transactions Tab -->
     <div id="transactions-tab" class="tab-content">
         <div class="filter-section">
-            <label for="transaction-type-filter">Тип:</label>
-            <select id="transaction-type-filter">
-                <option value="">Всі типи</option>
-                <option value="INTERNAL_TRANSFER">Переказ між рахунками</option>
-                <option value="EXTERNAL_INCOME">Зовнішній прихід</option>
-                <option value="EXTERNAL_EXPENSE">Зовнішня витрата</option>
-                <option value="CLIENT_PAYMENT">Оплата клієнту</option>
-                <option value="CURRENCY_CONVERSION">Конвертація валют</option>
-            </select>
-            <label for="transaction-account-filter">Рахунок:</label>
-            <select id="transaction-account-filter">
-                <option value="">Всі рахунки</option>
-            </select>
-            <label for="transaction-category-filter">Категорія:</label>
-            <select id="transaction-category-filter">
-                <option value="">Всі категорії</option>
-            </select>
-            <label for="transaction-date-from">Дата від:</label>
-            <input type="date" id="transaction-date-from">
-            <label for="transaction-date-to">Дата до:</label>
-            <input type="date" id="transaction-date-to">
-            <button id="apply-transaction-filters" class="btn-primary">Застосувати фільтри</button>
+            <button id="open-transaction-filters-modal" class="btn-primary">Фільтри</button>
             <button id="export-transactions-btn" class="btn-secondary">Експорт в Excel</button>
         </div>
         <div class="table-container">
@@ -295,6 +278,54 @@
     </div>
 </div>
 
+<!-- Transaction Filters Modal -->
+<div id="transaction-filters-modal" class="modal">
+    <div class="modal-content">
+        <span class="close" id="close-transaction-filters-modal">&times;</span>
+        <h2>Фільтри транзакцій</h2>
+        <form id="transaction-filters-form">
+            <div class="form-group">
+                <label for="transaction-type-filter">Тип:</label>
+                <select id="transaction-type-filter">
+                    <option value="">Всі типи</option>
+                    <option value="INTERNAL_TRANSFER">Переказ між рахунками</option>
+                    <option value="EXTERNAL_INCOME">Зовнішній прихід</option>
+                    <option value="EXTERNAL_EXPENSE">Зовнішня витрата</option>
+                    <option value="CLIENT_PAYMENT">Оплата клієнту</option>
+                    <option value="CURRENCY_CONVERSION">Конвертація валют</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="transaction-account-filter">Рахунок:</label>
+                <select id="transaction-account-filter">
+                    <option value="">Всі рахунки</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="transaction-category-filter">Категорія:</label>
+                <select id="transaction-category-filter">
+                    <option value="">Всі категорії</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="transaction-date-from">Дата від:</label>
+                <input type="date" id="transaction-date-from">
+            </div>
+            
+            <div class="form-group">
+                <label for="transaction-date-to">Дата до:</label>
+                <input type="date" id="transaction-date-to">
+            </div>
+            
+            <button type="button" id="apply-transaction-filters" class="btn-primary">Застосувати фільтри</button>
+            <button type="button" id="clear-transaction-filters" class="btn-secondary">Очистити</button>
+        </form>
+    </div>
+</div>
+
 <!-- Edit Transaction Modal -->
 <div id="edit-transaction-modal" class="modal">
     <div class="modal-content">
@@ -355,16 +386,19 @@
 </div>
 
 <script src="/js/utils/constants.js"></script>
-<script src="/js/error.js"></script>
 <script src="/js/utils/dropdownLoader.js"></script>
+<script src="/js/common.js"></script>
+<script src="/js/error.js"></script>
+<script src="/js/createCustomSelect.js"></script>
 <script src="/js/modules/FinanceUtils.js"></script>
 <script src="/js/modules/FinanceDataLoader.js"></script>
 <script src="/js/modules/FinanceRenderer.js"></script>
 <script src="/js/modules/FinanceFilters.js"></script>
 <script src="/js/modules/FinanceTabs.js"></script>
 <script src="/js/modules/FinanceExchangeRateModal.js"></script>
+<script src="/js/modules/FinanceModal.js"></script>
+<script src="/js/modules/FinanceTransactionForm.js"></script>
 <script src="/js/finance.js"></script>
-<script src="/js/common.js"></script>
 </body>
 </html>
 

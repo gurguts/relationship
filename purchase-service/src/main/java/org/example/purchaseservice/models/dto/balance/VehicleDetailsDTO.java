@@ -24,12 +24,15 @@ public class VehicleDetailsDTO {
     private String senderName;
     private Long receiverId;
     private String receiverName;
-    private String destinationCountry;
-    private String destinationPlace;
+    private Long destinationCountryId;
+    private String destinationCountryName;
+    private Long destinationPlaceId;
+    private String destinationPlaceName;
     private String product;
     private String productQuantity;
     private String declarationNumber;
-    private String terminal;
+    private Long terminalId;
+    private String terminalName;
     private String driverFullName;
     private Boolean isOurVehicle;
     private Boolean eur1;

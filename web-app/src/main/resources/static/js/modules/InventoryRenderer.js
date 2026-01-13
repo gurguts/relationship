@@ -61,7 +61,7 @@ const InventoryRenderer = (function() {
     function populateContainerTypesSelect(selectElement, containerTypes) {
         if (!selectElement) return;
         
-        selectElement.innerHTML = '';
+        selectElement.textContent = '';
         
         if (!containerTypes || containerTypes.length === 0) {
             const emptyOption = document.createElement('option');

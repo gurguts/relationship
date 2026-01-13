@@ -34,9 +34,6 @@
     --transition-slow: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-* {
-    box-sizing: border-box;
-}
 
 body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -245,6 +242,17 @@ body {
     background: var(--bg-primary);
     transform: none;
     cursor: default;
+}
+
+#tab-products .modern-table tbody tr.vehicle-items-total-row {
+    background: var(--bg-tertiary);
+    border-top: 2px solid var(--primary);
+    cursor: default;
+}
+
+#tab-products .modern-table tbody tr.vehicle-items-total-row:hover {
+    background: var(--bg-tertiary);
+    transform: none;
 }
 
 #tab-expenses .modern-table tbody tr:hover {

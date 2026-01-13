@@ -52,11 +52,13 @@ public class Vehicle {
     @JoinColumn(name = "receiver_id")
     private VehicleReceiver receiver;
     
-    @Column(name = "destination_country", length = 100)
-    private String destinationCountry;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "destination_country_id")
+    private VehicleDestinationCountry destinationCountry;
     
-    @Column(name = "destination_place")
-    private String destinationPlace;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "destination_place_id")
+    private VehicleDestinationPlace destinationPlace;
     
     @Column(name = "product")
     private String product;
@@ -67,8 +69,9 @@ public class Vehicle {
     @Column(name = "declaration_number", length = 100)
     private String declarationNumber;
     
-    @Column(name = "terminal", length = 100)
-    private String terminal;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "terminal_id")
+    private VehicleTerminal terminal;
     
     @Column(name = "driver_full_name")
     private String driverFullName;

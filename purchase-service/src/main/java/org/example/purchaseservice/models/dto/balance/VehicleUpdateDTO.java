@@ -14,12 +14,12 @@ public class VehicleUpdateDTO {
     private String description;
     private Long senderId;
     private Long receiverId;
-    private String destinationCountry;
-    private String destinationPlace;
+    private Long destinationCountryId;
+    private Long destinationPlaceId;
     private String product;
     private String productQuantity;
     private String declarationNumber;
-    private String terminal;
+    private Long terminalId;
     private String driverFullName;
     private Boolean isOurVehicle;
     private Boolean eur1;

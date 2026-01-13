@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.userservice.exceptions.user.UserException;
 import org.example.userservice.mappers.AccountMapper;
 import org.example.userservice.models.account.Account;
+import org.example.userservice.models.account.AccountBalance;
 import org.example.userservice.models.dto.account.AccountBalanceDTO;
 import org.example.userservice.models.dto.account.AccountCreateDTO;
 import org.example.userservice.models.dto.account.AccountDTO;
@@ -22,6 +23,8 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import static org.springframework.http.HttpStatus.FORBIDDEN;
 
@@ -50,7 +53,6 @@ public class AccountController {
     }
 
     @GetMapping("/user/{userId}")
-    @PreAuthorize("hasAuthority('finance:view')")
     public ResponseEntity<List<AccountDTO>> getAccountsByUserId(@PathVariable @Positive @NonNull Long userId) {
         List<Account> accounts = accountService.getAccountsByUserId(userId);
         List<AccountDTO> dtos = accounts.stream()
@@ -89,12 +91,25 @@ public class AccountController {
     }
 
     @GetMapping("/{id}/balances")
-    @PreAuthorize("hasAuthority('finance:view')")
     public ResponseEntity<List<AccountBalanceDTO>> getAccountBalances(@PathVariable @Positive @NonNull Long id) {
         List<AccountBalanceDTO> dtos = accountService.getAccountBalances(id).stream()
                 .map(accountMapper::accountBalanceToAccountBalanceDTO)
                 .toList();
         return ResponseEntity.ok(dtos);
+    }
+    
+    @PostMapping("/balances/batch")
+    @PreAuthorize("hasAuthority('finance:view')")
+    public ResponseEntity<Map<Long, List<AccountBalanceDTO>>> getAccountBalancesBatch(@RequestBody @NonNull List<@Positive Long> accountIds) {
+        Map<Long, List<AccountBalance>> balancesMap = accountService.getAccountBalancesBatch(accountIds);
+        Map<Long, List<AccountBalanceDTO>> result = balancesMap.entrySet().stream()
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        entry -> entry.getValue().stream()
+                                .map(accountMapper::accountBalanceToAccountBalanceDTO)
+                                .toList()
+                ));
+        return ResponseEntity.ok(result);
     }
 
     @PostMapping

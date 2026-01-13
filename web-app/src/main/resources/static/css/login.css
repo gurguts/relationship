@@ -1,3 +1,13 @@
+:root {
+    --bright-blue: #0554F2;
+    --primary: #0554F2;
+
+    --border-radius: 12px;
+
+    --dark-blue: #03258C;
+    --main-grey: #7D8C8B;
+}
+
 html {
     line-height: 1.6;
     font-size: 0.8vw;
@@ -14,17 +24,6 @@ body {
     min-height: 100vh;
 }
 
-:root {
-    --bright-blue: #0554F2;
-    --dark-blue: #03258C;
-    --bright-green: #67ad22;
-    --dark-green: #49730A;
-    --main-yellow: #ffff10;
-    --main-grey: #7D8C8B;
-    --background-color: #c6dae0;
-    --base-text-size: 1.1em;
-    --rem: 1.3rem;
-}
 
 img {
     width: 20rem;

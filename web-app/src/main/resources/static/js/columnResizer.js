@@ -22,7 +22,7 @@ function initColumnResizer(clientTypeId) {
         colgroup = document.createElement('colgroup');
         table.insertBefore(colgroup, table.firstChild);
     } else {
-        colgroup.innerHTML = '';
+        colgroup.textContent = '';
     }
     
     // Загружаем сохраненные ширины из localStorage
@@ -409,7 +409,7 @@ function initColumnResizerForPurchase(containerId, storageKey) {
         colgroup = document.createElement('colgroup');
         table.insertBefore(colgroup, table.firstChild);
     } else {
-        colgroup.innerHTML = '';
+        colgroup.textContent = '';
     }
     
     const savedWidths = loadColumnWidths(storageKey);
@@ -580,7 +580,7 @@ function initColumnResizerForContainers(containerId, storageKey) {
         colgroup = document.createElement('colgroup');
         table.insertBefore(colgroup, table.firstChild);
     } else {
-        colgroup.innerHTML = '';
+        colgroup.textContent = '';
     }
     
     const savedWidths = loadColumnWidths(storageKey);

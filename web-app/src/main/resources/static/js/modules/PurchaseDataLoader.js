@@ -162,6 +162,33 @@ const PurchaseDataLoader = (function() {
         }
     }
     
+    async function loadReport(query, filters) {
+        try {
+            let queryParams = [];
+            
+            if (query) {
+                queryParams.push(`q=${encodeURIComponent(query)}`);
+            }
+            
+            if (filters && Object.keys(filters).length > 0) {
+                queryParams.push(`filters=${encodeURIComponent(JSON.stringify(filters))}`);
+            }
+            
+            const url = `${API_URL_PURCHASE}/report${queryParams.length > 0 ? '?' + queryParams.join('&') : ''}`;
+            const response = await fetch(url);
+            
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ message: 'Failed to load report' }));
+                throw new Error(errorData.message || 'Failed to load report');
+            }
+            
+            return await response.json();
+        } catch (error) {
+            console.error('Error loading report:', error);
+            throw error;
+        }
+    }
+    
     return {
         loadClientType,
         loadClientTypeFields,
@@ -171,6 +198,7 @@ const PurchaseDataLoader = (function() {
         deletePurchase,
         deleteClient,
         deleteClientActive,
-        restoreClient
+        restoreClient,
+        loadReport
     };
 })();

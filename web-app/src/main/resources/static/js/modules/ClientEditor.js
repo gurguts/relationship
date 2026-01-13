@@ -38,7 +38,7 @@ const ClientEditor = (function() {
         showSaveCancelButtons();
         const field = document.getElementById(`modal-client-${fieldId}`);
         if (!field) return;
-        const currentValue = field.innerText;
+        const currentValue = field.textContent || '';
         
         const fieldP = field.closest('p');
         if (fieldP) {
@@ -48,7 +48,12 @@ const ClientEditor = (function() {
             }
         }
 
-        field.innerHTML = `<textarea id="edit-${fieldId}" class="edit-textarea">${currentValue}</textarea>`;
+        field.textContent = '';
+        const textarea = document.createElement('textarea');
+        textarea.id = `edit-${fieldId}`;
+        textarea.className = 'edit-textarea';
+        textarea.value = currentValue;
+        field.appendChild(textarea);
         editingState.editing = true;
     }
 
@@ -56,7 +61,7 @@ const ClientEditor = (function() {
         showSaveCancelButtons();
         const field = document.getElementById(`modal-client-${fieldId}`);
         if (!field) return;
-        const currentValue = field.innerText;
+        const currentValue = field.textContent || '';
         
         const fieldP = field.closest('p');
         if (fieldP) {
@@ -66,14 +71,19 @@ const ClientEditor = (function() {
             }
         }
         
-        field.innerHTML = `<select id="edit-${fieldId}"></select>`;
-        const select = document.getElementById(`edit-${fieldId}`);
-        if (select) {
+        field.textContent = '';
+        const select = document.createElement('select');
+        select.id = `edit-${fieldId}`;
+        field.appendChild(select);
+        
+        if (options && Array.isArray(options)) {
             options.forEach(option => {
                 const opt = document.createElement('option');
                 opt.value = option.id;
-                opt.text = option.name;
-                if (option.name === currentValue) opt.selected = true;
+                opt.textContent = option.name || '';
+                if (option.name === currentValue) {
+                    opt.selected = true;
+                }
                 select.appendChild(opt);
             });
         }
@@ -374,25 +384,24 @@ const ClientEditor = (function() {
             inputElement.dataset.originalValue = originalValue;
             if (!isEmpty && currentValue) {
                 const fieldSpanElement = document.getElementById(`modal-field-${fieldId}`);
-                if (fieldSpanElement && fieldSpanElement.innerHTML) {
-                    const phoneLinks = fieldSpanElement.innerHTML.match(/<a[^>]*href="tel:([^"]+)"[^>]*>([^<]+)<\/a>/g);
+                if (fieldSpanElement) {
+                    const phoneLinks = fieldSpanElement.querySelectorAll('a[href^="tel:"]');
                     if (phoneLinks && phoneLinks.length > 0) {
-                        const phones = phoneLinks.map(link => {
-                            const hrefMatch = link.match(/href="tel:([^"]+)"/);
-                            if (hrefMatch) {
-                                return hrefMatch[1];
+                        const phones = Array.from(phoneLinks).map(link => {
+                            const href = link.getAttribute('href');
+                            if (href && href.startsWith('tel:')) {
+                                return href.substring(4);
                             }
-                            const textMatch = link.match(/>([^<]+)</);
-                            return textMatch ? textMatch[1] : '';
+                            return link.textContent || '';
                         }).filter(p => p);
                         inputElement.value = phones.join(', ');
                     } else {
-                        const textContent = fieldSpanElement.textContent || fieldSpanElement.innerText || '';
-                        const phones = textContent.split(/\s+/).filter(p => p.trim() && p.trim() !== '—');
+                        const textContent = fieldSpanElement.textContent || '';
+                        const phones = textContent.split(/\s+/).filter(p => p.trim() && p.trim() !== '—' && p.trim() !== CLIENT_MESSAGES.EMPTY_VALUE);
                         inputElement.value = phones.join(', ');
                     }
                 } else {
-                    inputElement.value = currentValue.replace(/<[^>]+>/g, '').trim();
+                    inputElement.value = currentValue.trim();
                 }
             }
             fieldSpan.replaceWith(inputElement);

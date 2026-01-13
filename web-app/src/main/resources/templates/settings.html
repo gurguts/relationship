@@ -109,6 +109,10 @@
         <button class="tab-btn" data-tab="accounts">Рахунки</button>
         <button class="tab-btn" data-tab="vehicle-senders">Відправники машин</button>
         <button class="tab-btn" data-tab="vehicle-receivers">Отримувачі машин</button>
+        <button class="tab-btn" data-tab="vehicle-terminals">Термінали машин</button>
+        <button class="tab-btn" data-tab="vehicle-destination-countries">Країни призначення</button>
+        <button class="tab-btn" data-tab="vehicle-destination-places">Місця призначення</button>
+        <button class="tab-btn" data-tab="carriers">Перевізники</button>
     </div>
 
     <!-- Finance Categories Tab -->
@@ -241,6 +245,82 @@
                 </tr>
                 </thead>
                 <tbody id="vehicle-receivers-body"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Vehicle Terminals Tab -->
+    <div id="vehicle-terminals-tab" class="tab-content">
+        <div class="filter-section">
+            <button id="create-vehicle-terminal-btn" class="btn-primary">Створити термінал</button>
+        </div>
+        <div class="table-container">
+            <table id="vehicle-terminals-table" class="data-table">
+                <thead>
+                <tr>
+                    <th>Назва</th>
+                    <th>Дії</th>
+                </tr>
+                </thead>
+                <tbody id="vehicle-terminals-body"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Vehicle Destination Countries Tab -->
+    <div id="vehicle-destination-countries-tab" class="tab-content">
+        <div class="filter-section">
+            <button id="create-vehicle-destination-country-btn" class="btn-primary">Створити країну призначення</button>
+        </div>
+        <div class="table-container">
+            <table id="vehicle-destination-countries-table" class="data-table">
+                <thead>
+                <tr>
+                    <th>Назва</th>
+                    <th>Дії</th>
+                </tr>
+                </thead>
+                <tbody id="vehicle-destination-countries-body"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Vehicle Destination Places Tab -->
+    <div id="vehicle-destination-places-tab" class="tab-content">
+        <div class="filter-section">
+            <button id="create-vehicle-destination-place-btn" class="btn-primary">Створити місце призначення</button>
+        </div>
+        <div class="table-container">
+            <table id="vehicle-destination-places-table" class="data-table">
+                <thead>
+                <tr>
+                    <th>Назва</th>
+                    <th>Дії</th>
+                </tr>
+                </thead>
+                <tbody id="vehicle-destination-places-body"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Carriers Tab -->
+    <div id="carriers-tab" class="tab-content">
+        <div class="filter-section">
+            <button id="create-carrier-btn" class="btn-primary">Створити перевізника</button>
+        </div>
+        <div class="table-container">
+            <table id="carriers-table" class="data-table">
+                <thead>
+                <tr>
+                    <th>Назва компанії</th>
+                    <th>Адреса реєстрації</th>
+                    <th>Телефон</th>
+                    <th>Код</th>
+                    <th>Рахунок</th>
+                    <th>Дії</th>
+                </tr>
+                </thead>
+                <tbody id="carriers-body"></tbody>
             </table>
         </div>
     </div>
@@ -421,7 +501,95 @@
     </div>
 </div>
 
+<!-- Create/Edit Vehicle Terminal Modal -->
+<div id="create-vehicle-terminal-modal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2 id="vehicle-terminal-modal-title">Створити термінал</h2>
+        <form id="vehicle-terminal-form">
+            <input type="hidden" id="vehicle-terminal-id">
+            <div class="form-group">
+                <label for="vehicle-terminal-name">Назва:</label>
+                <input type="text" id="vehicle-terminal-name" required>
+            </div>
+            <button type="submit" class="btn-primary" id="vehicle-terminal-submit-btn">Створити</button>
+        </form>
+    </div>
+</div>
+
+<!-- Create/Edit Vehicle Destination Country Modal -->
+<div id="create-vehicle-destination-country-modal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2 id="vehicle-destination-country-modal-title">Створити країну призначення</h2>
+        <form id="vehicle-destination-country-form">
+            <input type="hidden" id="vehicle-destination-country-id">
+            <div class="form-group">
+                <label for="vehicle-destination-country-name">Назва:</label>
+                <input type="text" id="vehicle-destination-country-name" required>
+            </div>
+            <button type="submit" class="btn-primary" id="vehicle-destination-country-submit-btn">Створити</button>
+        </form>
+    </div>
+</div>
+
+<!-- Create/Edit Vehicle Destination Place Modal -->
+<div id="create-vehicle-destination-place-modal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2 id="vehicle-destination-place-modal-title">Створити місце призначення</h2>
+        <form id="vehicle-destination-place-form">
+            <input type="hidden" id="vehicle-destination-place-id">
+            <div class="form-group">
+                <label for="vehicle-destination-place-name">Назва:</label>
+                <input type="text" id="vehicle-destination-place-name" required>
+            </div>
+            <button type="submit" class="btn-primary" id="vehicle-destination-place-submit-btn">Створити</button>
+        </form>
+    </div>
+</div>
+
+<!-- Create/Edit Carrier Modal -->
+<div id="create-carrier-modal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2 id="carrier-form-title">Створити перевізника</h2>
+        <form id="carrier-form">
+            <input type="hidden" id="carrier-id">
+            <div class="form-group">
+                <label for="carrier-company-name">Назва компанії перевізника *</label>
+                <input type="text" id="carrier-company-name" required>
+            </div>
+            <div class="form-group">
+                <label for="carrier-registration-address">Адреса реєстрації</label>
+                <textarea id="carrier-registration-address" rows="3"></textarea>
+            </div>
+            <div class="form-group">
+                <label for="carrier-phone-number">Номер телефону</label>
+                <input type="text" id="carrier-phone-number">
+            </div>
+            <div class="form-group">
+                <label for="carrier-code">Код</label>
+                <input type="text" id="carrier-code">
+            </div>
+            <div class="form-group">
+                <label for="carrier-account">Рахунок</label>
+                <input type="text" id="carrier-account">
+            </div>
+            <button type="submit" class="btn-primary" id="carrier-submit-btn">Створити</button>
+        </form>
+    </div>
+</div>
+
+<script src="/js/utils/constants.js"></script>
 <script src="/js/common.js"></script>
+<script src="/js/error.js"></script>
+<script src="/js/utils/dropdownLoader.js"></script>
+<script src="/js/modules/ConfirmationModal.js"></script>
+<script src="/js/modules/SettingsUtils.js"></script>
+<script src="/js/modules/SettingsDataLoader.js"></script>
+<script src="/js/modules/SettingsRenderer.js"></script>
+<script src="/js/modules/SettingsModal.js"></script>
 <script src="/js/settings.js"></script>
 </body>
 </html>

@@ -45,6 +45,15 @@ public class TransactionCrudController {
         return ResponseEntity.noContent().build();
     }
 
+    @PreAuthorize("hasAuthority('finance:view')")
+    @PutMapping("/{transactionId}/amount")
+    public ResponseEntity<Void> updateTransactionAmountPut(
+            @PathVariable @Positive @NonNull Long transactionId,
+            @RequestBody @DecimalMin(value = "0.0", inclusive = false) @NonNull BigDecimal amount) {
+        transactionCrudService.updateTransactionAmount(transactionId, amount);
+        return ResponseEntity.noContent().build();
+    }
+
     @PreAuthorize("hasAuthority('transaction:delete')")
     @DeleteMapping("/{transactionId}")
     public ResponseEntity<Void> deleteTransaction(@PathVariable @Positive @NonNull Long transactionId) {

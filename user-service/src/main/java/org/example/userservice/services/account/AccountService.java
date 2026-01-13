@@ -117,6 +117,16 @@ public class AccountService {
     public List<AccountBalance> getAccountBalances(@NonNull Long accountId) {
         return accountBalanceRepository.findByAccountId(accountId);
     }
+    
+    @Transactional(readOnly = true)
+    public Map<Long, List<AccountBalance>> getAccountBalancesBatch(@NonNull List<Long> accountIds) {
+        if (accountIds.isEmpty()) {
+            return Map.of();
+        }
+        List<AccountBalance> allBalances = accountBalanceRepository.findByAccountIdIn(accountIds);
+        return allBalances.stream()
+                .collect(Collectors.groupingBy(AccountBalance::getAccountId));
+    }
 
     private void validateCurrencies(Set<String> currencies, @NonNull String operation) {
         if (currencies == null || currencies.isEmpty()) {

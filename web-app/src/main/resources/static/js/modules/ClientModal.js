@@ -38,30 +38,35 @@ const ClientModal = (function() {
 
         fullDeleteButton.dataset.originalDisplay = fullDeleteButton.style.display || 'block';
         
-        fullDeleteButton.onclick = async () => {
-            if (!confirm('Ви впевнені, що хочете повністю видалити цього клієнта з бази даних? Ця дія незворотна!')) {
-                return;
-            }
-            
-            if (loaderBackdrop) {
-                loaderBackdrop.style.display = 'flex';
-            }
-            try {
-                await ClientDataLoader.deleteClient(client.id, true);
-                showMessage('Клієнт повністю видалений з бази даних', 'info');
-                if (clientModal) {
-                    clientModal.style.display = 'none';
-                }
-                loadDataWithSort(currentPage, pageSize, currentSort, currentDirection);
-            } catch (error) {
-                console.error('Помилка видалення клієнта:', error);
-                handleError(error instanceof ErrorResponse ? error : new ErrorResponse('DELETE_ERROR', error.message || 'Failed to delete client'));
-            } finally {
-                if (loaderBackdrop) {
-                    loaderBackdrop.style.display = 'none';
-                }
-            }
-        };
+        if (fullDeleteButton) {
+            fullDeleteButton.addEventListener('click', () => {
+                ConfirmationModal.show(
+                    CONFIRMATION_MESSAGES.FULL_DELETE_CLIENT,
+                    CONFIRMATION_MESSAGES.CONFIRMATION_TITLE,
+                    async () => {
+                        if (loaderBackdrop) {
+                            loaderBackdrop.style.display = 'flex';
+                        }
+                        try {
+                            await ClientDataLoader.deleteClient(client.id, true);
+                            showMessage('Клієнт повністю видалений з бази даних', 'info');
+                            if (clientModal) {
+                                clientModal.style.display = 'none';
+                            }
+                            loadDataWithSort(currentPage, pageSize, currentSort, currentDirection);
+                        } catch (error) {
+                            console.error('Помилка видалення клієнта:', error);
+                            handleError(error instanceof ErrorResponse ? error : new ErrorResponse('DELETE_ERROR', error.message || 'Failed to delete client'));
+                        } finally {
+                            if (loaderBackdrop) {
+                                loaderBackdrop.style.display = 'none';
+                            }
+                        }
+                    },
+                    () => {}
+                );
+            });
+        }
 
         if (client.isActive === false) {
             deleteButton.style.display = 'none';
@@ -76,55 +81,65 @@ const ClientModal = (function() {
             restoreButton.dataset.originalDisplay = 'none';
         }
         
-        deleteButton.onclick = async () => {
-            if (!confirm('Ви впевнені, що хочете деактивувати цього клієнта? Клієнт буде прихований, але залишиться в базі даних.')) {
-                return;
-            }
-            
-            if (loaderBackdrop) {
-                loaderBackdrop.style.display = 'flex';
-            }
-            try {
-                await ClientDataLoader.deleteClient(client.id, false);
-                showMessage('Клієнт деактивовано (isActive = false)', 'info');
-                if (clientModal) {
-                    clientModal.style.display = 'none';
-                }
-                loadDataWithSort(currentPage, pageSize, currentSort, currentDirection);
-            } catch (error) {
-                console.error('Помилка деактивації клієнта:', error);
-                handleError(error instanceof ErrorResponse ? error : new ErrorResponse('DEACTIVATE_ERROR', error.message || 'Failed to deactivate client'));
-            } finally {
-                if (loaderBackdrop) {
-                    loaderBackdrop.style.display = 'none';
-                }
-            }
-        };
+        if (deleteButton) {
+            deleteButton.addEventListener('click', () => {
+                ConfirmationModal.show(
+                    CONFIRMATION_MESSAGES.DEACTIVATE_CLIENT,
+                    CONFIRMATION_MESSAGES.CONFIRMATION_TITLE,
+                    async () => {
+                        if (loaderBackdrop) {
+                            loaderBackdrop.style.display = 'flex';
+                        }
+                        try {
+                            await ClientDataLoader.deleteClient(client.id, false);
+                            showMessage('Клієнт деактивовано (isActive = false)', 'info');
+                            if (clientModal) {
+                                clientModal.style.display = 'none';
+                            }
+                            loadDataWithSort(currentPage, pageSize, currentSort, currentDirection);
+                        } catch (error) {
+                            console.error('Помилка деактивації клієнта:', error);
+                            handleError(error instanceof ErrorResponse ? error : new ErrorResponse('DEACTIVATE_ERROR', error.message || 'Failed to deactivate client'));
+                        } finally {
+                            if (loaderBackdrop) {
+                                loaderBackdrop.style.display = 'none';
+                            }
+                        }
+                    },
+                    () => {}
+                );
+            });
+        }
 
-        restoreButton.onclick = async () => {
-            if (!confirm('Ви впевнені, що хочете відновити цього клієнта? Клієнт знову стане активним.')) {
-                return;
-            }
-
-            if (loaderBackdrop) {
-                loaderBackdrop.style.display = 'flex';
-            }
-            try {
-                await ClientDataLoader.restoreClient(client.id);
-                showMessage('Клієнт відновлено (isActive = true)', 'info');
-                if (clientModal) {
-                    clientModal.style.display = 'none';
-                }
-                loadDataWithSort(currentPage, pageSize, currentSort, currentDirection);
-            } catch (error) {
-                console.error('Помилка відновлення клієнта:', error);
-                handleError(error instanceof ErrorResponse ? error : new ErrorResponse('RESTORE_ERROR', error.message || 'Failed to restore client'));
-            } finally {
-                if (loaderBackdrop) {
-                    loaderBackdrop.style.display = 'none';
-                }
-            }
-        };
+        if (restoreButton) {
+            restoreButton.addEventListener('click', () => {
+                ConfirmationModal.show(
+                    CONFIRMATION_MESSAGES.RESTORE_CLIENT,
+                    CONFIRMATION_MESSAGES.CONFIRMATION_TITLE,
+                    async () => {
+                        if (loaderBackdrop) {
+                            loaderBackdrop.style.display = 'flex';
+                        }
+                        try {
+                            await ClientDataLoader.restoreClient(client.id);
+                            showMessage('Клієнт відновлено (isActive = true)', 'info');
+                            if (clientModal) {
+                                clientModal.style.display = 'none';
+                            }
+                            await loadDataWithSort(currentPage, pageSize, currentSort, currentDirection);
+                        } catch (error) {
+                            console.error('Помилка відновлення клієнта:', error);
+                            handleError(error instanceof ErrorResponse ? error : new ErrorResponse('RESTORE_ERROR', error.message || 'Failed to restore client'));
+                        } finally {
+                            if (loaderBackdrop) {
+                                loaderBackdrop.style.display = 'none';
+                            }
+                        }
+                    },
+                    () => {}
+                );
+            });
+        }
     }
 
     function renderFieldValue(field, values, valueSpan) {
@@ -138,7 +153,8 @@ const ClientModal = (function() {
                         const phone = v.valueText || '';
                         if (phone) {
                             const phoneLink = document.createElement('a');
-                            phoneLink.href = `tel:${phone}`;
+                            const cleanPhone = phone.trim().replace(/[^\d+\-\s()]/g, '');
+                            phoneLink.setAttribute('href', `tel:${cleanPhone}`);
                             phoneLink.textContent = phone;
                             valueSpan.appendChild(phoneLink);
                         }
@@ -154,7 +170,8 @@ const ClientModal = (function() {
                     const phone = values[0].valueText || '';
                     if (phone) {
                         const phoneLink = document.createElement('a');
-                        phoneLink.href = `tel:${phone}`;
+                        const cleanPhone = phone.trim().replace(/[^\d+\-\s()]/g, '');
+                        phoneLink.setAttribute('href', `tel:${cleanPhone}`);
                         phoneLink.textContent = phone;
                         valueSpan.appendChild(phoneLink);
                     } else {
@@ -184,7 +201,7 @@ const ClientModal = (function() {
             editButton.className = 'edit-icon';
             editButton.setAttribute('data-field-id', field.id);
             editButton.setAttribute('title', 'Редагувати');
-            editButton.onclick = () => enableEditField(field.id, field.fieldType, field.allowMultiple || false);
+            editButton.addEventListener('click', () => enableEditField(field.id, field.fieldType, field.allowMultiple || false));
             const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
             svg.setAttribute('viewBox', '0 0 24 24');
             const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
@@ -200,14 +217,30 @@ const ClientModal = (function() {
         const canEditSourceField = ClientPermissions.canEditSource();
         const canEditCompanyField = ClientPermissions.canEditCompany(client, availableSources);
 
-        const companyEditButton = document.querySelector(`button.edit-icon[onclick*="enableEdit('company')"]`);
+        const companyEditButton = document.getElementById('edit-company');
         if (companyEditButton) {
             companyEditButton.style.display = canEditCompanyField ? '' : 'none';
+            if (canEditCompanyField && !companyEditButton.hasAttribute('data-listener-attached')) {
+                companyEditButton.setAttribute('data-listener-attached', 'true');
+                companyEditButton.addEventListener('click', () => {
+                    if (typeof enableEdit === 'function') {
+                        enableEdit('company');
+                    }
+                });
+            }
         }
 
         const sourceEditButton = document.getElementById('edit-source');
         if (sourceEditButton) {
             sourceEditButton.style.display = canEditSourceField ? '' : 'none';
+            if (canEditSourceField && !sourceEditButton.hasAttribute('data-listener-attached')) {
+                sourceEditButton.setAttribute('data-listener-attached', 'true');
+                sourceEditButton.addEventListener('click', () => {
+                    if (typeof enableSelect === 'function' && typeof availableSources !== 'undefined') {
+                        enableSelect('source', availableSources);
+                    }
+                });
+            }
         }
     }
 

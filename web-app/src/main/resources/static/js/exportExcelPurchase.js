@@ -32,11 +32,19 @@ function populateExportFormPurchase(formId) {
                 const fieldValue = `field_${field.id}`;
                 const fieldLabel = field.fieldLabel || field.fieldName;
                 
-                // Проверяем, не добавлено ли уже это поле
                 if (!form.querySelector(`input[value="${fieldValue}"]`)) {
-                const label = document.createElement('label');
-                label.innerHTML = `<input type="checkbox" name="fields" value="${fieldValue}" checked> ${fieldLabel}`;
-                clientSection.appendChild(label);
+                    const label = document.createElement('label');
+                    
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.name = 'fields';
+                    checkbox.value = fieldValue;
+                    checkbox.checked = true;
+                    label.appendChild(checkbox);
+                    
+                    label.appendChild(document.createTextNode(' ' + (fieldLabel || '')));
+                    
+                    clientSection.appendChild(label);
                 }
             });
         }
