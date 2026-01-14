@@ -11,10 +11,7 @@ import java.util.Optional;
 public interface TransactionCategoryRepository extends CrudRepository<TransactionCategory, Long> {
     @NonNull
     List<TransactionCategory> findByTypeAndIsActiveTrueOrderByNameAsc(@NonNull TransactionType type);
-    
-    @NonNull
-    List<TransactionCategory> findByTypeOrderByNameAsc(@NonNull TransactionType type);
-    
+
     Optional<TransactionCategory> findByTypeAndName(@NonNull TransactionType type, @NonNull String name);
     
     boolean existsByTypeAndName(@NonNull TransactionType type, @NonNull String name);

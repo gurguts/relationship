@@ -1,7 +1,6 @@
 package org.example.purchaseservice.services.impl;
 
 import jakarta.servlet.http.HttpServletResponse;
-import org.example.purchaseservice.models.dto.purchase.PurchaseReportDTO;
 import org.springframework.data.domain.Sort;
 
 import java.util.List;
@@ -16,8 +15,6 @@ public interface IPurchaseSpecialOperationsService {
             Map<String, List<String>> filterParams,
             HttpServletResponse response,
             List<String> selectedFields);
-
-    PurchaseReportDTO generateReport(String query, Map<String, List<String>> filterParams);
 
     void generateComparisonExcelFile(String purchaseDataFrom, String purchaseDataTo, HttpServletResponse response);
 }

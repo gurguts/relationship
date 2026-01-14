@@ -8,8 +8,9 @@ import org.example.userservice.exceptions.transaction.TransactionNotFoundExcepti
 import org.example.userservice.models.transaction.Transaction;
 import org.example.userservice.models.transaction.TransactionType;
 import org.example.userservice.repositories.TransactionRepository;
+import org.example.userservice.services.impl.IAccountBalanceService;
+import org.example.userservice.services.impl.IAccountTransactionService;
 import org.example.userservice.services.impl.ITransactionCrudService;
-import org.example.userservice.services.account.AccountBalanceService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,8 +27,8 @@ public class TransactionCrudService implements ITransactionCrudService {
     private static final RoundingMode CONVERTED_AMOUNT_ROUNDING_MODE = RoundingMode.HALF_UP;
 
     private final TransactionRepository transactionRepository;
-    private final AccountTransactionService accountTransactionService;
-    private final AccountBalanceService accountBalanceService;
+    private final IAccountTransactionService accountTransactionService;
+    private final IAccountBalanceService accountBalanceService;
 
     @Override
     @Transactional(readOnly = true)
@@ -47,7 +48,6 @@ public class TransactionCrudService implements ITransactionCrudService {
         BigDecimal difference = amount.subtract(oldAmount);
 
         if (difference.compareTo(BigDecimal.ZERO) == 0) {
-            log.debug("Amount unchanged for transaction: id={}, amount={}", transactionId, amount);
             return;
         }
 
@@ -64,7 +64,6 @@ public class TransactionCrudService implements ITransactionCrudService {
                                                    @NonNull BigDecimal newAmount, @NonNull BigDecimal difference) {
         TransactionType type = transaction.getType();
         if (type == null) {
-            log.warn("Transaction type is null for transaction: id={}", transaction.getId());
             return;
         }
 
@@ -85,16 +84,12 @@ public class TransactionCrudService implements ITransactionCrudService {
             case CURRENCY_CONVERSION:
                 updateBalanceForCurrencyConversion(transaction, oldAmount, newAmount, difference);
                 break;
-            default:
-                log.debug("No balance update needed for transaction type: {}", type);
-                break;
         }
     }
 
     private void updateBalanceForClientPaymentOrExpense(@NonNull Transaction transaction, @NonNull String currency, 
                                                         @NonNull BigDecimal difference) {
         if (transaction.getFromAccountId() == null) {
-            log.warn("FromAccountId is null for transaction: id={}, type={}", transaction.getId(), transaction.getType());
             return;
         }
         
@@ -108,7 +103,6 @@ public class TransactionCrudService implements ITransactionCrudService {
     private void updateBalanceForExternalIncome(@NonNull Transaction transaction, @NonNull String currency, 
                                                 @NonNull BigDecimal difference) {
         if (transaction.getToAccountId() == null) {
-            log.warn("ToAccountId is null for transaction: id={}, type={}", transaction.getId(), transaction.getType());
             return;
         }
         
@@ -122,8 +116,6 @@ public class TransactionCrudService implements ITransactionCrudService {
     private void updateBalanceForInternalTransfer(@NonNull Transaction transaction, @NonNull String currency, 
                                                   @NonNull BigDecimal difference) {
         if (transaction.getFromAccountId() == null || transaction.getToAccountId() == null) {
-            log.warn("FromAccountId or ToAccountId is null for transaction: id={}, type={}", 
-                    transaction.getId(), transaction.getType());
             return;
         }
         
@@ -139,7 +131,6 @@ public class TransactionCrudService implements ITransactionCrudService {
     private void updateBalanceForCurrencyConversion(@NonNull Transaction transaction, @NonNull BigDecimal oldAmount, 
                                                     @NonNull BigDecimal newAmount, @NonNull BigDecimal difference) {
         if (transaction.getFromAccountId() == null) {
-            log.warn("FromAccountId is null for currency conversion transaction: id={}", transaction.getId());
             return;
         }
         
@@ -147,13 +138,11 @@ public class TransactionCrudService implements ITransactionCrudService {
         String toCurrency = transaction.getConvertedCurrency();
         
         if (fromCurrency == null || toCurrency == null) {
-            log.warn("Currency or convertedCurrency is null for transaction: id={}", transaction.getId());
             return;
         }
         
         BigDecimal exchangeRate = transaction.getExchangeRate();
         if (exchangeRate == null || exchangeRate.compareTo(BigDecimal.ZERO) <= 0) {
-            log.warn("Invalid exchange rate for transaction: id={}, exchangeRate={}", transaction.getId(), exchangeRate);
             return;
         }
         

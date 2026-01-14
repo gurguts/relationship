@@ -10,7 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.example.containerservice.exceptions.ContainerException;
 import org.example.containerservice.models.dto.PageResponse;
 import org.example.containerservice.models.dto.container.ClientContainerResponseDTO;
-import org.example.containerservice.services.ClientContainerSearchService;
+import org.example.containerservice.services.impl.IClientContainerSearchService;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -32,7 +32,7 @@ import java.util.Map;
 @Validated
 public class ClientContainerSearchController {
     private final ObjectMapper objectMapper;
-    private final ClientContainerSearchService clientContainerService;
+    private final IClientContainerSearchService clientContainerService;
 
     @PreAuthorize("hasAuthority('container:view')")
     @GetMapping("/search-containers")

@@ -8,6 +8,7 @@ import org.example.userservice.exceptions.transaction.TransactionException;
 import org.example.userservice.models.transaction.TransactionCategory;
 import org.example.userservice.models.transaction.TransactionType;
 import org.example.userservice.repositories.TransactionCategoryRepository;
+import org.example.userservice.services.impl.ITransactionCategoryService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,18 +17,20 @@ import java.util.List;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class TransactionCategoryService {
+public class TransactionCategoryService implements ITransactionCategoryService {
     private static final String ERROR_CODE_CATEGORY_ALREADY_EXISTS = "CATEGORY_ALREADY_EXISTS";
     private static final String ERROR_CODE_NAME_REQUIRED = "NAME_REQUIRED";
     private static final String ERROR_CODE_TYPE_REQUIRED = "TYPE_REQUIRED";
 
     private final TransactionCategoryRepository categoryRepository;
 
+    @Override
     @Transactional(readOnly = true)
     public @NonNull List<TransactionCategory> getCategoriesByType(@NonNull TransactionType type) {
         return categoryRepository.findByTypeAndIsActiveTrueOrderByNameAsc(type);
     }
 
+    @Override
     @Transactional(readOnly = true)
     public TransactionCategory getCategoryById(@NonNull Long id) {
         return categoryRepository.findById(id)
@@ -50,6 +53,7 @@ public class TransactionCategoryService {
         return saved;
     }
 
+    @Override
     @Transactional
     public TransactionCategory updateCategory(@NonNull Long id, @NonNull TransactionCategory updatedCategory) {
         validateCategory(updatedCategory);
@@ -81,6 +85,7 @@ public class TransactionCategoryService {
         return saved;
     }
 
+    @Override
     @Transactional
     public void deleteCategory(@NonNull Long id) {
         TransactionCategory category = getCategoryById(id);
@@ -89,6 +94,7 @@ public class TransactionCategoryService {
                 category.getId(), category.getType(), category.getName());
     }
 
+    @Override
     @Transactional
     public void deactivateCategory(@NonNull Long id) {
         TransactionCategory category = getCategoryById(id);

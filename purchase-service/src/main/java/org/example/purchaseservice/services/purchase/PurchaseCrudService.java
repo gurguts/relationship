@@ -6,8 +6,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.purchaseservice.clients.AccountClient;
 import org.example.purchaseservice.clients.AccountTransactionClient;
 import org.example.purchaseservice.clients.TransactionApiClient;
-import org.example.purchaseservice.services.source.SourceService;
-import org.example.purchaseservice.services.user.UserService;
+import org.example.purchaseservice.services.impl.ISourceService;
+import org.example.purchaseservice.services.impl.IUserService;
+import org.example.purchaseservice.services.impl.IDriverProductBalanceService;
 import org.example.purchaseservice.exceptions.PurchaseException;
 import org.example.purchaseservice.exceptions.PurchaseNotFoundException;
 import org.example.purchaseservice.models.PaymentMethod;
@@ -21,6 +22,7 @@ import org.example.purchaseservice.models.warehouse.WarehouseReceipt;
 import org.example.purchaseservice.repositories.PurchaseRepository;
 import org.example.purchaseservice.repositories.WarehouseReceiptRepository;
 import org.example.purchaseservice.services.impl.IPurchaseCrudService;
+import org.example.purchaseservice.services.impl.IPurchasePriceCalculationService;
 import org.springframework.data.jpa.domain.Specification;
 import org.example.purchaseservice.utils.SecurityUtils;
 import org.springframework.stereotype.Service;
@@ -48,12 +50,12 @@ public class PurchaseCrudService implements IPurchaseCrudService {
     private final TransactionApiClient transactionApiClient;
     private final AccountTransactionClient accountTransactionClient;
     private final AccountClient accountClient;
-    private final SourceService sourceService;
-    private final UserService userService;
-    private final org.example.purchaseservice.services.balance.DriverProductBalanceService driverProductBalanceService;
+    private final ISourceService sourceService;
+    private final IUserService userService;
+    private final IDriverProductBalanceService driverProductBalanceService;
     private final WarehouseReceiptRepository warehouseReceiptRepository;
     private final IExchangeRateService exchangeRateService;
-    private final PurchaseService purchaseService;
+    private final IPurchasePriceCalculationService purchaseService;
 
     @Override
     @Transactional
@@ -192,10 +194,9 @@ public class PurchaseCrudService implements IPurchaseCrudService {
     private void updateTransactionAmount(@NonNull Long transactionId, @NonNull BigDecimal newAmount) {
         try {
             transactionApiClient.updateTransactionAmount(transactionId, newAmount);
-            log.debug("Transaction amount updated: transactionId={}, newAmount={}", transactionId, newAmount);
         } catch (FeignException e) {
-            log.warn("Could not update transaction amount: transactionId={}, status={}, error={}", 
-                    transactionId, e.status(), e.getMessage());
+            log.error("Feign error updating transaction amount: transactionId={}, status={}, error={}", 
+                    transactionId, e.status(), e.getMessage(), e);
             throw new PurchaseException("TRANSACTION_UPDATE_FAILED", 
                     String.format("Failed to update transaction amount: %s", e.getMessage()), e);
         } catch (Exception e) {
@@ -248,7 +249,6 @@ public class PurchaseCrudService implements IPurchaseCrudService {
     private String getFullName() {
         String login = SecurityUtils.getCurrentUserLogin();
         if (login == null || login.trim().isEmpty()) {
-            log.debug("Cannot get full name: user login is null or empty");
             return null;
         }
         
@@ -256,9 +256,6 @@ public class PurchaseCrudService implements IPurchaseCrudService {
     }
 
     private Long createAccountTransactionForPurchase(@NonNull Long userId, @NonNull Purchase purchase) {
-        log.debug("Creating account transaction for purchase: userId={}, currency={}", 
-                userId, purchase.getCurrency());
-        
         List<AccountDTO> userAccounts = getUserAccounts(userId);
         validateUserHasAccounts(userId, userAccounts);
         
@@ -274,7 +271,6 @@ public class PurchaseCrudService implements IPurchaseCrudService {
             List<AccountDTO> userAccounts = accountClient.getAccountsByUserId(userId).getBody();
             return userAccounts != null ? userAccounts : Collections.emptyList();
         } catch (Exception e) {
-            log.warn("Failed to get user accounts: userId={}, error: {}", userId, e.getMessage());
             return Collections.emptyList();
         }
     }
@@ -319,8 +315,6 @@ public class PurchaseCrudService implements IPurchaseCrudService {
                 throw new PurchaseException("TRANSACTION_CREATION_FAILED", 
                         "Failed to create transaction: response body or transaction ID is null");
             }
-            log.debug("Transaction created: id={}, accountId={}, amount={}", 
-                    transactionDTO.getId(), transactionRequest.getFromAccountId(), transactionRequest.getAmount());
             return transactionDTO.getId();
         } catch (FeignException e) {
             log.error("Feign error creating transaction: accountId={}, status={}, error={}", 
@@ -341,7 +335,6 @@ public class PurchaseCrudService implements IPurchaseCrudService {
     
     private AccountDTO findAccountWithCurrency(@NonNull List<AccountDTO> accounts, String currency) {
         if (accounts.isEmpty()) {
-            log.debug("No accounts provided for currency search");
             return null;
         }
         
@@ -378,7 +371,6 @@ public class PurchaseCrudService implements IPurchaseCrudService {
     @Override
     @Transactional(readOnly = true)
     public Purchase findPurchaseById(@NonNull Long id) {
-        log.debug("Finding purchase by id: {}", id);
         return purchaseRepository.findById(id)
                 .orElseThrow(() -> new PurchaseNotFoundException(String.format("Purchase with ID %d not found", id)));
     }
@@ -413,14 +405,7 @@ public class PurchaseCrudService implements IPurchaseCrudService {
                         purchase.getQuantity(),
                         purchase.getTotalPriceEur()
                 );
-                log.debug("Product removed from driver balance: userId={}, productId={}, quantity={}", 
-                        purchase.getUser(), purchase.getProduct(), purchase.getQuantity());
-            } catch (PurchaseException e) {
-                log.warn("Could not remove product from driver balance during purchase deletion: purchaseId={}, error={}", 
-                        purchase.getId(), e.getMessage());
-            } catch (RuntimeException e) {
-                log.error("Unexpected error removing product from driver balance during purchase deletion: purchaseId={}", 
-                        purchase.getId(), e);
+            } catch (RuntimeException _) {
             }
         }
     }
@@ -429,16 +414,7 @@ public class PurchaseCrudService implements IPurchaseCrudService {
         if (purchase.getTransaction() != null) {
             try {
                 transactionApiClient.deleteTransaction(purchase.getTransaction());
-                log.debug("Transaction deleted: transactionId={}", purchase.getTransaction());
-            } catch (FeignException e) {
-                log.warn("Could not delete transaction during purchase deletion: purchaseId={}, transactionId={}, status={}, error={}", 
-                        purchase.getId(), purchase.getTransaction(), e.status(), e.getMessage());
-            } catch (org.example.purchaseservice.exceptions.PurchaseException e) {
-                log.warn("Could not delete transaction during purchase deletion: purchaseId={}, transactionId={}, error={}", 
-                        purchase.getId(), purchase.getTransaction(), e.getMessage());
-            } catch (RuntimeException e) {
-                log.error("Unexpected error deleting transaction during purchase deletion: purchaseId={}, transactionId={}", 
-                        purchase.getId(), purchase.getTransaction(), e);
+            } catch (RuntimeException _) {
             }
         }
     }

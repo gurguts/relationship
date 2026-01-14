@@ -5,8 +5,6 @@ import org.example.clientservice.models.clienttype.ClientTypePermission;
 import org.example.clientservice.models.dto.clienttype.ClientTypePermissionDTO;
 import org.springframework.stereotype.Component;
 
-import java.util.Objects;
-
 @Component
 public class ClientTypePermissionMapper {
 
@@ -14,12 +12,10 @@ public class ClientTypePermissionMapper {
         ClientTypePermissionDTO dto = new ClientTypePermissionDTO();
         dto.setId(permission.getId());
         dto.setUserId(permission.getUserId());
-        
-        if (permission.getClientType() != null) {
-            dto.setClientTypeId(permission.getClientType().getId());
-            dto.setClientTypeName(permission.getClientType().getName());
-        }
-        
+
+        dto.setClientTypeId(permission.getClientType().getId());
+        dto.setClientTypeName(permission.getClientType().getName());
+
         dto.setCanView(permission.getCanView());
         dto.setCanCreate(permission.getCanCreate());
         dto.setCanEdit(permission.getCanEdit());

@@ -19,6 +19,7 @@ import org.example.purchaseservice.repositories.VehicleProductRepository;
 import org.example.purchaseservice.repositories.VehicleTerminalRepository;
 import org.example.purchaseservice.repositories.VehicleDestinationCountryRepository;
 import org.example.purchaseservice.repositories.VehicleDestinationPlaceRepository;
+import org.example.purchaseservice.services.impl.IVehicleExpenseService;
 import org.example.purchaseservice.spec.VehicleSpecification;
 import org.example.purchaseservice.utils.StringUtils;
 import org.springframework.data.domain.Page;
@@ -29,6 +30,7 @@ import feign.FeignException;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -55,7 +57,7 @@ public class VehicleService implements IVehicleService {
     private final VehicleDestinationPlaceRepository vehicleDestinationPlaceRepository;
     private final TransactionApiClient transactionApiClient;
     @Getter
-    private final VehicleExpenseService vehicleExpenseService;
+    private final IVehicleExpenseService vehicleExpenseService;
 
     @Transactional
     public Vehicle createVehicle(@NonNull Vehicle vehicle) {
@@ -68,7 +70,7 @@ public class VehicleService implements IVehicleService {
     }
 
     @Transactional
-    public Vehicle addWithdrawalCost(@NonNull Long vehicleId, BigDecimal withdrawalCost) {
+    public void addWithdrawalCost(@NonNull Long vehicleId, BigDecimal withdrawalCost) {
         log.info("Adding withdrawal cost to vehicle: vehicleId={}, cost={}", vehicleId, withdrawalCost);
         
         Vehicle vehicle = getVehicleById(vehicleId);
@@ -84,12 +86,11 @@ public class VehicleService implements IVehicleService {
         Vehicle saved = vehicleRepository.save(vehicle);
         
         log.info("Vehicle updated: id={}, newTotalCost={}", saved.getId(), saved.getTotalCostEur());
-        
-        return saved;
+
     }
 
     @Transactional
-    public Vehicle subtractWithdrawalCost(@NonNull Long vehicleId, BigDecimal withdrawalCost) {
+    public void subtractWithdrawalCost(@NonNull Long vehicleId, BigDecimal withdrawalCost) {
         log.info("Subtracting withdrawal cost from vehicle: vehicleId={}, cost={}", vehicleId, withdrawalCost);
         
         Vehicle vehicle = getVehicleById(vehicleId);
@@ -109,8 +110,7 @@ public class VehicleService implements IVehicleService {
         Vehicle saved = vehicleRepository.save(vehicle);
         
         log.info("Vehicle updated: id={}, newTotalCost={}", saved.getId(), saved.getTotalCostEur());
-        
-        return saved;
+
     }
 
     @Transactional(readOnly = true)
@@ -252,7 +252,7 @@ public class VehicleService implements IVehicleService {
                 oldTotalCost
         );
         
-        if (oldTotalCost != null && oldTotalCost.compareTo(BigDecimal.ZERO) > 0) {
+        if (oldTotalCost.compareTo(BigDecimal.ZERO) > 0) {
             subtractVehicleTotalCost(vehicle, oldTotalCost);
         }
         
@@ -401,7 +401,6 @@ public class VehicleService implements IVehicleService {
         quantity = quantity.setScale(QUANTITY_SCALE, PRICE_ROUNDING_MODE);
         BigDecimal totalCost = calculateTotalCost(quantity, balance.getAveragePriceEur());
         
-        logBalanceBeforeRemoval(warehouseId, productId, quantity, totalCost, balance);
         warehouseProductBalanceService.removeProductWithCost(warehouseId, productId, quantity, totalCost);
         
         VehicleProduct vehicleProduct = createVehicleProduct(vehicleId, warehouseId, productId, 
@@ -448,11 +447,6 @@ public class VehicleService implements IVehicleService {
         return quantity.multiply(averagePrice).setScale(PRICE_SCALE, PRICE_ROUNDING_MODE);
     }
     
-    private void logBalanceBeforeRemoval(Long warehouseId, Long productId, BigDecimal quantity, 
-                                         BigDecimal totalCost, WarehouseProductBalance balance) {
-        log.info("Before removeProductWithCost: warehouseId={}, productId={}, quantity={}, averagePrice={}, totalCost={}, currentBalanceQuantity={}, currentBalanceTotalCost={}",
-                warehouseId, productId, quantity, balance.getAveragePriceEur(), totalCost, balance.getQuantity(), balance.getTotalCostEur());
-    }
     
     
     private VehicleProduct createVehicleProduct(Long vehicleId, Long warehouseId, Long productId,
@@ -474,6 +468,34 @@ public class VehicleService implements IVehicleService {
         return vehicleProductRepository.findByVehicleId(vehicleId);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public Map<Long, List<VehicleProduct>> getVehicleProductsByVehicleIds(@NonNull List<Long> vehicleIds) {
+        if (vehicleIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        List<VehicleProduct> products = vehicleProductRepository.findByVehicleIdIn(vehicleIds);
+        return products.stream()
+                .collect(Collectors.groupingBy(VehicleProduct::getVehicleId));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<Long, BigDecimal> getExpensesTotalsByVehicleIds(@NonNull List<Long> vehicleIds) {
+        if (vehicleIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        Map<Long, List<VehicleExpense>> expensesMap = vehicleExpenseService.getExpensesByVehicleIds(vehicleIds);
+        return expensesMap.entrySet().stream()
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        entry -> entry.getValue().stream()
+                                .map(VehicleExpense::getConvertedAmount)
+                                .filter(Objects::nonNull)
+                                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                ));
+    }
+
     @Transactional
     public void deleteVehicle(@NonNull Long vehicleId) {
         log.info("Deleting vehicle: id={}", vehicleId);
@@ -482,7 +504,6 @@ public class VehicleService implements IVehicleService {
 
         try {
             transactionApiClient.deleteTransactionsByVehicleId(vehicleId);
-            log.info("Successfully deleted all transactions for vehicle: id={}", vehicleId);
         } catch (FeignException e) {
             log.error("Failed to delete transactions for vehicle: id={}, status={}, error: {}", 
                     vehicleId, e.status(), e.getMessage());
@@ -509,19 +530,10 @@ public class VehicleService implements IVehicleService {
     @Override
     @Transactional(readOnly = true)
     public Page<Vehicle> searchVehicles(String query, @NonNull Pageable pageable, Map<String, List<String>> filterParams) {
-        log.info("Searching vehicles: query={}, page={}, size={}, filters={}", 
-                query, pageable.getPageNumber(), pageable.getPageSize(), filterParams);
-        
         VehicleSpecification spec = new VehicleSpecification(query, filterParams);
         return vehicleRepository.findAll(spec, pageable);
     }
 
-    @Transactional(readOnly = true)
-    public BigDecimal calculateTotalExpenses(@NonNull Vehicle vehicle, @NonNull BigDecimal expensesTotal) {
-        List<VehicleProduct> products = vehicleProductRepository.findByVehicleId(vehicle.getId());
-        return calculateTotalExpenses(products, expensesTotal);
-    }
-    
     @Transactional(readOnly = true)
     public BigDecimal calculateTotalExpenses(@NonNull List<VehicleProduct> products, @NonNull BigDecimal expensesTotal) {
         BigDecimal totalCostEur = products.stream()
@@ -552,14 +564,7 @@ public class VehicleService implements IVehicleService {
         }
         return reclamationPerTon.multiply(quantityInTons).setScale(PRICE_SCALE, PRICE_ROUNDING_MODE);
     }
-    
-    @Transactional(readOnly = true)
-    public BigDecimal calculateMargin(@NonNull Vehicle vehicle, @NonNull BigDecimal expensesTotal) {
-        BigDecimal totalExpenses = calculateTotalExpenses(vehicle, expensesTotal);
-        BigDecimal totalIncome = calculateTotalIncome(vehicle);
-        return totalIncome.subtract(totalExpenses);
-    }
-    
+
     @Transactional(readOnly = true)
     public BigDecimal calculateMargin(@NonNull Vehicle vehicle, @NonNull List<VehicleProduct> products, @NonNull BigDecimal expensesTotal) {
         BigDecimal totalExpenses = calculateTotalExpenses(products, expensesTotal);
@@ -761,7 +766,6 @@ public class VehicleService implements IVehicleService {
         try {
             return new BigDecimal(productQuantity.replace(",", "."));
         } catch (NumberFormatException e) {
-            log.warn("Failed to parse productQuantity: {}", productQuantity, e);
             return null;
         }
     }

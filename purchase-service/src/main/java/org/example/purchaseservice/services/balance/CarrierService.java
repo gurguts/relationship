@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.purchaseservice.exceptions.PurchaseException;
 import org.example.purchaseservice.models.balance.Carrier;
 import org.example.purchaseservice.repositories.CarrierRepository;
+import org.example.purchaseservice.services.impl.ICarrierService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,9 +15,10 @@ import java.util.List;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class CarrierService {
+public class CarrierService implements ICarrierService {
     private final CarrierRepository carrierRepository;
 
+    @Override
     @Transactional
     public Carrier createCarrier(@NonNull Carrier carrier) {
         if (carrier.getCompanyName() == null || carrier.getCompanyName().trim().isEmpty()) {
@@ -35,6 +37,7 @@ public class CarrierService {
         return saved;
     }
 
+    @Override
     @Transactional
     public Carrier updateCarrier(@NonNull Long carrierId, @NonNull Carrier updateData) {
         log.info("Updating carrier: id={}", carrierId);
@@ -45,7 +48,7 @@ public class CarrierService {
 
         if (updateData.getCompanyName() != null) {
             String normalizedCompanyName = updateData.getCompanyName();
-            if (normalizedCompanyName == null || normalizedCompanyName.trim().isEmpty()) {
+            if (normalizedCompanyName.trim().isEmpty()) {
                 throw new PurchaseException("INVALID_CARRIER_DATA", "Company name cannot be empty");
             }
 
@@ -79,6 +82,7 @@ public class CarrierService {
         return saved;
     }
 
+    @Override
     @Transactional(readOnly = true)
     public Carrier getCarrier(@NonNull Long carrierId) {
         return carrierRepository.findById(carrierId)
@@ -86,16 +90,19 @@ public class CarrierService {
                         String.format("Carrier not found: id=%d", carrierId)));
     }
 
+    @Override
     @Transactional(readOnly = true)
     public List<Carrier> getAllCarriers() {
         return carrierRepository.findAll();
     }
 
+    @Override
     @Transactional(readOnly = true)
     public List<Carrier> searchCarriersByCompanyName(@NonNull String companyName) {
         return carrierRepository.findByCompanyNameContainingIgnoreCase(companyName);
     }
 
+    @Override
     @Transactional
     public void deleteCarrier(@NonNull Long carrierId) {
         log.info("Deleting carrier: id={}", carrierId);

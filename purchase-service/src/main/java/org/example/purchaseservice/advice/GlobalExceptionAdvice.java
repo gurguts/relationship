@@ -185,6 +185,81 @@ public class GlobalExceptionAdvice {
     }
 
     @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ErrorResponse handleIllegalArgumentException(@NonNull IllegalArgumentException ex, @NonNull Locale locale) {
+        String exceptionMessage = Objects.toString(ex.getMessage(), "");
+        logRequestContext("Illegal argument: {}", exceptionMessage);
+        
+        String messageKey = determineMessageKey(exceptionMessage);
+        String localizedMessage = MessageLocalizationHelper.getLocalizedMessage(
+                messageSource, messageKey, exceptionMessage, locale);
+        
+        if (messageKey.equals("error.illegal_argument") && !localizedMessage.equals(exceptionMessage)) {
+            Object[] args = extractArguments(exceptionMessage);
+            if (args != null && args.length > 0) {
+                try {
+                    localizedMessage = messageSource.getMessage(messageKey, args, exceptionMessage, locale);
+                } catch (Exception e) {
+                    localizedMessage = exceptionMessage;
+                }
+            }
+        }
+        
+        return new ErrorResponse(
+                ErrorConstants.ERROR_VALIDATION,
+                localizedMessage,
+                null
+        );
+    }
+    
+    private String determineMessageKey(String message) {
+        if (message == null) {
+            return "error.illegal_argument";
+        }
+        
+        String lowerMessage = message.toLowerCase();
+        if (lowerMessage.contains("terminal") && lowerMessage.contains("already exists")) {
+            return "error.vehicle_terminal_already_exists";
+        }
+        if (lowerMessage.contains("terminal") && lowerMessage.contains("not found")) {
+            return "error.vehicle_terminal_not_found";
+        }
+        if (lowerMessage.contains("destination country") && lowerMessage.contains("already exists")) {
+            return "error.vehicle_destination_country_already_exists";
+        }
+        if (lowerMessage.contains("destination country") && lowerMessage.contains("not found")) {
+            return "error.vehicle_destination_country_not_found";
+        }
+        if (lowerMessage.contains("destination place") && lowerMessage.contains("already exists")) {
+            return "error.vehicle_destination_place_already_exists";
+        }
+        if (lowerMessage.contains("destination place") && lowerMessage.contains("not found")) {
+            return "error.vehicle_destination_place_not_found";
+        }
+        
+        return "error.illegal_argument";
+    }
+    
+    private Object[] extractArguments(String message) {
+        if (message == null) {
+            return null;
+        }
+        
+        int startIndex = message.indexOf("'");
+        if (startIndex == -1) {
+            return null;
+        }
+        
+        int endIndex = message.indexOf("'", startIndex + 1);
+        if (endIndex == -1) {
+            return null;
+        }
+        
+        String argument = message.substring(startIndex + 1, endIndex);
+        return new Object[]{argument};
+    }
+
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ExceptionHandler(JsonProcessingException.class)
     public ErrorResponse handleJsonProcessingException(@NonNull JsonProcessingException ex, @NonNull Locale locale) {
         String exceptionMessage = Objects.toString(ex.getMessage(), "");

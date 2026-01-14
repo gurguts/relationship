@@ -6,10 +6,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 public final class SecurityUtils {
-    
-    private static final String AUTHORITY_SYSTEM_ADMIN = "system:admin";
-    private static final String AUTHORITY_ADMINISTRATION_VIEW = "administration:view";
-    
+
     private SecurityUtils() {
         throw new UnsupportedOperationException("Utility class");
     }
@@ -27,16 +24,6 @@ public final class SecurityUtils {
                 (Long) authentication.getDetails() : null;
     }
 
-    public static boolean isAdmin() {
-        Authentication authentication = getAuthentication();
-        if (authentication == null) {
-            return false;
-        }
-        return authentication.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
-                .anyMatch(auth -> AUTHORITY_SYSTEM_ADMIN.equals(auth) || AUTHORITY_ADMINISTRATION_VIEW.equals(auth));
-    }
-
     public static boolean hasAuthority(@NonNull String authority) {
         Authentication authentication = getAuthentication();
         if (authentication == null) {
@@ -44,7 +31,7 @@ public final class SecurityUtils {
         }
         return authentication.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
-                .anyMatch(auth -> authority.equals(auth));
+                .anyMatch(authority::equals);
     }
 
     public static String getCurrentUserLogin() {

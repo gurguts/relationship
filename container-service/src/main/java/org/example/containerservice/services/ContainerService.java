@@ -62,7 +62,6 @@ public class ContainerService implements IContainerService {
     @Override
     @Cacheable(value = CACHE_NAME_CONTAINERS, key = "#id")
     public Container getContainerById(@NonNull Long id) {
-        log.debug("Retrieving container: id={}", id);
         return containerRepository.findById(id)
                 .orElseThrow(() -> new ContainerNotFoundException(String.format(MESSAGE_CONTAINER_NOT_FOUND, id)));
     }

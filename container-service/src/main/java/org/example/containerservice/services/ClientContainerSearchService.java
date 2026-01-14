@@ -17,6 +17,7 @@ import org.example.containerservice.utils.FilterUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.example.containerservice.services.impl.IClientContainerSearchService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -32,7 +33,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class ClientContainerSearchService {
+public class ClientContainerSearchService implements IClientContainerSearchService {
 
     private static final String FILTER_KEY_SOURCE = "source";
     private static final String FILTER_KEY_CLIENT_SOURCE = "clientSource";
@@ -51,12 +52,13 @@ public class ClientContainerSearchService {
     private final ClientContainerRepository clientContainerRepository;
     private final ClientApiClient clientApiClient;
 
+    @Override
     @Transactional(readOnly = true)
     public PageResponse<ClientContainerResponseDTO> searchClientContainer(String query,
                                                                           @NonNull Pageable pageable,
                                                                           Map<String, List<String>> filterParams) {
         Long clientTypeId = FilterUtils.extractClientTypeId(filterParams);
-        Map<String, List<String>> clientFilterParams = FilterUtils.filterClientParams(filterParams, false);
+        Map<String, List<String>> clientFilterParams = FilterUtils.filterClientParams(filterParams);
         
         ClientData clientData = fetchClientData(query, clientFilterParams, clientTypeId);
         List<Long> clientIds = clientData.clientIds();

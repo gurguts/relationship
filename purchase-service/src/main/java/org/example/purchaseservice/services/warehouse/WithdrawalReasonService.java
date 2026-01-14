@@ -24,88 +24,61 @@ public class WithdrawalReasonService implements IWithdrawalReasonService {
     @Transactional(readOnly = true)
     @Cacheable(value = "withdrawalReasons", key = "#id")
     public WithdrawalReason getWithdrawalReason(@NonNull Long id) {
-        try {
-            return withdrawalReasonRepository.findById(id)
-                    .orElseThrow(() -> new WithdrawalReasonNotFoundException(
-                            String.format("WithdrawalReason with ID %d not found", id)));
-        } catch (WithdrawalReasonNotFoundException e) {
-            log.error("WithdrawalReason not found: id={}", id, e);
-            throw e;
-        } catch (Exception e) {
-            log.error("Error getting withdrawal reason: id={}", id, e);
-            throw new WithdrawalReasonNotFoundException(
-                    String.format("WithdrawalReason with ID %d not found", id));
-        }
+        return withdrawalReasonRepository.findById(id)
+                .orElseThrow(() -> new WithdrawalReasonNotFoundException(
+                        String.format("WithdrawalReason with ID %d not found", id)));
     }
 
     @Override
     @Transactional(readOnly = true)
     @Cacheable(value = "withdrawalReasons", key = "'allWithdrawalReasons'")
     public List<WithdrawalReason> getAllWithdrawalReasons() {
-        try {
-            return withdrawalReasonRepository.findAll();
-        } catch (Exception e) {
-            log.error("Error getting all withdrawal reasons", e);
-            throw new RuntimeException("Failed to get all withdrawal reasons", e);
-        }
+        return withdrawalReasonRepository.findAll();
     }
 
     @Override
     @Transactional
     @CacheEvict(value = {"withdrawalReasons"}, allEntries = true)
     public WithdrawalReason createWithdrawalReason(@NonNull WithdrawalReason withdrawalReason) {
+        log.info("Creating new withdrawal reason: name={}", withdrawalReason.getName());
         validateWithdrawalReason(withdrawalReason);
-        try {
-            return withdrawalReasonRepository.save(withdrawalReason);
-        } catch (Exception e) {
-            log.error("Error creating withdrawal reason: name={}", withdrawalReason.getName(), e);
-            throw new RuntimeException("Failed to create withdrawal reason", e);
-        }
+        WithdrawalReason saved = withdrawalReasonRepository.save(withdrawalReason);
+        log.info("Withdrawal reason created: id={}", saved.getId());
+        return saved;
     }
 
     @Override
     @Transactional
     @CacheEvict(value = {"withdrawalReasons"}, allEntries = true)
     public WithdrawalReason updateWithdrawalReason(@NonNull Long id, @NonNull WithdrawalReason withdrawalReason) {
+        log.info("Updating withdrawal reason: id={}", id);
         validateWithdrawalReasonForUpdate(withdrawalReason);
-        try {
-            WithdrawalReason existingWithdrawalReason = withdrawalReasonRepository.findById(id)
-                    .orElseThrow(() -> new WithdrawalReasonNotFoundException(
-                            String.format("WithdrawalReason with ID %d not found", id)));
-            
-            if (withdrawalReason.getName() != null) {
-                existingWithdrawalReason.setName(withdrawalReason.getName());
-            }
-            if (withdrawalReason.getPurpose() != null) {
-                existingWithdrawalReason.setPurpose(withdrawalReason.getPurpose());
-            }
-            
-            return withdrawalReasonRepository.save(existingWithdrawalReason);
-        } catch (WithdrawalReasonNotFoundException e) {
-            log.error("WithdrawalReason not found for update: id={}", id, e);
-            throw e;
-        } catch (Exception e) {
-            log.error("Error updating withdrawal reason: id={}", id, e);
-            throw new RuntimeException("Failed to update withdrawal reason", e);
+        WithdrawalReason existingWithdrawalReason = withdrawalReasonRepository.findById(id)
+                .orElseThrow(() -> new WithdrawalReasonNotFoundException(
+                        String.format("WithdrawalReason with ID %d not found", id)));
+
+        if (withdrawalReason.getName() != null) {
+            existingWithdrawalReason.setName(withdrawalReason.getName());
         }
+        if (withdrawalReason.getPurpose() != null) {
+            existingWithdrawalReason.setPurpose(withdrawalReason.getPurpose());
+        }
+
+        WithdrawalReason saved = withdrawalReasonRepository.save(existingWithdrawalReason);
+        log.info("Withdrawal reason updated: id={}", saved.getId());
+        return saved;
     }
 
     @Override
     @Transactional
     @CacheEvict(value = {"withdrawalReasons"}, allEntries = true)
     public void deleteWithdrawalReason(@NonNull Long id) {
-        try {
-            WithdrawalReason withdrawalReason = withdrawalReasonRepository.findById(id)
-                    .orElseThrow(() -> new WithdrawalReasonNotFoundException(
-                            String.format("WithdrawalReason with ID %d not found", id)));
-            withdrawalReasonRepository.delete(withdrawalReason);
-        } catch (WithdrawalReasonNotFoundException e) {
-            log.error("WithdrawalReason not found for deletion: id={}", id, e);
-            throw e;
-        } catch (Exception e) {
-            log.error("Error deleting withdrawal reason: id={}", id, e);
-            throw new RuntimeException("Failed to delete withdrawal reason", e);
-        }
+        log.info("Deleting withdrawal reason: id={}", id);
+        WithdrawalReason withdrawalReason = withdrawalReasonRepository.findById(id)
+                .orElseThrow(() -> new WithdrawalReasonNotFoundException(
+                        String.format("WithdrawalReason with ID %d not found", id)));
+        withdrawalReasonRepository.delete(withdrawalReason);
+        log.info("Withdrawal reason deleted: id={}", id);
     }
 
     private void validateWithdrawalReason(@NonNull WithdrawalReason withdrawalReason) {

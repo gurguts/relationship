@@ -4,12 +4,11 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.example.purchaseservice.models.balance.VehicleDestinationCountry;
 import org.example.purchaseservice.models.dto.balance.VehicleDestinationCountryCreateDTO;
 import org.example.purchaseservice.models.dto.balance.VehicleDestinationCountryDTO;
 import org.example.purchaseservice.mappers.VehicleDestinationCountryMapper;
-import org.example.purchaseservice.services.balance.VehicleDestinationCountryService;
+import org.example.purchaseservice.services.impl.IVehicleDestinationCountryService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
@@ -19,14 +18,13 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import java.net.URI;
 import java.util.List;
 
-@Slf4j
 @RestController
 @RequestMapping("/api/v1/vehicle-destination-countries")
 @RequiredArgsConstructor
 @Validated
 public class VehicleDestinationCountryController {
     
-    private final VehicleDestinationCountryService vehicleDestinationCountryService;
+    private final IVehicleDestinationCountryService vehicleDestinationCountryService;
     private final VehicleDestinationCountryMapper vehicleDestinationCountryMapper;
     
     @PreAuthorize("hasAuthority('settings_declarant:create')")

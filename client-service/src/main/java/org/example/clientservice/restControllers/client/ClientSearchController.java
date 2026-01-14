@@ -6,7 +6,6 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.example.clientservice.models.client.PageResponse;
 import org.example.clientservice.models.dto.client.ClientDTO;
 import org.example.clientservice.models.dto.client.ClientListDTO;
@@ -22,7 +21,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-@Slf4j
 @RestController
 @RequestMapping("/api/v1/client")
 @RequiredArgsConstructor

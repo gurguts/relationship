@@ -4,7 +4,8 @@ import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.purchaseservice.mappers.PurchaseMapper;
-import org.example.purchaseservice.services.source.SourceService;
+import org.example.purchaseservice.services.impl.ISourceService;
+import org.example.purchaseservice.services.impl.IUserService;
 import org.example.purchaseservice.models.ClientData;
 import org.example.purchaseservice.models.PageResponse;
 import org.example.purchaseservice.models.Purchase;
@@ -21,7 +22,6 @@ import org.example.purchaseservice.repositories.WarehouseReceiptRepository;
 import org.example.purchaseservice.models.warehouse.WarehouseReceipt;
 import org.example.purchaseservice.models.Product;
 import org.example.purchaseservice.services.impl.IPurchaseSearchService;
-import org.example.purchaseservice.services.user.UserService;
 import org.example.purchaseservice.models.dto.user.UserDTO;
 import org.example.purchaseservice.spec.PurchaseSpecification;
 import feign.FeignException;
@@ -77,10 +77,10 @@ public class PurchaseSearchService implements IPurchaseSearchService {
     
     private final PurchaseRepository purchaseRepository;
     private final ClientApiClient clientApiClient;
-    private final SourceService sourceService;
+    private final ISourceService sourceService;
     private final WarehouseReceiptRepository warehouseReceiptRepository;
     private final PurchaseMapper purchaseMapper;
-    private final UserService userService;
+    private final IUserService userService;
     private final ProductRepository productRepository;
 
     private record SearchFilters(
@@ -176,8 +176,14 @@ public class PurchaseSearchService implements IPurchaseSearchService {
     
     private ClientData fetchClientData(String query, @NonNull Map<String, List<String>> clientFilterParams, Long clientTypeId) {
         try {
-            if (hasClientFilters(clientFilterParams, query)) {
+            if (hasClientFilters(clientFilterParams, query) || clientTypeId != null) {
                 ClientData clientData = fetchClientIdsWithFilters(query, clientFilterParams, clientTypeId);
+                if (clientTypeId != null) {
+                    if (clientData.clientIds() == null) {
+                        return new ClientData(Collections.emptyList(), Collections.emptyMap());
+                    }
+                    return clientData;
+                }
                 if (clientData.clientIds() != null && clientData.clientIds().isEmpty() && 
                     StringUtils.hasText(query) && clientFilterParams.isEmpty()) {
                     return new ClientData(null, Collections.emptyMap());
@@ -189,12 +195,18 @@ public class PurchaseSearchService implements IPurchaseSearchService {
         } catch (FeignException e) {
             log.error("Feign error fetching client data: query={}, status={}, error={}", 
                     query, e.status(), e.getMessage(), e);
+            if (clientTypeId != null) {
+                return new ClientData(Collections.emptyList(), Collections.emptyMap());
+            }
             if (StringUtils.hasText(query) && clientFilterParams.isEmpty()) {
                 return new ClientData(null, Collections.emptyMap());
             }
             return new ClientData(Collections.emptyList(), Collections.emptyMap());
         } catch (Exception e) {
             log.error("Unexpected error fetching client data: query={}, error={}", query, e.getMessage(), e);
+            if (clientTypeId != null) {
+                return new ClientData(Collections.emptyList(), Collections.emptyMap());
+            }
             if (StringUtils.hasText(query) && clientFilterParams.isEmpty()) {
                 return new ClientData(null, Collections.emptyMap());
             }
@@ -507,7 +519,6 @@ public class PurchaseSearchService implements IPurchaseSearchService {
                     sourceNamesMap.put(sourceId, "Невідомий");
                 }
             } catch (Exception e) {
-                log.warn("Failed to load source name for sourceId={}: {}", sourceId, e.getMessage());
                 sourceNamesMap.put(sourceId, "Невідомий");
             }
         }

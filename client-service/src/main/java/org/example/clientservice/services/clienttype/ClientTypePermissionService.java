@@ -13,6 +13,7 @@ import org.example.clientservice.models.dto.clienttype.ClientTypePermissionDTO;
 import org.example.clientservice.models.dto.clienttype.ClientTypePermissionUpdateDTO;
 import org.example.clientservice.repositories.clienttype.ClientTypePermissionRepository;
 import org.example.clientservice.services.impl.IClientTypePermissionService;
+import org.example.clientservice.services.impl.IClientTypeService;
 import org.example.clientservice.utils.SecurityUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,7 +32,7 @@ public class ClientTypePermissionService implements IClientTypePermissionService
     private static final boolean DEFAULT_CAN_DELETE = false;
     
     private final ClientTypePermissionRepository permissionRepository;
-    private final ClientTypeService clientTypeService;
+    private final IClientTypeService clientTypeService;
     private final ClientTypePermissionMapper permissionMapper;
 
     @Override
@@ -86,42 +87,21 @@ public class ClientTypePermissionService implements IClientTypePermissionService
     @Override
     @NonNull
     public ClientTypePermission getPermission(@NonNull Long clientTypeId, @NonNull Long userId) {
-        try {
-            return permissionRepository.findByUserIdAndClientTypeId(userId, clientTypeId)
-                    .orElseThrow(() -> new ClientNotFoundException(
-                            String.format("Permission not found for user %d and client type %d", userId, clientTypeId)));
-        } catch (ClientNotFoundException e) {
-            throw e;
-        } catch (Exception e) {
-            log.error("Error getting permission for user {} and client type {}: {}", 
-                    userId, clientTypeId, e.getMessage(), e);
-            throw new ClientException("PERMISSION_FETCH_ERROR",
-                    String.format("Failed to get permission: %s", e.getMessage()), e);
-        }
+        return permissionRepository.findByUserIdAndClientTypeId(userId, clientTypeId)
+                .orElseThrow(() -> new ClientNotFoundException(
+                        String.format("Permission not found for user %d and client type %d", userId, clientTypeId)));
     }
 
     @Override
     @NonNull
     public List<ClientTypePermission> getPermissionsByClientTypeId(@NonNull Long clientTypeId) {
-        try {
-            return permissionRepository.findByClientTypeId(clientTypeId);
-        } catch (Exception e) {
-            log.error("Error getting permissions for client type {}: {}", clientTypeId, e.getMessage(), e);
-            throw new ClientException("PERMISSIONS_FETCH_ERROR",
-                    String.format("Failed to get permissions for client type: %s", e.getMessage()), e);
-        }
+        return permissionRepository.findByClientTypeId(clientTypeId);
     }
 
     @Override
     @NonNull
     public List<ClientTypePermission> getPermissionsByUserId(@NonNull Long userId) {
-        try {
-            return permissionRepository.findByUserId(userId);
-        } catch (Exception e) {
-            log.error("Error getting permissions for user {}: {}", userId, e.getMessage(), e);
-            throw new ClientException("PERMISSIONS_FETCH_ERROR",
-                    String.format("Failed to get permissions for user: %s", e.getMessage()), e);
-        }
+        return permissionRepository.findByUserId(userId);
     }
 
     @Override
@@ -161,23 +141,14 @@ public class ClientTypePermissionService implements IClientTypePermissionService
     public List<ClientTypePermissionDTO> getMyPermissions() {
         Long userId = SecurityUtils.getCurrentUserId();
         if (userId == null) {
-            log.warn("Attempt to get permissions for unauthenticated user");
             throw new ClientException("UNAUTHORIZED", "User not authenticated");
         }
         
-        try {
-            List<ClientTypePermission> permissions = getPermissionsByUserId(userId);
-            
-            return permissions.stream()
-                    .map(permissionMapper::toDTO)
-                    .collect(Collectors.toList());
-        } catch (ClientException e) {
-            throw e;
-        } catch (Exception e) {
-            log.error("Error getting permissions for current user: {}", e.getMessage(), e);
-            throw new ClientException("MY_PERMISSIONS_FETCH_ERROR",
-                    String.format("Failed to get user permissions: %s", e.getMessage()), e);
-        }
+        List<ClientTypePermission> permissions = getPermissionsByUserId(userId);
+        
+        return permissions.stream()
+                .map(permissionMapper::toDTO)
+                .collect(Collectors.toList());
     }
 
     @Override

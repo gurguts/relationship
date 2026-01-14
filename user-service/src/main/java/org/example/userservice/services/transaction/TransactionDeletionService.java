@@ -7,7 +7,8 @@ import org.example.userservice.exceptions.transaction.TransactionException;
 import org.example.userservice.models.transaction.Transaction;
 import org.example.userservice.models.transaction.TransactionType;
 import org.example.userservice.repositories.TransactionRepository;
-import org.example.userservice.services.account.AccountBalanceService;
+import org.example.userservice.services.impl.IAccountBalanceService;
+import org.example.userservice.services.impl.ITransactionDeletionService;
 import org.example.userservice.clients.VehicleCostApiClient;
 import org.example.userservice.models.dto.UpdateVehicleCostRequest;
 import org.springframework.stereotype.Component;
@@ -21,18 +22,20 @@ import java.util.Map;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class TransactionDeletionService {
+public class TransactionDeletionService implements ITransactionDeletionService {
     private static final String ERROR_CODE_UNSUPPORTED_TRANSACTION_TYPE = "UNSUPPORTED_TRANSACTION_TYPE";
     private static final String ERROR_CODE_FAILED_TO_REVERT_VEHICLE_COST = "FAILED_TO_REVERT_VEHICLE_COST";
     private static final String OPERATION_SUBTRACT = "subtract";
     private static final String BALANCE_KEY_SEPARATOR = "_";
 
     private final TransactionRepository transactionRepository;
-    private final AccountBalanceService accountBalanceService;
+    private final IAccountBalanceService accountBalanceService;
     private final VehicleCostApiClient vehicleCostApiClient;
 
+    @Override
     @Transactional
     public void deleteTransaction(@NonNull Long transactionId) {
+        log.info("Deleting transaction: id={}", transactionId);
         Transaction transaction = transactionRepository.findById(transactionId)
                 .orElseThrow(() -> new TransactionException(
                         String.format("Transaction with ID %d not found", transactionId)));
@@ -40,8 +43,10 @@ public class TransactionDeletionService {
         revertTransactionEffects(transaction);
 
         transactionRepository.delete(transaction);
+        log.info("Transaction deleted: id={}", transactionId);
     }
 
+    @Override
     @Transactional
     public void deleteTransactionsByVehicleId(@NonNull Long vehicleId) {
         List<Transaction> transactions = transactionRepository.findByVehicleIdOrderByCreatedAtDesc(vehicleId);
@@ -144,7 +149,6 @@ public class TransactionDeletionService {
                 case DEPOSIT:
                 case WITHDRAWAL:
                 case PURCHASE:
-                    log.warn("Unsupported transaction type {} for vehicle deletion, skipping balance adjustment", type);
                     break;
             }
         }

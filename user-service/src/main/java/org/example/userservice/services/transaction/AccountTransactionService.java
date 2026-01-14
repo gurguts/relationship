@@ -9,6 +9,10 @@ import org.example.userservice.models.transaction.Transaction;
 import org.example.userservice.models.transaction.TransactionType;
 import org.example.userservice.repositories.TransactionCategoryRepository;
 import org.example.userservice.repositories.TransactionRepository;
+import org.example.userservice.services.impl.IAccountTransactionService;
+import org.example.userservice.services.impl.ITransactionCreationService;
+import org.example.userservice.services.impl.ITransactionDeletionService;
+import org.example.userservice.services.impl.ITransactionUpdateService;
 import org.example.userservice.utils.SecurityUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,7 +26,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class AccountTransactionService {
+public class AccountTransactionService implements IAccountTransactionService {
     private static final String ERROR_CODE_TRANSACTION_TYPE_REQUIRED = "TRANSACTION_TYPE_REQUIRED";
     private static final String ERROR_CODE_VEHICLE_EXPENSE_NOT_SUPPORTED = "VEHICLE_EXPENSE_NOT_SUPPORTED";
     private static final String ERROR_CODE_UNSUPPORTED_TRANSACTION_TYPE = "UNSUPPORTED_TRANSACTION_TYPE";
@@ -30,11 +34,12 @@ public class AccountTransactionService {
 
     private final TransactionRepository transactionRepository;
     private final TransactionCategoryRepository transactionCategoryRepository;
-    private final TransactionCreationService creationService;
-    private final TransactionUpdateService updateService;
-    private final TransactionDeletionService deletionService;
+    private final ITransactionCreationService creationService;
+    private final ITransactionUpdateService updateService;
+    private final ITransactionDeletionService deletionService;
     private final TransactionValidationService validationService;
 
+    @Override
     @Transactional(readOnly = true)
     public Transaction getTransactionById(@NonNull Long transactionId) {
         return transactionRepository.findById(transactionId)
@@ -42,11 +47,13 @@ public class AccountTransactionService {
                         String.format("Transaction with ID %d not found", transactionId)));
     }
 
+    @Override
     @Transactional(readOnly = true)
     public List<Transaction> getTransactionsByVehicleId(@NonNull Long vehicleId) {
         return transactionRepository.findByVehicleIdOrderByCreatedAtDesc(vehicleId);
     }
 
+    @Override
     @Transactional(readOnly = true)
     public Map<Long, List<Transaction>> getTransactionsByVehicleIds(@NonNull List<Long> vehicleIds) {
         if (vehicleIds.isEmpty()) {
@@ -57,11 +64,13 @@ public class AccountTransactionService {
                 .collect(Collectors.groupingBy(Transaction::getVehicleId));
     }
 
+    @Override
     @Transactional
     public void deleteTransactionsByVehicleId(@NonNull Long vehicleId) {
         deletionService.deleteTransactionsByVehicleId(vehicleId);
     }
 
+    @Override
     @Transactional
     public Transaction createTransaction(@NonNull Transaction transaction) {
         Long executorUserId = SecurityUtils.getCurrentUserId();
@@ -96,6 +105,7 @@ public class AccountTransactionService {
         };
     }
 
+    @Override
     @Transactional
     public Transaction updateTransaction(@NonNull Long transactionId, Long categoryId, String description, 
                                         BigDecimal newAmount, BigDecimal newExchangeRate, BigDecimal newCommission, 
@@ -104,6 +114,7 @@ public class AccountTransactionService {
                 newExchangeRate, newCommission, newConvertedAmount, counterpartyId);
     }
 
+    @Override
     @Transactional
     public void deleteTransaction(@NonNull Long transactionId) {
         deletionService.deleteTransaction(transactionId);

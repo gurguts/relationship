@@ -64,21 +64,20 @@ public class FilterUtils {
         }
     }
 
-    public static Map<String, List<String>> filterClientParams(@NonNull Map<String, List<String>> filterParams, 
-                                                                 boolean includeStatusBusinessRouteRegion) {
+    public static Map<String, List<String>> filterClientParams(@NonNull Map<String, List<String>> filterParams) {
         if (filterParams.isEmpty()) {
             return Collections.emptyMap();
         }
         
         return filterParams.entrySet().stream()
-                .filter(entry -> isClientFilterKey(entry.getKey(), includeStatusBusinessRouteRegion))
+                .filter(entry -> isClientFilterKey(entry.getKey()))
                 .collect(Collectors.toMap(
                         FilterUtils::transformClientKey,
                         Map.Entry::getValue
                 ));
     }
     
-    private static boolean isClientFilterKey(String key, boolean includeStatusBusinessRouteRegion) {
+    private static boolean isClientFilterKey(String key) {
         if (key == null) {
             return false;
         }

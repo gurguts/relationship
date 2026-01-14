@@ -21,8 +21,9 @@ import org.example.purchaseservice.repositories.VehicleSenderRepository;
 import org.example.purchaseservice.repositories.VehicleTerminalRepository;
 import org.example.purchaseservice.repositories.VehicleDestinationCountryRepository;
 import org.example.purchaseservice.repositories.VehicleDestinationPlaceRepository;
-import org.example.purchaseservice.services.balance.VehicleExpenseService;
 import org.example.purchaseservice.services.balance.IVehicleService;
+import org.example.purchaseservice.services.impl.IVehicleExpenseService;
+import org.example.purchaseservice.utils.StringUtils;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -34,7 +35,7 @@ import java.util.List;
 public class VehicleMapper {
     private final CarrierMapper carrierMapper;
     private final IVehicleService vehicleService;
-    private final VehicleExpenseService vehicleExpenseService;
+    private final IVehicleExpenseService vehicleExpenseService;
     private final CarrierRepository carrierRepository;
     private final VehicleSenderRepository vehicleSenderRepository;
     private final VehicleReceiverRepository vehicleReceiverRepository;
@@ -196,11 +197,7 @@ public class VehicleMapper {
     }
 
     private String normalizeString(String value) {
-        if (value == null) {
-            return null;
-        }
-        String trimmed = value.trim();
-        return trimmed.isEmpty() ? null : trimmed;
+        return StringUtils.normalizeString(value);
     }
 
     private BigDecimal calculateExpensesTotal(@NonNull Long vehicleId) {

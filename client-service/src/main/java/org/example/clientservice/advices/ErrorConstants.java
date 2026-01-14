@@ -8,9 +8,6 @@ final class ErrorConstants {
     static final String ERROR_SOURCE_NOT_FOUND = "SOURCE_NOT_FOUND";
     static final String ERROR_INVALID_JSON = "INVALID_JSON";
     static final String ERROR_SERVER_ERROR = "SERVER_ERROR";
-    static final String ERROR_IMPORT_EMPTY_FILE = "IMPORT_EMPTY_FILE";
-    static final String ERROR_IMPORT_INVALID_FILE_TYPE = "IMPORT_INVALID_FILE_TYPE";
-    static final String ERROR_IMPORT_INVALID_FILE = "IMPORT_INVALID_FILE";
 
     static final String MESSAGE_KEY_VALIDATION = "validation.error";
     static final String MESSAGE_KEY_ACCESS_DENIED = "access.denied";
@@ -18,9 +15,6 @@ final class ErrorConstants {
     static final String MESSAGE_KEY_SOURCE_NOT_FOUND = "source.notfound";
     static final String MESSAGE_KEY_JSON_ERROR = "json.error";
     static final String MESSAGE_KEY_SERVER_ERROR = "server.error";
-    static final String MESSAGE_KEY_IMPORT_EMPTY_FILE = "import.emptyfile";
-    static final String MESSAGE_KEY_IMPORT_INVALID_FILE_TYPE = "import.invalidfiletype";
-    static final String MESSAGE_KEY_IMPORT_INVALID_FILE = "import.invalidfile";
 
     static final String MESSAGE_KEY_PREFIX_CLIENT_ERROR = "client.error.%s";
     static final String MESSAGE_KEY_PREFIX_SOURCE_ERROR = "source.error.%s";

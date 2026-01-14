@@ -10,8 +10,8 @@ import org.example.clientservice.models.dto.clienttype.ClientFieldValueCreateDTO
 import org.example.clientservice.models.dto.clienttype.ClientFieldValueDTO;
 import org.example.clientservice.models.dto.fields.SourceDTO;
 import org.example.clientservice.models.field.Source;
-import org.example.clientservice.services.clienttype.ClientTypeService;
-import org.example.clientservice.services.clienttype.ClientTypeFieldService;
+import org.example.clientservice.services.impl.IClientTypeService;
+import org.example.clientservice.services.impl.IClientTypeFieldService;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
@@ -30,8 +30,8 @@ public class ClientMapper {
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern(DATE_TIME_PATTERN);
     private static final int DEFAULT_DISPLAY_ORDER = 0;
     
-    private final ClientTypeService clientTypeService;
-    private final ClientTypeFieldService clientTypeFieldService;
+    private final IClientTypeService clientTypeService;
+    private final IClientTypeFieldService clientTypeFieldService;
     private final org.example.clientservice.mappers.clienttype.ClientFieldValueMapper fieldValueMapper;
 
 

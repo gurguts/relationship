@@ -7,7 +7,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import java.time.LocalDate;
 import java.util.List;
 
 public interface WarehouseReceiptRepository extends JpaRepository<WarehouseReceipt, Long> {
@@ -17,7 +16,5 @@ public interface WarehouseReceiptRepository extends JpaRepository<WarehouseRecei
     @NonNull
     List<WarehouseReceipt> findAll(Specification<WarehouseReceipt> specification);
 
-    @NonNull
-    List<WarehouseReceipt> findAllByEntryDateLessThanEqual(@NonNull LocalDate date);
 }
 

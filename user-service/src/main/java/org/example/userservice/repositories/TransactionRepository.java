@@ -14,7 +14,7 @@ import java.util.List;
 
 public interface TransactionRepository extends JpaRepository<Transaction, Long>, JpaSpecificationExecutor<Transaction> {
     @NonNull
-    Page<Transaction> findAll(@NonNull Specification<Transaction> specification, @NonNull Pageable pageable);
+    Page<Transaction> findAll(Specification<Transaction> specification, @NonNull Pageable pageable);
     
     @NonNull
     List<Transaction> findByVehicleIdOrderByCreatedAtDesc(@NonNull Long vehicleId);

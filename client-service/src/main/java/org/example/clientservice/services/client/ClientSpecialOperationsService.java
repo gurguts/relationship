@@ -18,8 +18,8 @@ import org.example.clientservice.models.dto.clienttype.FieldIdsRequest;
 import org.example.clientservice.models.field.Source;
 import org.example.clientservice.services.impl.IClientSpecialOperationsService;
 import org.example.clientservice.services.impl.ISourceService;
-import org.example.clientservice.services.clienttype.ClientTypeFieldService;
-import org.example.clientservice.services.clienttype.ClientTypeService;
+import org.example.clientservice.services.impl.IClientTypeFieldService;
+import org.example.clientservice.services.impl.IClientTypeService;
 import org.example.clientservice.spec.ClientSpecification;
 import org.example.clientservice.utils.FilenameUtils;
 import org.springframework.data.domain.Sort;
@@ -59,8 +59,8 @@ public class ClientSpecialOperationsService implements IClientSpecialOperationsS
     private static final String EMPTY_STRING = "";
 
     private final ISourceService sourceService;
-    private final ClientTypeFieldService clientTypeFieldService;
-    private final ClientTypeService clientTypeService;
+    private final IClientTypeFieldService clientTypeFieldService;
+    private final IClientTypeService clientTypeService;
 
     @Override
     @Transactional(readOnly = true)
@@ -72,8 +72,6 @@ public class ClientSpecialOperationsService implements IClientSpecialOperationsS
             Map<String, List<String>> filterParams,
             @NonNull List<String> selectedFields
     ) {
-        log.info("Starting export to Excel with {} fields", selectedFields.size());
-        
         validateInputs(query, selectedFields);
 
         Sort sort = createSort(sortDirection, sortProperty);
@@ -81,12 +79,11 @@ public class ClientSpecialOperationsService implements IClientSpecialOperationsS
 
         List<Client> clientList = fetchClients(query, filterParams, filterIds, sort);
 
-        Workbook workbook = generateWorkbook(clientList, selectedFields, filterIds);
+        Workbook workbook = generateWorkbook(clientList, selectedFields);
 
         byte[] excelData = convertWorkbookToBytes(workbook);
         String filename = generateFilename(filterParams);
 
-        log.info("Successfully exported {} clients to Excel", clientList.size());
         return new ClientExportResult(excelData, filename);
     }
 
@@ -271,8 +268,7 @@ public class ClientSpecialOperationsService implements IClientSpecialOperationsS
         cq.orderBy(orders);
     }
 
-    private Workbook generateWorkbook(@NonNull List<Client> clientList, @NonNull List<String> selectedFields, 
-                                     @NonNull ClientFilterIds filterIds) {
+    private Workbook generateWorkbook(@NonNull List<Client> clientList, @NonNull List<String> selectedFields) {
         Workbook workbook = new XSSFWorkbook();
         Sheet sheet = workbook.createSheet("Client Data");
 

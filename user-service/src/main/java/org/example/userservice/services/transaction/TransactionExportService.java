@@ -16,6 +16,7 @@ import org.example.userservice.repositories.AccountRepository;
 import org.example.userservice.repositories.CounterpartyRepository;
 import org.example.userservice.repositories.TransactionCategoryRepository;
 import org.example.userservice.repositories.TransactionRepository;
+import org.example.userservice.services.impl.ITransactionExportService;
 import org.example.userservice.spec.TransactionSpecification;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -37,7 +38,7 @@ import java.util.stream.StreamSupport;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class TransactionExportService {
+public class TransactionExportService implements ITransactionExportService {
     private static final String ERROR_CODE_EXPORT_FAILED = "EXPORT_FAILED";
     private static final String SHEET_NAME = "Транзакції";
     private static final String NO_TRANSACTIONS_MESSAGE = "Транзакції не знайдено";
@@ -69,16 +70,13 @@ public class TransactionExportService {
     private final TransactionCategoryRepository transactionCategoryRepository;
     private final CounterpartyRepository counterpartyRepository;
 
+    @Override
     @Transactional(readOnly = true)
     public byte[] exportToExcel(@NonNull Map<String, List<String>> filters) {
-        log.info("Starting transaction export with filters: {}", filters);
-        
         try {
             TransactionSpecification spec = new TransactionSpecification(filters);
             Sort sortBy = Sort.by(Sort.Direction.DESC, "createdAt");
             List<Transaction> transactions = transactionRepository.findAll(spec, sortBy);
-            
-            log.info("Found {} transactions for export", transactions.size());
 
             if (transactions.isEmpty()) {
                 return createEmptyWorkbook();
@@ -131,7 +129,6 @@ public class TransactionExportService {
                             )))
                     .orElse(Collections.emptyMap());
         } catch (Exception e) {
-            log.warn("Failed to load client data: {}", e.getMessage());
             return Collections.emptyMap();
         }
     }
@@ -206,7 +203,6 @@ public class TransactionExportService {
             autoSizeColumns(sheet);
             
             workbook.write(outputStream);
-            log.info("Successfully exported {} transactions to Excel", transactions.size());
             return outputStream.toByteArray();
         }
     }

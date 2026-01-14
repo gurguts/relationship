@@ -4,12 +4,11 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.example.purchaseservice.models.balance.VehicleReceiver;
 import org.example.purchaseservice.models.dto.balance.VehicleReceiverCreateDTO;
 import org.example.purchaseservice.models.dto.balance.VehicleReceiverDTO;
 import org.example.purchaseservice.mappers.VehicleReceiverMapper;
-import org.example.purchaseservice.services.balance.VehicleReceiverService;
+import org.example.purchaseservice.services.impl.IVehicleReceiverService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
@@ -19,14 +18,13 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import java.net.URI;
 import java.util.List;
 
-@Slf4j
 @RestController
 @RequestMapping("/api/v1/vehicle-receivers")
 @RequiredArgsConstructor
 @Validated
 public class VehicleReceiverController {
     
-    private final VehicleReceiverService vehicleReceiverService;
+    private final IVehicleReceiverService vehicleReceiverService;
     private final VehicleReceiverMapper vehicleReceiverMapper;
     
     @PreAuthorize("hasAuthority('settings_declarant:create')")

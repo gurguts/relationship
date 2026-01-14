@@ -9,8 +9,9 @@ import org.example.purchaseservice.models.balance.Vehicle;
 import org.example.purchaseservice.models.dto.balance.VehicleDetailsDTO;
 import org.example.purchaseservice.mappers.VehicleMapper;
 import org.example.purchaseservice.repositories.ProductRepository;
-import org.example.purchaseservice.repositories.VehicleProductRepository;
 import org.example.purchaseservice.repositories.VehicleRepository;
+import org.example.purchaseservice.services.impl.IVehicleExportService;
+import org.example.purchaseservice.services.impl.IVehicleExpenseService;
 import org.example.purchaseservice.spec.VehicleSpecification;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -26,12 +27,12 @@ import java.util.concurrent.CompletableFuture;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class VehicleExportService {
+public class VehicleExportService implements IVehicleExportService {
     private final VehicleRepository vehicleRepository;
     private final VehicleMapper vehicleMapper;
-    private final org.example.purchaseservice.services.balance.VehicleExpenseService vehicleExpenseService;
+    private final IVehicleExpenseService vehicleExpenseService;
+    private final IVehicleService vehicleService;
     private final ProductRepository productRepository;
-    private final VehicleProductRepository vehicleProductRepository;
     private final org.example.purchaseservice.clients.TransactionCategoryClient transactionCategoryClient;
     private final org.example.purchaseservice.clients.AccountClient accountClient;
 
@@ -63,7 +64,8 @@ public class VehicleExportService {
             Map<Long, String> categoryNameMap,
             List<Long> sortedCategoryIds
     ) {}
-
+    
+    @Override
     @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public byte[] exportToExcel(String query, Map<String, List<String>> filterParams) throws IOException {
         List<Vehicle> vehicles = loadVehicles(query, filterParams);
@@ -176,8 +178,12 @@ public class VehicleExportService {
     }
 
     private Map<Long, Product> loadProductMap(List<Long> vehicleIds) {
+        Map<Long, List<org.example.purchaseservice.models.balance.VehicleProduct>> vehicleProductsMap = 
+                vehicleService.getVehicleProductsByVehicleIds(vehicleIds);
         List<org.example.purchaseservice.models.balance.VehicleProduct> allVehicleProducts = 
-                vehicleProductRepository.findByVehicleIdIn(vehicleIds);
+                vehicleProductsMap.values().stream()
+                        .flatMap(List::stream)
+                        .toList();
         
         List<Long> productIds = allVehicleProducts.stream()
                 .map(org.example.purchaseservice.models.balance.VehicleProduct::getProductId)
@@ -233,8 +239,7 @@ public class VehicleExportService {
                         .filter(account -> account != null && account.getId() != null && accountIds.contains(account.getId()))
                         .forEach(account -> accountNameMap.put(account.getId(), account.getName()));
             }
-        } catch (Exception e) {
-            log.warn("Failed to get account names: {}", e.getMessage());
+        } catch (Exception _) {
         }
         return accountNameMap;
     }
@@ -259,7 +264,6 @@ public class VehicleExportService {
                             categoryNameMap.put(categoryId, name);
                         }
                     } catch (Exception e) {
-                        log.warn("Failed to get category name for categoryId {}: {}", categoryId, e.getMessage());
                         synchronized (categoryNameMap) {
                             categoryNameMap.put(categoryId, CATEGORY_PREFIX + categoryId);
                         }
@@ -269,8 +273,7 @@ public class VehicleExportService {
         
         try {
             CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
-        } catch (Exception e) {
-            log.error("Error loading category names: {}", e.getMessage());
+        } catch (Exception _) {
         }
         
         return categoryNameMap;
@@ -438,8 +441,7 @@ public class VehicleExportService {
                 BigDecimal quantityInTons = new BigDecimal(vehicleDTO.getProductQuantity().replace(",", "."));
                 fullReclamation = reclamationPerTon.multiply(quantityInTons)
                         .setScale(RECLAMATION_SCALE, RoundingMode.HALF_UP);
-            } catch (NumberFormatException e) {
-                log.warn("Failed to parse productQuantity for reclamation calculation: {}", vehicleDTO.getProductQuantity(), e);
+            } catch (NumberFormatException _) {
             }
         }
         

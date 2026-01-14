@@ -163,13 +163,6 @@ const FinanceModal = (function() {
     function setupEditTransactionModalHandlers() {
         const modal = document.getElementById('edit-transaction-modal');
         if (!modal) return;
-        
-        modal.addEventListener('click', (e) => {
-            const modalContent = modal.querySelector('.modal-content');
-            if (modalContent && !modalContent.contains(e.target)) {
-                closeEditTransactionModal();
-            }
-        });
     }
 
     function showDeleteConfirmationModal(onConfirm, onCancel) {

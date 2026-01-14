@@ -11,19 +11,19 @@ import org.example.clientservice.models.clienttype.ClientFieldValue;
 import org.example.clientservice.models.clienttype.ClientType;
 import org.example.clientservice.models.clienttype.ClientTypeField;
 import org.example.clientservice.models.clienttype.ClientTypeFieldListValue;
-import org.example.clientservice.models.clienttype.FieldType;
 import org.example.clientservice.models.field.Source;
 import org.example.clientservice.repositories.ClientRepository;
 import org.example.clientservice.services.impl.IClientCrudService;
 import org.example.clientservice.services.impl.IClientImportService;
 import org.example.clientservice.services.impl.ISourceService;
-import org.example.clientservice.services.clienttype.ClientTypeFieldService;
-import org.example.clientservice.services.clienttype.ClientTypeService;
+import org.example.clientservice.services.impl.IClientTypeFieldService;
+import org.example.clientservice.services.impl.IClientTypeService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import jakarta.persistence.metamodel.EntityType;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -41,84 +41,31 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ClientImportService implements IClientImportService {
 
-    private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-    private static final DateTimeFormatter ISO_DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
-    private static final DateTimeFormatter ISO_DATE_TIME_NO_SECONDS_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm");
-    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-
-    private static final String HEADER_ID = "ID (опціонально)";
-    private static final String HEADER_SOURCE = "Залучення (назва)";
-    private static final String HEADER_CREATED_AT = "Дата створення (yyyy-MM-dd, yyyy-MM-dd HH:mm:ss, yyyy-MM-dd'T'HH:mm:ss або yyyy-MM-dd'T'HH:mm)";
-    private static final String HEADER_UPDATED_AT = "Дата оновлення (yyyy-MM-dd, yyyy-MM-dd HH:mm:ss, yyyy-MM-dd'T'HH:mm:ss або yyyy-MM-dd'T'HH:mm)";
-    private static final String HEADER_IS_ACTIVE = "Активний (Так/Ні)";
-    private static final String HEADER_MULTIPLE_SUFFIX = " (через кому, якщо кілька)";
-    private static final String DEFAULT_COMPANY_LABEL = "Компанія";
-    private static final String EXAMPLE_COMPANY = "Приклад компанії";
-    private static final String EXAMPLE_TEXT = "Приклад тексту";
-    private static final String EXAMPLE_NUMBER = "123.45";
-    private static final String EXAMPLE_DATE = "2024-01-01";
-    private static final String EXAMPLE_PHONE = "+380123456789";
-    private static final String EXAMPLE_BOOLEAN = "Так";
-    private static final String SHEET_NAME = "Clients";
-    private static final int MIN_ROWS_REQUIRED = 2;
-    private static final int EXAMPLE_ROW_INDEX = 1;
-    private static final int HEADER_ROW_INDEX = 0;
-    private static final boolean DEFAULT_IS_ACTIVE = true;
-    private static final String COLUMN_ID = "id";
-    private static final String COLUMN_COMPANY = "company";
-    private static final String COLUMN_SOURCE = "source";
-    private static final String COLUMN_CREATED_AT = "createdAt";
-    private static final String COLUMN_UPDATED_AT = "updatedAt";
-    private static final String COLUMN_IS_ACTIVE = "isActive";
-    private static final String FIELD_PREFIX = "field_";
-    private static final String KEYWORD_SOURCE_UA = "Залучення";
-    private static final String KEYWORD_CREATED_UA = "створення";
-    private static final String KEYWORD_UPDATED_UA = "оновлення";
-    private static final String KEYWORD_ACTIVE_UA = "Активний";
-    private static final String KEYWORD_CREATED_EN = "Created";
-    private static final String KEYWORD_UPDATED_EN = "Updated";
-    private static final String KEYWORD_ACTIVE_EN = "Active";
-    private static final String BOOLEAN_TRUE_UA = "Так";
-    private static final String BOOLEAN_FALSE_UA = "Ні";
-    private static final String BOOLEAN_TRUE_EN = "true";
-    private static final String BOOLEAN_FALSE_EN = "false";
-    private static final String BOOLEAN_TRUE_NUM = "1";
-    private static final String BOOLEAN_FALSE_NUM = "0";
-    private static final String SQL_INSERT_CLIENTS = "INSERT INTO clients (id, client_type_id, company, source_id, is_active";
-    private static final String SQL_VALUES = ") VALUES (:id, :clientTypeId, :company, :sourceId, :isActive";
-    private static final String SQL_SELECT_MAX_ID = "SELECT MAX(id) FROM clients";
-    private static final String SQL_ALTER_AUTO_INCREMENT = "ALTER TABLE clients AUTO_INCREMENT = :nextId";
-    private static final String CONTENT_TYPE_EXCEL_OLD = "application/vnd.ms-excel";
-    private static final String CONTENT_TYPE_EXCEL_NEW = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-    private static final String FILE_EXTENSION_XLSX = ".xlsx";
-    private static final String FILE_EXTENSION_XLS = ".xls";
-    private static final long MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
-    private static final String COMMA_SEPARATOR = ",";
-    private static final String EMPTY_STRING = "";
-
-    private static final Set<String> BOOLEAN_TRUE_VALUES = Set.of(
-            BOOLEAN_TRUE_UA.toLowerCase(), BOOLEAN_TRUE_EN.toLowerCase(), BOOLEAN_TRUE_NUM);
-    private static final Set<String> BOOLEAN_FALSE_VALUES = Set.of(
-            BOOLEAN_FALSE_UA.toLowerCase(), BOOLEAN_FALSE_EN.toLowerCase(), BOOLEAN_FALSE_NUM);
-
     @PersistenceContext
     private EntityManager entityManager;
 
-    private final ClientTypeService clientTypeService;
-    private final ClientTypeFieldService clientTypeFieldService;
+    private final IClientTypeService clientTypeService;
+    private final IClientTypeFieldService clientTypeFieldService;
     private final ClientRepository clientRepository;
     private final IClientCrudService clientCrudService;
     private final ISourceService sourceService;
 
+    private String getClientTableName() {
+        EntityType<?> entityType = entityManager.getMetamodel().entity(Client.class);
+        jakarta.persistence.Table tableAnnotation = Client.class.getAnnotation(jakarta.persistence.Table.class);
+        if (tableAnnotation != null && !tableAnnotation.name().isEmpty()) {
+            return tableAnnotation.name();
+        }
+        return entityType.getName().toLowerCase();
+    }
+
     @Override
     public byte[] generateTemplate(@NonNull Long clientTypeId) {
-        log.info("Generating import template for client type: {}", clientTypeId);
-
         ClientType clientType = clientTypeService.getClientTypeById(clientTypeId);
         List<ClientTypeField> fields = clientTypeFieldService.getFieldsByClientTypeId(clientTypeId);
 
         Workbook workbook = new XSSFWorkbook();
-        Sheet sheet = workbook.createSheet(SHEET_NAME);
+        Sheet sheet = workbook.createSheet(ClientImportConstants.SHEET_NAME);
 
         createHeaderRow(sheet, clientType, fields);
         createExampleRow(sheet, fields);
@@ -129,36 +76,36 @@ public class ClientImportService implements IClientImportService {
     }
 
     private void createHeaderRow(@NonNull Sheet sheet, @NonNull ClientType clientType, @NonNull List<ClientTypeField> fields) {
-        Row headerRow = sheet.createRow(HEADER_ROW_INDEX);
+        Row headerRow = sheet.createRow(ClientImportConstants.HEADER_ROW_INDEX);
         int colIndex = 0;
 
-        headerRow.createCell(colIndex++).setCellValue(HEADER_ID);
-        String companyLabel = clientType.getNameFieldLabel() != null ? clientType.getNameFieldLabel() : DEFAULT_COMPANY_LABEL;
+        headerRow.createCell(colIndex++).setCellValue(ClientImportConstants.HEADER_ID);
+        String companyLabel = clientType.getNameFieldLabel();
         headerRow.createCell(colIndex++).setCellValue(companyLabel);
-        headerRow.createCell(colIndex++).setCellValue(HEADER_SOURCE);
-        headerRow.createCell(colIndex++).setCellValue(HEADER_CREATED_AT);
-        headerRow.createCell(colIndex++).setCellValue(HEADER_UPDATED_AT);
-        headerRow.createCell(colIndex++).setCellValue(HEADER_IS_ACTIVE);
+        headerRow.createCell(colIndex++).setCellValue(ClientImportConstants.HEADER_SOURCE);
+        headerRow.createCell(colIndex++).setCellValue(ClientImportConstants.HEADER_CREATED_AT);
+        headerRow.createCell(colIndex++).setCellValue(ClientImportConstants.HEADER_UPDATED_AT);
+        headerRow.createCell(colIndex++).setCellValue(ClientImportConstants.HEADER_IS_ACTIVE);
 
         for (ClientTypeField field : fields) {
             String header = field.getFieldLabel();
             if (Boolean.TRUE.equals(field.getAllowMultiple())) {
-                header += HEADER_MULTIPLE_SUFFIX;
+                header += ClientImportConstants.HEADER_MULTIPLE_SUFFIX;
             }
             headerRow.createCell(colIndex++).setCellValue(header);
         }
     }
 
     private void createExampleRow(@NonNull Sheet sheet, @NonNull List<ClientTypeField> fields) {
-        Row exampleRow = sheet.createRow(EXAMPLE_ROW_INDEX);
+        Row exampleRow = sheet.createRow(ClientImportConstants.EXAMPLE_ROW_INDEX);
         int colIndex = 0;
 
-        exampleRow.createCell(colIndex++).setCellValue(EMPTY_STRING);
-        exampleRow.createCell(colIndex++).setCellValue(EXAMPLE_COMPANY);
-        exampleRow.createCell(colIndex++).setCellValue(EMPTY_STRING);
-        exampleRow.createCell(colIndex++).setCellValue(EMPTY_STRING);
-        exampleRow.createCell(colIndex++).setCellValue(EMPTY_STRING);
-        exampleRow.createCell(colIndex++).setCellValue(EXAMPLE_BOOLEAN);
+        exampleRow.createCell(colIndex++).setCellValue(ClientImportConstants.EMPTY_STRING);
+        exampleRow.createCell(colIndex++).setCellValue(ClientImportConstants.EXAMPLE_COMPANY);
+        exampleRow.createCell(colIndex++).setCellValue(ClientImportConstants.EMPTY_STRING);
+        exampleRow.createCell(colIndex++).setCellValue(ClientImportConstants.EMPTY_STRING);
+        exampleRow.createCell(colIndex++).setCellValue(ClientImportConstants.EMPTY_STRING);
+        exampleRow.createCell(colIndex++).setCellValue(ClientImportConstants.EXAMPLE_BOOLEAN);
 
         for (ClientTypeField field : fields) {
             Cell cell = exampleRow.createCell(colIndex++);
@@ -168,11 +115,11 @@ public class ClientImportService implements IClientImportService {
 
     private void setExampleCellValue(@NonNull Cell cell, @NonNull ClientTypeField field) {
         switch (field.getFieldType()) {
-            case TEXT -> cell.setCellValue(EXAMPLE_TEXT);
-            case NUMBER -> cell.setCellValue(EXAMPLE_NUMBER);
-            case DATE -> cell.setCellValue(EXAMPLE_DATE);
-            case PHONE -> cell.setCellValue(EXAMPLE_PHONE);
-            case BOOLEAN -> cell.setCellValue(EXAMPLE_BOOLEAN);
+            case TEXT -> cell.setCellValue(ClientImportConstants.EXAMPLE_TEXT);
+            case NUMBER -> cell.setCellValue(ClientImportConstants.EXAMPLE_NUMBER);
+            case DATE -> cell.setCellValue(ClientImportConstants.EXAMPLE_DATE);
+            case PHONE -> cell.setCellValue(ClientImportConstants.EXAMPLE_PHONE);
+            case BOOLEAN -> cell.setCellValue(ClientImportConstants.EXAMPLE_BOOLEAN);
             case LIST -> setListExampleValue(cell, field);
         }
     }
@@ -184,13 +131,13 @@ public class ClientImportService implements IClientImportService {
 
         String exampleValue = field.getListValues().get(0).getValue();
         if (Boolean.TRUE.equals(field.getAllowMultiple()) && field.getListValues().size() > 1) {
-            exampleValue += COMMA_SEPARATOR + " " + field.getListValues().get(1).getValue();
+            exampleValue += ClientImportConstants.COMMA_SEPARATOR + " " + field.getListValues().get(1).getValue();
         }
         cell.setCellValue(exampleValue);
     }
 
     private void autoSizeColumns(@NonNull Sheet sheet) {
-        Row headerRow = sheet.getRow(HEADER_ROW_INDEX);
+        Row headerRow = sheet.getRow(ClientImportConstants.HEADER_ROW_INDEX);
         if (headerRow != null) {
             int lastCellNum = headerRow.getLastCellNum();
             for (int i = 0; i < lastCellNum; i++) {
@@ -214,7 +161,7 @@ public class ClientImportService implements IClientImportService {
 
             validateSheet(sheet);
 
-            Row headerRow = sheet.getRow(HEADER_ROW_INDEX);
+            Row headerRow = sheet.getRow(ClientImportConstants.HEADER_ROW_INDEX);
             if (headerRow == null) {
                 throw new ClientException("IMPORT_INVALID_FILE", "Header row is missing");
             }
@@ -232,11 +179,8 @@ public class ClientImportService implements IClientImportService {
 
             saveClients(importResult.clients());
 
-            log.info("Successfully imported {} clients for client type: {}", importResult.clients().size(), clientTypeId);
             return String.format("Successfully imported %d clients", importResult.clients().size());
 
-        } catch (ClientException e) {
-            throw e;
         } catch (IOException e) {
             log.error("Error reading Excel file for client type {}: {}", clientTypeId, e.getMessage(), e);
             throw new ClientException("IMPORT_READ_ERROR",
@@ -245,14 +189,14 @@ public class ClientImportService implements IClientImportService {
     }
 
     private void validateSheet(@NonNull Sheet sheet) {
-        if (sheet.getPhysicalNumberOfRows() < MIN_ROWS_REQUIRED) {
+        if (sheet.getPhysicalNumberOfRows() < ClientImportConstants.MIN_ROWS_REQUIRED) {
             throw new ClientException("IMPORT_INVALID_FILE",
                     "Excel file must contain at least a header and one row of data");
         }
     }
 
     private void validateRequiredColumns(@NonNull Map<String, Integer> columnIndexMap) {
-        if (!columnIndexMap.containsKey(COLUMN_COMPANY)) {
+        if (!columnIndexMap.containsKey(ClientImportConstants.COLUMN_COMPANY)) {
             throw new ClientException("IMPORT_MISSING_COLUMN",
                     "Required column 'company' not found in header");
         }
@@ -261,11 +205,10 @@ public class ClientImportService implements IClientImportService {
     private Map<String, Source> buildSourceNameMap() {
         List<Source> allSources = sourceService.getAllSources();
         return allSources.stream()
-                .filter(s -> s.getName() != null)
                 .collect(Collectors.toMap(
                         s -> s.getName().trim().toLowerCase(),
                         s -> s,
-                        (s1, s2) -> s1
+                        (s1, _) -> s1
                 ));
     }
 
@@ -325,27 +268,53 @@ public class ClientImportService implements IClientImportService {
 
     private void saveClients(@NonNull List<Client> clients) {
         if (clients.isEmpty()) {
-            log.warn("No clients to save");
             return;
         }
 
-        log.info("Saving {} clients", clients.size());
-
-        Long maxSpecifiedId = findMaxSpecifiedId(clients);
+        List<Client> clientsWithId = new ArrayList<>();
+        List<Client> clientsWithoutId = new ArrayList<>();
 
         for (Client client : clients) {
             if (client.getId() != null) {
-                saveClientWithId(client, client.getId());
+                clientsWithId.add(client);
             } else {
-                clientCrudService.createClient(client);
+                clientsWithoutId.add(client);
             }
         }
 
-        if (maxSpecifiedId != null) {
-            updateAutoIncrement(maxSpecifiedId);
+        if (!clientsWithoutId.isEmpty()) {
+            saveClientsWithoutId(clientsWithoutId);
+            log.info("Saved {} clients without specified ID", clientsWithoutId.size());
         }
 
-        log.info("Successfully saved {} clients", clients.size());
+        if (!clientsWithId.isEmpty()) {
+            saveClientsWithIdBatch(clientsWithId);
+            log.info("Saved {} clients with specified ID", clientsWithId.size());
+            Long maxSpecifiedId = findMaxSpecifiedId(clientsWithId);
+            if (maxSpecifiedId != null) {
+                updateAutoIncrement(maxSpecifiedId);
+            }
+        }
+    }
+
+    private void saveClientsWithoutId(@NonNull List<Client> clients) {
+        for (Client client : clients) {
+            Client savedClient = clientCrudService.createClient(client);
+            if (client.getFieldValues() != null && !client.getFieldValues().isEmpty()) {
+                Long clientId = savedClient.getId();
+                if (clientId != null) {
+                    saveFieldValuesForClient(client, savedClient);
+                } else {
+                    log.warn("Client saved but ID is null, cannot save field values");
+                }
+            }
+        }
+    }
+
+    private void saveClientsWithIdBatch(@NonNull List<Client> clients) {
+        for (Client client : clients) {
+            saveClientWithId(client, client.getId());
+        }
     }
 
     private Long findMaxSpecifiedId(@NonNull List<Client> clients) {
@@ -363,7 +332,14 @@ public class ClientImportService implements IClientImportService {
         setQueryParameters(query, client, specifiedId);
         executeClientInsert(query);
 
-        saveFieldValues(client, specifiedId);
+        if (client.getFieldValues() != null && !client.getFieldValues().isEmpty()) {
+            Client savedClient = entityManager.find(Client.class, specifiedId);
+            if (savedClient != null) {
+                saveFieldValuesForClient(client, savedClient);
+            } else {
+                log.warn("Client with id {} not found after save, cannot save field values", specifiedId);
+            }
+        }
     }
 
     private void validateClientForSave(@NonNull Client client) {
@@ -373,7 +349,8 @@ public class ClientImportService implements IClientImportService {
     }
 
     private jakarta.persistence.Query createInsertQuery(@NonNull Client client) {
-        String insertQuery = buildInsertQuery(client);
+        String tableName = getClientTableName();
+        String insertQuery = buildInsertQuery(client, tableName);
         return entityManager.createNativeQuery(insertQuery);
     }
 
@@ -384,7 +361,7 @@ public class ClientImportService implements IClientImportService {
                 .setParameter("clientTypeId", client.getClientType().getId())
                 .setParameter("company", client.getCompany())
                 .setParameter("sourceId", client.getSourceId())
-                .setParameter("isActive", client.getIsActive() != null ? client.getIsActive() : DEFAULT_IS_ACTIVE);
+                .setParameter("isActive", client.getIsActive() != null ? client.getIsActive() : ClientImportConstants.DEFAULT_IS_ACTIVE);
 
         if (client.getCreatedAt() != null) {
             query.setParameter("createdAt", client.getCreatedAt());
@@ -398,8 +375,10 @@ public class ClientImportService implements IClientImportService {
         query.executeUpdate();
     }
 
-    private String buildInsertQuery(@NonNull Client client) {
-        StringBuilder query = new StringBuilder(SQL_INSERT_CLIENTS);
+    private String buildInsertQuery(@NonNull Client client, @NonNull String tableName) {
+        StringBuilder query = new StringBuilder("INSERT INTO ");
+        query.append(tableName);
+        query.append(" (id, client_type_id, company, source_id, is_active");
         boolean hasCreatedAt = client.getCreatedAt() != null;
         boolean hasUpdatedAt = client.getUpdatedAt() != null;
 
@@ -410,7 +389,7 @@ public class ClientImportService implements IClientImportService {
             query.append(", updated_at");
         }
 
-        query.append(SQL_VALUES);
+        query.append(") VALUES (:id, :clientTypeId, :company, :sourceId, :isActive");
 
         if (hasCreatedAt) {
             query.append(", :createdAt");
@@ -423,14 +402,8 @@ public class ClientImportService implements IClientImportService {
         return query.toString();
     }
 
-    private void saveFieldValues(@NonNull Client client, @NonNull Long clientId) {
+    private void saveFieldValuesForClient(@NonNull Client client, @NonNull Client savedClient) {
         if (client.getFieldValues() == null || client.getFieldValues().isEmpty()) {
-            return;
-        }
-
-        Client savedClient = entityManager.find(Client.class, clientId);
-        if (savedClient == null) {
-            log.warn("Client with id {} not found after save", clientId);
             return;
         }
 
@@ -438,27 +411,30 @@ public class ClientImportService implements IClientImportService {
             fieldValue.setClient(savedClient);
             entityManager.persist(fieldValue);
         }
+        entityManager.flush();
     }
 
     private void updateAutoIncrement(@NonNull Long maxSpecifiedId) {
         try {
-            Long currentMaxId = (Long) entityManager.createNativeQuery(SQL_SELECT_MAX_ID).getSingleResult();
+            String tableName = getClientTableName();
+            String selectMaxIdQuery = "SELECT MAX(id) FROM " + tableName;
+            Long currentMaxId = (Long) entityManager.createNativeQuery(selectMaxIdQuery).getSingleResult();
             if (currentMaxId != null && maxSpecifiedId >= currentMaxId) {
-                entityManager.createNativeQuery(SQL_ALTER_AUTO_INCREMENT)
+                String alterAutoIncrementQuery = "ALTER TABLE " + tableName + " AUTO_INCREMENT = :nextId";
+                entityManager.createNativeQuery(alterAutoIncrementQuery)
                         .setParameter("nextId", maxSpecifiedId + 1)
                         .executeUpdate();
-                log.debug("Updated AUTO_INCREMENT to {}", maxSpecifiedId + 1);
+                log.info("Updated AUTO_INCREMENT for table {} to {}", tableName, maxSpecifiedId + 1);
             }
         } catch (Exception e) {
-            log.warn("Failed to update AUTO_INCREMENT: {}", e.getMessage());
+            log.warn("Failed to update AUTO_INCREMENT for table {}: {}", getClientTableName(), e.getMessage(), e);
         }
     }
 
     private Map<String, Integer> parseHeaders(@NonNull Row headerRow, @NonNull List<ClientTypeField> fields, @NonNull ClientType clientType) {
         Map<String, Integer> columnIndexMap = new HashMap<>();
 
-        String companyFieldLabel = clientType.getNameFieldLabel() != null
-                ? clientType.getNameFieldLabel() : DEFAULT_COMPANY_LABEL;
+        String companyFieldLabel = clientType.getNameFieldLabel();
 
         Map<String, ClientTypeField> fieldLabelMap = buildFieldLabelMap(fields);
 
@@ -476,7 +452,7 @@ public class ClientImportService implements IClientImportService {
             headerValue = headerValue.trim();
             String normalizedHeader = normalizeHeader(headerValue);
 
-            if (tryMapDynamicField(columnIndexMap, fields, normalizedHeader, headerValue, i)) {
+            if (tryMapDynamicField(columnIndexMap, fields, normalizedHeader, i)) {
                 continue;
             }
 
@@ -501,7 +477,6 @@ public class ClientImportService implements IClientImportService {
     private boolean tryMapDynamicField(@NonNull Map<String, Integer> columnIndexMap,
                                        @NonNull List<ClientTypeField> fields,
                                        @NonNull String normalizedHeader,
-                                       @NonNull String headerValue,
                                        int columnIndex) {
         for (ClientTypeField field : fields) {
             String fieldLabel = field.getFieldLabel();
@@ -511,7 +486,7 @@ public class ClientImportService implements IClientImportService {
                     normalizedHeader.startsWith(normalizedFieldLabel + " ") ||
                     normalizedHeader.startsWith(normalizedFieldLabel + "(") ||
                     normalizedHeader.startsWith(normalizedFieldLabel + " (")) {
-                columnIndexMap.put(FIELD_PREFIX + field.getId(), columnIndex);
+                columnIndexMap.put(ClientImportConstants.FIELD_PREFIX + field.getId(), columnIndex);
                 return true;
             }
         }
@@ -524,19 +499,19 @@ public class ClientImportService implements IClientImportService {
                                 @NonNull String companyFieldLabel,
                                 @NonNull Map<String, ClientTypeField> fieldLabelMap,
                                 int columnIndex) {
-        if (headerValue.contains("ID") && !headerValue.contains(FIELD_PREFIX)) {
-            columnIndexMap.put(COLUMN_ID, columnIndex);
+        if (headerValue.contains("ID") && !headerValue.contains(ClientImportConstants.FIELD_PREFIX)) {
+            columnIndexMap.put(ClientImportConstants.COLUMN_ID, columnIndex);
         } else if (headerValue.equals(companyFieldLabel) ||
                 (headerValue.startsWith(companyFieldLabel + " ") && !fieldLabelMap.containsKey(headerValue))) {
-            columnIndexMap.put(COLUMN_COMPANY, columnIndex);
-        } else if (normalizedHeader.contains(KEYWORD_SOURCE_UA.toLowerCase())) {
-            columnIndexMap.put(COLUMN_SOURCE, columnIndex);
-        } else if (normalizedHeader.contains(KEYWORD_CREATED_UA.toLowerCase()) || normalizedHeader.contains(KEYWORD_CREATED_EN.toLowerCase())) {
-            columnIndexMap.put(COLUMN_CREATED_AT, columnIndex);
-        } else if (normalizedHeader.contains(KEYWORD_UPDATED_UA.toLowerCase()) || normalizedHeader.contains(KEYWORD_UPDATED_EN.toLowerCase())) {
-            columnIndexMap.put(COLUMN_UPDATED_AT, columnIndex);
-        } else if (normalizedHeader.contains(KEYWORD_ACTIVE_UA.toLowerCase()) || normalizedHeader.contains(KEYWORD_ACTIVE_EN.toLowerCase())) {
-            columnIndexMap.put(COLUMN_IS_ACTIVE, columnIndex);
+            columnIndexMap.put(ClientImportConstants.COLUMN_COMPANY, columnIndex);
+        } else if (normalizedHeader.contains(ClientImportConstants.KEYWORD_SOURCE_UA.toLowerCase())) {
+            columnIndexMap.put(ClientImportConstants.COLUMN_SOURCE, columnIndex);
+        } else if (normalizedHeader.contains(ClientImportConstants.KEYWORD_CREATED_UA.toLowerCase()) || normalizedHeader.contains(ClientImportConstants.KEYWORD_CREATED_EN.toLowerCase())) {
+            columnIndexMap.put(ClientImportConstants.COLUMN_CREATED_AT, columnIndex);
+        } else if (normalizedHeader.contains(ClientImportConstants.KEYWORD_UPDATED_UA.toLowerCase()) || normalizedHeader.contains(ClientImportConstants.KEYWORD_UPDATED_EN.toLowerCase())) {
+            columnIndexMap.put(ClientImportConstants.COLUMN_UPDATED_AT, columnIndex);
+        } else if (normalizedHeader.contains(ClientImportConstants.KEYWORD_ACTIVE_UA.toLowerCase()) || normalizedHeader.contains(ClientImportConstants.KEYWORD_ACTIVE_EN.toLowerCase())) {
+            columnIndexMap.put(ClientImportConstants.COLUMN_IS_ACTIVE, columnIndex);
         }
     }
 
@@ -552,8 +527,8 @@ public class ClientImportService implements IClientImportService {
         parseId(client, row, columnIndexMap, rowNumber);
         parseCompany(client, row, columnIndexMap, rowNumber);
         parseSource(client, row, columnIndexMap, sourceNameMap, rowNumber);
-        parseDateTimeField(client, row, columnIndexMap, COLUMN_CREATED_AT, rowNumber);
-        parseDateTimeField(client, row, columnIndexMap, COLUMN_UPDATED_AT, rowNumber);
+        parseDateTimeField(client, row, columnIndexMap, ClientImportConstants.COLUMN_CREATED_AT, rowNumber);
+        parseDateTimeField(client, row, columnIndexMap, ClientImportConstants.COLUMN_UPDATED_AT, rowNumber);
         parseIsActive(client, row, columnIndexMap, rowNumber);
         parseFieldValues(client, row, fields, columnIndexMap, rowNumber);
 
@@ -561,7 +536,7 @@ public class ClientImportService implements IClientImportService {
     }
 
     private void parseId(@NonNull Client client, @NonNull Row row, @NonNull Map<String, Integer> columnIndexMap, int rowNumber) {
-        Integer idCol = columnIndexMap.get(COLUMN_ID);
+        Integer idCol = columnIndexMap.get(ClientImportConstants.COLUMN_ID);
         if (idCol == null) {
             return;
         }
@@ -585,7 +560,7 @@ public class ClientImportService implements IClientImportService {
     }
 
     private void parseCompany(@NonNull Client client, @NonNull Row row, @NonNull Map<String, Integer> columnIndexMap, int rowNumber) {
-        Integer companyCol = columnIndexMap.get(COLUMN_COMPANY);
+        Integer companyCol = columnIndexMap.get(ClientImportConstants.COLUMN_COMPANY);
         if (companyCol == null) {
             throw new ClientException("IMPORT_MISSING_COLUMN",
                     String.format("Row %d: Company name column not found", rowNumber));
@@ -605,7 +580,7 @@ public class ClientImportService implements IClientImportService {
                             @NonNull Map<String, Integer> columnIndexMap,
                             @NonNull Map<String, Source> sourceNameMap,
                             int rowNumber) {
-        Integer sourceCol = columnIndexMap.get(COLUMN_SOURCE);
+        Integer sourceCol = columnIndexMap.get(ClientImportConstants.COLUMN_SOURCE);
         if (sourceCol == null) {
             return;
         }
@@ -644,9 +619,9 @@ public class ClientImportService implements IClientImportService {
 
         try {
             LocalDateTime dateTime = parseDateTime(dateTimeValue.trim());
-            if (COLUMN_CREATED_AT.equals(columnKey)) {
+            if (ClientImportConstants.COLUMN_CREATED_AT.equals(columnKey)) {
                 client.setCreatedAt(dateTime);
-            } else if (COLUMN_UPDATED_AT.equals(columnKey)) {
+            } else if (ClientImportConstants.COLUMN_UPDATED_AT.equals(columnKey)) {
                 client.setUpdatedAt(dateTime);
             }
         } catch (ClientException e) {
@@ -656,17 +631,17 @@ public class ClientImportService implements IClientImportService {
     }
 
     private void parseIsActive(@NonNull Client client, @NonNull Row row, @NonNull Map<String, Integer> columnIndexMap, int rowNumber) {
-        Integer isActiveCol = columnIndexMap.get(COLUMN_IS_ACTIVE);
+        Integer isActiveCol = columnIndexMap.get(ClientImportConstants.COLUMN_IS_ACTIVE);
         if (isActiveCol != null) {
             Cell isActiveCell = row.getCell(isActiveCol);
             String isActiveValue = getCellValueAsString(isActiveCell);
             if (isActiveValue != null && !isActiveValue.trim().isEmpty()) {
                 client.setIsActive(parseBoolean(isActiveValue.trim(), rowNumber));
             } else {
-                client.setIsActive(DEFAULT_IS_ACTIVE);
+                client.setIsActive(ClientImportConstants.DEFAULT_IS_ACTIVE);
             }
         } else {
-            client.setIsActive(DEFAULT_IS_ACTIVE);
+            client.setIsActive(ClientImportConstants.DEFAULT_IS_ACTIVE);
         }
     }
 
@@ -675,7 +650,7 @@ public class ClientImportService implements IClientImportService {
                                   @NonNull Map<String, Integer> columnIndexMap,
                                   int rowNumber) {
         for (ClientTypeField field : fields) {
-            Integer fieldCol = columnIndexMap.get(FIELD_PREFIX + field.getId());
+            Integer fieldCol = columnIndexMap.get(ClientImportConstants.FIELD_PREFIX + field.getId());
             if (fieldCol == null) {
                 handleMissingField(field, columnIndexMap, rowNumber);
                 continue;
@@ -698,7 +673,7 @@ public class ClientImportService implements IClientImportService {
         log.warn("Row {}: Field '{}' (id={}) column not found in header map. Available columns: {}",
                 rowNumber, field.getFieldLabel(), field.getId(),
                 columnIndexMap.entrySet().stream()
-                        .filter(e -> e.getKey().startsWith(FIELD_PREFIX))
+                        .filter(e -> e.getKey().startsWith(ClientImportConstants.FIELD_PREFIX))
                         .map(e -> e.getKey() + ":" + e.getValue())
                         .collect(Collectors.joining(", ")));
         validateRequiredField(field, rowNumber);
@@ -715,8 +690,8 @@ public class ClientImportService implements IClientImportService {
                                                     @NonNull String value, int rowNumber) {
         List<ClientFieldValue> fieldValues = new ArrayList<>();
 
-        if (Boolean.TRUE.equals(field.getAllowMultiple()) && value.contains(COMMA_SEPARATOR)) {
-            String[] values = value.split(COMMA_SEPARATOR);
+        if (Boolean.TRUE.equals(field.getAllowMultiple()) && value.contains(ClientImportConstants.COMMA_SEPARATOR)) {
+            String[] values = value.split(ClientImportConstants.COMMA_SEPARATOR);
             for (int i = 0; i < values.length; i++) {
                 String singleValue = values[i].trim();
                 if (!singleValue.isEmpty()) {
@@ -764,7 +739,7 @@ public class ClientImportService implements IClientImportService {
     private void setDateValue(@NonNull ClientFieldValue fieldValue, @NonNull ClientTypeField field,
                              @NonNull String value, int rowNumber) {
         try {
-            LocalDate dateValue = LocalDate.parse(value, DATE_FORMATTER);
+            LocalDate dateValue = LocalDate.parse(value, ClientImportConstants.DATE_FORMATTER);
             fieldValue.setValueDate(dateValue);
         } catch (DateTimeParseException e) {
             throw new ClientException("IMPORT_INVALID_DATE",
@@ -796,9 +771,9 @@ public class ClientImportService implements IClientImportService {
 
     private Boolean parseBoolean(@NonNull String value, int rowNumber) {
         String trimmed = value.trim().toLowerCase();
-        if (BOOLEAN_TRUE_VALUES.contains(trimmed)) {
+        if (ClientImportConstants.BOOLEAN_TRUE_VALUES.contains(trimmed)) {
             return true;
-        } else if (BOOLEAN_FALSE_VALUES.contains(trimmed)) {
+        } else if (ClientImportConstants.BOOLEAN_FALSE_VALUES.contains(trimmed)) {
             return false;
         } else {
             throw new ClientException("IMPORT_INVALID_BOOLEAN",
@@ -808,9 +783,9 @@ public class ClientImportService implements IClientImportService {
 
     private LocalDateTime parseDateTime(@NonNull String value) {
         List<DateTimeFormatter> formatters = List.of(
-                DATE_TIME_FORMATTER,
-                ISO_DATE_TIME_FORMATTER,
-                ISO_DATE_TIME_NO_SECONDS_FORMATTER
+                ClientImportConstants.DATE_TIME_FORMATTER,
+                ClientImportConstants.ISO_DATE_TIME_FORMATTER,
+                ClientImportConstants.ISO_DATE_TIME_NO_SECONDS_FORMATTER
         );
 
         for (DateTimeFormatter formatter : formatters) {
@@ -821,7 +796,7 @@ public class ClientImportService implements IClientImportService {
         }
 
         try {
-            LocalDate date = LocalDate.parse(value, DATE_FORMATTER);
+            LocalDate date = LocalDate.parse(value, ClientImportConstants.DATE_FORMATTER);
             return date.atTime(LocalTime.MIN);
         } catch (DateTimeParseException e) {
             throw new ClientException("IMPORT_INVALID_DATETIME",
@@ -842,7 +817,6 @@ public class ClientImportService implements IClientImportService {
                 default -> null;
             };
         } catch (Exception e) {
-            log.debug("Error parsing ID from cell: {}", e.getMessage());
             return null;
         }
     }
@@ -887,7 +861,6 @@ public class ClientImportService implements IClientImportService {
                 default -> null;
             };
         } catch (Exception e) {
-            log.debug("Error parsing formula ID from cell: {}", e.getMessage());
             return null;
         }
     }
@@ -907,14 +880,13 @@ public class ClientImportService implements IClientImportService {
                 default -> formatCellWithFormatter(cell);
             };
         } catch (Exception e) {
-            log.debug("Error getting cell value as string: {}", e.getMessage());
             return formatCellWithFormatter(cell);
         }
     }
 
     private String formatNumericCell(@NonNull Cell cell) {
         if (DateUtil.isCellDateFormatted(cell)) {
-            return cell.getLocalDateTimeCellValue().format(DATE_TIME_FORMATTER);
+            return cell.getLocalDateTimeCellValue().format(ClientImportConstants.DATE_TIME_FORMATTER);
         }
 
         double numericValue = cell.getNumericCellValue();
@@ -933,7 +905,6 @@ public class ClientImportService implements IClientImportService {
                 default -> cell.getCellFormula();
             };
         } catch (Exception e) {
-            log.debug("Error formatting formula cell: {}", e.getMessage());
             return cell.getCellFormula();
         }
     }
@@ -943,25 +914,18 @@ public class ClientImportService implements IClientImportService {
             DataFormatter formatter = new DataFormatter();
             return formatter.formatCellValue(cell);
         } catch (Exception e) {
-            log.debug("Error formatting cell with formatter: {}", e.getMessage());
             return null;
         }
     }
 
     private byte[] convertWorkbookToBytes(@NonNull Workbook workbook) {
-        try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+        try (workbook; ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
             workbook.write(baos);
             return baos.toByteArray();
         } catch (IOException e) {
             log.error("Error converting workbook to bytes: {}", e.getMessage(), e);
             throw new ClientException("EXCEL_GENERATION_ERROR",
                     String.format("Error generating Excel file: %s", e.getMessage()));
-        } finally {
-            try {
-                workbook.close();
-            } catch (IOException e) {
-                log.warn("Failed to close workbook: {}", e.getMessage());
-            }
         }
     }
 
@@ -970,13 +934,13 @@ public class ClientImportService implements IClientImportService {
             throw new ClientException("IMPORT_EMPTY_FILE", "File cannot be empty");
         }
 
-        if (file.getSize() > MAX_FILE_SIZE_BYTES) {
+        if (file.getSize() > ClientImportConstants.MAX_FILE_SIZE_BYTES) {
             throw new ClientException("IMPORT_FILE_TOO_LARGE",
-                    String.format("File size exceeds maximum allowed size of %d bytes", MAX_FILE_SIZE_BYTES));
+                    String.format("File size exceeds maximum allowed size of %d bytes", ClientImportConstants.MAX_FILE_SIZE_BYTES));
         }
 
         String filename = file.getOriginalFilename();
-        if (filename == null || (!filename.toLowerCase().endsWith(FILE_EXTENSION_XLSX) && !filename.toLowerCase().endsWith(FILE_EXTENSION_XLS))) {
+        if (filename == null || (!filename.toLowerCase().endsWith(ClientImportConstants.FILE_EXTENSION_XLSX) && !filename.toLowerCase().endsWith(ClientImportConstants.FILE_EXTENSION_XLS))) {
             throw new ClientException("IMPORT_INVALID_FILE_TYPE", "Only Excel files (.xlsx, .xls) are supported");
         }
 
@@ -989,8 +953,8 @@ public class ClientImportService implements IClientImportService {
     private boolean isValidContentType(@NonNull String contentType) {
         return contentType.contains("spreadsheet") ||
                 contentType.contains("excel") ||
-                contentType.equals(CONTENT_TYPE_EXCEL_OLD) ||
-                contentType.equals(CONTENT_TYPE_EXCEL_NEW);
+                contentType.equals(ClientImportConstants.CONTENT_TYPE_EXCEL_OLD) ||
+                contentType.equals(ClientImportConstants.CONTENT_TYPE_EXCEL_NEW);
     }
 
     private record ImportResult(@NonNull List<Client> clients, @NonNull List<String> errors) {

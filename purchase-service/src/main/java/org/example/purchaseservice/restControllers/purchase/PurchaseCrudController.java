@@ -4,7 +4,6 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.example.purchaseservice.mappers.PurchaseMapper;
 import org.example.purchaseservice.models.Purchase;
 import org.example.purchaseservice.models.dto.purchase.PurchaseCreateDTO;
@@ -19,7 +18,6 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
 
-@Slf4j
 @RestController
 @RequestMapping("/api/v1/purchase")
 @RequiredArgsConstructor
@@ -35,7 +33,6 @@ public class PurchaseCrudController {
         Purchase purchase = purchaseMapper.purchaseCreateDTOToPurchase(purchaseCreateDTO);
         Purchase createdPurchase = purchaseCrudService.createPurchase(purchase);
         PurchaseDTO createdPurchaseDto = purchaseMapper.toDtoForCreate(createdPurchase);
-        log.info("Purchase created with ID: {}", createdPurchaseDto.getId());
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
                 .path("/{id}")
                 .buildAndExpand(createdPurchaseDto.getId())
@@ -52,7 +49,6 @@ public class PurchaseCrudController {
         Purchase updatedPurchase = purchaseCrudService.updatePurchase(id, purchase);
         PurchaseDTO updatedPurchaseDto = purchaseMapper.toDto(updatedPurchase);
         purchaseCrudService.enrichPurchaseDTOWithReceivedStatus(updatedPurchaseDto, updatedPurchase);
-        log.info("Purchase updated with ID: {}", updatedPurchaseDto.getId());
         return ResponseEntity.ok(updatedPurchaseDto);
     }
 
@@ -61,7 +57,6 @@ public class PurchaseCrudController {
         Purchase purchase = purchaseCrudService.findPurchaseById(id);
         PurchaseDTO purchaseDto = purchaseMapper.toDto(purchase);
         purchaseCrudService.enrichPurchaseDTOWithReceivedStatus(purchaseDto, purchase);
-        log.info("Purchase fetched with ID: {}", purchaseDto.getId());
         return ResponseEntity.ok(purchaseDto);
     }
 
@@ -69,7 +64,6 @@ public class PurchaseCrudController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deletePurchase(@PathVariable @Positive Long id) {
         purchaseCrudService.deletePurchase(id);
-        log.info("Purchase deleted with ID: {}", id);
         return ResponseEntity.noContent().build();
     }
 }

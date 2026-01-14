@@ -10,8 +10,8 @@ import org.example.userservice.models.branch.Branch;
 import org.example.userservice.models.branch.BranchPermission;
 import org.example.userservice.models.dto.branch.BranchCreateDTO;
 import org.example.userservice.models.dto.branch.BranchDTO;
-import org.example.userservice.services.branch.BranchPermissionService;
-import org.example.userservice.services.branch.BranchService;
+import org.example.userservice.services.impl.IBranchPermissionService;
+import org.example.userservice.services.impl.IBranchService;
 import org.example.userservice.utils.SecurityUtils;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -33,8 +33,8 @@ import static org.springframework.http.HttpStatus.FORBIDDEN;
 @RequiredArgsConstructor
 @Validated
 public class BranchController {
-    private final BranchService branchService;
-    private final BranchPermissionService branchPermissionService;
+    private final IBranchService branchService;
+    private final IBranchPermissionService branchPermissionService;
     private final BranchMapper branchMapper;
 
     @GetMapping
@@ -132,7 +132,7 @@ public class BranchController {
                 .collect(Collectors.toMap(
                         BranchPermission::getBranchId,
                         p -> p,
-                        (existing, replacement) -> existing
+                        (existing, _) -> existing
                 ));
     }
 

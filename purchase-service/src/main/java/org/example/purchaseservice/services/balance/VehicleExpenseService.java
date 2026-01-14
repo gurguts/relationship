@@ -10,6 +10,7 @@ import org.example.purchaseservice.models.dto.balance.VehicleExpenseUpdateDTO;
 import org.example.purchaseservice.repositories.VehicleExpenseRepository;
 import org.example.purchaseservice.repositories.VehicleRepository;
 import org.example.purchaseservice.services.exchange.IExchangeRateService;
+import org.example.purchaseservice.services.impl.IVehicleExpenseService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,7 +25,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class VehicleExpenseService {
+public class VehicleExpenseService implements IVehicleExpenseService {
     
     private static final int EXCHANGE_RATE_SCALE = 6;
     private static final String EUR_CURRENCY = "EUR";
@@ -34,6 +35,7 @@ public class VehicleExpenseService {
     private final VehicleRepository vehicleRepository;
     private final IExchangeRateService exchangeRateService;
     
+    @Override
     @Transactional
     public VehicleExpense createVehicleExpense(@NonNull VehicleExpenseCreateDTO dto) {
         log.info("Creating vehicle expense: vehicleId={}, categoryId={}", dto.getVehicleId(), dto.getCategoryId());
@@ -74,11 +76,13 @@ public class VehicleExpenseService {
         return saved;
     }
     
+    @Override
     @Transactional(readOnly = true)
     public List<VehicleExpense> getExpensesByVehicleId(@NonNull Long vehicleId) {
         return vehicleExpenseRepository.findByVehicleIdOrderByCreatedAtDesc(vehicleId);
     }
     
+    @Override
     @Transactional(readOnly = true)
     public Map<Long, List<VehicleExpense>> getExpensesByVehicleIds(@NonNull List<Long> vehicleIds) {
         if (vehicleIds.isEmpty()) {
@@ -92,6 +96,7 @@ public class VehicleExpenseService {
                 .collect(Collectors.groupingBy(VehicleExpense::getVehicleId));
     }
     
+    @Override
     @Transactional(readOnly = true)
     public VehicleExpense getExpenseById(@NonNull Long expenseId) {
         return vehicleExpenseRepository.findById(expenseId)
@@ -99,6 +104,7 @@ public class VehicleExpenseService {
                         String.format("Vehicle expense not found: id=%d", expenseId)));
     }
     
+    @Override
     @Transactional
     public VehicleExpense updateVehicleExpense(@NonNull Long expenseId, @NonNull VehicleExpenseUpdateDTO dto) {
         log.info("Updating vehicle expense: id={}", expenseId);

@@ -8,6 +8,7 @@ import org.example.userservice.exceptions.transaction.TransactionException;
 import org.example.userservice.models.transaction.Counterparty;
 import org.example.userservice.models.transaction.CounterpartyType;
 import org.example.userservice.repositories.CounterpartyRepository;
+import org.example.userservice.services.impl.ICounterpartyService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,18 +17,20 @@ import java.util.List;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class CounterpartyService {
+public class CounterpartyService implements ICounterpartyService {
     private static final String ERROR_CODE_COUNTERPARTY_ALREADY_EXISTS = "COUNTERPARTY_ALREADY_EXISTS";
     private static final String ERROR_CODE_NAME_REQUIRED = "NAME_REQUIRED";
     private static final String ERROR_CODE_TYPE_REQUIRED = "TYPE_REQUIRED";
 
     private final CounterpartyRepository counterpartyRepository;
 
+    @Override
     @Transactional(readOnly = true)
     public @NonNull List<Counterparty> getCounterpartiesByType(@NonNull CounterpartyType type) {
         return counterpartyRepository.findByTypeOrderByNameAsc(type);
     }
 
+    @Override
     @Transactional(readOnly = true)
     public Counterparty getCounterpartyById(@NonNull Long id) {
         return counterpartyRepository.findById(id)
@@ -35,6 +38,7 @@ public class CounterpartyService {
                         String.format("Counterparty with ID %d not found", id)));
     }
 
+    @Override
     @Transactional
     public Counterparty createCounterparty(@NonNull Counterparty counterparty) {
         validateCounterparty(counterparty);
@@ -49,6 +53,7 @@ public class CounterpartyService {
         return saved;
     }
 
+    @Override
     @Transactional
     public Counterparty updateCounterparty(@NonNull Long id, @NonNull Counterparty updatedCounterparty) {
         validateCounterparty(updatedCounterparty);
@@ -78,6 +83,7 @@ public class CounterpartyService {
         return saved;
     }
 
+    @Override
     @Transactional
     public void deleteCounterparty(@NonNull Long id) {
         Counterparty counterparty = getCounterpartyById(id);

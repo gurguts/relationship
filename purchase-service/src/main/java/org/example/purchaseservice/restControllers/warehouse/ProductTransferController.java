@@ -10,7 +10,7 @@ import org.example.purchaseservice.models.dto.PageResponse;
 import org.example.purchaseservice.models.dto.warehouse.ProductTransferDTO;
 import org.example.purchaseservice.models.dto.warehouse.ProductTransferResponseDTO;
 import org.example.purchaseservice.models.dto.warehouse.ProductTransferUpdateDTO;
-import org.example.purchaseservice.services.warehouse.ProductTransferService;
+import org.example.purchaseservice.services.impl.IProductTransferService;
 import org.springframework.data.domain.Page;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
@@ -32,15 +32,11 @@ import java.time.format.DateTimeFormatter;
 @RequiredArgsConstructor
 @Validated
 public class ProductTransferController {
-    private final ProductTransferService productTransferService;
+    private final IProductTransferService productTransferService;
 
     @PreAuthorize("hasAuthority('warehouse:withdraw')")
     @PostMapping("/transfer")
     public ResponseEntity<ProductTransferResponseDTO> transferProduct(@RequestBody @Valid @NonNull ProductTransferDTO transferDTO) {
-        log.info("Received product transfer request: from product {} to product {}, quantity={}", 
-                transferDTO.getFromProductId(),
-                transferDTO.getToProductId(),
-                transferDTO.getQuantity());
         
         org.example.purchaseservice.models.warehouse.ProductTransfer transfer = productTransferService.transferProduct(transferDTO);
         ProductTransferResponseDTO responseDTO = productTransferService.toDTO(transfer);

@@ -4,12 +4,11 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.example.purchaseservice.models.balance.DriverProductBalance;
 import org.example.purchaseservice.models.dto.balance.DriverProductBalanceDTO;
 import org.example.purchaseservice.models.dto.balance.UpdateTotalCostRequest;
 import org.example.purchaseservice.mappers.DriverProductBalanceMapper;
-import org.example.purchaseservice.services.balance.DriverProductBalanceService;
+import org.example.purchaseservice.services.impl.IDriverProductBalanceService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
@@ -17,13 +16,12 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@Slf4j
 @RestController
 @RequestMapping("/api/v1/driver/balances")
 @RequiredArgsConstructor
 @Validated
 public class DriverBalanceController {
-    private final DriverProductBalanceService driverProductBalanceService;
+    private final IDriverProductBalanceService driverProductBalanceService;
     private final DriverProductBalanceMapper driverProductBalanceMapper;
 
     @GetMapping("/{driverId}/product/{productId}")

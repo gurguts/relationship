@@ -12,6 +12,5 @@ public interface IWarehouseReceiptService {
 
     WarehouseReceipt createWarehouseReceipt(WarehouseReceipt dto);
 
-    List<WarehouseReceipt> findWarehouseReceiptsByFilters(Map<String, List<String>> warehouseFilters);
 }
 

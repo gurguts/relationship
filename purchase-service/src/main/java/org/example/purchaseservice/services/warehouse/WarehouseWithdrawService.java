@@ -49,6 +49,8 @@ public class WarehouseWithdrawService implements IWarehouseWithdrawService {
     @Override
     @Transactional
     public WarehouseWithdrawal createWithdrawal(@NonNull WarehouseWithdrawal warehouseWithdrawal) {
+        log.info("Creating warehouse withdrawal: warehouseId={}, productId={}, quantity={}", 
+                warehouseWithdrawal.getWarehouseId(), warehouseWithdrawal.getProductId(), warehouseWithdrawal.getQuantity());
         validateWarehouseWithdrawal(warehouseWithdrawal);
         
         Long userId = SecurityUtils.getCurrentUserId();
@@ -82,12 +84,14 @@ public class WarehouseWithdrawService implements IWarehouseWithdrawService {
             vehicleService.addWithdrawalCost(warehouseWithdrawal.getVehicleId(), priceResult.totalCost());
         }
         
+        log.info("Warehouse withdrawal created: id={}", savedWithdrawal.getId());
         return savedWithdrawal;
     }
 
     @Override
     @Transactional
     public WarehouseWithdrawal updateWithdrawal(@NonNull Long id, @NonNull WarehouseWithdrawal request) {
+        log.info("Updating warehouse withdrawal: id={}", id);
         validateWarehouseWithdrawalForUpdate(request);
         
         WarehouseWithdrawal withdrawal = findWithdrawalById(id);
@@ -106,6 +110,7 @@ public class WarehouseWithdrawService implements IWarehouseWithdrawService {
         if (newQuantity.compareTo(BigDecimal.ZERO) == 0) {
             restoreWithdrawalToWarehouse(withdrawal);
             warehouseWithdrawalRepository.delete(withdrawal);
+            log.info("Warehouse withdrawal deleted (quantity=0): id={}", id);
             return null;
         }
         
@@ -119,15 +124,19 @@ public class WarehouseWithdrawService implements IWarehouseWithdrawService {
         
         updateWithdrawalFields(withdrawal, request, newQuantity, unitPrice);
         
-        return warehouseWithdrawalRepository.save(withdrawal);
+        WarehouseWithdrawal saved = warehouseWithdrawalRepository.save(withdrawal);
+        log.info("Warehouse withdrawal updated: id={}", saved.getId());
+        return saved;
     }
 
     @Override
     @Transactional
     public void deleteWithdrawal(@NonNull Long id) {
+        log.info("Deleting warehouse withdrawal: id={}", id);
         WarehouseWithdrawal withdrawal = findWithdrawalById(id);
         restoreWithdrawalToWarehouse(withdrawal);
         warehouseWithdrawalRepository.delete(withdrawal);
+        log.info("Warehouse withdrawal deleted: id={}", id);
     }
 
     @Override
@@ -165,25 +174,13 @@ public class WarehouseWithdrawService implements IWarehouseWithdrawService {
     @Override
     @Transactional(readOnly = true)
     public List<WithdrawalReason> getAllWithdrawalReasons() {
-        try {
-            return withdrawalReasonRepository.findAll();
-        } catch (Exception e) {
-            log.error("Error getting all withdrawal reasons", e);
-            throw new PurchaseException("FAILED_TO_GET_WITHDRAWAL_REASONS", 
-                    "Failed to get all withdrawal reasons", e);
-        }
+        return withdrawalReasonRepository.findAll();
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<WithdrawalReason> getWithdrawalReasonsByPurpose(@NonNull WithdrawalReason.Purpose purpose) {
-        try {
-            return withdrawalReasonRepository.findByPurpose(purpose);
-        } catch (Exception e) {
-            log.error("Error getting withdrawal reasons by purpose: purpose={}", purpose, e);
-            throw new PurchaseException("FAILED_TO_GET_WITHDRAWAL_REASONS", 
-                    String.format("Failed to get withdrawal reasons by purpose: %s", purpose), e);
-        }
+        return withdrawalReasonRepository.findByPurpose(purpose);
     }
 
     private void validateWarehouseWithdrawal(@NonNull WarehouseWithdrawal warehouseWithdrawal) {
@@ -321,11 +318,8 @@ public class WarehouseWithdrawService implements IWarehouseWithdrawService {
 
     private WarehouseWithdrawal findWithdrawalById(@NonNull Long id) {
         return warehouseWithdrawalRepository.findById(id)
-                .orElseThrow(() -> {
-                    log.error("Withdrawal not found: id={}", id);
-                    return new PurchaseException("WITHDRAWAL_NOT_FOUND", 
-                            String.format("Withdrawal with ID %d not found", id));
-                });
+                .orElseThrow(() -> new PurchaseException("WITHDRAWAL_NOT_FOUND", 
+                        String.format("Withdrawal with ID %d not found", id)));
     }
 
     private void validateProductChange(@NonNull WarehouseWithdrawal request, @NonNull WarehouseWithdrawal withdrawal) {

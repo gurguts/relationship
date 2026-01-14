@@ -21,10 +21,9 @@ final class MessageLocalizationHelper {
 
     static String getLocalizedErrorCodeMessage(@NonNull MessageSource messageSource,
                                                @NonNull String errorCode,
-                                               @NonNull String messageKeyPrefix,
                                                String fallbackMessage,
                                                @NonNull Locale locale) {
-        String messageKey = String.format(messageKeyPrefix, errorCode.toUpperCase());
+        String messageKey = String.format(ErrorConstants.MESSAGE_KEY_PREFIX_WEBAPP_ERROR, errorCode.toUpperCase());
         String localizedMessage = messageSource.getMessage(messageKey, null, null, locale);
         
         if (isValidLocalizedMessage(localizedMessage, messageKey)) {

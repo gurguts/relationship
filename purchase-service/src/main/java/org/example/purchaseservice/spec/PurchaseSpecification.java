@@ -76,16 +76,14 @@ public class PurchaseSpecification implements Specification<Purchase> {
         Predicate filterPredicate = applyFilters(criteriaBuilder.conjunction(), root, criteriaBuilder);
         predicates.add(filterPredicate);
 
-        if (StringUtils.hasText(this.query)) {
-            if (clientIds != null && !clientIds.isEmpty()) {
-                predicates.add(root.get(FIELD_CLIENT).in(clientIds));
-            } else {
-                List<Predicate> searchPredicates = buildSearchPredicates(root, criteriaBuilder);
-                Predicate searchPredicate = criteriaBuilder.or(searchPredicates.toArray(new Predicate[0]));
-                predicates.add(searchPredicate);
-            }
-        } else if (clientIds != null && !clientIds.isEmpty()) {
+        if (clientIds != null && !clientIds.isEmpty()) {
             predicates.add(root.get(FIELD_CLIENT).in(clientIds));
+        } else if (clientIds != null) {
+            predicates.add(criteriaBuilder.disjunction());
+        } else if (StringUtils.hasText(this.query)) {
+            List<Predicate> searchPredicates = buildSearchPredicates(root, criteriaBuilder);
+            Predicate searchPredicate = criteriaBuilder.or(searchPredicates.toArray(new Predicate[0]));
+            predicates.add(searchPredicate);
         }
 
         return criteriaBuilder.and(predicates.toArray(new Predicate[0]));

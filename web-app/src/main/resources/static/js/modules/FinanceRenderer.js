@@ -1,22 +1,33 @@
 const FinanceRenderer = (function() {
-    async function renderAccountsAndBranches(branches, accounts, usersCache, branchesCache, balancesMap = null) {
+    async function renderAccountsAndBranches(branches, accounts, usersCache, branchesCache, balancesMap = null, standaloneAccounts = null, standaloneBalance = null, standalonePosition = 'end') {
         const container = document.getElementById('accounts-branches-container');
         if (!container) return;
         container.textContent = '';
         
         const accountsByBranch = {};
-        const standaloneAccounts = [];
+        let standaloneAccountsList = standaloneAccounts || [];
         
-        accounts.forEach(account => {
-            if (account.branchId) {
-                if (!accountsByBranch[account.branchId]) {
-                    accountsByBranch[account.branchId] = [];
+        if (!standaloneAccounts) {
+            accounts.forEach(account => {
+                if (account.branchId) {
+                    if (!accountsByBranch[account.branchId]) {
+                        accountsByBranch[account.branchId] = [];
+                    }
+                    accountsByBranch[account.branchId].push(account);
+                } else {
+                    standaloneAccountsList.push(account);
                 }
-                accountsByBranch[account.branchId].push(account);
-            } else {
-                standaloneAccounts.push(account);
-            }
-        });
+            });
+        } else {
+            accounts.forEach(account => {
+                if (account.branchId) {
+                    if (!accountsByBranch[account.branchId]) {
+                        accountsByBranch[account.branchId] = [];
+                    }
+                    accountsByBranch[account.branchId].push(account);
+                }
+            });
+        }
         
         const allAccountIds = accounts
             .map(acc => acc.id)
@@ -37,12 +48,31 @@ const FinanceRenderer = (function() {
                 return await createBranchSection(branch, branchAccounts, usersCache, branchesCache, balancesMap);
             })
         );
-        branchSections.forEach(section => container.appendChild(section));
         
-        if (standaloneAccounts.length > 0) {
-            const standaloneBalance = calculateAccountsTotalBalanceFromMap(standaloneAccounts, balancesMap);
-            const standaloneSection = await createStandaloneAccountsSection(standaloneAccounts, standaloneBalance, usersCache, branchesCache, balancesMap);
+        let standaloneSection = null;
+        if (standaloneAccountsList.length > 0) {
+            const calculatedBalance = standaloneBalance !== null ? standaloneBalance : calculateAccountsTotalBalanceFromMap(standaloneAccountsList, balancesMap);
+            standaloneSection = await createStandaloneAccountsSection(standaloneAccountsList, calculatedBalance, usersCache, branchesCache, balancesMap);
+        }
+        
+        if (standalonePosition === 'start' && standaloneSection) {
             container.appendChild(standaloneSection);
+            branchSections.forEach(section => container.appendChild(section));
+        } else if (typeof standalonePosition === 'number' && standaloneSection) {
+            branchSections.forEach((section, index) => {
+                container.appendChild(section);
+                if (index === standalonePosition - 1) {
+                    container.appendChild(standaloneSection);
+                }
+            });
+            if (standalonePosition >= branchSections.length) {
+                container.appendChild(standaloneSection);
+            }
+        } else {
+            branchSections.forEach(section => container.appendChild(section));
+            if (standaloneSection) {
+                container.appendChild(standaloneSection);
+            }
         }
     }
     

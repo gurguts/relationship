@@ -73,7 +73,6 @@ nextPageButton.addEventListener('click', () => {
 
 function showEditModal(purchase) {
     PurchaseEditModal.showEditModal(purchase, {
-        productMap: productMap,
         sourceMap: sourceMap
     });
 }

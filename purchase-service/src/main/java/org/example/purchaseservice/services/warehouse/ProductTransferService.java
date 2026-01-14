@@ -17,8 +17,10 @@ import org.example.purchaseservice.repositories.ProductTransferRepository;
 import org.example.purchaseservice.repositories.WarehouseRepository;
 import org.example.purchaseservice.repositories.WithdrawalReasonRepository;
 import org.example.purchaseservice.services.balance.IWarehouseProductBalanceService;
+import org.example.purchaseservice.services.impl.IProductTransferService;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.example.purchaseservice.utils.ValidationUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -43,7 +45,7 @@ import java.util.stream.StreamSupport;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class ProductTransferService {
+public class ProductTransferService implements IProductTransferService {
     
     private static final int PRICE_SCALE = 6;
     private static final int QUANTITY_SCALE = 2;
@@ -79,8 +81,11 @@ public class ProductTransferService {
     private final ProductRepository productRepository;
     private final WarehouseRepository warehouseRepository;
 
+    @Override
     @Transactional
     public ProductTransfer transferProduct(@NonNull ProductTransferDTO transferDTO) {
+        log.info("Creating product transfer: warehouseId={}, fromProductId={}, toProductId={}, quantity={}", 
+                transferDTO.getWarehouseId(), transferDTO.getFromProductId(), transferDTO.getToProductId(), transferDTO.getQuantity());
         validateTransferDTO(transferDTO);
         
         Long warehouseId = transferDTO.getWarehouseId();
@@ -121,9 +126,11 @@ public class ProductTransferService {
             savedTransfer = productTransferRepository.save(savedTransfer);
         }
         
+        log.info("Product transfer created: id={}", savedTransfer.getId());
         return savedTransfer;
     }
 
+    @Override
     @Transactional(readOnly = true)
     public Page<ProductTransferResponseDTO> getTransfers(
             LocalDate dateFrom,
@@ -154,6 +161,7 @@ public class ProductTransferService {
         return transfers.map(this::toDTO);
     }
 
+    @Override
     @Transactional(readOnly = true)
     public List<ProductTransferResponseDTO> getAllTransfers(
             LocalDate dateFrom,
@@ -181,8 +189,10 @@ public class ProductTransferService {
         return transfers.stream().map(this::toDTO).toList();
     }
 
+    @Override
     @Transactional
     public ProductTransferResponseDTO updateTransfer(@NonNull Long transferId, @NonNull ProductTransferUpdateDTO updateDTO) {
+        log.info("Updating product transfer: id={}", transferId);
         ProductTransfer transfer = productTransferRepository.findById(transferId)
                 .orElseThrow(() -> new PurchaseException("TRANSFER_NOT_FOUND",
                         String.format("Product transfer not found: id=%d", transferId)));
@@ -196,6 +206,7 @@ public class ProductTransferService {
         validateQuantity(newQuantity);
 
         if (newQuantity.compareTo(BigDecimal.ZERO) == 0) {
+            log.info("Product transfer deleted (quantity=0): id={}", transferId);
             return deleteTransfer(transfer, originalQuantity, unitPrice);
         }
 
@@ -210,9 +221,11 @@ public class ProductTransferService {
         updateTransferFields(transfer, updateDTO, newQuantity, unitPrice);
         
         ProductTransfer saved = productTransferRepository.save(transfer);
+        log.info("Product transfer updated: id={}", saved.getId());
         return toDTO(saved);
     }
 
+    @Override
     public ProductTransferResponseDTO toDTO(@NonNull ProductTransfer transfer) {
         ProductTransferResponseDTO dto = new ProductTransferResponseDTO();
         dto.setId(transfer.getId());
@@ -231,6 +244,7 @@ public class ProductTransferService {
         return dto;
     }
 
+    @Override
     @Transactional(readOnly = true)
     public List<TransferExcelData> getTransfersForExcel(
             LocalDate dateFrom,
@@ -292,6 +306,7 @@ public class ProductTransferService {
         }).toList();
     }
 
+    @Override
     @Transactional(readOnly = true)
     public byte[] exportToExcel(
             LocalDate dateFrom,
@@ -362,13 +377,7 @@ public class ProductTransferService {
     }
 
     private void validatePageSize(int size) {
-        if (size <= 0) {
-            throw new PurchaseException("INVALID_PAGE_SIZE", "Page size must be positive");
-        }
-        if (size > MAX_PAGE_SIZE) {
-            throw new PurchaseException("INVALID_PAGE_SIZE",
-                    String.format("Page size cannot exceed %d, got: %d", MAX_PAGE_SIZE, size));
-        }
+        ValidationUtils.validatePageSize(size, MAX_PAGE_SIZE);
     }
 
     private String validateAndGetSortProperty(String sortBy) {
@@ -533,6 +542,7 @@ public class ProductTransferService {
         );
 
         productTransferRepository.delete(transfer);
+        log.info("Product transfer deleted: id={}", transfer.getId());
         return null;
     }
 

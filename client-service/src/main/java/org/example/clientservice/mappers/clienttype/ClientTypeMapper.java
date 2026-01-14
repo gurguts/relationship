@@ -13,8 +13,6 @@ import java.util.stream.Collectors;
 @Component
 public class ClientTypeMapper {
 
-    private static final String DEFAULT_NAME_FIELD_LABEL = "Компанія";
-
     public ClientTypeDTO clientTypeToDTO(@NonNull ClientType clientType) {
         ClientTypeDTO dto = new ClientTypeDTO();
         dto.setId(clientType.getId());
@@ -38,7 +36,7 @@ public class ClientTypeMapper {
     public ClientType createDTOToClientType(@NonNull ClientTypeCreateDTO dto) {
         ClientType clientType = new ClientType();
         clientType.setName(dto.getName());
-        clientType.setNameFieldLabel(dto.getNameFieldLabel() != null ? dto.getNameFieldLabel() : DEFAULT_NAME_FIELD_LABEL);
+        clientType.setNameFieldLabel(dto.getNameFieldLabel());
         return clientType;
     }
 

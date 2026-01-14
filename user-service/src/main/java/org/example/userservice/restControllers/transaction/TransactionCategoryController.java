@@ -9,7 +9,7 @@ import org.example.userservice.models.transaction.TransactionCategory;
 import org.example.userservice.models.transaction.TransactionType;
 import org.example.userservice.models.dto.transaction.TransactionCategoryCreateDTO;
 import org.example.userservice.models.dto.transaction.TransactionCategoryDTO;
-import org.example.userservice.services.transaction.TransactionCategoryService;
+import org.example.userservice.services.impl.ITransactionCategoryService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
@@ -26,7 +26,7 @@ import static org.springframework.http.HttpStatus.CREATED;
 @RequiredArgsConstructor
 @Validated
 public class TransactionCategoryController {
-    private final TransactionCategoryService categoryService;
+    private final ITransactionCategoryService categoryService;
     private final TransactionCategoryMapper transactionCategoryMapper;
 
     @GetMapping("/type/{type}")

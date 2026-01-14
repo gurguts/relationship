@@ -30,11 +30,8 @@ public class ExchangeRateService implements IExchangeRateService {
         String normalizedCurrency = normalizeCurrency(fromCurrency);
         
         if (EUR_CURRENCY.equalsIgnoreCase(normalizedCurrency)) {
-            log.debug("Getting exchange rate for EUR: returning 1.0");
             return BigDecimal.ONE;
         }
-        
-        log.debug("Getting exchange rate: fromCurrency={}", normalizedCurrency);
         
         ExchangeRate rate = exchangeRateRepository.findByFromCurrency(normalizedCurrency)
                 .orElseThrow(() -> new PurchaseException("EXCHANGE_RATE_NOT_FOUND", 
@@ -46,16 +43,12 @@ public class ExchangeRateService implements IExchangeRateService {
                     String.format("Exchange rate value is null for currency: %s", normalizedCurrency));
         }
         
-        log.debug("Exchange rate found: fromCurrency={}, rate={}", normalizedCurrency, exchangeRate);
         return exchangeRate;
     }
 
     @Transactional(readOnly = true)
     public List<ExchangeRate> getAllExchangeRates() {
-        log.debug("Getting all exchange rates");
-        List<ExchangeRate> rates = exchangeRateRepository.findAll();
-        log.debug("Found {} exchange rates", rates.size());
-        return rates;
+        return exchangeRateRepository.findAll();
     }
 
     @Transactional

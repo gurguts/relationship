@@ -169,6 +169,7 @@
                 <label><input type="checkbox" name="fields" value="quantity" checked> Кількість</label>
                 <label><input type="checkbox" name="fields" value="unitPrice" checked> Ціна за одиницю</label>
                 <label><input type="checkbox" name="fields" value="totalPrice" checked> Всього сплачено</label>
+                <label><input type="checkbox" name="fields" value="totalPriceEur" checked> Всього сплачено EUR</label>
                 <label><input type="checkbox" name="fields" value="currency" checked> Валюта</label>
                 <label><input type="checkbox" name="fields" value="exchangeRate" checked> Курс</label>
                 <label><input type="checkbox" name="fields" value="paymentMethod" checked> Метод оплати</label>
@@ -218,9 +219,6 @@
         <span id="close-edit-modal" class="close">&times;</span>
         <h3>Редагувати закупівлю</h3>
         <form id="edit-form">
-            <label>Товар:
-                <select name="productId" required></select>
-            </label>
             <label>Кількість:
                 <input type="number" name="quantity" step="0.01" min="0" required>
             </label>

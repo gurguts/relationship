@@ -35,11 +35,9 @@ public class ClientTypeFieldMapper {
         dto.setId(field.getId());
         dto.setFieldName(field.getFieldName());
         dto.setFieldLabel(field.getFieldLabel());
-        
-        if (field.getFieldType() != null) {
-            dto.setFieldType(field.getFieldType().name());
-        }
-        
+
+        dto.setFieldType(field.getFieldType().name());
+
         dto.setIsRequired(field.getIsRequired());
         dto.setIsSearchable(field.getIsSearchable());
         dto.setIsFilterable(field.getIsFilterable());

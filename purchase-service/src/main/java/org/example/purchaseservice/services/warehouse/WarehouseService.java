@@ -24,84 +24,58 @@ public class WarehouseService implements IWarehouseService {
     @Transactional(readOnly = true)
     @Cacheable(value = "warehouses", key = "#id")
     public Warehouse getWarehouse(@NonNull Long id) {
-        try {
-            return warehouseRepository.findById(id)
-                    .orElseThrow(() -> new WarehouseNotFoundException(String.format("Warehouse with ID %d not found", id)));
-        } catch (WarehouseNotFoundException e) {
-            log.error("Warehouse not found: id={}", id, e);
-            throw e;
-        } catch (Exception e) {
-            log.error("Error getting warehouse: id={}", id, e);
-            throw new WarehouseNotFoundException(String.format("Warehouse with ID %d not found", id));
-        }
+        return warehouseRepository.findById(id)
+                .orElseThrow(() -> new WarehouseNotFoundException(String.format("Warehouse with ID %d not found", id)));
     }
 
     @Override
     @Transactional(readOnly = true)
     @Cacheable(value = "warehouses", key = "'allWarehouses'")
     public List<Warehouse> getAllWarehouses() {
-        try {
-            return warehouseRepository.findAll();
-        } catch (Exception e) {
-            log.error("Error getting all warehouses", e);
-            throw new RuntimeException("Failed to get all warehouses", e);
-        }
+        return warehouseRepository.findAll();
     }
 
     @Override
     @Transactional
     @CacheEvict(value = {"warehouses"}, allEntries = true)
     public Warehouse createWarehouse(@NonNull Warehouse warehouse) {
+        log.info("Creating new warehouse: name={}", warehouse.getName());
         validateWarehouse(warehouse);
-        try {
-            return warehouseRepository.save(warehouse);
-        } catch (Exception e) {
-            log.error("Error creating warehouse: name={}", warehouse.getName(), e);
-            throw new RuntimeException("Failed to create warehouse", e);
-        }
+        Warehouse saved = warehouseRepository.save(warehouse);
+        log.info("Warehouse created: id={}", saved.getId());
+        return saved;
     }
 
     @Override
     @Transactional
     @CacheEvict(value = {"warehouses"}, allEntries = true)
     public Warehouse updateWarehouse(@NonNull Long id, @NonNull Warehouse warehouse) {
+        log.info("Updating warehouse: id={}", id);
         validateWarehouse(warehouse);
-        try {
-            Warehouse existingWarehouse = warehouseRepository.findById(id)
-                    .orElseThrow(() -> new WarehouseNotFoundException(String.format("Warehouse with ID %d not found", id)));
-            
-            if (warehouse.getName() != null) {
-                existingWarehouse.setName(warehouse.getName());
-            }
-            if (warehouse.getDescription() != null) {
-                existingWarehouse.setDescription(warehouse.getDescription());
-            }
-            
-            return warehouseRepository.save(existingWarehouse);
-        } catch (WarehouseNotFoundException e) {
-            log.error("Warehouse not found for update: id={}", id, e);
-            throw e;
-        } catch (Exception e) {
-            log.error("Error updating warehouse: id={}", id, e);
-            throw new RuntimeException("Failed to update warehouse", e);
+        Warehouse existingWarehouse = warehouseRepository.findById(id)
+                .orElseThrow(() -> new WarehouseNotFoundException(String.format("Warehouse with ID %d not found", id)));
+
+        if (warehouse.getName() != null) {
+            existingWarehouse.setName(warehouse.getName());
         }
+        if (warehouse.getDescription() != null) {
+            existingWarehouse.setDescription(warehouse.getDescription());
+        }
+
+        Warehouse saved = warehouseRepository.save(existingWarehouse);
+        log.info("Warehouse updated: id={}", saved.getId());
+        return saved;
     }
 
     @Override
     @Transactional
     @CacheEvict(value = {"warehouses"}, allEntries = true)
     public void deleteWarehouse(@NonNull Long id) {
-        try {
-            Warehouse warehouse = warehouseRepository.findById(id)
-                    .orElseThrow(() -> new WarehouseNotFoundException(String.format("Warehouse with ID %d not found", id)));
-            warehouseRepository.delete(warehouse);
-        } catch (WarehouseNotFoundException e) {
-            log.error("Warehouse not found for deletion: id={}", id, e);
-            throw e;
-        } catch (Exception e) {
-            log.error("Error deleting warehouse: id={}", id, e);
-            throw new RuntimeException("Failed to delete warehouse", e);
-        }
+        log.info("Deleting warehouse: id={}", id);
+        Warehouse warehouse = warehouseRepository.findById(id)
+                .orElseThrow(() -> new WarehouseNotFoundException(String.format("Warehouse with ID %d not found", id)));
+        warehouseRepository.delete(warehouse);
+        log.info("Warehouse deleted: id={}", id);
     }
 
     private void validateWarehouse(@NonNull Warehouse warehouse) {

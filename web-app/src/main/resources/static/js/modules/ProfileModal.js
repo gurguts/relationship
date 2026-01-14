@@ -11,6 +11,10 @@ const ProfileModal = (function() {
         modal.id = 'edit-balance-modal';
         modal.style.display = 'flex';
         
+        setTimeout(() => {
+            modal.classList.add('show');
+        }, CLIENT_CONSTANTS.MODAL_ANIMATION_DELAY);
+        
         const modalContent = document.createElement('div');
         modalContent.className = 'modal-content';
         
@@ -99,8 +103,13 @@ const ProfileModal = (function() {
 
     function closeEditBalanceModal() {
         if (modalInstance) {
-            modalInstance.remove();
-            modalInstance = null;
+            modalInstance.classList.remove('show');
+            setTimeout(() => {
+                if (modalInstance) {
+                    modalInstance.remove();
+                    modalInstance = null;
+                }
+            }, CLIENT_CONSTANTS.MODAL_CLOSE_DELAY);
         }
     }
 

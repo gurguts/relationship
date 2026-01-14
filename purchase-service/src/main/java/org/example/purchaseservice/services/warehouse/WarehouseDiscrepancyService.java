@@ -14,6 +14,7 @@ import org.example.purchaseservice.repositories.WarehouseDiscrepancyRepository;
 import org.example.purchaseservice.models.dto.warehouse.DiscrepancyStatisticsDTO;
 import org.example.purchaseservice.repositories.ProductRepository;
 import org.example.purchaseservice.repositories.WarehouseRepository;
+import org.example.purchaseservice.services.impl.IWarehouseDiscrepancyService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -34,7 +35,7 @@ import java.util.stream.StreamSupport;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class WarehouseDiscrepancyService {
+public class WarehouseDiscrepancyService implements IWarehouseDiscrepancyService {
     
     private static final int VALUE_SCALE = 2;
     private static final int MAX_PAGE_SIZE = 1000;
@@ -60,6 +61,7 @@ public class WarehouseDiscrepancyService {
     private final ProductRepository productRepository;
     private final WarehouseRepository warehouseRepository;
     
+    @Override
     @Transactional
     public void createDiscrepancy(
             Long warehouseReceiptId,
@@ -87,6 +89,9 @@ public class WarehouseDiscrepancyService {
                 ? WarehouseDiscrepancy.DiscrepancyType.GAIN 
                 : WarehouseDiscrepancy.DiscrepancyType.LOSS;
         
+        log.info("Creating warehouse discrepancy: driverId={}, productId={}, warehouseId={}, type={}, quantity={}", 
+                driverId, productId, warehouseId, type, discrepancyQuantity);
+        
         WarehouseDiscrepancy discrepancy = WarehouseDiscrepancy.builder()
                 .warehouseReceiptId(warehouseReceiptId)
                 .driverId(driverId)
@@ -103,9 +108,11 @@ public class WarehouseDiscrepancyService {
                 .createdByUserId(createdByUserId)
                 .build();
 
-        discrepancyRepository.save(discrepancy);
+        WarehouseDiscrepancy saved = discrepancyRepository.save(discrepancy);
+        log.info("Warehouse discrepancy created: id={}", saved.getId());
     }
     
+    @Override
     @Transactional
     public void createFromDriverBalance(
             @NonNull Long warehouseReceiptId,
@@ -162,6 +169,7 @@ public class WarehouseDiscrepancyService {
         return discrepancyRepository.findAll(spec, pageable);
     }
 
+    @Override
     @Transactional(readOnly = true)
     public DiscrepancyStatisticsDTO getStatistics(String type, LocalDate dateFrom, LocalDate dateTo) {
         validateDateRange(dateFrom, dateTo);
@@ -185,6 +193,7 @@ public class WarehouseDiscrepancyService {
         return stats;
     }
 
+    @Override
     @Transactional(readOnly = true)
     public WarehouseDiscrepancy getDiscrepancyById(@NonNull Long id) {
         return discrepancyRepository.findById(id)
@@ -192,6 +201,7 @@ public class WarehouseDiscrepancyService {
                         String.format("Discrepancy not found: id=%d", id)));
     }
 
+    @Override
     @Transactional(readOnly = true)
     public byte[] exportToExcel(
             Long driverId,

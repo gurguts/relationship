@@ -9,8 +9,8 @@ import java.util.List;
 
 public interface IWarehouseProductBalanceService {
     
-    WarehouseProductBalance addProduct(@NonNull Long warehouseId, @NonNull Long productId, 
-                                      @NonNull BigDecimal quantity, @NonNull BigDecimal totalCost);
+    void addProduct(@NonNull Long warehouseId, @NonNull Long productId,
+                    @NonNull BigDecimal quantity, @NonNull BigDecimal totalCost);
     
     BigDecimal removeProduct(@NonNull Long warehouseId, @NonNull Long productId, @NonNull BigDecimal quantity);
     
@@ -22,15 +22,11 @@ public interface IWarehouseProductBalanceService {
     WarehouseProductBalance getBalance(@NonNull Long warehouseId, @NonNull Long productId);
     
     List<WarehouseProductBalance> getWarehouseBalances(@NonNull Long warehouseId);
-    
-    List<WarehouseProductBalance> getProductBalances(@NonNull Long productId);
-    
+
     void adjustProductCost(@NonNull Long warehouseId, @NonNull Long productId, @NonNull BigDecimal costDelta);
     
     boolean hasEnoughProduct(@NonNull Long warehouseId, @NonNull Long productId, @NonNull BigDecimal requiredQuantity);
-    
-    BigDecimal getAveragePrice(@NonNull Long warehouseId, @NonNull Long productId);
-    
+
     WarehouseProductBalance setInitialBalance(@NonNull Long warehouseId, @NonNull Long productId,
                                              @NonNull BigDecimal initialQuantity, @NonNull BigDecimal averagePriceEur);
     

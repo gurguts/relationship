@@ -7,7 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.userservice.models.dto.PageResponse;
 import org.example.userservice.models.dto.transaction.TransactionPageDTO;
 import org.example.userservice.services.impl.ITransactionSearchService;
-import org.example.userservice.services.transaction.TransactionExportService;
+import org.example.userservice.services.impl.ITransactionExportService;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -18,7 +18,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Collections;
@@ -36,7 +35,7 @@ public class TransactionSearchController {
     private static final String DATE_TIME_PATTERN = "yyyy-MM-dd_HH-mm-ss";
 
     private final ITransactionSearchService transactionSearchService;
-    private final TransactionExportService transactionExportService;
+    private final ITransactionExportService transactionExportService;
     private final ObjectMapper objectMapper;
 
     @PreAuthorize("hasAuthority('finance:view')")
@@ -59,7 +58,7 @@ public class TransactionSearchController {
     @PreAuthorize("hasAuthority('finance:view')")
     @GetMapping("/export")
     public ResponseEntity<byte[]> exportTransactions(
-            @RequestParam(required = false) String filters) throws IOException {
+            @RequestParam(required = false) String filters) {
 
         Map<String, List<String>> filterMap = parseFilters(filters);
 

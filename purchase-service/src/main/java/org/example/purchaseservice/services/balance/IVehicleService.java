@@ -16,9 +16,9 @@ public interface IVehicleService {
     
     Vehicle createVehicle(@NonNull Vehicle vehicle);
     
-    Vehicle addWithdrawalCost(@NonNull Long vehicleId, BigDecimal withdrawalCost);
+    void addWithdrawalCost(@NonNull Long vehicleId, BigDecimal withdrawalCost);
     
-    Vehicle subtractWithdrawalCost(@NonNull Long vehicleId, BigDecimal withdrawalCost);
+    void subtractWithdrawalCost(@NonNull Long vehicleId, BigDecimal withdrawalCost);
     
     Vehicle getVehicle(@NonNull Long vehicleId);
     
@@ -43,17 +43,17 @@ public interface IVehicleService {
     void deleteVehicle(@NonNull Long vehicleId);
     
     Page<Vehicle> searchVehicles(String query, @NonNull Pageable pageable, Map<String, List<String>> filterParams);
-    
-    BigDecimal calculateTotalExpenses(@NonNull Vehicle vehicle, @NonNull BigDecimal expensesTotal);
-    
+
     BigDecimal calculateTotalExpenses(@NonNull List<VehicleProduct> products, @NonNull BigDecimal expensesTotal);
     
     BigDecimal calculateTotalIncome(@NonNull Vehicle vehicle);
     
     BigDecimal calculateFullReclamation(@NonNull Vehicle vehicle);
-    
-    BigDecimal calculateMargin(@NonNull Vehicle vehicle, @NonNull BigDecimal expensesTotal);
-    
+
     BigDecimal calculateMargin(@NonNull Vehicle vehicle, @NonNull List<VehicleProduct> products, @NonNull BigDecimal expensesTotal);
+    
+    Map<Long, List<VehicleProduct>> getVehicleProductsByVehicleIds(@NonNull List<Long> vehicleIds);
+    
+    Map<Long, BigDecimal> getExpensesTotalsByVehicleIds(@NonNull List<Long> vehicleIds);
 }
 

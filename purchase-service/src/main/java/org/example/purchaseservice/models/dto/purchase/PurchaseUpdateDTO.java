@@ -11,7 +11,6 @@ public class PurchaseUpdateDTO {
 
     private Long sourceId;
 
-    @NotNull(message = "{validation.purchase.product.null}")
     private Long productId;
 
     @NotNull(message = "{validation.purchase.quantity.null}")

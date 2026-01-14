@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.purchaseservice.clients.UserClient;
 import org.example.purchaseservice.models.dto.user.UserDTO;
+import org.example.purchaseservice.services.impl.IUserService;
 import org.springframework.stereotype.Service;
 
 import java.util.Collections;
@@ -14,10 +15,11 @@ import java.util.List;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class UserService {
+public class UserService implements IUserService {
     
     private final UserClient userClient;
     
+    @Override
     public String getUserFullNameFromLogin(@NonNull String login) {
         if (login.trim().isEmpty()) {
             return null;
@@ -40,6 +42,7 @@ public class UserService {
         }
     }
     
+    @Override
     public List<UserDTO> getAllUsers() {
         try {
             List<UserDTO> users = userClient.getAllUsers().getBody();

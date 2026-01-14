@@ -27,7 +27,6 @@ public class SourceService implements ISourceService {
     private static final String ERROR_INVALID_ID = "INVALID_ID";
     private static final String ERROR_INVALID_NAME = "INVALID_NAME";
     private static final String ERROR_INVALID_QUERY = "INVALID_QUERY";
-    private static final String ERROR_SOURCE_FETCH = "SOURCE_FETCH_ERROR";
     private static final String ERROR_SOURCE_CREATION = "SOURCE_CREATION_ERROR";
     private static final String ERROR_SOURCE_UPDATE = "SOURCE_UPDATE_ERROR";
     private static final String ERROR_SOURCE_DELETION = "SOURCE_DELETION_ERROR";
@@ -39,31 +38,17 @@ public class SourceService implements ISourceService {
     @Cacheable(value = "sources", key = "#id")
     @NonNull
     public Source getSource(@NonNull Long id) {
-        try {
-            validateId(id);
-            return sourceRepository.findById(id)
-                    .orElseThrow(() -> new SourceNotFoundException(
-                            String.format("Source not found with id: %d", id)));
-        } catch (SourceNotFoundException e) {
-            throw e;
-        } catch (Exception e) {
-            log.error("Error getting source with ID {}: {}", id, e.getMessage(), e);
-            throw new SourceException(ERROR_SOURCE_FETCH,
-                    String.format("Failed to get source: %s", e.getMessage()), e);
-        }
+        validateId(id);
+        return sourceRepository.findById(id)
+                .orElseThrow(() -> new SourceNotFoundException(
+                        String.format("Source not found with id: %d", id)));
     }
 
     @Override
     @Cacheable(value = "sources", key = "'allSources'")
     @NonNull
     public List<Source> getAllSources() {
-        try {
-            return sourceRepository.findAll();
-        } catch (Exception e) {
-            log.error("Error getting all sources: {}", e.getMessage(), e);
-            throw new SourceException(ERROR_SOURCE_FETCH,
-                    String.format("Failed to get all sources: %s", e.getMessage()), e);
-        }
+        return sourceRepository.findAll();
     }
 
     @Override
@@ -153,28 +138,16 @@ public class SourceService implements ISourceService {
     @Cacheable(value = "sourceNames", key = "'sourceNames'")
     @NonNull
     public Map<Long, String> getSourceNames() {
-        try {
-            return sourceRepository.findAll().stream()
-                    .collect(Collectors.toMap(Source::getId, Source::getName));
-        } catch (Exception e) {
-            log.error("Error getting source names: {}", e.getMessage(), e);
-            throw new SourceException(ERROR_SOURCE_FETCH,
-                    String.format("Failed to get source names: %s", e.getMessage()), e);
-        }
+        return sourceRepository.findAll().stream()
+                .collect(Collectors.toMap(Source::getId, Source::getName));
     }
 
     @Override
     @Cacheable(value = "sourceSearch", key = "#query")
     @NonNull
     public List<Source> findByNameContaining(@NonNull String query) {
-        try {
-            validateQuery(query);
-            return sourceRepository.findByNameContainingIgnoreCase(query);
-        } catch (Exception e) {
-            log.error("Error searching sources by query {}: {}", query, e.getMessage(), e);
-            throw new SourceException(ERROR_SOURCE_FETCH,
-                    String.format("Failed to search sources: %s", e.getMessage()), e);
-        }
+        validateQuery(query);
+        return sourceRepository.findByNameContainingIgnoreCase(query);
     }
     
     private void validateId(@NonNull Long id) {

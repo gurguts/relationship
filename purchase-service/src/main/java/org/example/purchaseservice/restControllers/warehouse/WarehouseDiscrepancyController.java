@@ -9,7 +9,7 @@ import org.example.purchaseservice.models.dto.PageResponse;
 import org.example.purchaseservice.models.dto.warehouse.DiscrepancyStatisticsDTO;
 import org.example.purchaseservice.models.dto.warehouse.WarehouseDiscrepancyDTO;
 import org.example.purchaseservice.models.warehouse.WarehouseDiscrepancy;
-import org.example.purchaseservice.services.warehouse.WarehouseDiscrepancyService;
+import org.example.purchaseservice.services.impl.IWarehouseDiscrepancyService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -32,7 +32,7 @@ import java.time.format.DateTimeFormatter;
 @RequiredArgsConstructor
 @Validated
 public class WarehouseDiscrepancyController {
-    private final WarehouseDiscrepancyService discrepancyService;
+    private final IWarehouseDiscrepancyService discrepancyService;
     private final WarehouseDiscrepancyMapper warehouseDiscrepancyMapper;
 
     @PreAuthorize("hasAuthority('warehouse:view')")
@@ -48,9 +48,7 @@ public class WarehouseDiscrepancyController {
             @RequestParam(required = false) String type,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo) {
-        
-        log.info("Fetching discrepancies: page={}, size={}, sort={}, direction={}", page, size, sort, direction);
-        
+
         Sort.Direction sortDirection = Sort.Direction.fromString(direction);
         PageRequest pageRequest = PageRequest.of(page, size, Sort.by(sortDirection, sort));
         
@@ -92,9 +90,7 @@ public class WarehouseDiscrepancyController {
             @RequestParam(required = false) String type,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo) {
-        log.info("Exporting discrepancies to Excel with filters: driverId={}, productId={}, warehouseId={}, type={}, dateFrom={}, dateTo={}",
-                driverId, productId, warehouseId, type, dateFrom, dateTo);
-        
+
         try {
             byte[] excelData = discrepancyService.exportToExcel(
                     driverId, productId, warehouseId, type, dateFrom, dateTo

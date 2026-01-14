@@ -59,18 +59,12 @@ public class TransactionSearchService implements ITransactionSearchService {
     public PageResponse<TransactionPageDTO> getTransactionsWithPagination(int page, int size, String sort,
                                                                           String direction, Map<String, List<String>> filters) {
         validateSearchParameters(page, size, sort, direction);
-        
-        log.info("Searching transactions: page={}, size={}, sort={}, direction={}, filters={}", 
-                page, size, sort, direction, filters);
 
         Sort sortBy = buildSort(sort, direction);
         PageRequest pageRequest = PageRequest.of(page, size, sortBy);
 
         TransactionSpecification spec = new TransactionSpecification(filters);
         Page<Transaction> transactionPage = transactionRepository.findAll(spec, pageRequest);
-
-        log.info("Found {} transactions (page {} of {})", 
-                transactionPage.getContent().size(), transactionPage.getNumber() + 1, transactionPage.getTotalPages());
 
         Map<Long, String> clientCompanyMap = loadClientData(transactionPage.getContent());
         Map<Long, String> accountNameMap = loadAccountData(transactionPage.getContent());
@@ -119,7 +113,6 @@ public class TransactionSearchService implements ITransactionSearchService {
             Sort.Direction sortDir = Sort.Direction.fromString(sortDirection);
             return Sort.by(sortDir, sortField);
         } catch (IllegalArgumentException e) {
-            log.warn("Invalid sort direction: {}, using default: {}", sortDirection, DEFAULT_SORT_DIRECTION);
             return Sort.by(Sort.Direction.fromString(DEFAULT_SORT_DIRECTION), sortField);
         }
     }
@@ -146,7 +139,6 @@ public class TransactionSearchService implements ITransactionSearchService {
                             )))
                     .orElse(Collections.emptyMap());
         } catch (Exception e) {
-            log.warn("Failed to load client data: {}", e.getMessage());
             return Collections.emptyMap();
         }
     }
@@ -225,7 +217,6 @@ public class TransactionSearchService implements ITransactionSearchService {
                     ))
                     : Collections.emptyMap();
         } catch (Exception e) {
-            log.warn("Failed to fetch vehicle numbers: {}", e.getMessage());
             return Collections.emptyMap();
         }
     }

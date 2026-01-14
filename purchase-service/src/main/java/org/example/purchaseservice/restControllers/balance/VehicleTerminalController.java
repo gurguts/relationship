@@ -4,12 +4,11 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.example.purchaseservice.models.balance.VehicleTerminal;
 import org.example.purchaseservice.models.dto.balance.VehicleTerminalCreateDTO;
 import org.example.purchaseservice.models.dto.balance.VehicleTerminalDTO;
 import org.example.purchaseservice.mappers.VehicleTerminalMapper;
-import org.example.purchaseservice.services.balance.VehicleTerminalService;
+import org.example.purchaseservice.services.impl.IVehicleTerminalService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
@@ -19,14 +18,13 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import java.net.URI;
 import java.util.List;
 
-@Slf4j
 @RestController
 @RequestMapping("/api/v1/vehicle-terminals")
 @RequiredArgsConstructor
 @Validated
 public class VehicleTerminalController {
     
-    private final VehicleTerminalService vehicleTerminalService;
+    private final IVehicleTerminalService vehicleTerminalService;
     private final VehicleTerminalMapper vehicleTerminalMapper;
     
     @PreAuthorize("hasAuthority('settings_declarant:create')")

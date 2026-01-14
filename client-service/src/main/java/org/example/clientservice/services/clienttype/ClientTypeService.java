@@ -33,10 +33,8 @@ public class ClientTypeService implements IClientTypeService {
     private static final String ERROR_INVALID_NAME = "INVALID_NAME";
     private static final String ERROR_DELETE_FORBIDDEN = "DELETE_FORBIDDEN";
     private static final String ERROR_SERIALIZATION_ERROR = "SERIALIZATION_ERROR";
-    private static final String ERROR_LIST_VALUE_NOT_FOUND = "LIST_VALUE_NOT_FOUND";
     private static final String ERROR_CLIENT_TYPE_CREATION = "CLIENT_TYPE_CREATION_ERROR";
     private static final String ERROR_CLIENT_TYPE_UPDATE = "CLIENT_TYPE_UPDATE_ERROR";
-    private static final String ERROR_CLIENT_TYPE_FETCH = "CLIENT_TYPE_FETCH_ERROR";
     private static final String ERROR_CLIENT_TYPE_DELETION = "CLIENT_TYPE_DELETION_ERROR";
     private static final String ERROR_STATIC_FIELDS_CONFIG_UPDATE = "STATIC_FIELDS_CONFIG_UPDATE_ERROR";
     
@@ -96,71 +94,37 @@ public class ClientTypeService implements IClientTypeService {
     @Override
     @NonNull
     public ClientType getClientTypeById(@NonNull Long id) {
-        try {
-            validateId(id);
-            return clientTypeRepository.findById(id)
-                    .orElseThrow(() -> new ClientNotFoundException(
-                            String.format("Client type not found with id: %d", id)));
-        } catch (ClientNotFoundException e) {
-            throw e;
-        } catch (Exception e) {
-            log.error("Error getting client type with ID {}: {}", id, e.getMessage(), e);
-            throw new ClientException(ERROR_CLIENT_TYPE_FETCH,
-                    String.format("Failed to get client type: %s", e.getMessage()), e);
-        }
+        validateId(id);
+        return clientTypeRepository.findById(id)
+                .orElseThrow(() -> new ClientNotFoundException(
+                        String.format("Client type not found with id: %d", id)));
     }
 
     @Override
     @NonNull
     public ClientType getClientTypeByIdWithFields(@NonNull Long id) {
-        try {
-            validateId(id);
-            return clientTypeRepository.findByIdWithFields(id)
-                    .orElseThrow(() -> new ClientNotFoundException(
-                            String.format("Client type not found with id: %d", id)));
-        } catch (ClientNotFoundException e) {
-            throw e;
-        } catch (Exception e) {
-            log.error("Error getting client type with fields for ID {}: {}", id, e.getMessage(), e);
-            throw new ClientException(ERROR_CLIENT_TYPE_FETCH,
-                    String.format("Failed to get client type with fields: %s", e.getMessage()), e);
-        }
+        validateId(id);
+        return clientTypeRepository.findByIdWithFields(id)
+                .orElseThrow(() -> new ClientNotFoundException(
+                        String.format("Client type not found with id: %d", id)));
     }
 
     @Override
     @NonNull
     public List<ClientType> getAllActiveClientTypes() {
-        try {
-            return clientTypeRepository.findAllActiveOrderedByName();
-        } catch (Exception e) {
-            log.error("Error getting all active client types: {}", e.getMessage(), e);
-            throw new ClientException(ERROR_CLIENT_TYPE_FETCH,
-                    String.format("Failed to get all active client types: %s", e.getMessage()), e);
-        }
+        return clientTypeRepository.findAllActiveOrderedByName();
     }
 
     @Override
     @NonNull
     public Page<ClientType> getAllClientTypes(@NonNull Pageable pageable) {
-        try {
-            return clientTypeRepository.findAll(pageable);
-        } catch (Exception e) {
-            log.error("Error getting paginated client types: {}", e.getMessage(), e);
-            throw new ClientException(ERROR_CLIENT_TYPE_FETCH,
-                    String.format("Failed to get paginated client types: %s", e.getMessage()), e);
-        }
+        return clientTypeRepository.findAll(pageable);
     }
 
     @Override
     @NonNull
     public Page<ClientType> getAllActiveClientTypes(@NonNull Pageable pageable) {
-        try {
-            return clientTypeRepository.findByIsActiveTrue(pageable);
-        } catch (Exception e) {
-            log.error("Error getting paginated active client types: {}", e.getMessage(), e);
-            throw new ClientException(ERROR_CLIENT_TYPE_FETCH,
-                    String.format("Failed to get paginated active client types: %s", e.getMessage()), e);
-        }
+        return clientTypeRepository.findByIsActiveTrue(pageable);
     }
 
     @Override
@@ -190,35 +154,19 @@ public class ClientTypeService implements IClientTypeService {
 
     @NonNull
     public ClientTypeFieldListValue getListValueById(@NonNull Long id) {
-        try {
-            validateId(id);
-            return listValueRepository.findById(id)
-                    .orElseThrow(() -> new ClientNotFoundException(
-                            String.format("List value not found with id: %d", id)));
-        } catch (ClientNotFoundException e) {
-            throw e;
-        } catch (Exception e) {
-            log.error("Error getting list value with ID {}: {}", id, e.getMessage(), e);
-            throw new ClientException(ERROR_LIST_VALUE_NOT_FOUND,
-                    String.format("Failed to get list value: %s", e.getMessage()), e);
-        }
+        validateId(id);
+        return listValueRepository.findById(id)
+                .orElseThrow(() -> new ClientNotFoundException(
+                        String.format("List value not found with id: %d", id)));
     }
 
     @Override
     @NonNull
     public StaticFieldsConfig getStaticFieldsConfig(@NonNull Long id) {
-        try {
-            validateId(id);
-            ClientType clientType = getClientTypeById(id);
-            StaticFieldsConfig config = StaticFieldsHelper.parseStaticFieldsConfig(clientType);
-            return config != null ? config : new StaticFieldsConfig();
-        } catch (ClientNotFoundException e) {
-            throw e;
-        } catch (Exception e) {
-            log.error("Error getting static fields config for client type with ID {}: {}", id, e.getMessage(), e);
-            throw new ClientException(ERROR_CLIENT_TYPE_FETCH,
-                    String.format("Failed to get static fields config: %s", e.getMessage()), e);
-        }
+        validateId(id);
+        ClientType clientType = getClientTypeById(id);
+        StaticFieldsConfig config = StaticFieldsHelper.parseStaticFieldsConfig(clientType);
+        return config != null ? config : new StaticFieldsConfig();
     }
 
     @Override

@@ -4,7 +4,6 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.example.purchaseservice.models.ExchangeRate;
 import org.example.purchaseservice.models.dto.ExchangeRateDTO;
 import org.example.purchaseservice.models.dto.ExchangeRateUpdateDTO;
@@ -17,7 +16,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@Slf4j
 @RestController
 @RequestMapping("/api/v1/exchange-rates")
 @RequiredArgsConstructor

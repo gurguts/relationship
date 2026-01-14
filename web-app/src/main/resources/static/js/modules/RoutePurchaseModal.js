@@ -130,6 +130,7 @@ const RoutePurchaseModal = (function() {
         }
         
         modal.style.display = 'flex';
+        modal.classList.add('show');
     }
 
     function setupCurrencyHandler(currencySelect, exchangeRateLabel, exchangeRateInput) {
@@ -149,6 +150,7 @@ const RoutePurchaseModal = (function() {
         if (closeButton) {
             closeButton.addEventListener('click', () => {
                 modal.style.display = 'none';
+                modal.classList.remove('show');
             });
         }
     }
@@ -195,6 +197,7 @@ const RoutePurchaseModal = (function() {
                     }
                     
                     modal.style.display = 'none';
+                    modal.classList.remove('show');
                     form.reset();
                     showMessage('Закупівлю успішно створено', 'info');
                 } catch (error) {

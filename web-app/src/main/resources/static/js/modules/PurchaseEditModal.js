@@ -1,29 +1,8 @@
 const PurchaseEditModal = (function() {
     let modal = null;
     let form = null;
-    let productMap = null;
     let sourceMap = null;
     let onSaveSuccess = null;
-    
-    function generateProductOptions(selectedId) {
-        if (!productMap || !productMap.size) {
-            const option = document.createElement('option');
-            option.value = '';
-            option.textContent = 'Продукти не завантажені';
-            return option;
-        }
-        const fragment = document.createDocumentFragment();
-        Array.from(productMap.entries()).forEach(([id, name]) => {
-            const option = document.createElement('option');
-            option.value = id;
-            option.textContent = name;
-            if (id === selectedId || String(id) === String(selectedId)) {
-                option.selected = true;
-            }
-            fragment.appendChild(option);
-        });
-        return fragment;
-    }
     
     function generateSourceOptions(selectedId) {
         if (!sourceMap || !sourceMap.size) {
@@ -54,7 +33,6 @@ const PurchaseEditModal = (function() {
         if (!modal || !form) return;
         
         const header = modal.querySelector('h3');
-        const productSelect = form.querySelector('select[name="productId"]');
         const quantityInput = form.querySelector('input[name="quantity"]');
         const totalPriceInput = form.querySelector('input[name="totalPrice"]');
         const createdAtInput = form.querySelector('input[name="createdAt"]');
@@ -62,15 +40,12 @@ const PurchaseEditModal = (function() {
         const sourceSelect = form.querySelector('select[name="sourceId"]');
         const commentTextarea = form.querySelector('textarea[name="comment"]');
         
-        if (!header || !productSelect || !quantityInput || !totalPriceInput || !createdAtInput || !exchangeRateInput || !sourceSelect || !commentTextarea) {
+        if (!header || !quantityInput || !totalPriceInput || !createdAtInput || !exchangeRateInput || !sourceSelect || !commentTextarea) {
             console.error('Required form elements not found');
             return;
         }
         
         header.textContent = `ID: ${purchase.id}`;
-        productSelect.textContent = '';
-        const productOptions = generateProductOptions(purchase.productId);
-        productSelect.appendChild(productOptions);
         quantityInput.value = purchase.quantity || 0;
         totalPriceInput.value = purchase.totalPrice || 0;
         exchangeRateInput.value = purchase.exchangeRate || '';
@@ -88,7 +63,6 @@ const PurchaseEditModal = (function() {
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             const updatedData = {
-                productId: productSelect.value,
                 quantity: parseFloat(quantityInput.value),
                 totalPrice: parseFloat(totalPriceInput.value),
                 createdAt: createdAtInput.value,
@@ -120,7 +94,6 @@ const PurchaseEditModal = (function() {
     function init(config) {
         modal = document.getElementById(config.modalId || 'edit-modal');
         form = document.getElementById(config.formId || 'edit-form');
-        productMap = config.productMap;
         sourceMap = config.sourceMap;
         onSaveSuccess = config.onSaveSuccess;
         

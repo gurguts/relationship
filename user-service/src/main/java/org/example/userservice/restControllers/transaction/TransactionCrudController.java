@@ -12,7 +12,7 @@ import org.example.userservice.models.dto.transaction.TransactionDTO;
 import org.example.userservice.models.dto.transaction.TransactionUpdateDTO;
 import org.example.userservice.models.transaction.Transaction;
 import org.example.userservice.services.impl.ITransactionCrudService;
-import org.example.userservice.services.transaction.AccountTransactionService;
+import org.example.userservice.services.impl.IAccountTransactionService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
@@ -33,7 +33,7 @@ import static org.springframework.http.HttpStatus.CREATED;
 @Validated
 public class TransactionCrudController {
     private final ITransactionCrudService transactionCrudService;
-    private final AccountTransactionService accountTransactionService;
+    private final IAccountTransactionService accountTransactionService;
     private final TransactionMapper transactionMapper;
 
     @PreAuthorize("hasAuthority('finance:view')")

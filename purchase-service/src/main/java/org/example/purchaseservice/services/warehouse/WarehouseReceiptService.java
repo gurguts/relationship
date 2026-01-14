@@ -9,14 +9,14 @@ import org.example.purchaseservice.models.balance.DriverProductBalance;
 import org.example.purchaseservice.models.warehouse.WarehouseReceipt;
 import org.example.purchaseservice.models.dto.warehouse.WarehouseReceiptDTO;
 import org.example.purchaseservice.repositories.WarehouseReceiptRepository;
-import org.example.purchaseservice.services.balance.DriverProductBalanceService;
+import org.example.purchaseservice.services.impl.IDriverProductBalanceService;
+import org.example.purchaseservice.services.impl.IWarehouseDiscrepancyService;
 import org.example.purchaseservice.services.balance.IWarehouseProductBalanceService;
 import org.example.purchaseservice.services.impl.IWarehouseReceiptService;
 import org.example.purchaseservice.spec.WarehouseReceiptSpecification;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
-import org.springframework.data.jpa.domain.Specification;
 import org.example.purchaseservice.utils.SecurityUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,9 +38,9 @@ public class WarehouseReceiptService implements IWarehouseReceiptService {
     private static final RoundingMode PRICE_ROUNDING_MODE = RoundingMode.HALF_UP;
     
     private final WarehouseReceiptRepository warehouseReceiptRepository;
-    private final DriverProductBalanceService driverProductBalanceService;
+    private final IDriverProductBalanceService driverProductBalanceService;
     private final IWarehouseProductBalanceService warehouseProductBalanceService;
-    private final WarehouseDiscrepancyService warehouseDiscrepancyService;
+    private final IWarehouseDiscrepancyService warehouseDiscrepancyService;
 
     @Override
     @Transactional(readOnly = true)
@@ -76,6 +76,8 @@ public class WarehouseReceiptService implements IWarehouseReceiptService {
     @Override
     @Transactional
     public WarehouseReceipt createWarehouseReceipt(@NonNull WarehouseReceipt warehouseReceipt) {
+        log.info("Creating warehouse receipt: userId={}, productId={}, warehouseId={}, quantity={}", 
+                warehouseReceipt.getUserId(), warehouseReceipt.getProductId(), warehouseReceipt.getWarehouseId(), warehouseReceipt.getQuantity());
         validateWarehouseReceipt(warehouseReceipt);
         
         DriverProductBalance driverBalance = driverProductBalanceService.getBalance(
@@ -107,15 +109,8 @@ public class WarehouseReceiptService implements IWarehouseReceiptService {
 
         updateBalances(warehouseReceipt, purchasedQuantity, receivedQuantity, totalDriverCost);
         
+        log.info("Warehouse receipt created: id={}", savedReceipt.getId());
         return savedReceipt;
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<WarehouseReceipt> findWarehouseReceiptsByFilters(@NonNull Map<String, List<String>> filters) {
-        validateFilters(filters);
-        Specification<WarehouseReceipt> spec = new WarehouseReceiptSpecification(filters);
-        return warehouseReceiptRepository.findAll(spec);
     }
 
     private WarehouseReceiptDTO convertToDTO(@NonNull WarehouseReceipt receipt) {

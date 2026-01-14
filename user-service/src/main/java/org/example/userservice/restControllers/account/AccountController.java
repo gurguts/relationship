@@ -4,7 +4,6 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.example.userservice.exceptions.user.UserException;
 import org.example.userservice.mappers.AccountMapper;
 import org.example.userservice.models.account.Account;
@@ -12,8 +11,8 @@ import org.example.userservice.models.account.AccountBalance;
 import org.example.userservice.models.dto.account.AccountBalanceDTO;
 import org.example.userservice.models.dto.account.AccountCreateDTO;
 import org.example.userservice.models.dto.account.AccountDTO;
-import org.example.userservice.services.account.AccountService;
-import org.example.userservice.services.branch.BranchPermissionService;
+import org.example.userservice.services.impl.IAccountService;
+import org.example.userservice.services.impl.IBranchPermissionService;
 import org.example.userservice.utils.SecurityUtils;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -28,14 +27,13 @@ import java.util.stream.Collectors;
 
 import static org.springframework.http.HttpStatus.FORBIDDEN;
 
-@Slf4j
 @RestController
 @RequestMapping("/api/v1/accounts")
 @RequiredArgsConstructor
 @Validated
 public class AccountController {
-    private final AccountService accountService;
-    private final BranchPermissionService branchPermissionService;
+    private final IAccountService accountService;
+    private final IBranchPermissionService branchPermissionService;
     private final AccountMapper accountMapper;
 
     @GetMapping

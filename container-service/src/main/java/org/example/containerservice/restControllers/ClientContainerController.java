@@ -8,7 +8,7 @@ import org.example.containerservice.mappers.ContainerMapper;
 import org.example.containerservice.models.dto.container.ClientContainerDTO;
 import org.example.containerservice.models.dto.container.CollectFromClientRequest;
 import org.example.containerservice.models.dto.container.TransferToClientRequest;
-import org.example.containerservice.services.ClientContainerService;
+import org.example.containerservice.services.impl.IClientContainerService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
@@ -22,7 +22,7 @@ import java.util.List;
 @Validated
 public class ClientContainerController {
 
-    private final ClientContainerService clientContainerService;
+    private final IClientContainerService clientContainerService;
     private final ContainerMapper containerMapper;
 
     @PreAuthorize("hasAuthority('container:transfer')")

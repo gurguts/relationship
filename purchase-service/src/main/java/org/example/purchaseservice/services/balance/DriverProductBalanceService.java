@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.purchaseservice.exceptions.PurchaseException;
 import org.example.purchaseservice.models.balance.DriverProductBalance;
 import org.example.purchaseservice.repositories.DriverProductBalanceRepository;
+import org.example.purchaseservice.services.impl.IDriverProductBalanceService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,13 +17,14 @@ import java.util.List;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class DriverProductBalanceService {
+public class DriverProductBalanceService implements IDriverProductBalanceService {
     
     private final DriverProductBalanceRepository driverProductBalanceRepository;
     
+    @Override
     @Transactional
-    public DriverProductBalance addProduct(@NonNull Long driverId, @NonNull Long productId,
-                                            @NonNull BigDecimal quantity, @NonNull BigDecimal totalPriceEur) {
+    public void addProduct(@NonNull Long driverId, @NonNull Long productId,
+                           @NonNull BigDecimal quantity, @NonNull BigDecimal totalPriceEur) {
         log.info("Adding product to driver balance: driverId={}, productId={}, quantity={}, totalPriceEur={}",
                 driverId, productId, quantity, totalPriceEur);
 
@@ -57,12 +59,12 @@ public class DriverProductBalanceService {
         log.info("Driver balance updated: id={}, newQuantity={}, newAveragePrice={}, totalCost={}",
                 saved.getId(), saved.getQuantity(), saved.getAveragePriceEur(), saved.getTotalCostEur());
 
-        return saved;
     }
     
+    @Override
     @Transactional
-    public DriverProductBalance removeProduct(@NonNull Long driverId, @NonNull Long productId,
-                                               @NonNull BigDecimal quantity, @NonNull BigDecimal totalPriceEur) {
+    public void removeProduct(@NonNull Long driverId, @NonNull Long productId,
+                              @NonNull BigDecimal quantity, @NonNull BigDecimal totalPriceEur) {
         log.info("Removing product from driver balance: driverId={}, productId={}, quantity={}, totalPrice={}",
                 driverId, productId, quantity, totalPriceEur);
 
@@ -100,19 +102,19 @@ public class DriverProductBalanceService {
         if (saved.getQuantity().compareTo(BigDecimal.ZERO) == 0) {
             driverProductBalanceRepository.delete(saved);
             log.info("Driver balance deleted (quantity=0): id={}", saved.getId());
-            return null;
+            return;
         }
 
         log.info("Driver balance updated: id={}, newQuantity={}, newAveragePrice={}, totalCost={}",
                 saved.getId(), saved.getQuantity(), saved.getAveragePriceEur(), saved.getTotalCostEur());
 
-        return saved;
     }
     
+    @Override
     @Transactional
-    public DriverProductBalance updateFromPurchaseChange(@NonNull Long driverId, @NonNull Long productId,
-                                                          BigDecimal oldQuantity, BigDecimal oldTotalPrice,
-                                                          BigDecimal newQuantity, BigDecimal newTotalPrice) {
+    public void updateFromPurchaseChange(@NonNull Long driverId, @NonNull Long productId,
+                                         BigDecimal oldQuantity, BigDecimal oldTotalPrice,
+                                         BigDecimal newQuantity, BigDecimal newTotalPrice) {
         log.info("Updating driver balance from purchase change: driverId={}, productId={}", driverId, productId);
 
         if (oldQuantity != null && oldQuantity.compareTo(BigDecimal.ZERO) < 0) {
@@ -175,48 +177,39 @@ public class DriverProductBalanceService {
         if (saved.getQuantity().compareTo(BigDecimal.ZERO) == 0) {
             driverProductBalanceRepository.delete(saved);
             log.info("Driver balance deleted after update (quantity=0): id={}", saved.getId());
-            return null;
+            return;
         }
 
         log.info("Driver balance updated: id={}, newQuantity={}, newAveragePrice={}, totalCost={}",
                 saved.getId(), saved.getQuantity(), saved.getAveragePriceEur(), saved.getTotalCostEur());
 
-        return saved;
     }
     
+    @Override
     @Transactional(readOnly = true)
     public DriverProductBalance getBalance(@NonNull Long driverId, @NonNull Long productId) {
         return driverProductBalanceRepository.findByDriverIdAndProductId(driverId, productId).orElse(null);
     }
 
+    @Override
     @Transactional(readOnly = true)
     public List<DriverProductBalance> getDriverBalances(@NonNull Long driverId) {
         return driverProductBalanceRepository.findByDriverId(driverId);
     }
 
+    @Override
     @Transactional(readOnly = true)
     public List<DriverProductBalance> getProductBalances(@NonNull Long productId) {
         return driverProductBalanceRepository.findByProductId(productId);
     }
 
-    @Transactional(readOnly = true)
-    public boolean hasEnoughProduct(@NonNull Long driverId, @NonNull Long productId, @NonNull BigDecimal requiredQuantity) {
-        if (requiredQuantity.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new PurchaseException("INVALID_QUANTITY", "Required quantity must be positive");
-        }
-
-        DriverProductBalance balance = getBalance(driverId, productId);
-        if (balance == null) {
-            return false;
-        }
-        return balance.getQuantity().compareTo(requiredQuantity) >= 0;
-    }
-    
+    @Override
     @Transactional(readOnly = true)
     public List<DriverProductBalance> getAllActiveBalances() {
         return driverProductBalanceRepository.findAllWithPositiveQuantity();
     }
     
+    @Override
     @Transactional
     public DriverProductBalance updateTotalCostEur(@NonNull Long driverId, @NonNull Long productId,
                                                     @NonNull BigDecimal newTotalCostEur) {

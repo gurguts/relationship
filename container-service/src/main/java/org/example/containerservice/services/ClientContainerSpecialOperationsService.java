@@ -116,7 +116,6 @@ public class ClientContainerSpecialOperationsService implements IClientContainer
 
         List<ClientDTO> clients = fetchClientIds(query, filterParams);
         if (clients.isEmpty()) {
-            log.info("No clients found for the given filters, returning empty workbook");
             Workbook workbook = new XSSFWorkbook();
             sendExcelFileResponse(workbook, response);
             return;
@@ -319,7 +318,6 @@ public class ClientContainerSpecialOperationsService implements IClientContainer
         try {
             return Long.parseLong(field.substring(FIELD_PREFIX_LENGTH));
         } catch (NumberFormatException | StringIndexOutOfBoundsException e) {
-            log.warn("Invalid field ID in field name {}: {}", field, e.getMessage());
             return null;
         }
     }
@@ -376,12 +374,10 @@ public class ClientContainerSpecialOperationsService implements IClientContainer
                                     : field + " (клієнта)";
                         }
                     } else {
-                        log.warn("ClientTypeFieldDTO not found for fieldId: {}", fieldId);
                         header = field + " (клієнта)";
                     }
                     headerMap.put(field, header);
                 } else {
-                    log.warn("Invalid field ID in field name: {}", field);
                     headerMap.put(field, field + " (клієнта)");
                 }
             }
@@ -461,7 +457,7 @@ public class ClientContainerSpecialOperationsService implements IClientContainer
                     return sourceName.toString();
                 }
             }
-        } catch (NoSuchMethodException | java.lang.reflect.InvocationTargetException | IllegalAccessException e) {
+        } catch (NoSuchMethodException | java.lang.reflect.InvocationTargetException | IllegalAccessException _) {
         }
 
         String sourceId = client.getSourceId();
@@ -470,13 +466,8 @@ public class ClientContainerSpecialOperationsService implements IClientContainer
         }
         try {
             Long sourceIdLong = Long.parseLong(sourceId.trim());
-            String name = getNameFromDTOList(sourceDTOs, sourceIdLong);
-            if (name.isEmpty() && !sourceDTOs.isEmpty()) {
-                log.debug("Source name not found for sourceId: {} in {} sources", sourceIdLong, sourceDTOs.size());
-            }
-            return name;
+            return getNameFromDTOList(sourceDTOs, sourceIdLong);
         } catch (NumberFormatException e) {
-            log.warn("Invalid sourceId format: {}", sourceId);
             return EMPTY_STRING;
         }
     }
@@ -494,23 +485,11 @@ public class ClientContainerSpecialOperationsService implements IClientContainer
                         uniqueSources.put(sourceDTO.getId(), sourceDTO);
                     }
                 }
-            } catch (NoSuchMethodException | java.lang.reflect.InvocationTargetException | IllegalAccessException | ClassCastException e) {
+            } catch (NoSuchMethodException | java.lang.reflect.InvocationTargetException | IllegalAccessException | ClassCastException _) {
             }
 
-            String sourceId = client.getSourceId();
-            if (sourceId != null && !sourceId.trim().isEmpty()) {
-                try {
-                    Long sourceIdLong = Long.parseLong(sourceId.trim());
-                    if (!uniqueSources.containsKey(sourceIdLong)) {
-                        log.debug("Source ID {} found in client but SourceDTO not available via reflection", sourceIdLong);
-                    }
-                } catch (NumberFormatException e) {
-                    log.warn("Invalid sourceId format in client: {}", sourceId);
-                }
-            }
         }
 
-        log.debug("Fetched {} unique source names for clients", uniqueSources.size());
         return new ArrayList<>(uniqueSources.values());
     }
 

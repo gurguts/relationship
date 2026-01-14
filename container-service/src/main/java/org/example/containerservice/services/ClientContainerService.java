@@ -12,7 +12,8 @@ import org.example.containerservice.models.ContainerTransactionType;
 import org.example.containerservice.repositories.ClientContainerRepository;
 import org.example.containerservice.repositories.ContainerBalanceRepository;
 import org.example.containerservice.services.impl.IContainerService;
-import org.example.containerservice.utils.SecurityUtils;
+import org.example.containerservice.services.impl.IClientContainerService;
+import org.example.containerservice.services.impl.IContainerTransactionService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,21 +28,20 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class ClientContainerService {
+public class ClientContainerService implements IClientContainerService {
 
     private static final String ERROR_INVALID_BALANCE = "INVALID_BALANCE";
     private static final String ERROR_NOT_ENOUGH_DATA = "NOT_ENOUGH_DATA";
-    private static final String ERROR_AUTHENTICATION_REQUIRED = "AUTHENTICATION_REQUIRED";
     private static final String MESSAGE_CONTAINER_NULL = "Container is null in balance";
     private static final String MESSAGE_VALIDATION_REQUIRED = "Client ID, container ID, and quantity must be valid";
-    private static final String MESSAGE_AUTHENTICATION_REQUIRED = "User authentication required";
     private static final String MESSAGE_BALANCE_NOT_FOUND = "No balance found for user %d";
 
     private final ClientContainerRepository clientContainerRepository;
     private final ContainerBalanceRepository containerBalanceRepository;
-    private final ContainerTransactionService containerTransactionService;
+    private final IContainerTransactionService containerTransactionService;
     private final IContainerService containerService;
 
+    @Override
     @Transactional
     public void transferContainerToClient(@NonNull Long userId,
                                           @NonNull Long clientId,
@@ -66,6 +66,7 @@ public class ClientContainerService {
         log.info("Transferred {} units of container {} from user {} to client {}", quantity, containerId, userId, clientId);
     }
 
+    @Override
     @Transactional
     public void collectContainerFromClient(@NonNull Long userId,
                                            @NonNull Long clientId,
@@ -150,14 +151,12 @@ public class ClientContainerService {
             throw new ContainerException(ERROR_NOT_ENOUGH_DATA, MESSAGE_VALIDATION_REQUIRED);
         }
 
-        if (userId == null) {
-            throw new ContainerException(ERROR_AUTHENTICATION_REQUIRED, MESSAGE_AUTHENTICATION_REQUIRED);
-        }
-
         return getOrCreateBalance(userId, containerId);
     }
 
+    @Override
     @Transactional(readOnly = true)
+    @NonNull
     public List<ClientContainer> getClientContainers(@NonNull Long clientId) {
         return clientContainerRepository.findByClient(clientId);
     }

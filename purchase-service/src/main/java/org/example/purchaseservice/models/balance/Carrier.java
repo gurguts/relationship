@@ -18,7 +18,7 @@ public class Carrier {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
-    @Column(name = "company_name", nullable = false, length = 255)
+    @Column(name = "company_name", nullable = false)
     private String companyName;
     
     @Column(name = "registration_address", columnDefinition = "TEXT")

@@ -9,7 +9,8 @@ import org.example.userservice.models.transaction.Transaction;
 import org.example.userservice.models.transaction.TransactionType;
 import org.example.userservice.repositories.TransactionCategoryRepository;
 import org.example.userservice.repositories.TransactionRepository;
-import org.example.userservice.services.account.AccountBalanceService;
+import org.example.userservice.services.impl.IAccountBalanceService;
+import org.example.userservice.services.impl.ITransactionUpdateService;
 import org.example.userservice.clients.VehicleCostApiClient;
 import org.example.userservice.models.dto.UpdateVehicleCostRequest;
 import org.springframework.stereotype.Component;
@@ -21,7 +22,7 @@ import java.math.RoundingMode;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class TransactionUpdateService {
+public class TransactionUpdateService implements ITransactionUpdateService {
     private static final String ERROR_CODE_INVALID_COMMISSION = "INVALID_COMMISSION";
     private static final String ERROR_CODE_UNSUPPORTED_TRANSACTION_TYPE = "UNSUPPORTED_TRANSACTION_TYPE";
     private static final String ERROR_CODE_FAILED_TO_UPDATE_VEHICLE_COST = "FAILED_TO_UPDATE_VEHICLE_COST";
@@ -33,13 +34,15 @@ public class TransactionUpdateService {
 
     private final TransactionRepository transactionRepository;
     private final TransactionCategoryRepository transactionCategoryRepository;
-    private final AccountBalanceService accountBalanceService;
+    private final IAccountBalanceService accountBalanceService;
     private final VehicleCostApiClient vehicleCostApiClient;
 
+    @Override
     @Transactional
     public Transaction updateTransaction(@NonNull Long transactionId, Long categoryId, String description, 
                                         BigDecimal newAmount, BigDecimal newExchangeRate, BigDecimal newCommission, 
                                         BigDecimal newConvertedAmount, Long counterpartyId) {
+        log.info("Updating transaction: id={}", transactionId);
         Transaction transaction = transactionRepository.findById(transactionId)
                 .orElseThrow(() -> new TransactionException(
                         String.format("Transaction with ID %d not found", transactionId)));
@@ -63,7 +66,9 @@ public class TransactionUpdateService {
                     amountChanged, commissionChanged, exchangeRateChanged, convertedAmountChanged);
         }
 
-        return transactionRepository.save(transaction);
+        Transaction saved = transactionRepository.save(transaction);
+        log.info("Transaction updated: id={}", saved.getId());
+        return saved;
     }
 
     private void updateTransactionFields(@NonNull Transaction transaction, Long categoryId, String description, 

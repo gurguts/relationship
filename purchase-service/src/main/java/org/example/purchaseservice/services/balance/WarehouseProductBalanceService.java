@@ -35,8 +35,8 @@ public class WarehouseProductBalanceService implements IWarehouseProductBalanceS
     
     @Override
     @Transactional
-    public WarehouseProductBalance addProduct(@NonNull Long warehouseId, @NonNull Long productId, 
-                                               @NonNull BigDecimal quantity, @NonNull BigDecimal totalCost) {
+    public void addProduct(@NonNull Long warehouseId, @NonNull Long productId,
+                           @NonNull BigDecimal quantity, @NonNull BigDecimal totalCost) {
         log.info("Adding product to warehouse balance: warehouseId={}, productId={}, quantity={}, totalCost={}", 
                 warehouseId, productId, quantity, totalCost);
         
@@ -66,8 +66,7 @@ public class WarehouseProductBalanceService implements IWarehouseProductBalanceS
         
         log.info("Warehouse balance updated: id={}, newQuantity={}, newTotalCost={}, newAveragePrice={}", 
                 saved.getId(), saved.getQuantity(), saved.getTotalCostEur(), saved.getAveragePriceEur());
-        
-        return saved;
+
     }
     
     @Override
@@ -200,13 +199,7 @@ public class WarehouseProductBalanceService implements IWarehouseProductBalanceS
     public List<WarehouseProductBalance> getWarehouseBalances(@NonNull Long warehouseId) {
         return warehouseProductBalanceRepository.findByWarehouseId(warehouseId);
     }
-    
-    @Override
-    @Transactional(readOnly = true)
-    public List<WarehouseProductBalance> getProductBalances(@NonNull Long productId) {
-        return warehouseProductBalanceRepository.findByProductId(productId);
-    }
-    
+
     @Override
     @Transactional
     public void adjustProductCost(@NonNull Long warehouseId, @NonNull Long productId, @NonNull BigDecimal costDelta) {
@@ -258,14 +251,7 @@ public class WarehouseProductBalanceService implements IWarehouseProductBalanceS
         BigDecimal availableQuantity = getSafeQuantity(balance);
         return availableQuantity.compareTo(requiredQuantity) >= 0;
     }
-    
-    @Override
-    @Transactional(readOnly = true)
-    public BigDecimal getAveragePrice(@NonNull Long warehouseId, @NonNull Long productId) {
-        WarehouseProductBalance balance = getBalance(warehouseId, productId);
-        return balance != null ? getSafeAveragePrice(balance) : BigDecimal.ZERO;
-    }
-    
+
     @Override
     @Transactional
     public WarehouseProductBalance setInitialBalance(@NonNull Long warehouseId, @NonNull Long productId,

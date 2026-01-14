@@ -1,6 +1,9 @@
 let accountsCache = [];
+let allAccountsCache = [];
 let branchesCache = [];
 let usersCache = [];
+let allBalancesMap = null;
+let currentSearchQuery = '';
 
 let currentTransactionPage = 0;
 const transactionPageSize = CLIENT_CONSTANTS.DEFAULT_PAGE_SIZE;
@@ -41,6 +44,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 function initializeTabs() {
     FinanceTabs.init((targetTab) => {
             if (targetTab === 'accounts') {
+                restoreAccountSearch();
                 loadAccountsAndBranches();
             } else if (targetTab === 'transactions') {
             FinanceFilters.populateTransactionFilters(accountsCache, branchesCache, transactionFiltersCustomSelects).then((updatedCustomSelects) => {
@@ -99,6 +103,8 @@ async function loadInitialData() {
 
 async function loadAccountsAndBranches() {
     try {
+        restoreAccountSearch();
+        
         if (usersCache.length === 0) {
             usersCache = await FinanceDataLoader.loadUsers();
         }
@@ -106,12 +112,22 @@ async function loadAccountsAndBranches() {
             branchesCache = await FinanceDataLoader.loadBranches();
         }
         
-        accountsCache = await FinanceDataLoader.loadAccounts();
-        accountsCache = accountsCache || [];
+        allAccountsCache = await FinanceDataLoader.loadAccounts();
+        allAccountsCache = allAccountsCache || [];
+        
+        if (currentSearchQuery) {
+            const query = currentSearchQuery.toLowerCase();
+            accountsCache = allAccountsCache.filter(account => {
+                const accountName = (account.name || '').toLowerCase();
+                return accountName.includes(query);
+            });
+        } else {
+            accountsCache = [...allAccountsCache];
+        }
         
         const branchAccountIds = [];
         branchesCache.forEach(branch => {
-            const branchAccounts = accountsCache.filter(acc => acc.branchId === branch.id);
+            const branchAccounts = allAccountsCache.filter(acc => acc.branchId === branch.id);
             branchAccounts.forEach(acc => {
                 if (acc.id != null && acc.id !== undefined && !isNaN(Number(acc.id))) {
                     branchAccountIds.push(Number(acc.id));
@@ -120,34 +136,108 @@ async function loadAccountsAndBranches() {
         });
         
         const allAccountIds = [...new Set([
-            ...accountsCache
+            ...allAccountsCache
                 .map(acc => acc.id)
                 .filter(id => id != null && id !== undefined && !isNaN(Number(id)))
                 .map(id => Number(id)),
             ...branchAccountIds
         ])];
-        const balancesMap = await FinanceDataLoader.loadAccountBalancesBatch(allAccountIds);
+        allBalancesMap = await FinanceDataLoader.loadAccountBalancesBatch(allAccountIds);
         
-        const branchesWithBalances = await Promise.all(
-            branchesCache.map(async (branch) => {
-                const branchAccounts = accountsCache.filter(acc => acc.branchId === branch.id);
-                const totalBalance = FinanceRenderer.calculateAccountsTotalBalanceFromMap(branchAccounts, balancesMap);
-                return { ...branch, totalBalance };
-            })
-        );
-        
-        await FinanceRenderer.renderAccountsAndBranches(
-            branchesWithBalances, 
-            accountsCache, 
-            usersCache, 
-            branchesCache,
-            balancesMap
-        );
+        await renderFilteredAccounts();
     } catch (error) {
         console.error('Error loading accounts and branches:', error);
         handleError(error);
         throw error;
     }
+}
+
+async function renderFilteredAccounts() {
+    const standaloneAccounts = accountsCache.filter(acc => !acc.branchId);
+    const standaloneBalance = FinanceRenderer.calculateAccountsTotalBalanceFromMap(standaloneAccounts, allBalancesMap);
+    const hasStandaloneMatchingAccounts = standaloneAccounts.length > 0;
+    
+    const branchesWithBalances = await Promise.all(
+        branchesCache.map(async (branch) => {
+            const branchAccounts = accountsCache.filter(acc => acc.branchId === branch.id);
+            const totalBalance = FinanceRenderer.calculateAccountsTotalBalanceFromMap(branchAccounts, allBalancesMap);
+            const hasMatchingAccounts = branchAccounts.length > 0;
+            return { ...branch, totalBalance, hasMatchingAccounts };
+        })
+    );
+    
+    const sortedResult = sortBranchesAndStandalone(branchesWithBalances, hasStandaloneMatchingAccounts);
+    
+    await FinanceRenderer.renderAccountsAndBranches(
+        sortedResult.branches, 
+        accountsCache, 
+        usersCache, 
+        branchesCache,
+        allBalancesMap,
+        standaloneAccounts,
+        standaloneBalance,
+        sortedResult.standalonePosition
+    );
+}
+
+function sortBranchesAndStandalone(branches, hasStandaloneMatchingAccounts) {
+    if (!currentSearchQuery) {
+        return { branches, standalonePosition: 'end' };
+    }
+    
+    const sortedBranches = branches.sort((a, b) => {
+        if (a.hasMatchingAccounts && !b.hasMatchingAccounts) {
+            return -1;
+        }
+        if (!a.hasMatchingAccounts && b.hasMatchingAccounts) {
+            return 1;
+        }
+        return 0;
+    });
+    
+    let standalonePosition = 'end';
+    if (hasStandaloneMatchingAccounts) {
+        const branchesWithMatches = sortedBranches.filter(b => b.hasMatchingAccounts).length;
+        if (branchesWithMatches === 0) {
+            standalonePosition = 'start';
+        } else {
+            standalonePosition = branchesWithMatches;
+        }
+    }
+    
+    return { branches: sortedBranches, standalonePosition };
+}
+
+function restoreAccountSearch() {
+    const accountSearchInput = document.getElementById('account-search-input');
+    if (accountSearchInput) {
+        const savedSearchValue = sessionStorage.getItem('finance-account-search');
+        if (savedSearchValue) {
+            accountSearchInput.value = savedSearchValue;
+            currentSearchQuery = savedSearchValue;
+        } else {
+            accountSearchInput.value = '';
+            currentSearchQuery = '';
+        }
+    }
+}
+
+function filterAccountsBySearch(searchQuery) {
+    currentSearchQuery = searchQuery;
+    
+    if (!searchQuery) {
+        accountsCache = [...allAccountsCache];
+        sessionStorage.removeItem('finance-account-search');
+    } else {
+        const query = searchQuery.toLowerCase();
+        accountsCache = allAccountsCache.filter(account => {
+            const accountName = (account.name || '').toLowerCase();
+            return accountName.includes(query);
+        });
+        sessionStorage.setItem('finance-account-search', searchQuery);
+    }
+    
+    renderFilteredAccounts();
 }
 
 async function loadTransactions() {
@@ -470,6 +560,25 @@ async function handleCreateTransaction(e) {
 }
 
 function setupEventListeners() {
+    const accountSearchInput = document.getElementById('account-search-input');
+    if (accountSearchInput) {
+        const savedSearchValue = sessionStorage.getItem('finance-account-search');
+        if (savedSearchValue) {
+            accountSearchInput.value = savedSearchValue;
+            filterAccountsBySearch(savedSearchValue);
+        }
+        
+        accountSearchInput.addEventListener('input', (e) => {
+            const value = e.target.value.trim();
+            if (value) {
+                sessionStorage.setItem('finance-account-search', value);
+            } else {
+                sessionStorage.removeItem('finance-account-search');
+            }
+            filterAccountsBySearch(value);
+        });
+    }
+    
     document.getElementById('create-transaction-btn')?.addEventListener('click', () => {
         FinanceModal.openCreateTransactionModal({
             onPopulateForm: populateTransactionForm,
@@ -533,6 +642,5 @@ function setupEventListeners() {
     });
 
     document.getElementById('close-edit-transaction-modal')?.addEventListener('click', () => FinanceModal.closeEditTransactionModal());
-    document.getElementById('cancel-edit-transaction')?.addEventListener('click', () => FinanceModal.closeEditTransactionModal());
     document.getElementById('edit-transaction-form')?.addEventListener('submit', handleUpdateTransaction);
 }

@@ -73,7 +73,6 @@ public class GlobalExceptionAdvice {
         
         String message = MessageLocalizationHelper.getLocalizedErrorCodeMessage(
                 messageSource, errorCode,
-                ErrorConstants.MESSAGE_KEY_PREFIX_WEBAPP_ERROR,
                 exceptionMessage, locale);
         
         return new ErrorResponse(errorCode, message, null);

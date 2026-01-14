@@ -83,9 +83,6 @@ public class ClientSearchService implements IClientSearchService {
     @Override
     @NonNull
     public List<ClientListDTO> searchClientsForPurchase(@NonNull ClientSearchRequest request) {
-        log.info("Searching clients for purchase-service with query: {}, filters: {}, clientTypeId: {}",
-                request.query(), request.filterParams(), request.clientTypeId());
-        
         String normalizedQuery = normalizeQuery(request.query());
         validateQuery(normalizedQuery);
         
@@ -94,7 +91,7 @@ public class ClientSearchService implements IClientSearchService {
                 : null;
         
         Map<String, List<String>> cleanedFilterParams = cleanFilterParamsForPurchase(request.filterParams());
-        List<Client> clients = fetchClients(normalizedQuery, cleanedFilterParams, filterIds, request.clientTypeId(), false);
+        List<Client> clients = fetchClients(normalizedQuery, cleanedFilterParams, filterIds, request.clientTypeId());
         
         ExternalClientDataCache cache = ExternalClientDataCache.of(sourceService.getAllSources());
         
@@ -223,24 +220,13 @@ public class ClientSearchService implements IClientSearchService {
         
         return clientPage;
     }
-    
-    private List<Client> fetchClients(String query, @NonNull Map<String, List<String>> filterParams, 
+
+    private List<Client> fetchClients(String query, @NonNull Map<String, List<String>> filterParams,
                                      ClientFilterIds filterIds, Long clientTypeId) {
-        return fetchClients(query, filterParams, filterIds, clientTypeId, true);
-    }
-    
-    private List<Client> fetchClients(String query, @NonNull Map<String, List<String>> filterParams, 
-                                     ClientFilterIds filterIds, Long clientTypeId, boolean loadFieldValues) {
         ClientSpecification specification = createClientSpecification(query, filterParams, filterIds, 
                 clientTypeId, null);
-        
-        List<Client> clients = clientRepository.findAll(specification);
-        
-        if (loadFieldValues) {
-            loadFieldValuesIfNeeded(clients);
-        }
-        
-        return clients;
+
+        return clientRepository.findAll(specification);
     }
     
     private void loadFieldValuesIfNeeded(@NonNull List<Client> clients) {
@@ -259,12 +245,10 @@ public class ClientSearchService implements IClientSearchService {
         List<Long> allowedClientTypeIds = getAccessibleClientTypeIds(userId);
         
         if (allowedClientTypeIds.isEmpty()) {
-            log.debug("User {} has no accessible client types", userId);
             return Collections.emptyList();
         }
         
         if (clientTypeId != null && !allowedClientTypeIds.contains(clientTypeId)) {
-            log.debug("User {} does not have access to client type {}", userId, clientTypeId);
             return Collections.emptyList();
         }
         
@@ -337,7 +321,7 @@ public class ClientSearchService implements IClientSearchService {
                 : null;
         
         Map<String, List<String>> cleanedFilterParams = cleanFilterParamsForPurchase(request.filterParams());
-        List<Client> clients = fetchClients(normalizedQuery, cleanedFilterParams, filterIds, request.clientTypeId(), false);
+        List<Client> clients = fetchClients(normalizedQuery, cleanedFilterParams, filterIds, request.clientTypeId());
         
         return clients.stream()
                 .map(Client::getId)

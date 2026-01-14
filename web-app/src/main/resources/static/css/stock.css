@@ -203,10 +203,9 @@ body.modal-open {
 }
 
 .modal-content h3 {
-    background: linear-gradient(135deg, #4CAF50, #2E7D32);
-    color: white;
+    color: black;
     margin: 0;
-    padding: 25px 30px;
+    padding: 10px 30px;
     font-size: 1.4rem;
     font-weight: 600;
     text-align: center;
@@ -217,7 +216,7 @@ body.modal-open {
 .modal-content form {
     display: flex;
     flex-direction: column;
-    padding: 20px;
+    padding: 10px;
     width: 100%;
     box-sizing: border-box;
     flex: 1;

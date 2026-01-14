@@ -8,7 +8,7 @@ import org.example.userservice.mappers.BranchPermissionMapper;
 import org.example.userservice.models.branch.BranchPermission;
 import org.example.userservice.models.dto.branch.BranchPermissionCreateDTO;
 import org.example.userservice.models.dto.branch.BranchPermissionDTO;
-import org.example.userservice.services.branch.BranchPermissionService;
+import org.example.userservice.services.impl.IBranchPermissionService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
@@ -25,7 +25,7 @@ import static org.springframework.http.HttpStatus.CREATED;
 @RequiredArgsConstructor
 @Validated
 public class BranchPermissionController {
-    private final BranchPermissionService branchPermissionService;
+    private final IBranchPermissionService branchPermissionService;
     private final BranchPermissionMapper branchPermissionMapper;
 
     @GetMapping("/user/{userId}")

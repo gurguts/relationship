@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.purchaseservice.clients.SourceClient;
 import org.example.purchaseservice.exceptions.PurchaseException;
 import org.example.purchaseservice.models.dto.fields.SourceDTO;
+import org.example.purchaseservice.services.impl.ISourceService;
 import org.springframework.stereotype.Service;
 
 import java.util.Collections;
@@ -15,10 +16,11 @@ import java.util.List;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class SourceService {
+public class SourceService implements ISourceService {
     
     private final SourceClient sourceClient;
     
+    @Override
     public SourceDTO getSourceName(@NonNull Long sourceId) {
         try {
             SourceDTO sourceDTO = sourceClient.getSourceName(sourceId).getBody();
@@ -42,6 +44,7 @@ public class SourceService {
         }
     }
     
+    @Override
     public List<SourceDTO> findByNameContaining(@NonNull String query) {
         if (query.trim().isEmpty()) {
             return Collections.emptyList();

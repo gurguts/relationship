@@ -17,6 +17,7 @@ import org.example.clientservice.models.dto.clienttype.FieldReorderDTO;
 import org.example.clientservice.models.dto.clienttype.StaticFieldsConfig;
 import org.example.clientservice.repositories.clienttype.ClientTypeFieldRepository;
 import org.example.clientservice.services.impl.IClientTypeFieldService;
+import org.example.clientservice.services.impl.IClientTypeService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,7 +34,7 @@ public class ClientTypeFieldService implements IClientTypeFieldService {
     
     private final ClientTypeFieldRepository fieldRepository;
     private final ClientTypeFieldMapper fieldMapper;
-    private final ClientTypeService clientTypeService;
+    private final IClientTypeService clientTypeService;
 
     @Override
     @Transactional
@@ -82,90 +83,45 @@ public class ClientTypeFieldService implements IClientTypeFieldService {
     @Override
     @NonNull
     public ClientTypeField getFieldById(@NonNull Long fieldId) {
-        try {
-            return fieldRepository.findByIdWithListValues(fieldId)
-                    .orElseThrow(() -> new ClientNotFoundException("Field not found with id: " + fieldId));
-        } catch (ClientNotFoundException e) {
-            throw e;
-        } catch (Exception e) {
-            log.error("Error getting field with ID {}: {}", fieldId, e.getMessage(), e);
-            throw new ClientException("FIELD_FETCH_ERROR",
-                    String.format("Failed to get field: %s", e.getMessage()), e);
-        }
+        return fieldRepository.findByIdWithListValues(fieldId)
+                .orElseThrow(() -> new ClientNotFoundException("Field not found with id: " + fieldId));
     }
 
     @Override
     @NonNull
     public List<ClientTypeField> getFieldsByClientTypeId(@NonNull Long clientTypeId) {
-        try {
-            return fieldRepository.findByClientTypeIdOrderByDisplayOrderAscWithListValues(clientTypeId);
-        } catch (Exception e) {
-            log.error("Error getting fields for client type {}: {}", clientTypeId, e.getMessage(), e);
-            throw new ClientException("FIELDS_FETCH_ERROR",
-                    String.format("Failed to get fields for client type: %s", e.getMessage()), e);
-        }
+        return fieldRepository.findByClientTypeIdOrderByDisplayOrderAscWithListValues(clientTypeId);
     }
 
     @Override
     @NonNull
     public List<ClientTypeField> getVisibleFieldsByClientTypeId(@NonNull Long clientTypeId) {
-        try {
-            return fieldRepository.findVisibleFieldsByClientTypeId(clientTypeId);
-        } catch (Exception e) {
-            log.error("Error getting visible fields for client type {}: {}", clientTypeId, e.getMessage(), e);
-            throw new ClientException("VISIBLE_FIELDS_FETCH_ERROR",
-                    String.format("Failed to get visible fields: %s", e.getMessage()), e);
-        }
+        return fieldRepository.findVisibleFieldsByClientTypeId(clientTypeId);
     }
 
     @Override
     @NonNull
     public List<ClientTypeField> getSearchableFieldsByClientTypeId(@NonNull Long clientTypeId) {
-        try {
-            return fieldRepository.findSearchableFieldsByClientTypeId(clientTypeId);
-        } catch (Exception e) {
-            log.error("Error getting searchable fields for client type {}: {}", clientTypeId, e.getMessage(), e);
-            throw new ClientException("SEARCHABLE_FIELDS_FETCH_ERROR",
-                    String.format("Failed to get searchable fields: %s", e.getMessage()), e);
-        }
+        return fieldRepository.findSearchableFieldsByClientTypeId(clientTypeId);
     }
 
     @Override
     @NonNull
     public List<ClientTypeField> getFilterableFieldsByClientTypeId(@NonNull Long clientTypeId) {
-        try {
-            return fieldRepository.findFilterableFieldsByClientTypeId(clientTypeId);
-        } catch (Exception e) {
-            log.error("Error getting filterable fields for client type {}: {}", clientTypeId, e.getMessage(), e);
-            throw new ClientException("FILTERABLE_FIELDS_FETCH_ERROR",
-                    String.format("Failed to get filterable fields: %s", e.getMessage()), e);
-        }
+        return fieldRepository.findFilterableFieldsByClientTypeId(clientTypeId);
     }
 
     @Override
     @NonNull
     public List<ClientTypeField> getVisibleInCreateFieldsByClientTypeId(@NonNull Long clientTypeId) {
-        try {
-            return fieldRepository.findVisibleInCreateFieldsByClientTypeId(clientTypeId);
-        } catch (Exception e) {
-            log.error("Error getting visible in create fields for client type {}: {}", clientTypeId, e.getMessage(), e);
-            throw new ClientException("VISIBLE_IN_CREATE_FIELDS_FETCH_ERROR",
-                    String.format("Failed to get visible in create fields: %s", e.getMessage()), e);
-        }
+        return fieldRepository.findVisibleInCreateFieldsByClientTypeId(clientTypeId);
     }
 
     @Override
     @NonNull
     public List<ClientTypeField> getFieldsByIds(@NonNull FieldIdsRequest request) {
         validateFieldIdsRequest(request);
-        
-        try {
-            return fieldRepository.findByIdsWithListValues(request.fieldIds());
-        } catch (Exception e) {
-            log.error("Error getting fields by IDs: {}", e.getMessage(), e);
-            throw new ClientException("FIELDS_BY_IDS_FETCH_ERROR",
-                    String.format("Failed to get fields by IDs: %s", e.getMessage()), e);
-        }
+        return fieldRepository.findByIdsWithListValues(request.fieldIds());
     }
 
     @Override
@@ -199,7 +155,6 @@ public class ClientTypeFieldService implements IClientTypeFieldService {
             updateFieldDisplayOrders(dto, fieldMap);
             
             fieldRepository.saveAll(fields);
-            log.info("Successfully reordered {} fields for client type {}", fields.size(), clientTypeId);
         } catch (ClientException | ClientNotFoundException e) {
             throw e;
         } catch (Exception e) {
@@ -212,41 +167,29 @@ public class ClientTypeFieldService implements IClientTypeFieldService {
     @Override
     @NonNull
     public List<ClientTypeFieldDTO> getVisibleFieldsWithStatic(@NonNull Long clientTypeId) {
-        try {
-            List<ClientTypeField> fields = getVisibleFieldsByClientTypeId(clientTypeId);
-            List<ClientTypeFieldDTO> response = mapFieldsToDTOs(fields);
+        List<ClientTypeField> fields = getVisibleFieldsByClientTypeId(clientTypeId);
+        List<ClientTypeFieldDTO> response = mapFieldsToDTOs(fields);
 
-            addStaticFieldsToResponse(response, clientTypeId);
+        addStaticFieldsToResponse(response, clientTypeId);
 
-            return response;
-        } catch (Exception e) {
-            log.error("Error getting visible fields with static for client type {}: {}", clientTypeId, e.getMessage(), e);
-            throw new ClientException("VISIBLE_FIELDS_WITH_STATIC_FETCH_ERROR",
-                    String.format("Failed to get visible fields with static: %s", e.getMessage()), e);
-        }
+        return response;
     }
 
     @Override
     @NonNull
     public ClientTypeFieldsAllDTO getAllFieldsByClientTypeId(@NonNull Long clientTypeId) {
-        try {
-            ClientType clientType = clientTypeService.getClientTypeById(clientTypeId);
-            
-            ClientTypeFieldsAllDTO dto = new ClientTypeFieldsAllDTO();
-            dto.setAll(mapFieldsToDTOs(getFieldsByClientTypeId(clientTypeId)));
-            dto.setVisible(mapFieldsToDTOs(getVisibleFieldsByClientTypeId(clientTypeId)));
-            dto.setSearchable(mapFieldsToDTOs(getSearchableFieldsByClientTypeId(clientTypeId)));
-            dto.setFilterable(mapFieldsToDTOs(getFilterableFieldsByClientTypeId(clientTypeId)));
-            dto.setVisibleInCreate(mapFieldsToDTOs(getVisibleInCreateFieldsByClientTypeId(clientTypeId)));
-            
-            addStaticFieldsToVisible(dto, clientType);
+        ClientType clientType = clientTypeService.getClientTypeById(clientTypeId);
+        
+        ClientTypeFieldsAllDTO dto = new ClientTypeFieldsAllDTO();
+        dto.setAll(mapFieldsToDTOs(getFieldsByClientTypeId(clientTypeId)));
+        dto.setVisible(mapFieldsToDTOs(getVisibleFieldsByClientTypeId(clientTypeId)));
+        dto.setSearchable(mapFieldsToDTOs(getSearchableFieldsByClientTypeId(clientTypeId)));
+        dto.setFilterable(mapFieldsToDTOs(getFilterableFieldsByClientTypeId(clientTypeId)));
+        dto.setVisibleInCreate(mapFieldsToDTOs(getVisibleInCreateFieldsByClientTypeId(clientTypeId)));
+        
+        addStaticFieldsToVisible(dto, clientType);
 
-            return dto;
-        } catch (Exception e) {
-            log.error("Error getting all fields for client type {}: {}", clientTypeId, e.getMessage(), e);
-            throw new ClientException("ALL_FIELDS_FETCH_ERROR",
-                    String.format("Failed to get all fields: %s", e.getMessage()), e);
-        }
+        return dto;
     }
     
     private void validateFieldIdsRequest(@NonNull FieldIdsRequest request) {

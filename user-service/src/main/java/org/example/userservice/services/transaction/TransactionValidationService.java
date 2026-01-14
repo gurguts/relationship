@@ -9,35 +9,39 @@ import org.example.userservice.models.account.Account;
 import org.example.userservice.models.transaction.Transaction;
 import org.example.userservice.models.transaction.TransactionType;
 import org.example.userservice.repositories.AccountRepository;
-import org.example.userservice.services.account.AccountBalanceService;
-import org.example.userservice.services.branch.BranchPermissionService;
+import org.example.userservice.services.impl.IAccountBalanceService;
+import org.example.userservice.services.impl.IBranchPermissionService;
+import org.example.userservice.services.impl.ITransactionValidationService;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 
 @Component
 @RequiredArgsConstructor
-public class TransactionValidationService {
+public class TransactionValidationService implements ITransactionValidationService {
     private static final String ERROR_CODE_CURRENCY_REQUIRED = "CURRENCY_REQUIRED";
     private static final String ERROR_CODE_INVALID_COMMISSION = "INVALID_COMMISSION";
     private static final String ERROR_CODE_SAME_ACCOUNTS = "SAME_ACCOUNTS";
     private static final String ERROR_CODE_ACCESS_DENIED = "ACCESS_DENIED";
 
     private final AccountRepository accountRepository;
-    private final AccountBalanceService accountBalanceService;
-    private final BranchPermissionService branchPermissionService;
+    private final IAccountBalanceService accountBalanceService;
+    private final IBranchPermissionService branchPermissionService;
 
+    @Override
     public void validateAccount(@NonNull Long accountId) {
         accountRepository.findById(accountId)
                 .orElseThrow(() -> new AccountNotFoundException(
                         String.format("Account with ID %d not found", accountId)));
     }
 
+    @Override
     public void validateAccounts(@NonNull Long fromAccountId, @NonNull Long toAccountId) {
         validateAccount(fromAccountId);
         validateAccount(toAccountId);
     }
 
+    @Override
     public void validateCurrency(@NonNull Long accountId, @NonNull String currency) {
         if (currency.trim().isEmpty()) {
             throw new TransactionException(ERROR_CODE_CURRENCY_REQUIRED, "Currency is required");
@@ -50,6 +54,7 @@ public class TransactionValidationService {
         }
     }
 
+    @Override
     public void validateCommission(BigDecimal commission, BigDecimal amount) {
         if (commission != null) {
             if (commission.compareTo(BigDecimal.ZERO) < 0) {
@@ -67,6 +72,7 @@ public class TransactionValidationService {
         }
     }
 
+    @Override
     public void checkAccountPermissions(@NonNull Long userId, @NonNull Transaction transaction) {
         TransactionType type = transaction.getType();
         

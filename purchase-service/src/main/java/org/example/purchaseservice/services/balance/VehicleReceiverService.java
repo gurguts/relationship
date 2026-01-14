@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.purchaseservice.exceptions.PurchaseException;
 import org.example.purchaseservice.models.balance.VehicleReceiver;
 import org.example.purchaseservice.repositories.VehicleReceiverRepository;
+import org.example.purchaseservice.services.impl.IVehicleReceiverService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,10 +15,11 @@ import java.util.List;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class VehicleReceiverService {
+public class VehicleReceiverService implements IVehicleReceiverService {
     
     private final VehicleReceiverRepository vehicleReceiverRepository;
     
+    @Override
     @Transactional
     public VehicleReceiver createVehicleReceiver(@NonNull VehicleReceiver receiver) {
         if (receiver.getName() == null || receiver.getName().trim().isEmpty()) {
@@ -39,6 +41,7 @@ public class VehicleReceiverService {
         return saved;
     }
     
+    @Override
     @Transactional
     public VehicleReceiver updateVehicleReceiver(@NonNull Long receiverId, @NonNull VehicleReceiver updateData) {
         log.info("Updating vehicle receiver: id={}", receiverId);
@@ -66,6 +69,7 @@ public class VehicleReceiverService {
         return saved;
     }
     
+    @Override
     @Transactional(readOnly = true)
     public VehicleReceiver getVehicleReceiver(@NonNull Long receiverId) {
         return vehicleReceiverRepository.findById(receiverId)
@@ -73,11 +77,13 @@ public class VehicleReceiverService {
                         String.format("Vehicle receiver not found: id=%d", receiverId)));
     }
     
+    @Override
     @Transactional(readOnly = true)
     public List<VehicleReceiver> getAllVehicleReceivers() {
         return vehicleReceiverRepository.findAllByOrderByNameAsc();
     }
     
+    @Override
     @Transactional
     public void deleteVehicleReceiver(@NonNull Long receiverId) {
         log.info("Deleting vehicle receiver: id={}", receiverId);

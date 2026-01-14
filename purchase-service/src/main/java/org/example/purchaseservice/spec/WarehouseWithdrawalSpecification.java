@@ -50,14 +50,13 @@ public class WarehouseWithdrawalSpecification implements Specification<Warehouse
             return cb.conjunction();
         }
 
-        applyIdFilters(predicates, root, cb);
+        applyIdFilters(predicates, root);
         applyDateFilters(predicates, root, cb);
 
         return predicates.isEmpty() ? cb.conjunction() : cb.and(predicates.toArray(new Predicate[0]));
     }
 
-    private void applyIdFilters(@NonNull List<Predicate> predicates, @NonNull Root<WarehouseWithdrawal> root,
-                                @NonNull CriteriaBuilder cb) {
+    private void applyIdFilters(@NonNull List<Predicate> predicates, @NonNull Root<WarehouseWithdrawal> root) {
         addIdFilter(predicates, root, FILTER_PRODUCT_ID, FIELD_PRODUCT_ID);
         addIdFilter(predicates, root, FILTER_WAREHOUSE_ID, FIELD_WAREHOUSE_ID);
         addWithdrawalReasonIdFilter(predicates, root);

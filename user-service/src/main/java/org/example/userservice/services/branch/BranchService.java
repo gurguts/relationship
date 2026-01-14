@@ -7,6 +7,8 @@ import org.example.userservice.exceptions.branch.BranchNotFoundException;
 import org.example.userservice.exceptions.user.UserException;
 import org.example.userservice.models.branch.Branch;
 import org.example.userservice.repositories.BranchRepository;
+import org.example.userservice.services.impl.IBranchService;
+import org.example.userservice.services.impl.IBranchPermissionService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,17 +19,19 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class BranchService {
+public class BranchService implements IBranchService {
     private static final String ERROR_CODE_BRANCH_ALREADY_EXISTS = "BRANCH_ALREADY_EXISTS";
 
     private final BranchRepository branchRepository;
-    private final BranchPermissionService branchPermissionService;
+    private final IBranchPermissionService branchPermissionService;
 
+    @Override
     @Transactional(readOnly = true)
     public List<Branch> getAllBranches() {
         return branchRepository.findAllByOrderByNameAsc();
     }
 
+    @Override
     @Transactional(readOnly = true)
     public List<Branch> getBranchesAccessibleToUser(@NonNull Long userId) {
         List<Branch> allBranches = branchRepository.findAllByOrderByNameAsc();
@@ -47,40 +51,41 @@ public class BranchService {
                 .collect(Collectors.toSet());
     }
 
+    @Override
     @Transactional(readOnly = true)
     public Branch getBranchById(@NonNull Long id) {
         return branchRepository.findById(id)
-                .orElseThrow(() -> {
-                    log.warn("Branch not found: {}", id);
-                    return new BranchNotFoundException(
-                            String.format("Branch with ID %d not found", id));
-                });
+                .orElseThrow(() -> new BranchNotFoundException(
+                        String.format("Branch with ID %d not found", id)));
     }
 
+    @Override
     @Transactional
     public Branch createBranch(@NonNull Branch branch) {
+        log.info("Creating branch: name={}", branch.getName());
         validateBranchNameUniqueness(branch.getName());
         
         Branch saved = branchRepository.save(branch);
-        log.debug("Created branch {} with name {}", saved.getId(), saved.getName());
+        log.info("Branch created: id={}", saved.getId());
         return saved;
     }
 
     private void validateBranchNameUniqueness(@NonNull String name) {
         if (branchRepository.findByName(name).isPresent()) {
-            log.warn("Attempt to create branch with existing name: {}", name);
             throw new UserException(ERROR_CODE_BRANCH_ALREADY_EXISTS, 
                     String.format("Branch with name '%s' already exists", name));
         }
     }
 
+    @Override
     @Transactional
     public Branch updateBranch(@NonNull Long id, @NonNull Branch updatedBranch) {
+        log.info("Updating branch: id={}", id);
         Branch branch = getBranchById(id);
         updateBranchFields(branch, updatedBranch);
         
         Branch saved = branchRepository.save(branch);
-        log.debug("Updated branch {}", id);
+        log.info("Branch updated: id={}", saved.getId());
         return saved;
     }
 
@@ -89,10 +94,12 @@ public class BranchService {
         branch.setDescription(updatedBranch.getDescription());
     }
 
+    @Override
     @Transactional
     public void deleteBranch(@NonNull Long id) {
+        log.info("Deleting branch: id={}", id);
         Branch branch = getBranchById(id);
         branchRepository.delete(branch);
-        log.debug("Deleted branch {}", id);
+        log.info("Branch deleted: id={}", id);
     }
 }

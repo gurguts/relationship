@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.purchaseservice.exceptions.PurchaseException;
 import org.example.purchaseservice.models.balance.VehicleSender;
 import org.example.purchaseservice.repositories.VehicleSenderRepository;
+import org.example.purchaseservice.services.impl.IVehicleSenderService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,10 +15,11 @@ import java.util.List;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class VehicleSenderService {
+public class VehicleSenderService implements IVehicleSenderService {
     
     private final VehicleSenderRepository vehicleSenderRepository;
     
+    @Override
     @Transactional
     public VehicleSender createVehicleSender(@NonNull VehicleSender sender) {
         if (sender.getName() == null || sender.getName().trim().isEmpty()) {
@@ -39,6 +41,7 @@ public class VehicleSenderService {
         return saved;
     }
     
+    @Override
     @Transactional
     public VehicleSender updateVehicleSender(@NonNull Long senderId, @NonNull VehicleSender updateData) {
         log.info("Updating vehicle sender: id={}", senderId);
@@ -66,6 +69,7 @@ public class VehicleSenderService {
         return saved;
     }
     
+    @Override
     @Transactional(readOnly = true)
     public VehicleSender getVehicleSender(@NonNull Long senderId) {
         return vehicleSenderRepository.findById(senderId)
@@ -73,11 +77,13 @@ public class VehicleSenderService {
                         String.format("Vehicle sender not found: id=%d", senderId)));
     }
     
+    @Override
     @Transactional(readOnly = true)
     public List<VehicleSender> getAllVehicleSenders() {
         return vehicleSenderRepository.findAllByOrderByNameAsc();
     }
     
+    @Override
     @Transactional
     public void deleteVehicleSender(@NonNull Long senderId) {
         log.info("Deleting vehicle sender: id={}", senderId);

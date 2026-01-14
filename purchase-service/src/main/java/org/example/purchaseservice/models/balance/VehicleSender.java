@@ -18,7 +18,7 @@ public class VehicleSender {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
-    @Column(name = "name", nullable = false, length = 255, unique = true)
+    @Column(name = "name", nullable = false, unique = true)
     private String name;
     
     @CreationTimestamp

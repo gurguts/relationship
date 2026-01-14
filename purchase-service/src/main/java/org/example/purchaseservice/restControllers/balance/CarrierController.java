@@ -4,13 +4,12 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.example.purchaseservice.models.balance.Carrier;
 import org.example.purchaseservice.models.dto.balance.CarrierCreateDTO;
 import org.example.purchaseservice.models.dto.balance.CarrierDetailsDTO;
 import org.example.purchaseservice.models.dto.balance.CarrierUpdateDTO;
 import org.example.purchaseservice.mappers.CarrierMapper;
-import org.example.purchaseservice.services.balance.CarrierService;
+import org.example.purchaseservice.services.impl.ICarrierService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
@@ -20,13 +19,12 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import java.net.URI;
 import java.util.List;
 
-@Slf4j
 @RestController
 @RequestMapping("/api/v1/carriers")
 @RequiredArgsConstructor
 @Validated
 public class CarrierController {
-    private final CarrierService carrierService;
+    private final ICarrierService carrierService;
     private final CarrierMapper carrierMapper;
 
     @PreAuthorize("hasAuthority('warehouse:create') or hasAuthority('declarant:create')")

@@ -3,7 +3,7 @@ package org.example.containerservice.restControllers;
 import lombok.RequiredArgsConstructor;
 import org.example.containerservice.mappers.ContainerMapper;
 import org.example.containerservice.models.dto.container.ContainerTransactionDTO;
-import org.example.containerservice.services.ContainerTransactionService;
+import org.example.containerservice.services.impl.IContainerTransactionService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,7 +18,7 @@ import java.util.List;
 @Validated
 public class ContainerTransactionController {
 
-    private final ContainerTransactionService containerTransactionService;
+    private final IContainerTransactionService containerTransactionService;
     private final ContainerMapper containerMapper;
 
     @GetMapping

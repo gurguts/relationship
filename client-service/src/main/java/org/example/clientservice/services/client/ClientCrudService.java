@@ -68,8 +68,6 @@ public class ClientCrudService implements IClientCrudService {
 
     @Override
     public Client getClient(@NonNull Long clientId) {
-        log.debug("Getting client: id={}", clientId);
-
         Client client = clientRepository.findById(clientId)
                 .orElseThrow(() -> new ClientNotFoundException("Client not found with id: " + clientId));
 
@@ -88,7 +86,6 @@ public class ClientCrudService implements IClientCrudService {
         checkRelatedEntities(clientId);
 
         clientRepository.deleteById(clientId);
-        log.info("Client fully deleted: id={}", clientId);
     }
 
     @Override
@@ -100,7 +97,6 @@ public class ClientCrudService implements IClientCrudService {
         checkDeletionPermissions(client);
 
         clientRepository.deactivateClientById(clientId);
-        log.info("Client deactivated: id={}", clientId);
     }
 
     @Override
@@ -110,7 +106,6 @@ public class ClientCrudService implements IClientCrudService {
 
         getClient(clientId);
         clientRepository.activateClientById(clientId);
-        log.info("Client activated: id={}", clientId);
     }
 
     private void checkClientTypePermission(org.example.clientservice.models.clienttype.ClientType clientType, PermissionAction action) {

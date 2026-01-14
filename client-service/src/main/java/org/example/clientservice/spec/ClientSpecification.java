@@ -86,7 +86,7 @@ public class ClientSpecification implements Specification<Client> {
     }
 
     @Override
-    public Predicate toPredicate(@NonNull Root<Client> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
+    public Predicate toPredicate(@NonNull Root<Client> root, CriteriaQuery<?> query, @NonNull CriteriaBuilder criteriaBuilder) {
         Predicate predicate = criteriaBuilder.conjunction();
 
         predicate = applyQueryFilter(predicate, root, query, criteriaBuilder);

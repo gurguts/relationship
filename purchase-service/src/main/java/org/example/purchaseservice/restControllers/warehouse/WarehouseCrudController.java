@@ -4,7 +4,6 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.example.purchaseservice.mappers.WarehouseMapper;
 import org.example.purchaseservice.models.dto.warehouse.WarehouseCreateDTO;
 import org.example.purchaseservice.models.dto.warehouse.WarehouseDTO;
@@ -23,7 +22,6 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/warehouse")
 @RequiredArgsConstructor
-@Slf4j
 @Validated
 public class WarehouseCrudController {
     private final WarehouseMapper warehouseMapper;

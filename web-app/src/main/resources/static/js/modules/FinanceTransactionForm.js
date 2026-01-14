@@ -270,7 +270,7 @@ const FinanceTransactionForm = (function() {
         }
     }
 
-    function buildTransactionFormData() {
+    function buildTransactionFormData(customSelects) {
         const type = document.getElementById('transaction-type').value;
         const categoryValue = document.getElementById('transaction-category').value;
         

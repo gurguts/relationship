@@ -29,12 +29,6 @@ public class PageController {
         return "purchase";
     }
 
-    @PreAuthorize("hasAuthority('sale:view')")
-    @GetMapping("/sale")
-    public String getSalePage() {
-        return "sale";
-    }
-
     @PreAuthorize("hasAuthority('container:view')")
     @GetMapping("/containers")
     public String getContainersPage() {

@@ -11,7 +11,7 @@ import org.example.containerservice.models.dto.UserDTO;
 import org.example.containerservice.models.dto.container.ContainerBalanceDTO;
 import org.example.containerservice.models.dto.container.ContainerOperationRequest;
 import org.example.containerservice.models.dto.container.UserContainerBalanceDTO;
-import org.example.containerservice.services.ContainerBalanceService;
+import org.example.containerservice.services.impl.IContainerBalanceService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
@@ -28,7 +28,7 @@ import java.util.Map;
 @Validated
 public class ContainerBalanceController {
 
-    private final ContainerBalanceService containerBalanceService;
+    private final IContainerBalanceService containerBalanceService;
     private final ContainerMapper containerMapper;
     private final UserApiClient userApiClient;
 

@@ -2,6 +2,7 @@ package org.example.clientservice.services.impl;
 
 import lombok.NonNull;
 import org.example.clientservice.models.clienttype.ClientType;
+import org.example.clientservice.models.clienttype.ClientTypeFieldListValue;
 import org.example.clientservice.models.dto.clienttype.ClientTypeCreateDTO;
 import org.example.clientservice.models.dto.clienttype.ClientTypeUpdateDTO;
 import org.example.clientservice.models.dto.clienttype.StaticFieldsConfig;
@@ -33,6 +34,9 @@ public interface IClientTypeService {
     Page<ClientType> getAllActiveClientTypes(@NonNull Pageable pageable);
     
     void deleteClientType(@NonNull Long id);
+
+    @NonNull
+    ClientTypeFieldListValue getListValueById(@NonNull Long id);
 
     @NonNull
     StaticFieldsConfig getStaticFieldsConfig(@NonNull Long id);

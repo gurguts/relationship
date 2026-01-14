@@ -9,7 +9,8 @@ import org.example.userservice.models.account.Account;
 import org.example.userservice.models.account.AccountBalance;
 import org.example.userservice.repositories.AccountBalanceRepository;
 import org.example.userservice.repositories.AccountRepository;
-import org.example.userservice.services.branch.BranchPermissionService;
+import org.example.userservice.services.impl.IAccountService;
+import org.example.userservice.services.impl.IBranchPermissionService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,15 +23,16 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class AccountService {
+public class AccountService implements IAccountService {
     private static final String ERROR_CODE_CURRENCIES_REQUIRED = "CURRENCIES";
     private static final String ERROR_CODE_CURRENCY_NOT_REMOVABLE = "CURRENCY";
     private static final String ERROR_CODE_BALANCE_NOT_ZERO = "BALANCE";
 
     private final AccountRepository accountRepository;
     private final AccountBalanceRepository accountBalanceRepository;
-    private final BranchPermissionService branchPermissionService;
+    private final IBranchPermissionService branchPermissionService;
 
+    @Override
     @Transactional(readOnly = true)
     public List<Account> getAccountsAccessibleToUser(@NonNull Long userId) {
         List<Account> allAccounts = accountRepository.findAllByOrderByNameAsc();
@@ -55,44 +57,48 @@ public class AccountService {
                 .collect(Collectors.toSet());
     }
 
+    @Override
     @Transactional(readOnly = true)
     public List<Account> getAccountsByUserId(@NonNull Long userId) {
         return accountRepository.findByUserId(userId);
     }
 
+    @Override
     @Transactional(readOnly = true)
     public List<Account> getAccountsByBranchId(@NonNull Long branchId) {
         return accountRepository.findByBranchId(branchId);
     }
 
+    @Override
     @Transactional(readOnly = true)
     public Account getAccountById(@NonNull Long id) {
         return accountRepository.findById(id)
-                .orElseThrow(() -> {
-                    log.warn("Account not found: {}", id);
-                    return new AccountNotFoundException(
-                            String.format("Account with ID %d not found", id));
-                });
+                .orElseThrow(() -> new AccountNotFoundException(
+                        String.format("Account with ID %d not found", id)));
     }
 
+    @Override
     @Transactional
     public Account createAccount(@NonNull Account account) {
-        validateCurrencies(account.getCurrencies(), "create");
+        log.info("Creating account: name={}", account.getName());
+        validateCurrencies(account.getCurrencies());
 
         Account savedAccount = accountRepository.save(account);
         createBalancesForAccount(savedAccount.getId(), account.getCurrencies());
 
-        log.debug("Created account {} with {} currencies", savedAccount.getId(), account.getCurrencies().size());
+        log.info("Account created: id={}", savedAccount.getId());
         return savedAccount;
     }
 
+    @Override
     @Transactional
     public Account updateAccount(@NonNull Long id, @NonNull Account updatedAccount) {
+        log.info("Updating account: id={}", id);
         Account account = getAccountById(id);
         updateAccountFields(account, updatedAccount);
 
         Set<String> newCurrencies = updatedAccount.getCurrencies();
-        validateCurrencies(newCurrencies, "update");
+        validateCurrencies(newCurrencies);
 
         Set<String> oldCurrencies = account.getCurrencies();
         createNewBalancesForAccount(id, newCurrencies, oldCurrencies);
@@ -100,24 +106,28 @@ public class AccountService {
 
         account.setCurrencies(newCurrencies);
         Account savedAccount = accountRepository.save(account);
-        log.debug("Updated account {}", id);
+        log.info("Account updated: id={}", savedAccount.getId());
         return savedAccount;
     }
 
+    @Override
     @Transactional
     public void deleteAccount(@NonNull Long id) {
+        log.info("Deleting account: id={}", id);
         Account account = getAccountById(id);
         validateAccountCanBeDeleted(id);
         
         accountRepository.delete(account);
-        log.debug("Deleted account {}", id);
+        log.info("Account deleted: id={}", id);
     }
 
+    @Override
     @Transactional(readOnly = true)
     public List<AccountBalance> getAccountBalances(@NonNull Long accountId) {
         return accountBalanceRepository.findByAccountId(accountId);
     }
     
+    @Override
     @Transactional(readOnly = true)
     public Map<Long, List<AccountBalance>> getAccountBalancesBatch(@NonNull List<Long> accountIds) {
         if (accountIds.isEmpty()) {
@@ -128,9 +138,8 @@ public class AccountService {
                 .collect(Collectors.groupingBy(AccountBalance::getAccountId));
     }
 
-    private void validateCurrencies(Set<String> currencies, @NonNull String operation) {
+    private void validateCurrencies(Set<String> currencies) {
         if (currencies == null || currencies.isEmpty()) {
-            log.warn("Attempt to {} account without currencies", operation);
             throw new AccountException(ERROR_CODE_CURRENCIES_REQUIRED, "Account must have at least one currency");
         }
     }
@@ -157,7 +166,6 @@ public class AccountService {
         
         if (!balancesToCreate.isEmpty()) {
             accountBalanceRepository.saveAll(balancesToCreate);
-            log.debug("Created {} new balances for account {}", balancesToCreate.size(), accountId);
         }
     }
 
@@ -179,7 +187,6 @@ public class AccountService {
                 .map(balanceMap::get)
                 .filter(balance -> {
                     if (balance != null && balance.getAmount().compareTo(BigDecimal.ZERO) != 0) {
-                        log.warn("Cannot remove currency {} from account {}: non-zero balance", balance.getCurrency(), accountId);
                         throw new AccountException(ERROR_CODE_CURRENCY_NOT_REMOVABLE, 
                                 String.format("Cannot remove currency %s: account has non-zero balance", balance.getCurrency()));
                     }
@@ -189,14 +196,12 @@ public class AccountService {
         
         if (!balancesToDelete.isEmpty()) {
             accountBalanceRepository.deleteAll(balancesToDelete);
-            log.debug("Deleted {} balances for account {}", balancesToDelete.size(), accountId);
         }
     }
 
     private void validateAccountCanBeDeleted(@NonNull Long accountId) {
         long nonZeroCount = accountBalanceRepository.countNonZeroBalances(accountId);
         if (nonZeroCount > 0) {
-            log.warn("Cannot delete account {}: has {} non-zero balance(s)", accountId, nonZeroCount);
             throw new AccountException(ERROR_CODE_BALANCE_NOT_ZERO, 
                     String.format("Cannot delete account: has %d non-zero balance(s)", nonZeroCount));
         }

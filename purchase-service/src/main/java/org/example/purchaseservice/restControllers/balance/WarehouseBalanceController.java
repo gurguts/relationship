@@ -4,7 +4,6 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.example.purchaseservice.models.balance.WarehouseBalanceAdjustment;
 import org.example.purchaseservice.models.balance.WarehouseProductBalance;
 import org.example.purchaseservice.models.dto.balance.InitialWarehouseBalanceDTO;
@@ -15,14 +14,12 @@ import org.example.purchaseservice.mappers.WarehouseBalanceMapper;
 import org.example.purchaseservice.services.balance.IWarehouseProductBalanceService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.example.purchaseservice.utils.SecurityUtils;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@Slf4j
 @RestController
 @RequestMapping("/api/v1/warehouse/balances")
 @RequiredArgsConstructor
@@ -36,10 +33,7 @@ public class WarehouseBalanceController {
     @PostMapping("/initialize")
     public ResponseEntity<WarehouseProductBalanceDTO> setInitialBalance(
             @RequestBody @Valid @NonNull InitialWarehouseBalanceDTO dto) {
-        
-        log.info("Setting initial balance: warehouse={}, product={}, qty={}, price={}", 
-                dto.getWarehouseId(), dto.getProductId(), dto.getInitialQuantity(), dto.getAveragePriceEur());
-        
+
         WarehouseProductBalance balance = warehouseProductBalanceService.setInitialBalance(
                 dto.getWarehouseId(),
                 dto.getProductId(),
@@ -73,8 +67,7 @@ public class WarehouseBalanceController {
             @PathVariable @Positive Long productId,
             @RequestBody @Valid @NonNull WarehouseBalanceUpdateRequest request) {
 
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        Long userId = authentication != null ? (Long) authentication.getDetails() : null;
+        Long userId = SecurityUtils.getCurrentUserId();
 
         WarehouseProductBalance updatedBalance = warehouseProductBalanceService.updateBalance(
                 warehouseId,

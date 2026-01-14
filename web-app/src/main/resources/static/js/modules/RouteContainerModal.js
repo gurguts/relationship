@@ -1,4 +1,15 @@
 const RouteContainerModal = (function() {
+    async function loadUsers() {
+        try {
+            const response = await fetch('/api/v1/user');
+            if (!response.ok) throw new Error('Failed to load users');
+            return await response.json();
+        } catch (error) {
+            console.error('Error loading users:', error);
+            return [];
+        }
+    }
+
     async function loadContainers() {
         try {
             const response = await fetch('/api/v1/container');
@@ -15,18 +26,27 @@ const RouteContainerModal = (function() {
             modal,
             form,
             clientIdInput,
+            userIdSelect,
             containerIdSelect,
             loaderBackdrop
         } = config;
 
-        if (!modal || !form || !clientIdInput || !containerIdSelect) {
+        if (!modal || !form || !clientIdInput || !userIdSelect || !containerIdSelect) {
             return;
         }
         
         form.reset();
         clientIdInput.value = clientId;
         
-        const containers = await loadContainers();
+        const [users, containers] = await Promise.all([loadUsers(), loadContainers()]);
+        
+        userIdSelect.innerHTML = '<option value="">Виберіть водія</option>';
+        users.forEach(user => {
+            const option = document.createElement('option');
+            option.value = user.id;
+            option.textContent = user.name;
+            userIdSelect.appendChild(option);
+        });
         
         containerIdSelect.innerHTML = '<option value="">Виберіть тип тари</option>';
         containers.forEach(container => {
@@ -37,12 +57,14 @@ const RouteContainerModal = (function() {
         });
         
         modal.style.display = 'flex';
+        modal.classList.add('show');
     }
 
     function setupCloseHandler(closeButton, modal) {
         if (closeButton) {
             closeButton.addEventListener('click', () => {
                 modal.style.display = 'none';
+                modal.classList.remove('show');
             });
         }
     }
@@ -59,15 +81,17 @@ const RouteContainerModal = (function() {
                 
                 const operationType = document.getElementById('containerOperationType').value;
                 const clientId = Number(document.getElementById('containerClientId').value);
+                const userId = Number(document.getElementById('containerUserId').value);
                 const containerId = Number(document.getElementById('containerContainerId').value);
                 const quantity = parseFloat(document.getElementById('containerQuantity').value);
                 
-                if (!operationType || !clientId || !containerId || !quantity) {
+                if (!operationType || !clientId || !userId || !containerId || !quantity) {
                     showMessage('Будь ласка, заповніть всі поля', 'error');
                     return;
                 }
                 
                 const formData = {
+                    userId: userId,
                     clientId: clientId,
                     containerId: containerId,
                     quantity: quantity
@@ -95,6 +119,7 @@ const RouteContainerModal = (function() {
                     }
                     
                     modal.style.display = 'none';
+                    modal.classList.remove('show');
                     form.reset();
                     const operationText = operationType === 'transfer' 
                         ? 'Тара успішно залишена у клієнта'

@@ -9,7 +9,7 @@ import org.example.userservice.models.transaction.Counterparty;
 import org.example.userservice.models.transaction.CounterpartyType;
 import org.example.userservice.models.dto.transaction.CounterpartyCreateDTO;
 import org.example.userservice.models.dto.transaction.CounterpartyDTO;
-import org.example.userservice.services.transaction.CounterpartyService;
+import org.example.userservice.services.impl.ICounterpartyService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
@@ -26,7 +26,7 @@ import static org.springframework.http.HttpStatus.CREATED;
 @RequiredArgsConstructor
 @Validated
 public class CounterpartyController {
-    private final CounterpartyService counterpartyService;
+    private final ICounterpartyService counterpartyService;
     private final CounterpartyMapper counterpartyMapper;
 
     @GetMapping("/type/{type}")

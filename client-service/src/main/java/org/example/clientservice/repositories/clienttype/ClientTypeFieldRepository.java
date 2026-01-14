@@ -38,11 +38,7 @@ public interface ClientTypeFieldRepository extends JpaRepository<ClientTypeField
     @Query("SELECT DISTINCT f FROM ClientTypeField f LEFT JOIN FETCH f.listValues WHERE f.clientType.id = :clientTypeId AND f.isVisibleInCreate = true ORDER BY f.displayOrder ASC")
     @NonNull
     List<ClientTypeField> findVisibleInCreateFieldsByClientTypeId(@NonNull @Param("clientTypeId") Long clientTypeId);
-    
-    @Query("SELECT DISTINCT f FROM ClientTypeField f LEFT JOIN FETCH f.listValues WHERE f.clientType.id = :clientTypeId ORDER BY f.displayOrder ASC")
-    @NonNull
-    List<ClientTypeField> findByClientTypeIdWithListValues(@NonNull @Param("clientTypeId") Long clientTypeId);
-    
+
     @Query("SELECT DISTINCT f FROM ClientTypeField f LEFT JOIN FETCH f.listValues WHERE f.id = :fieldId")
     Optional<ClientTypeField> findByIdWithListValues(@NonNull @Param("fieldId") Long fieldId);
 }

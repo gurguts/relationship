@@ -93,7 +93,6 @@ public class ProductService implements IProductService {
             throw new ProductException("INVALID_NAME", "Product name cannot be empty");
         }
         
-        log.debug("Searching products by name: name={}", normalizedName);
         return productRepository.findByNameContainingIgnoreCase(normalizedName);
     }
 
@@ -107,7 +106,6 @@ public class ProductService implements IProductService {
         }
 
         if (ALL_USAGE_FILTER.equalsIgnoreCase(normalizedUsage)) {
-            log.debug("Getting all products");
             Iterable<Product> products = productRepository.findAll();
             return StreamSupport.stream(products.spliterator(), false).toList();
         }
@@ -119,7 +117,6 @@ public class ProductService implements IProductService {
             throw new ProductException("ILLEGAL_USAGE", String.format("Invalid product usage filter: %s", normalizedUsage));
         }
 
-        log.debug("Getting products by usage: usage={}", usageFilter);
         return productRepository.findByUsage(usageFilter);
     }
 
@@ -127,7 +124,6 @@ public class ProductService implements IProductService {
     @Transactional(readOnly = true)
     @Cacheable(value = "products", key = "#usage")
     public List<Product> findProductsByUsage(@NonNull ProductUsage usage) {
-        log.debug("Finding products by usage: usage={}", usage);
         return productRepository.findByUsage(usage);
     }
 

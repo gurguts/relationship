@@ -2,19 +2,22 @@ package org.example.userservice.services.transaction;
 
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.example.userservice.exceptions.transaction.TransactionException;
 import org.example.userservice.models.transaction.Transaction;
 import org.example.userservice.repositories.TransactionRepository;
-import org.example.userservice.services.account.AccountBalanceService;
+import org.example.userservice.services.impl.IAccountBalanceService;
+import org.example.userservice.services.impl.ITransactionCreationService;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
-public class TransactionCreationService {
+public class TransactionCreationService implements ITransactionCreationService {
     private static final String ERROR_CODE_CLIENT_ID_REQUIRED = "CLIENT_ID_REQUIRED";
     private static final String ERROR_CODE_INVALID_CURRENCY_CONVERSION = "INVALID_CURRENCY_CONVERSION";
     private static final String ERROR_CODE_SAME_CURRENCIES = "SAME_CURRENCIES";
@@ -24,11 +27,14 @@ public class TransactionCreationService {
     private static final int CONVERTED_AMOUNT_SCALE = 2;
 
     private final TransactionRepository transactionRepository;
-    private final AccountBalanceService accountBalanceService;
+    private final IAccountBalanceService accountBalanceService;
     private final TransactionValidationService validationService;
 
+    @Override
     @Transactional
     public Transaction createInternalTransfer(@NonNull Transaction transaction) {
+        log.info("Creating internal transfer transaction: fromAccountId={}, toAccountId={}, amount={}", 
+                transaction.getFromAccountId(), transaction.getToAccountId(), transaction.getAmount());
         validationService.validateAccounts(transaction.getFromAccountId(), transaction.getToAccountId());
         validationService.validateCurrency(transaction.getFromAccountId(), transaction.getCurrency());
         validationService.validateCurrency(transaction.getToAccountId(), transaction.getCurrency());
@@ -53,11 +59,16 @@ public class TransactionCreationService {
                 transferAmount
         );
 
-        return transactionRepository.save(transaction);
+        Transaction saved = transactionRepository.save(transaction);
+        log.info("Internal transfer transaction created: id={}", saved.getId());
+        return saved;
     }
 
+    @Override
     @Transactional
     public Transaction createExternalIncome(@NonNull Transaction transaction) {
+        log.info("Creating external income transaction: toAccountId={}, amount={}", 
+                transaction.getToAccountId(), transaction.getAmount());
         validationService.validateAccount(transaction.getToAccountId());
         validationService.validateCurrency(transaction.getToAccountId(), transaction.getCurrency());
 
@@ -67,11 +78,16 @@ public class TransactionCreationService {
                 transaction.getAmount()
         );
 
-        return transactionRepository.save(transaction);
+        Transaction saved = transactionRepository.save(transaction);
+        log.info("External income transaction created: id={}", saved.getId());
+        return saved;
     }
 
+    @Override
     @Transactional
     public Transaction createExternalExpense(@NonNull Transaction transaction) {
+        log.info("Creating external expense transaction: fromAccountId={}, amount={}", 
+                transaction.getFromAccountId(), transaction.getAmount());
         validationService.validateAccount(transaction.getFromAccountId());
         validationService.validateCurrency(transaction.getFromAccountId(), transaction.getCurrency());
 
@@ -81,11 +97,16 @@ public class TransactionCreationService {
                 transaction.getAmount()
         );
 
-        return transactionRepository.save(transaction);
+        Transaction saved = transactionRepository.save(transaction);
+        log.info("External expense transaction created: id={}", saved.getId());
+        return saved;
     }
 
+    @Override
     @Transactional
     public Transaction createClientPayment(@NonNull Transaction transaction) {
+        log.info("Creating client payment transaction: fromAccountId={}, clientId={}, amount={}", 
+                transaction.getFromAccountId(), transaction.getClientId(), transaction.getAmount());
         validationService.validateAccount(transaction.getFromAccountId());
         validationService.validateCurrency(transaction.getFromAccountId(), transaction.getCurrency());
 
@@ -101,11 +122,16 @@ public class TransactionCreationService {
 
         transaction.setToAccountId(null);
 
-        return transactionRepository.save(transaction);
+        Transaction saved = transactionRepository.save(transaction);
+        log.info("Client payment transaction created: id={}", saved.getId());
+        return saved;
     }
 
+    @Override
     @Transactional
     public Transaction createCurrencyConversion(@NonNull Transaction transaction) {
+        log.info("Creating currency conversion transaction: fromAccountId={}, amount={}", 
+                transaction.getFromAccountId(), transaction.getAmount());
         validationService.validateAccount(transaction.getFromAccountId());
         
         if (!transaction.getFromAccountId().equals(transaction.getToAccountId())) {
@@ -151,7 +177,9 @@ public class TransactionCreationService {
                 convertedAmount
         );
 
-        return transactionRepository.save(transaction);
+        Transaction saved = transactionRepository.save(transaction);
+        log.info("Currency conversion transaction created: id={}", saved.getId());
+        return saved;
     }
 }
 
