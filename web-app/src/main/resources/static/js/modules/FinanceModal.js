@@ -174,6 +174,9 @@ const FinanceModal = (function() {
         modal.className = 'modal';
         modal.id = 'delete-transaction-confirmation-modal';
         modal.style.display = 'flex';
+        setTimeout(() => {
+            modal.classList.add('show');
+        }, CLIENT_CONSTANTS.MODAL_ANIMATION_DELAY);
         
         const modalContent = document.createElement('div');
         modalContent.className = 'modal-content';
@@ -219,35 +222,22 @@ const FinanceModal = (function() {
         });
         buttonsDiv.appendChild(confirmBtn);
         
-        const cancelBtn = document.createElement('button');
-        cancelBtn.type = 'button';
-        cancelBtn.className = 'btn-secondary';
-        cancelBtn.textContent = FINANCE_MESSAGES.CANCEL;
-        cancelBtn.addEventListener('click', () => {
-            if (onCancel) {
-                onCancel();
-            }
-            closeDeleteConfirmationModal();
-        });
-        buttonsDiv.appendChild(cancelBtn);
-        
         modalContent.appendChild(buttonsDiv);
         modal.appendChild(modalContent);
         document.body.appendChild(modal);
-        
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                closeDeleteConfirmationModal();
-            }
-        });
         
         deleteConfirmationModal = modal;
     }
 
     function closeDeleteConfirmationModal() {
         if (deleteConfirmationModal) {
-            deleteConfirmationModal.remove();
-            deleteConfirmationModal = null;
+            deleteConfirmationModal.classList.remove('show');
+            setTimeout(() => {
+                if (deleteConfirmationModal) {
+                    deleteConfirmationModal.remove();
+                    deleteConfirmationModal = null;
+                }
+            }, CLIENT_CONSTANTS.MODAL_CLOSE_DELAY);
         }
     }
 

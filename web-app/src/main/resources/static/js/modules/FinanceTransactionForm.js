@@ -430,7 +430,9 @@ const FinanceTransactionForm = (function() {
     function buildUpdateTransactionData() {
         const transactionId = document.getElementById('edit-transaction-id').value;
         const categoryId = document.getElementById('edit-transaction-category').value;
-        const amount = parseFloat(document.getElementById('edit-transaction-amount').value);
+        const amountInput = document.getElementById('edit-transaction-amount');
+        const amountValue = amountInput ? amountInput.value.trim() : '';
+        const amount = amountValue === '' ? NaN : parseFloat(amountValue);
         const descriptionInput = document.getElementById('edit-transaction-description');
         const descriptionValue = descriptionInput ? descriptionInput.value.trim() : '';
         const exchangeRateInput = document.getElementById('edit-transaction-exchange-rate');
@@ -463,7 +465,9 @@ const FinanceTransactionForm = (function() {
             }
         }
         
-        return { transactionId, updateData, shouldDelete: amount === 0 || isNaN(amount) };
+        const shouldDelete = amountValue !== '' && !isNaN(amount) && amount === 0;
+        
+        return { transactionId, updateData, shouldDelete };
     }
 
     return {

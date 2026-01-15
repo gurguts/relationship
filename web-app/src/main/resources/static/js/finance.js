@@ -47,7 +47,7 @@ function initializeTabs() {
                 restoreAccountSearch();
                 loadAccountsAndBranches();
             } else if (targetTab === 'transactions') {
-            FinanceFilters.populateTransactionFilters(accountsCache, branchesCache, transactionFiltersCustomSelects).then((updatedCustomSelects) => {
+            FinanceFilters.populateTransactionFilters(allAccountsCache, branchesCache, transactionFiltersCustomSelects).then((updatedCustomSelects) => {
                     if (updatedCustomSelects) {
                         transactionFiltersCustomSelects = updatedCustomSelects;
                     }
@@ -378,7 +378,7 @@ function openCreateTransactionModal() {
         return;
     }
     
-    if (!isDataLoaded || !accountsCache || accountsCache.length === 0) {
+    if (!isDataLoaded || !allAccountsCache || allAccountsCache.length === 0) {
         showMessage('Дані ще не завантажені. Будь ласка, зачекайте або оновіть сторінку.', 'error');
         return;
     }
@@ -428,9 +428,9 @@ function populateTransactionForm() {
     const fromAccountSelect = document.getElementById('from-account');
     const toAccountSelect = document.getElementById('to-account');
     const conversionAccountSelect = document.getElementById('conversion-account');
-
+    
     FinanceTransactionForm.populateAccounts(
-        accountsCache,
+        allAccountsCache,
         branchesCache,
         [fromAccountSelect, toAccountSelect, conversionAccountSelect]
     );
@@ -460,7 +460,7 @@ function populateTransactionForm() {
 function handleTransactionTypeChange() {
     const type = document.getElementById('transaction-type').value;
     FinanceTransactionForm.handleTransactionTypeChange(type, {
-        accountsCache,
+        accountsCache: allAccountsCache,
         branchesCache,
         onLoadCounterparties: loadCounterparties,
         customSelects: financeCustomSelects
@@ -526,11 +526,11 @@ async function handleCreateTransaction(e) {
         return;
     }
         
-    if (formData.fromAccountId && !FinanceUtils.canOperateAccount(formData.fromAccountId, accountsCache, branchesCache)) {
+    if (formData.fromAccountId && !FinanceUtils.canOperateAccount(formData.fromAccountId, allAccountsCache, branchesCache)) {
         showMessage(FINANCE_MESSAGES.NO_ACCOUNT_PERMISSION, 'error');
         return;
     }
-    if (formData.toAccountId && !FinanceUtils.canOperateAccount(formData.toAccountId, accountsCache, branchesCache)) {
+    if (formData.toAccountId && !FinanceUtils.canOperateAccount(formData.toAccountId, allAccountsCache, branchesCache)) {
         showMessage(FINANCE_MESSAGES.NO_ACCOUNT_PERMISSION, 'error');
         return;
     }

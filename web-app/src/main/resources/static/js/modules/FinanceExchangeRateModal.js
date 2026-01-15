@@ -10,7 +10,9 @@ const FinanceExchangeRateModal = (function() {
     function init(config) {
         modal = document.getElementById(config.modalId);
         form = document.getElementById(config.formId);
-        closeBtn = document.querySelector(config.closeBtnSelector);
+        if (modal) {
+            closeBtn = modal.querySelector(config.closeBtnSelector);
+        }
         onSubmitCallback = config.onSubmit;
         
         if (closeBtn) {
@@ -24,16 +26,8 @@ const FinanceExchangeRateModal = (function() {
         if (modal) {
             if (modalClickHandler) {
                 modal.removeEventListener('click', modalClickHandler);
+                modalClickHandler = null;
             }
-            const modalContent = modal.querySelector('.modal-content');
-            modalClickHandler = (e) => {
-                if (modalContent && !modalContent.contains(e.target)) {
-                    closeModal();
-                } else if (!modalContent && e.target === modal) {
-                    closeModal();
-                }
-            };
-            modal.addEventListener('click', modalClickHandler);
         }
         
         if (form) {
