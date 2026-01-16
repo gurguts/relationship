@@ -132,6 +132,23 @@ const StockDataLoader = (function() {
         }
     }
     
+    async function loadWarehouseBalance(warehouseId, productId) {
+        try {
+            const response = await fetch(`${API_BASE}/warehouse/balances/${warehouseId}/product/${productId}`);
+            if (response.status === 404) {
+                return null;
+            }
+            if (!response.ok) {
+                const error = await parseErrorResponse(response);
+                throw error;
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error loading warehouse balance:', error);
+            throw error;
+        }
+    }
+    
     async function loadDriverBalances() {
         try {
             const response = await fetch(`${API_BASE}/driver/balances/active`);
@@ -587,6 +604,7 @@ const StockDataLoader = (function() {
         loadWarehouseEntries,
         loadDriverBalance,
         loadDriverBalances,
+        loadWarehouseBalance,
         loadVehicles,
         loadVehicleDetails,
         loadDiscrepanciesStatistics,

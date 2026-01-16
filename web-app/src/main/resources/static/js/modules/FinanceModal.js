@@ -6,6 +6,13 @@ const FinanceModal = (function() {
         const modal = document.getElementById('create-transaction-modal');
         if (!modal) return;
         
+        const fromAccountBalance = document.getElementById('from-account-balance');
+        const toAccountBalance = document.getElementById('to-account-balance');
+        const conversionAccountBalance = document.getElementById('conversion-account-balance');
+        if (fromAccountBalance) fromAccountBalance.style.display = 'none';
+        if (toAccountBalance) toAccountBalance.style.display = 'none';
+        if (conversionAccountBalance) conversionAccountBalance.style.display = 'none';
+        
         if (customSelects) {
             Object.values(customSelects).forEach(customSelect => {
                 if (customSelect && customSelect.reset) {
@@ -46,6 +53,13 @@ const FinanceModal = (function() {
             const clientHidden = document.getElementById('transaction-client-id');
             if (clientInput) clientInput.value = '';
             if (clientHidden) clientHidden.value = '';
+            
+            const fromAccountBalance = document.getElementById('from-account-balance');
+            const toAccountBalance = document.getElementById('to-account-balance');
+            const conversionAccountBalance = document.getElementById('conversion-account-balance');
+            if (fromAccountBalance) fromAccountBalance.style.display = 'none';
+            if (toAccountBalance) toAccountBalance.style.display = 'none';
+            if (conversionAccountBalance) conversionAccountBalance.style.display = 'none';
             
             if (onResetForm) {
                 onResetForm();

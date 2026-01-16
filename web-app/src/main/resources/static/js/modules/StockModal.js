@@ -218,6 +218,53 @@ const StockModal = (function() {
         }
     }
     
+    function hideWarehouseBalanceInfo() {
+        const warehouseBalanceInfo = document.getElementById('warehouse-balance-info');
+        const warehouseNoBalanceWarning = document.getElementById('warehouse-no-balance-warning');
+        if (warehouseBalanceInfo) {
+            warehouseBalanceInfo.style.display = 'none';
+        }
+        if (warehouseNoBalanceWarning) {
+            warehouseNoBalanceWarning.style.display = 'none';
+        }
+    }
+    
+    function showWarehouseBalanceInfo(balance) {
+        const warehouseBalanceInfo = document.getElementById('warehouse-balance-info');
+        const warehouseNoBalanceWarning = document.getElementById('warehouse-no-balance-warning');
+        
+        if (!balance || !balance.quantity || parseFloat(balance.quantity) === 0) {
+            if (warehouseBalanceInfo) {
+                warehouseBalanceInfo.style.display = 'none';
+            }
+            if (warehouseNoBalanceWarning) {
+                warehouseNoBalanceWarning.style.display = 'block';
+            }
+            return;
+        }
+        
+        if (warehouseBalanceInfo) {
+            const quantityElement = document.getElementById('warehouse-balance-quantity');
+            const priceElement = document.getElementById('warehouse-balance-price');
+            const totalElement = document.getElementById('warehouse-balance-total');
+            
+            if (quantityElement) {
+                quantityElement.textContent = StockUtils.formatNumber(balance.quantity, 2);
+            }
+            if (priceElement) {
+                priceElement.textContent = StockUtils.formatNumber(balance.averagePriceEur, 6);
+            }
+            if (totalElement) {
+                totalElement.textContent = StockUtils.formatNumber(balance.totalCostEur, 6);
+            }
+            
+            warehouseBalanceInfo.style.display = 'block';
+        }
+        if (warehouseNoBalanceWarning) {
+            warehouseNoBalanceWarning.style.display = 'none';
+        }
+    }
+    
     function populateVehicleForm(vehicle) {
         const detailVehicleDateInput = document.getElementById('detail-vehicle-date');
         const detailVehicleVehicleInput = document.getElementById('detail-vehicle-vehicle-number');
@@ -284,6 +331,8 @@ const StockModal = (function() {
         openBalanceHistoryModal,
         hideDriverBalanceInfo,
         showDriverBalanceInfo,
+        hideWarehouseBalanceInfo,
+        showWarehouseBalanceInfo,
         populateVehicleForm,
         setVehicleFormEditable,
         resetVehicleFormState

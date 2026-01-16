@@ -166,6 +166,9 @@ function createCustomSelect(selectElement, isFilter = false) {
                     Array.from(currentSelect.options).forEach(opt => opt.selected = opt.value === value);
                     currentSelect.value = value;
                     dropdown.classList.remove('open');
+                    
+                    const changeEvent = new Event('change', { bubbles: true });
+                    currentSelect.dispatchEvent(changeEvent);
                 }
                 updateSelection();
                 updateHiddenInput();
@@ -239,6 +242,9 @@ function createCustomSelect(selectElement, isFilter = false) {
                 Array.from(currentSelect.options).forEach(opt => opt.selected = opt.value === value);
                 currentSelect.value = value;
                 dropdown.classList.remove('open');
+                
+                const changeEvent = new Event('change', { bubbles: true });
+                currentSelect.dispatchEvent(changeEvent);
             }
             updateSelection();
             updateHiddenInput();

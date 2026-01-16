@@ -865,6 +865,22 @@
                 <option value="">Оберіть товар</option>
             </select>
 
+            <div id="warehouse-balance-info" style="display: none; margin: 15px 0; padding: 10px; background-color: #e8f5e9; border-radius: 5px; border: 1px solid #4caf50;">
+                <strong style="color: #2e7d32;">Баланс складу:</strong>
+                <div style="margin-top: 5px;">
+                    <span>Кількість: <strong id="warehouse-balance-quantity">0</strong> кг</span><br>
+                    <span>Середня ціна: <strong id="warehouse-balance-price">0</strong> EUR/кг</span><br>
+                    <span>Загальна вартість: <strong id="warehouse-balance-total">0</strong> EUR</span>
+                </div>
+            </div>
+            
+            <div id="warehouse-no-balance-warning" style="display: none; margin: 15px 0; padding: 10px; background-color: #fff3cd; border-radius: 5px; border: 1px solid #ffc107;">
+                <strong style="color: #856404;">⚠️ Увага:</strong>
+                <div style="margin-top: 5px; color: #856404;">
+                    На обраному складі немає цього товару на балансі.
+                </div>
+            </div>
+
             <label for="vehicle-quantity">Кількість (кг):</label>
             <input type="number" id="vehicle-quantity" step="0.01" min="0.01" placeholder="Кількість (кг)" required>
 

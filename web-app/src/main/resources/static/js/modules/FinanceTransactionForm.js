@@ -24,8 +24,11 @@ const FinanceTransactionForm = (function() {
         });
     }
 
-    function populateCurrencies(currencySelects) {
-        const currencies = ['UAH', 'USD', 'EUR'];
+    function populateCurrencies(currencySelects, availableCurrencies = null) {
+        const allCurrencies = ['UAH', 'USD', 'EUR'];
+        const currencies = availableCurrencies && availableCurrencies.length > 0 
+            ? availableCurrencies.filter(c => allCurrencies.includes(c))
+            : allCurrencies;
         
         currencySelects.forEach(select => {
             if (select) {
@@ -40,8 +43,90 @@ const FinanceTransactionForm = (function() {
                     option.textContent = currency;
                     select.appendChild(option);
                 });
+                
+                if (typeof createCustomSelect === 'function') {
+                    const selectId = select.id;
+                    if (window.financeCustomSelects && !window.financeCustomSelects[selectId]) {
+                        window.financeCustomSelects[selectId] = createCustomSelect(select);
+                    }
+                    const currencyData = currencies.map(c => ({ id: c, name: c }));
+                    if (window.financeCustomSelects && window.financeCustomSelects[selectId]) {
+                        window.financeCustomSelects[selectId].populate(currencyData);
+                    }
+                }
             }
         });
+    }
+    
+    function displayAccountBalance(accountId, balanceElementId, balancesMap) {
+        const balanceElement = document.getElementById(balanceElementId);
+        if (!balanceElement) return;
+        
+        if (!accountId) {
+            balanceElement.style.display = 'none';
+            balanceElement.textContent = '';
+            return;
+        }
+        
+        const accountIdNum = Number(accountId);
+        if (isNaN(accountIdNum) || !balancesMap || !balancesMap.has(accountIdNum)) {
+            balanceElement.style.display = 'none';
+            balanceElement.textContent = '';
+            return;
+        }
+        
+        const balances = balancesMap.get(accountIdNum);
+        if (!balances || balances.length === 0) {
+            balanceElement.style.display = 'none';
+            balanceElement.textContent = '';
+            return;
+        }
+        
+        const balanceParts = [];
+        balances.forEach(balance => {
+            if (balance.amount !== null && balance.amount !== undefined && parseFloat(balance.amount) !== 0) {
+                const amount = FinanceUtils.formatNumber(balance.amount, 2);
+                balanceParts.push(`${amount} ${balance.currency}`);
+            }
+        });
+        
+        if (balanceParts.length === 0) {
+            balanceElement.style.display = 'none';
+            balanceElement.textContent = '';
+            return;
+        }
+        
+        balanceElement.textContent = `Баланс: ${balanceParts.join(', ')}`;
+        balanceElement.style.display = 'block';
+    }
+    
+    function getAccountCurrencies(accountId, balancesMap) {
+        if (!accountId) return null;
+        
+        const accountIdNum = Number(accountId);
+        if (isNaN(accountIdNum) || !balancesMap || !balancesMap.has(accountIdNum)) {
+            return null;
+        }
+        
+        const balances = balancesMap.get(accountIdNum);
+        if (!balances || balances.length === 0) {
+            return null;
+        }
+        
+        const currencies = balances
+            .filter(b => b.amount !== null && b.amount !== undefined && parseFloat(b.amount) !== 0)
+            .map(b => b.currency)
+            .filter(c => c);
+        
+        return currencies.length > 0 ? currencies : null;
+    }
+    
+    function updateCurrencyOptions(accountId, balancesMap, currencySelectId) {
+        const currencies = getAccountCurrencies(accountId, balancesMap);
+        const currencySelect = document.getElementById(currencySelectId);
+        if (!currencySelect) return;
+        
+        populateCurrencies([currencySelect], currencies);
     }
 
     async function populateCategories(type, categorySelect, customSelects) {
@@ -90,7 +175,7 @@ const FinanceTransactionForm = (function() {
     }
 
     function handleTransactionTypeChange(type, config) {
-        const { accountsCache, branchesCache, onLoadCounterparties, customSelects } = config;
+        const { accountsCache, branchesCache, onLoadCounterparties, customSelects, balancesMap } = config;
         
         const fromAccountGroup = document.getElementById('from-account-group');
         const toAccountGroup = document.getElementById('to-account-group');
@@ -116,6 +201,10 @@ const FinanceTransactionForm = (function() {
         counterpartyGroup.style.display = 'none';
         receivedAmountGroup.style.display = 'none';
         commissionDisplayGroup.style.display = 'none';
+        
+        displayAccountBalance(null, 'from-account-balance', balancesMap);
+        displayAccountBalance(null, 'to-account-balance', balancesMap);
+        displayAccountBalance(null, 'conversion-account-balance', balancesMap);
         
         if (currencyGroup) {
             const label = currencyGroup.querySelector('label');
@@ -479,6 +568,9 @@ const FinanceTransactionForm = (function() {
         updateConversionExchangeRateDisplay,
         resetFormDisplays,
         buildTransactionFormData,
-        buildUpdateTransactionData
+        buildUpdateTransactionData,
+        displayAccountBalance,
+        getAccountCurrencies,
+        updateCurrencyOptions
     };
 })();

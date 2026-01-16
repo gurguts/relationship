@@ -454,6 +454,52 @@ function populateTransactionForm() {
     const conversionCurrencySelect = document.getElementById('conversion-currency');
     
     FinanceTransactionForm.populateCurrencies([currencySelect, conversionCurrencySelect]);
+    
+    setupAccountBalanceListeners();
+}
+
+let accountBalanceHandlers = {};
+
+function setupAccountBalanceListeners() {
+    function handleAccountChange(accountSelectId, balanceElementId, currencySelectId) {
+        const accountSelect = document.getElementById(accountSelectId);
+        if (!accountSelect) return;
+        
+        if (accountBalanceHandlers[accountSelectId]) {
+            accountSelect.removeEventListener('change', accountBalanceHandlers[accountSelectId]);
+        }
+        
+        const handler = () => {
+            let accountId = null;
+            
+            if (financeCustomSelects[accountSelectId]) {
+                const values = financeCustomSelects[accountSelectId].getValue();
+                accountId = values.length > 0 ? values[0] : null;
+            } else {
+                accountId = accountSelect.value;
+            }
+            
+            if (allBalancesMap) {
+                FinanceTransactionForm.displayAccountBalance(accountId, balanceElementId, allBalancesMap);
+                
+                if (currencySelectId && accountId) {
+                    FinanceTransactionForm.updateCurrencyOptions(accountId, allBalancesMap, currencySelectId);
+                } else if (currencySelectId && !accountId) {
+                    const currencySelect = document.getElementById(currencySelectId);
+                    if (currencySelect) {
+                        FinanceTransactionForm.populateCurrencies([currencySelect]);
+                    }
+                }
+            }
+        };
+        
+        accountBalanceHandlers[accountSelectId] = handler;
+        accountSelect.addEventListener('change', handler);
+    }
+    
+    handleAccountChange('from-account', 'from-account-balance', 'transaction-currency');
+    handleAccountChange('to-account', 'to-account-balance', null);
+    handleAccountChange('conversion-account', 'conversion-account-balance', 'transaction-currency');
 }
 
 
@@ -463,8 +509,14 @@ function handleTransactionTypeChange() {
         accountsCache: allAccountsCache,
         branchesCache,
         onLoadCounterparties: loadCounterparties,
-        customSelects: financeCustomSelects
+        customSelects: financeCustomSelects,
+        balancesMap: allBalancesMap
     });
+    
+    const currencySelect = document.getElementById('transaction-currency');
+    if (currencySelect) {
+        FinanceTransactionForm.populateCurrencies([currencySelect]);
+    }
 }
 
 function updateCommissionDisplay() {
@@ -589,7 +641,10 @@ function setupEventListeners() {
 
     document.getElementById('transaction-form')?.addEventListener('submit', handleCreateTransaction);
 
-    document.getElementById('transaction-type')?.addEventListener('change', handleTransactionTypeChange);
+    document.getElementById('transaction-type')?.addEventListener('change', () => {
+        handleTransactionTypeChange();
+        setupAccountBalanceListeners();
+    });
     
     document.getElementById('transaction-amount')?.addEventListener('input', () => {
         updateCommissionDisplay();

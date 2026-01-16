@@ -851,12 +851,10 @@ const balanceHistoryEmpty = document.getElementById('balance-history-empty');
 const balanceHistoryModal = document.getElementById('balance-history-modal');
 const balanceHistoryBtn = document.getElementById('balance-history-btn');
 
-// Discrepancies pagination state
 let currentDiscrepanciesPage = 0;
 let discrepanciesPageSize = 20;
 let discrepanciesFilters = {};
 
-// Transfers pagination state
 let currentTransfersPage = 0;
 let transfersPageSize = 20;
 let transfersFilters = {};
@@ -884,7 +882,6 @@ entriesBtn.addEventListener('click', async () => {
         document.getElementById('entries-filter-counter').style.display = 'none';
         document.getElementById('export-excel-entries').style.display = 'none';
     } else {
-        // Hide other containers
         document.getElementById('history-container').style.display = 'none';
         transfersContainer.style.display = 'none';
         vehiclesContainer.style.display = 'none';
@@ -907,7 +904,6 @@ addEntryBtn.addEventListener('click', () => {
     StockModal.openModal('entry-modal');
 });
 
-// Use event delegation on entry form for driver and product selection
 const entryForm = document.getElementById('entry-form');
 if (entryForm) {
     entryForm.addEventListener('change', (e) => {
@@ -968,6 +964,7 @@ function closeModal(modalId) {
             document.getElementById('create-vehicle-form')?.reset();
         } else if (modalId === 'add-product-to-vehicle-modal') {
             document.getElementById('add-product-to-vehicle-form')?.reset();
+            StockModal.hideWarehouseBalanceInfo();
         } else if (modalId === 'vehicle-details-modal') {
             StockModal.resetVehicleFormState(currentVehicleDetails);
         } else if (modalId === 'edit-vehicle-item-modal') {
@@ -1001,7 +998,6 @@ historyBtn.addEventListener('click', () => {
         document.getElementById('history-filter-counter').style.display = 'none';
         document.getElementById('export-excel-history').style.display = 'none';
     } else {
-        // Hide other containers
         document.getElementById('entries-container').style.display = 'none';
         transfersContainer.style.display = 'none';
         vehiclesContainer.style.display = 'none';
@@ -1022,28 +1018,24 @@ if (driverBalancesBtn) {
     });
     
     discrepanciesBtn.addEventListener('click', async () => {
-        // Toggle container visibility
         if (discrepanciesContainer.style.display === 'none' || discrepanciesContainer.style.display === '') {
-            // Show container
+            
             currentDiscrepanciesPage = 0;
             discrepanciesFilters = {};
             await loadDiscrepancies();
             await loadDiscrepanciesStatistics();
             discrepanciesContainer.style.display = 'block';
             
-            // Hide other containers
             if (historyContainer) historyContainer.style.display = 'none';
             if (entriesContainer) entriesContainer.style.display = 'none';
             if (transfersContainer) transfersContainer.style.display = 'none';
             if (vehiclesContainer) vehiclesContainer.style.display = 'none';
         } else {
-            // Hide container
             discrepanciesContainer.style.display = 'none';
         }
     });
 }
 
-// Transfers button click event
 if (transfersBtn) {
     transfersBtn.addEventListener('click', async () => {
         const filterButton = document.getElementById('open-transfers-filter-modal');
@@ -1144,7 +1136,6 @@ if (applyEntriesFiltersBtn) {
 
 document.getElementById('entries-filter-counter').addEventListener('click', clearEntriesFilters);
 
-// Transfers filter modal toggle
 const openTransfersFilterModalBtn = document.getElementById('open-transfers-filter-modal');
 if (openTransfersFilterModalBtn) {
     openTransfersFilterModalBtn.addEventListener('click', async () => {
@@ -1253,9 +1244,6 @@ async function initializeEntriesFilters() {
     updateEntriesSelectedFilters();
 }
 
-/**
- * Load driver balance for entry modal when driver and product are selected
- */
 async function loadDriverBalanceForEntry() {
     const driverId = document.getElementById('entry-user-id')?.value;
     const productId = document.getElementById('entry-product-id')?.value;
@@ -1271,6 +1259,24 @@ async function loadDriverBalanceForEntry() {
     } catch (error) {
         console.error('Error loading driver balance:', error);
         StockModal.hideDriverBalanceInfo();
+    }
+}
+
+async function loadWarehouseBalanceForVehicle() {
+    const warehouseId = document.getElementById('vehicle-warehouse-id')?.value;
+    const productId = document.getElementById('vehicle-product-id')?.value;
+    
+    if (!warehouseId || !productId) {
+        StockModal.hideWarehouseBalanceInfo();
+        return;
+    }
+    
+    try {
+        const balance = await StockDataLoader.loadWarehouseBalance(warehouseId, productId);
+        StockModal.showWarehouseBalanceInfo(balance);
+    } catch (error) {
+        console.error('Error loading warehouse balance:', error);
+        StockModal.hideWarehouseBalanceInfo();
     }
 }
 
@@ -1350,7 +1356,6 @@ if (editVehicleBtn) {
     });
 }
 
-// Open vehicles container
 if (vehiclesBtn) {
     vehiclesBtn.addEventListener('click', async () => {
         if (vehiclesContainer.style.display === 'block') {
@@ -1367,7 +1372,6 @@ if (vehiclesBtn) {
     });
 }
 
-// Open create vehicle modal
 if (createVehicleBtn) {
     createVehicleBtn.addEventListener('click', () => {
         document.getElementById('vehicle-date').valueAsDate = new Date();
@@ -1375,7 +1379,6 @@ if (createVehicleBtn) {
     });
 }
 
-// Create vehicle form submit
 if (createVehicleForm) {
     createVehicleForm.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -1405,7 +1408,6 @@ if (createVehicleForm) {
     });
 }
 
-// Load vehicles list
 async function loadVehicles() {
     try {
         const dateFrom = document.getElementById('vehicles-date-from')?.value;
@@ -1424,7 +1426,6 @@ async function loadVehicles() {
     }
 }
 
-// View vehicle details
 async function viewVehicleDetails(vehicleId) {
     currentVehicleId = vehicleId;
     
@@ -1451,16 +1452,22 @@ async function viewVehicleDetails(vehicleId) {
     }
 }
 
-// Add product to vehicle button
 document.getElementById('add-product-to-vehicle-btn')?.addEventListener('click', () => {
-    // Populate warehouses and products
+    
     populateWarehouses('vehicle-warehouse-id');
     populateProducts('vehicle-product-id');
-    
+    StockModal.hideWarehouseBalanceInfo();
     StockModal.openModal('add-product-to-vehicle-modal');
 });
 
-// Add product to vehicle form submit
+if (addProductToVehicleForm) {
+    addProductToVehicleForm.addEventListener('change', (e) => {
+        if (e.target.id === 'vehicle-warehouse-id' || e.target.id === 'vehicle-product-id') {
+            loadWarehouseBalanceForVehicle();
+        }
+    });
+}
+
 if (addProductToVehicleForm) {
     addProductToVehicleForm.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -1516,7 +1523,6 @@ document.getElementById('delete-vehicle-btn')?.addEventListener('click', () => {
     );
 });
 
-// Apply vehicles filters
 document.getElementById('apply-vehicles-filters')?.addEventListener('click', async () => {
     await loadVehicles();
 });
@@ -1599,7 +1605,6 @@ async function loadDiscrepancies() {
 
 const formatDate = StockUtils.formatDate;
 
-// Event listeners for discrepancies pagination
 document.getElementById('discrepancies-prev').addEventListener('click', async () => {
     if (currentDiscrepanciesPage > 0) {
         currentDiscrepanciesPage--;
@@ -1664,7 +1669,6 @@ document.getElementById('export-discrepancies-excel').addEventListener('click', 
 // TRANSFERS CONTAINER FUNCTIONALITY
 // ============================================
 
-// Load transfers with pagination
 async function loadTransfers() {
     try {
         const data = await StockDataLoader.loadTransfers(currentTransfersPage, transfersPageSize, transfersFilters);
@@ -1682,7 +1686,6 @@ async function loadTransfers() {
     }
 }
 
-// Apply transfer filters
 const applyTransferFiltersBtn = document.getElementById('apply-transfer-filters');
 if (applyTransferFiltersBtn) {
     applyTransferFiltersBtn.addEventListener('click', async () => {
@@ -1697,7 +1700,6 @@ if (applyTransferFiltersBtn) {
     });
 }
 
-// Reset transfer filters
 const clearTransferFiltersBtn = document.getElementById('clear-transfer-filters');
 if (clearTransferFiltersBtn) {
     clearTransferFiltersBtn.addEventListener('click', () => {
@@ -1705,7 +1707,6 @@ if (clearTransferFiltersBtn) {
     });
 }
 
-// Transfers pagination - Previous
 document.getElementById('transfers-prev-page').addEventListener('click', async () => {
     if (currentTransfersPage > 0) {
         currentTransfersPage--;
@@ -1713,7 +1714,6 @@ document.getElementById('transfers-prev-page').addEventListener('click', async (
     }
 });
 
-// Transfers pagination - Next
 document.getElementById('transfers-next-page').addEventListener('click', async () => {
     currentTransfersPage++;
     await loadTransfers();
@@ -2284,7 +2284,6 @@ if (balanceHistoryBtn) {
             document.getElementById('history-filter-counter').style.display = 'none';
             document.getElementById('export-excel-history').style.display = 'none';
         } else {
-            // Hide other containers
             document.getElementById('entries-container').style.display = 'none';
             transfersContainer.style.display = 'none';
             vehiclesContainer.style.display = 'none';
