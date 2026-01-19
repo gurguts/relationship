@@ -398,19 +398,24 @@ public class VehicleService implements IVehicleService {
         WarehouseProductBalance balance =
                 validateAndGetBalance(warehouseId, productId, quantity);
         
+        BigDecimal averagePriceEur = balance.getAveragePriceEur() != null 
+                ? balance.getAveragePriceEur() 
+                : BigDecimal.ZERO;
+        
         quantity = quantity.setScale(QUANTITY_SCALE, PRICE_ROUNDING_MODE);
-        BigDecimal totalCost = calculateTotalCost(quantity, balance.getAveragePriceEur());
+        BigDecimal totalCost = calculateTotalCost(quantity, averagePriceEur);
         
         warehouseProductBalanceService.removeProductWithCost(warehouseId, productId, quantity, totalCost);
         
         VehicleProduct vehicleProduct = createVehicleProduct(vehicleId, warehouseId, productId, 
-                quantity, balance.getAveragePriceEur(), totalCost, userId);
+                quantity, averagePriceEur, totalCost, userId);
         vehicleProductRepository.save(vehicleProduct);
         
         addVehicleTotalCost(vehicle, totalCost);
         Vehicle saved = vehicleRepository.save(vehicle);
         
-        log.info("Product added to vehicle: vehicleId={}, totalCost={}", saved.getId(), totalCost);
+        log.info("Product added to vehicle: vehicleId={}, totalCost={}, averagePrice={}", 
+                saved.getId(), totalCost, averagePriceEur);
         
         return saved;
     }

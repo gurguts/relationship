@@ -20,7 +20,9 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
+import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -173,9 +175,38 @@ public class GlobalExceptionAdvice {
         );
     }
 
+    @ExceptionHandler(AsyncRequestNotUsableException.class)
+    public void handleAsyncRequestNotUsableException(@NonNull AsyncRequestNotUsableException ex) {
+        String message = ex.getMessage();
+        if (message != null && (message.contains("Broken pipe") || message.contains("Connection reset"))) {
+            HttpServletRequest request = getCurrentRequest();
+            if (request != null) {
+                log.debug("Client closed connection before response completed: Path: {}, Method: {}, Remote: {}", 
+                        request.getRequestURI(), request.getMethod(), request.getRemoteAddr());
+            } else {
+                log.debug("Client closed connection before response completed");
+            }
+        } else {
+            logRequestContext("Async request not usable: {}", Objects.toString(message, ""));
+        }
+    }
+
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     @ExceptionHandler(Exception.class)
     public ErrorResponse handleGenericException(@NonNull Exception ex, @NonNull Locale locale) {
+        // Пропускаем IOException с Broken pipe
+        if (ex instanceof IOException && ex.getMessage() != null 
+                && (ex.getMessage().contains("Broken pipe") || ex.getMessage().contains("Connection reset"))) {
+            HttpServletRequest request = getCurrentRequest();
+            if (request != null) {
+                log.debug("Client closed connection: Path: {}, Method: {}, Remote: {}", 
+                        request.getRequestURI(), request.getMethod(), request.getRemoteAddr());
+            } else {
+                log.debug("Client closed connection");
+            }
+            return null;
+        }
+        
         String exceptionMessage = Objects.toString(ex.getMessage(), "");
         logRequestContextWithException(exceptionMessage, ex);
         return new ErrorResponse(
