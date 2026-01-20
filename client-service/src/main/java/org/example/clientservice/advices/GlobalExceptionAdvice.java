@@ -194,7 +194,6 @@ public class GlobalExceptionAdvice {
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     @ExceptionHandler(Exception.class)
     public ErrorResponse handleGenericException(@NonNull Exception ex, @NonNull Locale locale) {
-        // Пропускаем IOException с Broken pipe
         if (ex instanceof IOException && ex.getMessage() != null 
                 && (ex.getMessage().contains("Broken pipe") || ex.getMessage().contains("Connection reset"))) {
             HttpServletRequest request = getCurrentRequest();
