@@ -88,8 +88,14 @@ public class ClientContainerSearchService implements IClientContainerSearchServi
 
     private ClientData fetchClientData(String query, @NonNull Map<String, List<String>> clientFilterParams, Long clientTypeId) {
         try {
-            if (hasClientFilters(clientFilterParams, query)) {
+            if (hasClientFilters(clientFilterParams, query) || clientTypeId != null) {
                 ClientData clientData = fetchClientIdsWithFilters(query, clientFilterParams, clientTypeId);
+                if (clientTypeId != null) {
+                    if (clientData.clientIds() == null) {
+                        return new ClientData(Collections.emptyList(), Collections.emptyMap());
+                    }
+                    return clientData;
+                }
                 if (clientData.clientIds() != null && clientData.clientIds().isEmpty() && 
                     StringUtils.hasText(query) && clientFilterParams.isEmpty()) {
                     return new ClientData(null, Collections.emptyMap());
@@ -101,12 +107,18 @@ public class ClientContainerSearchService implements IClientContainerSearchServi
         } catch (FeignException e) {
             log.error("Feign error fetching client data: query={}, status={}, error={}", 
                     query, e.status(), e.getMessage(), e);
+            if (clientTypeId != null) {
+                return new ClientData(Collections.emptyList(), Collections.emptyMap());
+            }
             if (StringUtils.hasText(query) && clientFilterParams.isEmpty()) {
                 return new ClientData(null, Collections.emptyMap());
             }
             return new ClientData(Collections.emptyList(), Collections.emptyMap());
         } catch (Exception e) {
             log.error("Unexpected error fetching client data: query={}, error={}", query, e.getMessage(), e);
+            if (clientTypeId != null) {
+                return new ClientData(Collections.emptyList(), Collections.emptyMap());
+            }
             if (StringUtils.hasText(query) && clientFilterParams.isEmpty()) {
                 return new ClientData(null, Collections.emptyMap());
             }
