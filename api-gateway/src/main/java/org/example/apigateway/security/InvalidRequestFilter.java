@@ -27,7 +27,7 @@ public class InvalidRequestFilter implements WebFilter {
     private static final String MESSAGE_KEY_INVALID_REQUEST = "invalid.request";
 
     private static final String ALLOWED_CHARS_PATH = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~:/?#[]@!$&'()*+,;=%";
-    private static final String ALLOWED_CHARS_QUERY = ALLOWED_CHARS_PATH + "{}\" ";
+    private static final String ALLOWED_CHARS_QUERY = ALLOWED_CHARS_PATH + "{}\"\\ ";
 
     private final MessageSource messageSource;
     private final ObjectMapper objectMapper;
