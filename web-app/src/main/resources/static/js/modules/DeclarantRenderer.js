@@ -95,9 +95,10 @@ const DeclarantRenderer = (function() {
         }
     }
     
-    function populateAccounts(selectId, accounts) {
+    function populateAccounts(selectId, accounts, customSelects) {
         const select = document.getElementById(selectId);
         if (!select) return;
+        
         select.textContent = '';
         const defaultOption = document.createElement('option');
         defaultOption.value = '';
@@ -109,11 +110,25 @@ const DeclarantRenderer = (function() {
             option.textContent = account.name || `Рахунок #${account.id}`;
             select.appendChild(option);
         });
+        
+        if (customSelects && typeof createCustomSelect === 'function') {
+            if (!customSelects[selectId]) {
+                customSelects[selectId] = createCustomSelect(select);
+            }
+            const accountData = [
+                { id: '', name: 'Оберіть рахунок' },
+                ...accounts.map(account => ({ id: account.id, name: account.name || `Рахунок #${account.id}` }))
+            ];
+            if (customSelects[selectId]) {
+                customSelects[selectId].populate(accountData);
+            }
+        }
     }
     
-    function populateCategories(selectId, categories) {
+    function populateCategories(selectId, categories, customSelects) {
         const select = document.getElementById(selectId);
         if (!select) return;
+        
         select.textContent = '';
         const defaultOption = document.createElement('option');
         defaultOption.value = '';
@@ -125,6 +140,19 @@ const DeclarantRenderer = (function() {
             option.textContent = category.name;
             select.appendChild(option);
         });
+        
+        if (customSelects && typeof createCustomSelect === 'function') {
+            if (!customSelects[selectId]) {
+                customSelects[selectId] = createCustomSelect(select);
+            }
+            const categoryData = [
+                { id: '', name: 'Оберіть категорію' },
+                ...categories.map(category => ({ id: category.id, name: category.name }))
+            ];
+            if (customSelects[selectId]) {
+                customSelects[selectId].populate(categoryData);
+            }
+        }
     }
     
     function populateCurrencies(selectId, accountId, accounts) {
@@ -187,6 +215,7 @@ const DeclarantRenderer = (function() {
         
         vehicles.forEach((vehicle) => {
             const row = document.createElement('tr');
+            row.dataset.vehicleId = vehicle.id.toString();
             const rowClickHandler = () => onVehicleClick(vehicle.id);
             row.addEventListener('click', rowClickHandler);
             row._clickHandler = rowClickHandler;
@@ -217,8 +246,9 @@ const DeclarantRenderer = (function() {
             row.appendChild(createCell(DeclarantUtils.formatDate(vehicle.shipmentDate), 'Дата відвантаження'));
             row.appendChild(createCell(vehicle.invoiceUa || '-', 'Інвойс УА'));
             row.appendChild(createCell(vehicle.invoiceEu || '-', 'Інвойс ЄС'));
-            row.appendChild(createCell(DeclarantUtils.formatBoolean(vehicle.isOurVehicle), 'Наше завантаження'));
             row.appendChild(createCell(vehicle.senderName || '-', 'Відправник'));
+            row.appendChild(createCell(DeclarantUtils.formatDate(vehicle.invoiceUaDate), 'Дата інвойсу УА'));
+            row.appendChild(createCell(DeclarantUtils.formatDate(vehicle.invoiceEuDate), 'Дата інвойсу ЄС'));
             row.appendChild(createCell(vehicle.receiverName || '-', 'Отримувач'));
             row.appendChild(createCell(vehicle.destinationCountryName || '-', 'Країна призначення'));
             row.appendChild(createCell(vehicle.destinationPlaceName || '-', 'Місце призначення'));
@@ -234,6 +264,7 @@ const DeclarantRenderer = (function() {
             row.appendChild(createCell(DeclarantUtils.formatDate(vehicle.unloadingDate), 'Дата вивантаження'));
             row.appendChild(createCell(formatCarrier(vehicle.carrier), 'Перевізник'));
             row.appendChild(createCell(vehicle.description || '-', 'Коментар'));
+            row.appendChild(createCell(DeclarantUtils.formatBoolean(vehicle.isOurVehicle), 'Наше завантаження'));
             
             vehiclesTbody.appendChild(row);
         });

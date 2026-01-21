@@ -562,12 +562,12 @@ public class VehicleService implements IVehicleService {
             return BigDecimal.ZERO;
         }
         
-        String productQuantityStr = vehicle.getProductQuantity();
-        BigDecimal quantityInTons = parseProductQuantity(productQuantityStr);
-        if (quantityInTons == null) {
+        BigDecimal invoiceEuPricePerTon = vehicle.getInvoiceEuPricePerTon() != null ? vehicle.getInvoiceEuPricePerTon() : BigDecimal.ZERO;
+        if (invoiceEuPricePerTon.compareTo(BigDecimal.ZERO) == 0) {
             return BigDecimal.ZERO;
         }
-        return reclamationPerTon.multiply(quantityInTons).setScale(PRICE_SCALE, PRICE_ROUNDING_MODE);
+        
+        return reclamationPerTon.multiply(invoiceEuPricePerTon).setScale(PRICE_SCALE, PRICE_ROUNDING_MODE);
     }
 
     @Transactional(readOnly = true)

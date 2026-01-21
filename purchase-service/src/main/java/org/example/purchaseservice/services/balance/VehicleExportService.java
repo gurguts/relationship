@@ -436,12 +436,11 @@ public class VehicleExportService implements IVehicleExportService {
         BigDecimal reclamationPerTon = safeGetBigDecimal(vehicleDTO.getReclamation());
         BigDecimal fullReclamation = BigDecimal.ZERO;
         
-        if (reclamationPerTon.compareTo(BigDecimal.ZERO) > 0 && isNotEmpty(vehicleDTO.getProductQuantity())) {
-            try {
-                BigDecimal quantityInTons = new BigDecimal(vehicleDTO.getProductQuantity().replace(",", "."));
-                fullReclamation = reclamationPerTon.multiply(quantityInTons)
+        if (reclamationPerTon.compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal invoiceEuPricePerTon = safeGetBigDecimal(vehicleDTO.getInvoiceEuPricePerTon());
+            if (invoiceEuPricePerTon.compareTo(BigDecimal.ZERO) > 0) {
+                fullReclamation = reclamationPerTon.multiply(invoiceEuPricePerTon)
                         .setScale(RECLAMATION_SCALE, RoundingMode.HALF_UP);
-            } catch (NumberFormatException _) {
             }
         }
         

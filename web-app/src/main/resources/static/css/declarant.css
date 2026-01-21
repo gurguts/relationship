@@ -38,7 +38,6 @@
 body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     background: var(--bg-primary);
-    min-height: 100vh;
     margin: 0;
     padding: 0;
     color: var(--text-primary);
@@ -46,17 +45,20 @@ body {
 }
 
 .page-wrapper {
-    max-width: 1600px;
-    margin: 0 auto;
-    padding: 2rem;
-    padding-top: 4rem;
+    width: 100%;
+    margin: 0;
+    padding-top: 1rem;
+    box-sizing: border-box;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
 
 .page-header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: 2rem;
     gap: 2rem;
     flex-wrap: wrap;
 }
@@ -67,10 +69,10 @@ body {
 }
 
 .page-title-section h1 {
-    font-size: 2.5rem;
+    font-size: 1.8rem;
     font-weight: 700;
     color: var(--text-primary);
-    margin: 0 0 0.5rem 0;
+    margin: 0 0 0 1em;
     display: flex;
     align-items: center;
     gap: 1rem;
@@ -87,10 +89,16 @@ body {
     display: flex;
     gap: 1rem;
     flex-wrap: wrap;
+    padding: 0 3em 0.2em 0;
 }
 
 .content-container {
-    margin-top: 2rem;
+    width: 100%;
+    box-sizing: border-box;
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
 }
 
 .table-card {
@@ -99,7 +107,13 @@ body {
     box-shadow: var(--shadow-lg);
     overflow: hidden;
     transition: var(--transition);
-    border: 1px solid var(--border-color);
+    width: 100%;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    flex: 1;
+    min-height: 0;
 }
 
 .table-card:hover {
@@ -107,13 +121,18 @@ body {
 }
 
 .table-header {
-    padding: 1.5rem 2rem;
+    padding: 0.5rem 2rem;
     background: linear-gradient(135deg, var(--bright-blue, #42A5F5), var(--dark-blue, #1976D2), var(--bright-blue, #42A5F5));
     background-size: 200% 200%;
     color: white;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-shrink: 0;
+}
+
+.table-card > div:first-of-type + div {
+    flex-shrink: 0;
 }
 
 .table-header h2 {
@@ -133,7 +152,9 @@ body {
 
 .table-wrapper {
     overflow-x: auto;
+    overflow-y: auto;
     width: 100%;
+    position: relative;
 }
 
 .modern-table {
@@ -144,6 +165,9 @@ body {
 
 .modern-table thead {
     background: var(--bg-tertiary);
+    position: sticky;
+    top: 0;
+    z-index: 10;
 }
 
 .modern-table th {
@@ -156,6 +180,7 @@ body {
     border-bottom: 2px solid var(--border-color);
     position: relative;
     user-select: none;
+    background: var(--bg-tertiary);
 }
 
 .resizable-header {
@@ -169,6 +194,7 @@ body {
 
 .resizable-header.resizing {
     background: var(--bg-secondary);
+    z-index: 11;
 }
 
 .resize-handle {
@@ -391,7 +417,7 @@ body {
     height: 100%;
     background: rgba(15, 23, 42, 0.7);
     backdrop-filter: blur(4px);
-    z-index: 3;
+    z-index: 10;
     justify-content: center;
     align-items: center;
     padding: 1rem;
@@ -819,6 +845,11 @@ body.modal-open {
     .page-wrapper {
         padding: 1rem;
         padding-top: 3rem;
+        width: 100%;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
     }
 
     .page-header {
@@ -835,6 +866,7 @@ body.modal-open {
         width: 100%;
         flex-direction: column;
         gap: 0.8rem;
+        padding: 0;
     }
     
     .page-actions .btn {
@@ -1267,6 +1299,11 @@ body.modal-open {
     .page-wrapper {
         padding: 1rem;
         padding-top: 3rem;
+        width: 100%;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
     }
     
     .page-title-section h1 {
@@ -1301,12 +1338,19 @@ body.modal-open {
     }
 }
 
+#vehicles-pagination {
+    flex-shrink: 0;
+    border-top: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+}
+
 .pagination {
     display: flex;
     justify-content: center;
     align-items: center;
     gap: 0.5rem;
     flex-wrap: wrap;
+    padding: 0.5em;
 }
 
 .pagination-btn {
@@ -1346,4 +1390,226 @@ body.modal-open {
     padding: 0.5rem;
     color: var(--text-muted);
     user-select: none;
+}
+
+.custom-select-container {
+    position: relative;
+    width: 100%;
+}
+
+.custom-select-trigger {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    background-color: var(--bg-primary);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: var(--transition);
+    min-height: 2.75rem;
+}
+
+.custom-select-trigger:hover {
+    border-color: var(--text-muted);
+}
+
+.custom-select-trigger:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(5, 84, 242, 0.1);
+}
+
+.custom-select-placeholder {
+    border: none;
+    background: transparent;
+    width: 100%;
+    padding: 0;
+    font-size: 0.875rem;
+    font-family: inherit;
+}
+
+input.custom-select-placeholder {
+    width: 100%;
+}
+
+.custom-select-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    max-height: 18em;
+    overflow-y: auto;
+    background-color: var(--bg-primary);
+    border: 2px solid var(--border-color);
+    border-radius: var(--border-radius);
+    z-index: 10001;
+    margin-top: 2px;
+    display: none;
+    box-shadow: var(--shadow-lg);
+}
+
+.custom-select-dropdown.open {
+    display: block;
+}
+
+.custom-select-search {
+    padding: 0.75rem;
+    position: sticky;
+    top: 0;
+    background-color: var(--bg-primary);
+    border-bottom: 2px solid var(--border-color);
+    z-index: 1;
+}
+
+.custom-select-search input {
+    width: 100%;
+    padding: 0.6rem 0.8rem;
+    border: 2px solid var(--border-color);
+    border-radius: var(--border-radius);
+    font-size: 0.875rem;
+    font-family: inherit;
+    box-sizing: border-box;
+    transition: var(--transition);
+}
+
+.custom-select-search input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(5, 84, 242, 0.1);
+}
+
+.custom-select-option {
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    font-size: 0.875rem;
+}
+
+.custom-select-option:hover {
+    background-color: var(--bg-secondary);
+}
+
+.custom-select-option.selected {
+    background-color: var(--bg-tertiary);
+    font-weight: 600;
+}
+
+.custom-select-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    width: 100%;
+}
+
+.custom-select-tag {
+    display: flex;
+    align-items: center;
+    background-color: var(--bg-tertiary);
+    border-radius: 4px;
+    padding: 0.3rem 0.5rem;
+    font-size: 0.875rem;
+}
+
+.custom-select-tag-remove {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 5px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.2em;
+    color: var(--text-muted);
+    padding: 0;
+    width: 18px;
+    height: 18px;
+    line-height: 1;
+}
+
+.custom-select-tag-remove:hover {
+    color: var(--text-primary);
+}
+
+#create-vehicle-expense-modal .custom-select-container,
+#edit-vehicle-expense-modal .custom-select-container {
+    width: 100%;
+}
+
+#create-vehicle-expense-modal .custom-select-dropdown,
+#edit-vehicle-expense-modal .custom-select-dropdown {
+    z-index: 10002;
+}
+
+#create-vehicle-expense-modal .form-group,
+#edit-vehicle-expense-modal .form-group {
+    margin-bottom: 1.8em;
+}
+
+#create-vehicle-expense-modal .form-group label,
+#edit-vehicle-expense-modal .form-group label {
+    display: block;
+    margin-bottom: 0.6em;
+    font-weight: 600;
+    color: var(--dark-blue);
+    font-size: 1em;
+}
+
+#create-vehicle-expense-modal .form-group input[type="text"],
+#create-vehicle-expense-modal .form-group input[type="number"],
+#create-vehicle-expense-modal .form-group select,
+#create-vehicle-expense-modal .form-group textarea,
+#edit-vehicle-expense-modal .form-group input[type="text"],
+#edit-vehicle-expense-modal .form-group input[type="number"],
+#edit-vehicle-expense-modal .form-group select,
+#edit-vehicle-expense-modal .form-group textarea {
+    width: 100%;
+    padding: 0.85em 1em;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: var(--base-text-size);
+    box-sizing: border-box;
+    transition: all 0.2s ease;
+    background-color: #fff;
+    font-family: inherit;
+}
+
+#create-vehicle-expense-modal .form-group input[type="text"]:focus,
+#create-vehicle-expense-modal .form-group input[type="number"]:focus,
+#create-vehicle-expense-modal .form-group select:focus,
+#create-vehicle-expense-modal .form-group textarea:focus,
+#edit-vehicle-expense-modal .form-group input[type="text"]:focus,
+#edit-vehicle-expense-modal .form-group input[type="number"]:focus,
+#edit-vehicle-expense-modal .form-group select:focus,
+#edit-vehicle-expense-modal .form-group textarea:focus {
+    outline: none;
+    border-color: var(--bright-green);
+    box-shadow: 0 0 0 3px rgba(103, 173, 34, 0.1);
+}
+
+#create-vehicle-expense-modal .form-group input[type="text"]:hover,
+#create-vehicle-expense-modal .form-group input[type="number"]:hover,
+#create-vehicle-expense-modal .form-group select:hover,
+#create-vehicle-expense-modal .form-group textarea:hover,
+#edit-vehicle-expense-modal .form-group input[type="text"]:hover,
+#edit-vehicle-expense-modal .form-group input[type="number"]:hover,
+#edit-vehicle-expense-modal .form-group select:hover,
+#edit-vehicle-expense-modal .form-group textarea:hover {
+    border-color: #b0b0b0;
+}
+
+#create-vehicle-expense-modal .form-group select,
+#edit-vehicle-expense-modal .form-group select {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23333' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 1em center;
+    padding-right: 2.5em;
+}
+
+#create-vehicle-expense-modal .form-group textarea,
+#edit-vehicle-expense-modal .form-group textarea {
+    resize: vertical;
+    min-height: 100px;
+    font-family: inherit;
+    line-height: 1.5;
 }

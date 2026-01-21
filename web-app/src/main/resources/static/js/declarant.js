@@ -1046,7 +1046,9 @@ async function loadAccounts() {
     }
 }
 
-const populateAccounts = (selectId) => DeclarantRenderer.populateAccounts(selectId, accountsCache);
+let vehicleExpenseCustomSelects = {};
+
+const populateAccounts = (selectId) => DeclarantRenderer.populateAccounts(selectId, accountsCache, vehicleExpenseCustomSelects);
 
 async function loadCategoriesForVehicleExpense() {
     try {
@@ -1063,7 +1065,7 @@ async function loadCategoriesForVehicleExpense() {
     }
 }
 
-const populateCategories = DeclarantRenderer.populateCategories;
+const populateCategories = (selectId, categories) => DeclarantRenderer.populateCategories(selectId, categories, vehicleExpenseCustomSelects);
 const populateCurrencies = (selectId, accountId) => DeclarantRenderer.populateCurrencies(selectId, accountId, accountsCache);
 
 async function loadVehicleExpenses(vehicleId) {
@@ -1094,6 +1096,80 @@ async function loadVehicleExpenses(vehicleId) {
 
 const checkExchangeRatesFreshness = DeclarantDataLoader.checkExchangeRatesFreshness;
 
+async function updateVehicleFinancials() {
+    if (!currentVehicleId || !currentVehicleDetails) return;
+    
+    await loadVehicleExpenses(currentVehicleId);
+    
+    const expensesTotal = parseFloat(await getVehicleExpensesTotal(currentVehicleId)) || 0;
+    const productsTotalCost = calculateProductsTotalCost(currentVehicleDetails);
+    const totalExpenses = productsTotalCost + expensesTotal;
+    
+    const invoiceEuTotalPrice = currentVehicleDetails.invoiceEuTotalPrice || 0;
+    const fullReclamation = calculateFullReclamation(currentVehicleDetails);
+    const totalIncome = invoiceEuTotalPrice - fullReclamation;
+    const margin = totalIncome - totalExpenses;
+    
+    const vehicleTotalExpenses = document.getElementById('vehicle-total-expenses');
+    const vehicleTotalIncome = document.getElementById('vehicle-total-income');
+    const vehicleMargin = document.getElementById('vehicle-margin');
+    
+    if (vehicleTotalExpenses) {
+        vehicleTotalExpenses.textContent = formatNumber(totalExpenses, 2);
+    }
+    if (vehicleTotalIncome) {
+        vehicleTotalIncome.textContent = formatNumber(totalIncome, 2);
+    }
+    if (vehicleMargin) {
+        vehicleMargin.textContent = formatNumber(margin, 2);
+    }
+}
+
+async function reloadVehicleInTable() {
+    if (!currentVehicleId) return;
+    
+    try {
+        const updatedVehicle = await DeclarantDataLoader.loadVehicleDetails(currentVehicleId);
+        const vehicleIndex = vehiclesCache.findIndex(v => v.id === currentVehicleId);
+        if (vehicleIndex !== -1) {
+            vehiclesCache[vehicleIndex] = updatedVehicle;
+            const vehiclesTbody = document.getElementById('vehicles-tbody');
+            if (vehiclesTbody) {
+                const row = vehiclesTbody.querySelector(`tr[data-vehicle-id="${currentVehicleId}"]`);
+                if (row) {
+                    const productsTotalCost = (updatedVehicle.items && Array.isArray(updatedVehicle.items) && updatedVehicle.items.length > 0)
+                        ? calculateProductsTotalCost(updatedVehicle)
+                        : 0;
+                    const totalExpensesValue = updatedVehicle.totalExpenses != null ? parseFloat(updatedVehicle.totalExpenses) : 0;
+                    const expensesTotal = Math.max(0, totalExpensesValue - productsTotalCost);
+                    
+                    const cells = row.querySelectorAll('td');
+                    if (cells.length >= 6) {
+                        cells[1].textContent = `${formatNumber(productsTotalCost, 2)} EUR`;
+                        cells[1].style.fontWeight = '600';
+                        cells[1].style.color = 'var(--primary)';
+                        cells[2].textContent = `${formatNumber(expensesTotal, 2)} EUR`;
+                        cells[2].style.fontWeight = '600';
+                        cells[2].style.color = 'var(--primary)';
+                        cells[3].textContent = `${formatNumber(updatedVehicle.totalExpenses, 2)} EUR`;
+                        cells[3].style.fontWeight = '600';
+                        cells[3].style.color = 'var(--primary)';
+                        cells[4].textContent = `${formatNumber(updatedVehicle.totalIncome, 2)} EUR`;
+                        cells[4].style.fontWeight = '600';
+                        cells[4].style.color = 'var(--success)';
+                        const marginValue = updatedVehicle.margin != null ? parseFloat(updatedVehicle.margin) : 0;
+                        cells[5].textContent = `${formatNumber(updatedVehicle.margin, 2)} EUR`;
+                        cells[5].style.fontWeight = '600';
+                        cells[5].style.color = marginValue >= 0 ? 'var(--success)' : 'var(--danger)';
+                    }
+                }
+            }
+        }
+    } catch (error) {
+        console.error('Error reloading vehicle in table:', error);
+    }
+}
+
 document.getElementById('create-vehicle-expense-btn')?.addEventListener('click', async () => {
     if (!currentVehicleId) {
         showMessage('Не вдалося визначити машину', 'error');
@@ -1109,8 +1185,25 @@ document.getElementById('create-vehicle-expense-btn')?.addEventListener('click',
     const categories = await loadCategoriesForVehicleExpense();
     populateCategories('expense-category', categories);
     
-    if (expenseFromAccount) expenseFromAccount.value = '';
-    if (expenseCategory) expenseCategory.value = '';
+    if (vehicleExpenseCustomSelects['expense-from-account']) {
+        vehicleExpenseCustomSelects['expense-from-account'].reset();
+    }
+    if (vehicleExpenseCustomSelects['expense-category']) {
+        vehicleExpenseCustomSelects['expense-category'].reset();
+    }
+    
+    if (expenseFromAccount) {
+        const existingHandler = expenseFromAccount._changeHandler;
+        if (existingHandler) {
+            expenseFromAccount.removeEventListener('change', existingHandler);
+        }
+        const changeHandler = function(e) {
+            const accountId = e.target.value;
+            populateCurrencies('expense-currency', accountId);
+        };
+        expenseFromAccount.addEventListener('change', changeHandler);
+        expenseFromAccount._changeHandler = changeHandler;
+    }
     if (expenseAmount) expenseAmount.value = '';
     if (expenseCurrency) expenseCurrency.value = '';
     if (expenseDescription) expenseDescription.value = '';
@@ -1140,8 +1233,22 @@ if (createVehicleExpenseForm) {
             return;
         }
         
-        const fromAccountIdValue = expenseFromAccount?.value;
-        const categoryIdValue = expenseCategory?.value;
+        let fromAccountIdValue = '';
+        let categoryIdValue = '';
+        
+        if (vehicleExpenseCustomSelects['expense-from-account']) {
+            const values = vehicleExpenseCustomSelects['expense-from-account'].getValue();
+            fromAccountIdValue = values.length > 0 ? values[0] : '';
+        } else if (expenseFromAccount) {
+            fromAccountIdValue = expenseFromAccount.value;
+        }
+        
+        if (vehicleExpenseCustomSelects['expense-category']) {
+            const values = vehicleExpenseCustomSelects['expense-category'].getValue();
+            categoryIdValue = values.length > 0 ? values[0] : '';
+        } else if (expenseCategory) {
+            categoryIdValue = expenseCategory.value;
+        }
         
         const formData = {
             fromAccountId: fromAccountIdValue && fromAccountIdValue !== '0' ? parseInt(fromAccountIdValue) : null,
@@ -1157,32 +1264,11 @@ if (createVehicleExpenseForm) {
             closeModal('create-vehicle-expense-modal');
             createVehicleExpenseForm.reset();
             
-            await loadVehicleExpenses(currentVehicleId);
+            const updatedVehicle = await DeclarantDataLoader.loadVehicleDetails(currentVehicleId);
+            currentVehicleDetails = updatedVehicle;
             
-            if (currentVehicleDetails) {
-                const expensesTotal = parseFloat(await getVehicleExpensesTotal(currentVehicleId)) || 0;
-                const productsTotalCost = calculateProductsTotalCost(currentVehicleDetails);
-                const totalExpenses = productsTotalCost + expensesTotal;
-                
-                const invoiceEuTotalPrice = currentVehicleDetails.invoiceEuTotalPrice || 0;
-                const fullReclamation = calculateFullReclamation(currentVehicleDetails);
-                const totalIncome = invoiceEuTotalPrice - fullReclamation;
-                const margin = totalIncome - totalExpenses;
-                
-                const vehicleTotalExpenses = document.getElementById('vehicle-total-expenses');
-                const vehicleTotalIncome = document.getElementById('vehicle-total-income');
-                const vehicleMargin = document.getElementById('vehicle-margin');
-                
-                if (vehicleTotalExpenses) {
-                    vehicleTotalExpenses.textContent = formatNumber(totalExpenses, 2);
-                }
-                if (vehicleTotalIncome) {
-                    vehicleTotalIncome.textContent = formatNumber(totalIncome, 2);
-                }
-                if (vehicleMargin) {
-                    vehicleMargin.textContent = formatNumber(margin, 2);
-                }
-            }
+            await updateVehicleFinancials();
+            await reloadVehicleInTable();
         } catch (error) {
             showMessage(error.message || 'Помилка при створенні витрати', 'error');
         }
@@ -1206,14 +1292,38 @@ window.openEditVehicleExpenseModal = async function openEditVehicleExpenseModal(
     const categories = await loadCategoriesForVehicleExpense();
     populateCategories('edit-expense-category', categories);
     
-    if (editExpenseFromAccount) editExpenseFromAccount.value = expense.fromAccountId || '';
-    if (editExpenseCategory) editExpenseCategory.value = expense.categoryId || '';
-    if (editExpenseAmount) editExpenseAmount.value = expense.amount || '';
-    if (editExpenseCurrency) {
-        editExpenseCurrency.value = expense.currency || '';
+    if (vehicleExpenseCustomSelects['edit-expense-from-account'] && expense.fromAccountId) {
+        vehicleExpenseCustomSelects['edit-expense-from-account'].setValue([expense.fromAccountId.toString()]);
+        setTimeout(() => {
+            updateEditExpenseCurrencies();
+        }, 100);
+    } else if (editExpenseFromAccount) {
+        editExpenseFromAccount.value = expense.fromAccountId || '';
         if (expense.fromAccountId) {
             populateCurrencies('edit-expense-currency', expense.fromAccountId);
         }
+    }
+    
+    if (vehicleExpenseCustomSelects['edit-expense-category'] && expense.categoryId) {
+        vehicleExpenseCustomSelects['edit-expense-category'].setValue([expense.categoryId.toString()]);
+    } else if (editExpenseCategory) {
+        editExpenseCategory.value = expense.categoryId || '';
+    }
+    if (editExpenseAmount) editExpenseAmount.value = expense.amount || '';
+    if (editExpenseCurrency) {
+        editExpenseCurrency.value = expense.currency || '';
+    }
+    
+    if (editExpenseFromAccount) {
+        const existingHandler = editExpenseFromAccount._changeHandler;
+        if (existingHandler) {
+            editExpenseFromAccount.removeEventListener('change', existingHandler);
+        }
+        const changeHandler = function(e) {
+            updateEditExpenseCurrencies();
+        };
+        editExpenseFromAccount.addEventListener('change', changeHandler);
+        editExpenseFromAccount._changeHandler = changeHandler;
     }
     if (editExpenseDescription) editExpenseDescription.value = expense.description || '';
     
@@ -1225,6 +1335,19 @@ window.openEditVehicleExpenseModal = async function openEditVehicleExpenseModal(
     
     openModal('edit-vehicle-expense-modal');
 }
+
+const updateEditExpenseCurrencies = () => {
+    let accountId = '';
+    if (vehicleExpenseCustomSelects['edit-expense-from-account']) {
+        const values = vehicleExpenseCustomSelects['edit-expense-from-account'].getValue();
+        accountId = values.length > 0 ? values[0] : '';
+    } else if (editExpenseFromAccount) {
+        accountId = editExpenseFromAccount.value;
+    }
+    if (accountId) {
+        populateCurrencies('edit-expense-currency', accountId);
+    }
+};
 
 if (editExpenseFromAccount) {
     editExpenseFromAccount.addEventListener('change', (e) => {
@@ -1263,8 +1386,22 @@ if (editVehicleExpenseForm) {
             return;
         }
         
-        const fromAccountIdValue = editExpenseFromAccount?.value;
-        const categoryIdValue = editExpenseCategory?.value;
+        let fromAccountIdValue = '';
+        let categoryIdValue = '';
+        
+        if (vehicleExpenseCustomSelects['edit-expense-from-account']) {
+            const values = vehicleExpenseCustomSelects['edit-expense-from-account'].getValue();
+            fromAccountIdValue = values.length > 0 ? values[0] : '';
+        } else if (editExpenseFromAccount) {
+            fromAccountIdValue = editExpenseFromAccount.value;
+        }
+        
+        if (vehicleExpenseCustomSelects['edit-expense-category']) {
+            const values = vehicleExpenseCustomSelects['edit-expense-category'].getValue();
+            categoryIdValue = values.length > 0 ? values[0] : '';
+        } else if (editExpenseCategory) {
+            categoryIdValue = editExpenseCategory.value;
+        }
         
         const formData = {
             fromAccountId: fromAccountIdValue && fromAccountIdValue !== '0' ? parseInt(fromAccountIdValue) : null,
@@ -1279,34 +1416,14 @@ if (editVehicleExpenseForm) {
             showMessage('Витрату успішно оновлено', 'success');
             closeModal('edit-vehicle-expense-modal');
             editVehicleExpenseForm.reset();
+            const expenseIdToReset = currentExpenseId;
             currentExpenseId = null;
             
-            await loadVehicleExpenses(currentVehicleId);
+            const updatedVehicle = await DeclarantDataLoader.loadVehicleDetails(currentVehicleId);
+            currentVehicleDetails = updatedVehicle;
             
-            if (currentVehicleDetails) {
-                const expensesTotal = parseFloat(await getVehicleExpensesTotal(currentVehicleId)) || 0;
-                const productsTotalCost = calculateProductsTotalCost(currentVehicleDetails);
-                const totalExpenses = productsTotalCost + expensesTotal;
-                
-                const invoiceEuTotalPrice = currentVehicleDetails.invoiceEuTotalPrice || 0;
-                const fullReclamation = calculateFullReclamation(currentVehicleDetails);
-                const totalIncome = invoiceEuTotalPrice - fullReclamation;
-                const margin = totalIncome - totalExpenses;
-                
-                const vehicleTotalExpenses = document.getElementById('vehicle-total-expenses');
-                const vehicleTotalIncome = document.getElementById('vehicle-total-income');
-                const vehicleMargin = document.getElementById('vehicle-margin');
-                
-                if (vehicleTotalExpenses) {
-                    vehicleTotalExpenses.textContent = formatNumber(totalExpenses, 2);
-                }
-                if (vehicleTotalIncome) {
-                    vehicleTotalIncome.textContent = formatNumber(totalIncome, 2);
-                }
-                if (vehicleMargin) {
-                    vehicleMargin.textContent = formatNumber(margin, 2);
-                }
-            }
+            await updateVehicleFinancials();
+            await reloadVehicleInTable();
         } catch (error) {
             showMessage(error.message || 'Помилка при оновленні витрати', 'error');
         }
@@ -1316,6 +1433,36 @@ if (editVehicleExpenseForm) {
 document.getElementById('cancel-edit-vehicle-expense-btn')?.addEventListener('click', () => {
     closeModal('edit-vehicle-expense-modal');
     currentExpenseId = null;
+});
+
+document.getElementById('delete-vehicle-expense-btn')?.addEventListener('click', async () => {
+    if (!currentExpenseId) {
+        showMessage('Не вдалося визначити витрату', 'error');
+        return;
+    }
+    
+    ConfirmationModal.show(
+        'Ви впевнені, що хочете видалити цю витрату?',
+        'Підтвердження видалення',
+        async () => {
+            try {
+                await DeclarantDataLoader.deleteVehicleExpense(currentExpenseId);
+                showMessage('Витрату успішно видалено', 'success');
+                closeModal('edit-vehicle-expense-modal');
+                editVehicleExpenseForm.reset();
+                currentExpenseId = null;
+                
+                const updatedVehicle = await DeclarantDataLoader.loadVehicleDetails(currentVehicleId);
+                currentVehicleDetails = updatedVehicle;
+                
+                await updateVehicleFinancials();
+                await reloadVehicleInTable();
+            } catch (error) {
+                showMessage(error.message || 'Помилка при видаленні витрати', 'error');
+            }
+        },
+        () => {}
+    );
 });
 
 document.getElementById('export-vehicles-btn')?.addEventListener('click', async () => {

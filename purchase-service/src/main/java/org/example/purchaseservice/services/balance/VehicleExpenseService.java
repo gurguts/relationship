@@ -145,6 +145,17 @@ public class VehicleExpenseService implements IVehicleExpenseService {
         return saved;
     }
     
+    @Override
+    @Transactional
+    public void deleteVehicleExpense(@NonNull Long expenseId) {
+        log.info("Deleting vehicle expense: id={}", expenseId);
+        
+        VehicleExpense expense = getExpenseById(expenseId);
+        vehicleExpenseRepository.delete(expense);
+        
+        log.info("Vehicle expense deleted: id={}", expenseId);
+    }
+    
     private record ConversionResult(BigDecimal exchangeRate, BigDecimal convertedAmount) {}
 
     private void validateVehicleExists(Long vehicleId) {

@@ -100,11 +100,11 @@
 <div class="page-wrapper">
     <div class="page-header">
         <div class="page-title-section">
-            <h1>Машини декларанта</h1>
+            <!--<h1>СТОРІНКА ДЕКЛАРАНТА</h1>-->
         </div>
         <div class="page-actions">
             <button class="btn btn-primary" id="create-vehicle-btn">
-                <span class="btn-icon">➕</span>
+                <span class="btn-icon"></span>
                 Створити машину
             </button>
             <button class="btn btn-secondary" id="export-vehicles-btn">
@@ -120,7 +120,7 @@
                 <h2>Список машин</h2>
                 <span class="table-stats" id="vehicles-count">0 машин</span>
             </div>
-            <div style="padding: 1rem 2rem; border-bottom: 1px solid var(--border-color); background: var(--bg-secondary);">
+            <div style="padding: 0.5rem 2rem; border-bottom: 1px solid var(--border-color); background: var(--bg-secondary);">
                 <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
                     <div style="flex: 1; min-width: 300px;">
                         <input type="text" id="vehicles-search-input" class="form-input" placeholder="🔍 Пошук по всіх полях..." style="margin: 0;">
@@ -144,8 +144,9 @@
                             <th data-column="date" class="resizable-header">Дата відвантаження</th>
                             <th data-column="invoiceUa" class="resizable-header">Інвойс УА</th>
                             <th data-column="invoiceEu" class="resizable-header">Інвойс ЄС</th>
-                            <th data-column="isOurVehicle" class="resizable-header">Наше завантаження</th>
                             <th data-column="sender" class="resizable-header">Відправник</th>
+                            <th data-column="invoiceUaDate" class="resizable-header">Дата інвойсу УА</th>
+                            <th data-column="invoiceEuDate" class="resizable-header">Дата інвойсу ЄС</th>
                             <th data-column="receiver" class="resizable-header">Отримувач</th>
                             <th data-column="destinationCountry" class="resizable-header">Країна призначення</th>
                             <th data-column="destinationPlace" class="resizable-header">Місце призначення</th>
@@ -161,16 +162,17 @@
                             <th data-column="unloadingDate" class="resizable-header">Дата вивантаження</th>
                             <th data-column="carrier" class="resizable-header">Перевізник</th>
                             <th data-column="description" class="resizable-header">Коментар</th>
+                            <th data-column="isOurVehicle" class="resizable-header">Наше завантаження</th>
             </tr>
         </thead>
         <tbody id="vehicles-tbody">
                         <tr class="loading-row">
-                            <td colspan="24">Завантаження...</td>
+                            <td colspan="26">Завантаження...</td>
                         </tr>
         </tbody>
     </table>
             </div>
-            <div id="vehicles-pagination" style="padding: 1rem 2rem; border-top: 1px solid var(--border-color); background: var(--bg-secondary);"></div>
+            <div id="vehicles-pagination"></div>
         </div>
     </div>
 </div>
@@ -840,6 +842,7 @@
         </form>
         </div>
         <div class="modal-footer">
+            <button type="button" class="btn btn-danger" id="delete-vehicle-expense-btn">Видалити</button>
             <button type="button" class="btn btn-secondary" id="cancel-edit-vehicle-expense-btn">Скасувати</button>
             <button type="submit" form="edit-vehicle-expense-form" class="btn btn-primary">Зберегти</button>
         </div>
@@ -888,6 +891,7 @@
 
 <script src="/js/utils/constants.js"></script>
 <script src="/js/utils/dropdownLoader.js"></script>
+<script src="/js/createCustomSelect.js"></script>
 <script src="/js/common.js"></script>
 <script src="/js/error.js"></script>
 <script src="/js/modules/ConfirmationModal.js"></script>

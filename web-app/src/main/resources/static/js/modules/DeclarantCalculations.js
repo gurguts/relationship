@@ -25,18 +25,12 @@ const DeclarantCalculations = (function() {
             return 0;
         }
         
-        const productQuantityStr = vehicle.productQuantity;
-        if (!productQuantityStr || productQuantityStr.trim() === '') {
+        const invoiceEuPricePerTon = parseFloat(vehicle.invoiceEuPricePerTon) || 0;
+        if (invoiceEuPricePerTon === 0) {
             return 0;
         }
         
-        try {
-            const quantityInTons = parseFloat(productQuantityStr.replace(',', '.')) || 0;
-            return reclamationPerTon * quantityInTons;
-        } catch (error) {
-            console.warn('Failed to parse productQuantity for reclamation calculation:', productQuantityStr, error);
-            return 0;
-        }
+        return reclamationPerTon * invoiceEuPricePerTon;
     }
     
     function calculateInvoiceUaTotalPrice() {

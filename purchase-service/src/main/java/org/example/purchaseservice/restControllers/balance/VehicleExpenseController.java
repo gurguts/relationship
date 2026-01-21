@@ -55,4 +55,11 @@ public class VehicleExpenseController {
         VehicleExpense expense = vehicleExpenseService.updateVehicleExpense(expenseId, dto);
         return ResponseEntity.ok(expense);
     }
+
+    @PreAuthorize("hasAuthority('declarant:delete')")
+    @DeleteMapping("/expenses/{expenseId}")
+    public ResponseEntity<Void> deleteVehicleExpense(@PathVariable @Positive Long expenseId) {
+        vehicleExpenseService.deleteVehicleExpense(expenseId);
+        return ResponseEntity.noContent().build();
+    }
 }

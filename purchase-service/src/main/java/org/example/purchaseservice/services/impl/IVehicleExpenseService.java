@@ -18,4 +18,6 @@ public interface IVehicleExpenseService {
     VehicleExpense getExpenseById(@NonNull Long expenseId);
     
     VehicleExpense updateVehicleExpense(@NonNull Long expenseId, @NonNull VehicleExpenseUpdateDTO dto);
+    
+    void deleteVehicleExpense(@NonNull Long expenseId);
 }
