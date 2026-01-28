@@ -11,7 +11,6 @@ import org.example.containerservice.models.ContainerBalance;
 import org.example.containerservice.models.ContainerTransactionType;
 import org.example.containerservice.repositories.ClientContainerRepository;
 import org.example.containerservice.repositories.ContainerBalanceRepository;
-import org.example.containerservice.services.impl.IContainerService;
 import org.example.containerservice.services.impl.IClientContainerService;
 import org.example.containerservice.services.impl.IContainerTransactionService;
 import org.springframework.stereotype.Service;
@@ -39,7 +38,7 @@ public class ClientContainerService implements IClientContainerService {
     private final ClientContainerRepository clientContainerRepository;
     private final ContainerBalanceRepository containerBalanceRepository;
     private final IContainerTransactionService containerTransactionService;
-    private final IContainerService containerService;
+    private final ContainerBalanceHelper balanceHelper;
 
     @Override
     @Transactional
@@ -151,7 +150,7 @@ public class ClientContainerService implements IClientContainerService {
             throw new ContainerException(ERROR_NOT_ENOUGH_DATA, MESSAGE_VALIDATION_REQUIRED);
         }
 
-        return getOrCreateBalance(userId, containerId);
+        return balanceHelper.getOrCreateBalance(userId, containerId);
     }
 
     @Override
@@ -176,15 +175,4 @@ public class ClientContainerService implements IClientContainerService {
                 });
     }
 
-    private ContainerBalance getOrCreateBalance(@NonNull Long userId, @NonNull Long containerId) {
-        return containerBalanceRepository.findByUserIdAndContainerId(userId, containerId)
-                .orElseGet(() -> {
-                    ContainerBalance newBalance = new ContainerBalance();
-                    newBalance.setUserId(userId);
-                    newBalance.setContainer(containerService.getContainerById(containerId));
-                    newBalance.setTotalQuantity(BigDecimal.ZERO);
-                    newBalance.setClientQuantity(BigDecimal.ZERO);
-                    return newBalance;
-                });
-    }
 }

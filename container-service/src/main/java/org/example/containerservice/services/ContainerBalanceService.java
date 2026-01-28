@@ -9,7 +9,6 @@ import org.example.containerservice.models.Container;
 import org.example.containerservice.models.ContainerBalance;
 import org.example.containerservice.models.ContainerTransactionType;
 import org.example.containerservice.repositories.ContainerBalanceRepository;
-import org.example.containerservice.services.impl.IContainerService;
 import org.example.containerservice.services.impl.IContainerBalanceService;
 import org.example.containerservice.services.impl.IContainerTransactionService;
 import org.springframework.stereotype.Service;
@@ -35,7 +34,7 @@ public class ContainerBalanceService implements IContainerBalanceService {
 
     private final ContainerBalanceRepository containerBalanceRepository;
     private final IContainerTransactionService containerTransactionService;
-    private final IContainerService containerService;
+    private final ContainerBalanceHelper balanceHelper;
 
     @Override
     @Transactional
@@ -44,7 +43,7 @@ public class ContainerBalanceService implements IContainerBalanceService {
                                  @NonNull BigDecimal quantity) {
         validateParameters(quantity);
 
-        ContainerBalance balance = getOrCreateBalance(userId, containerId);
+        ContainerBalance balance = balanceHelper.getOrCreateBalance(userId, containerId);
         balance.setTotalQuantity(balance.getTotalQuantity().add(quantity));
         containerBalanceRepository.save(balance);
 
@@ -101,17 +100,6 @@ public class ContainerBalanceService implements IContainerBalanceService {
         return containerBalanceRepository.findByUserId(userId);
     }
 
-    protected ContainerBalance getOrCreateBalance(@NonNull Long userId, @NonNull Long containerId) {
-        return containerBalanceRepository.findByUserIdAndContainerId(userId, containerId)
-                .orElseGet(() -> {
-                    ContainerBalance newBalance = new ContainerBalance();
-                    newBalance.setUserId(userId);
-                    newBalance.setContainer(containerService.getContainerById(containerId));
-                    newBalance.setTotalQuantity(BigDecimal.ZERO);
-                    newBalance.setClientQuantity(BigDecimal.ZERO);
-                    return newBalance;
-                });
-    }
 
     @Override
     @Transactional(readOnly = true)
