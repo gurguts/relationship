@@ -14,14 +14,12 @@ import org.example.clientservice.models.dto.clienttype.ClientTypeFieldUpdateDTO;
 import org.example.clientservice.models.dto.clienttype.ClientTypeFieldsAllDTO;
 import org.example.clientservice.models.dto.clienttype.FieldIdsRequest;
 import org.example.clientservice.models.dto.clienttype.FieldReorderDTO;
-import org.example.clientservice.models.dto.clienttype.StaticFieldsConfig;
 import org.example.clientservice.repositories.clienttype.ClientTypeFieldRepository;
 import org.example.clientservice.services.impl.IClientTypeFieldService;
 import org.example.clientservice.services.impl.IClientTypeService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -30,11 +28,12 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class ClientTypeFieldService implements IClientTypeFieldService {
-    private static final int DEFAULT_DISPLAY_ORDER = 999;
     
     private final ClientTypeFieldRepository fieldRepository;
     private final ClientTypeFieldMapper fieldMapper;
     private final IClientTypeService clientTypeService;
+    private final ClientTypeFieldValidator validator;
+    private final ClientTypeFieldStaticFieldsHandler staticFieldsHandler;
 
     @Override
     @Transactional
@@ -120,7 +119,7 @@ public class ClientTypeFieldService implements IClientTypeFieldService {
     @Override
     @NonNull
     public List<ClientTypeField> getFieldsByIds(@NonNull FieldIdsRequest request) {
-        validateFieldIdsRequest(request);
+        validator.validateFieldIdsRequest(request);
         return fieldRepository.findByIdsWithListValues(request.fieldIds());
     }
 
@@ -147,7 +146,7 @@ public class ClientTypeFieldService implements IClientTypeFieldService {
         log.info("Reordering fields for client type {}", clientTypeId);
         
         try {
-            validateReorderRequest(clientTypeId, dto);
+            validator.validateReorderRequest(clientTypeId, dto);
             
             List<ClientTypeField> fields = fieldRepository.findByClientTypeIdOrderByDisplayOrderAsc(clientTypeId);
             Map<Long, ClientTypeField> fieldMap = buildFieldMap(fields);
@@ -170,7 +169,7 @@ public class ClientTypeFieldService implements IClientTypeFieldService {
         List<ClientTypeField> fields = getVisibleFieldsByClientTypeId(clientTypeId);
         List<ClientTypeFieldDTO> response = mapFieldsToDTOs(fields);
 
-        addStaticFieldsToResponse(response, clientTypeId);
+        staticFieldsHandler.addStaticFieldsToResponse(response, clientTypeId);
 
         return response;
     }
@@ -187,28 +186,11 @@ public class ClientTypeFieldService implements IClientTypeFieldService {
         dto.setFilterable(mapFieldsToDTOs(getFilterableFieldsByClientTypeId(clientTypeId)));
         dto.setVisibleInCreate(mapFieldsToDTOs(getVisibleInCreateFieldsByClientTypeId(clientTypeId)));
         
-        addStaticFieldsToVisible(dto, clientType);
+        staticFieldsHandler.addStaticFieldsToVisible(dto, clientType);
 
         return dto;
     }
     
-    private void validateFieldIdsRequest(@NonNull FieldIdsRequest request) {
-        if (request.fieldIds().isEmpty()) {
-            throw new ClientException("INVALID_FIELD_IDS", "List of field IDs cannot be empty");
-        }
-    }
-    
-    private void validateReorderRequest(@NonNull Long clientTypeId, @NonNull FieldReorderDTO dto) {
-        if (dto.getFieldIds() == null || dto.getFieldIds().isEmpty()) {
-            throw new ClientException("INVALID_FIELD_IDS", "List of field IDs for reordering cannot be empty");
-        }
-        
-        if (dto.getFieldIds().contains(null)) {
-            throw new ClientException("INVALID_FIELD_IDS", "List of field IDs cannot contain null values");
-        }
-        
-        clientTypeService.getClientTypeById(clientTypeId);
-    }
     
     private Map<Long, ClientTypeField> buildFieldMap(@NonNull List<ClientTypeField> fields) {
         return fields.stream()
@@ -240,37 +222,4 @@ public class ClientTypeFieldService implements IClientTypeFieldService {
                 .collect(Collectors.toList());
     }
     
-    private void addStaticFieldsToResponse(@NonNull List<ClientTypeFieldDTO> response, @NonNull Long clientTypeId) {
-        try {
-            ClientType clientType = clientTypeService.getClientTypeById(clientTypeId);
-            StaticFieldsConfig staticConfig = StaticFieldsHelper.parseStaticFieldsConfig(clientType);
-            
-            if (staticConfig != null) {
-                List<ClientTypeFieldDTO> staticFields = StaticFieldsHelper.createStaticFieldDTOs(staticConfig);
-                response.addAll(staticFields);
-                sortFieldsByDisplayOrder(response);
-            }
-        } catch (Exception e) {
-            log.warn("Failed to add static fields for client type {}: {}", clientTypeId, e.getMessage());
-        }
-    }
-    
-    private void addStaticFieldsToVisible(@NonNull ClientTypeFieldsAllDTO dto, @NonNull ClientType clientType) {
-        try {
-            StaticFieldsConfig staticConfig = StaticFieldsHelper.parseStaticFieldsConfig(clientType);
-            
-            if (staticConfig != null) {
-                List<ClientTypeFieldDTO> staticFields = StaticFieldsHelper.createStaticFieldDTOs(staticConfig);
-                dto.getVisible().addAll(staticFields);
-                sortFieldsByDisplayOrder(dto.getVisible());
-            }
-        } catch (Exception e) {
-            log.warn("Failed to add static fields to visible: {}", e.getMessage());
-        }
-    }
-    
-    private void sortFieldsByDisplayOrder(@NonNull List<ClientTypeFieldDTO> fields) {
-        fields.sort(Comparator.comparingInt(field -> 
-                field.getDisplayOrder() != null ? field.getDisplayOrder() : DEFAULT_DISPLAY_ORDER));
-    }
 }
