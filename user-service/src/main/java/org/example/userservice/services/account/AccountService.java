@@ -14,7 +14,6 @@ import org.example.userservice.services.impl.IBranchPermissionService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -25,12 +24,11 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class AccountService implements IAccountService {
     private static final String ERROR_CODE_CURRENCIES_REQUIRED = "CURRENCIES";
-    private static final String ERROR_CODE_CURRENCY_NOT_REMOVABLE = "CURRENCY";
-    private static final String ERROR_CODE_BALANCE_NOT_ZERO = "BALANCE";
 
     private final AccountRepository accountRepository;
     private final AccountBalanceRepository accountBalanceRepository;
     private final IBranchPermissionService branchPermissionService;
+    private final AccountBalanceLifecycleHelper balanceLifecycleHelper;
 
     @Override
     @Transactional(readOnly = true)
@@ -84,7 +82,7 @@ public class AccountService implements IAccountService {
         validateCurrencies(account.getCurrencies());
 
         Account savedAccount = accountRepository.save(account);
-        createBalancesForAccount(savedAccount.getId(), account.getCurrencies());
+        balanceLifecycleHelper.createBalancesForAccount(savedAccount.getId(), account.getCurrencies());
 
         log.info("Account created: id={}", savedAccount.getId());
         return savedAccount;
@@ -101,8 +99,7 @@ public class AccountService implements IAccountService {
         validateCurrencies(newCurrencies);
 
         Set<String> oldCurrencies = account.getCurrencies();
-        createNewBalancesForAccount(id, newCurrencies, oldCurrencies);
-        removeOldBalancesForAccount(id, oldCurrencies, newCurrencies);
+        balanceLifecycleHelper.syncBalancesOnUpdate(id, oldCurrencies, newCurrencies);
 
         account.setCurrencies(newCurrencies);
         Account savedAccount = accountRepository.save(account);
@@ -115,8 +112,8 @@ public class AccountService implements IAccountService {
     public void deleteAccount(@NonNull Long id) {
         log.info("Deleting account: id={}", id);
         Account account = getAccountById(id);
-        validateAccountCanBeDeleted(id);
-        
+        balanceLifecycleHelper.validateAccountCanBeDeleted(id);
+
         accountRepository.delete(account);
         log.info("Account deleted: id={}", id);
     }
@@ -149,72 +146,5 @@ public class AccountService implements IAccountService {
         account.setDescription(updatedAccount.getDescription());
         account.setUserId(updatedAccount.getUserId());
         account.setBranchId(updatedAccount.getBranchId());
-    }
-
-    private void createBalancesForAccount(@NonNull Long accountId, @NonNull Set<String> currencies) {
-        List<AccountBalance> balances = currencies.stream()
-                .map(currency -> createAccountBalance(accountId, currency))
-                .toList();
-        accountBalanceRepository.saveAll(balances);
-    }
-
-    private void createNewBalancesForAccount(@NonNull Long accountId, @NonNull Set<String> newCurrencies, @NonNull Set<String> oldCurrencies) {
-        List<AccountBalance> balancesToCreate = newCurrencies.stream()
-                .filter(currency -> !oldCurrencies.contains(currency))
-                .map(currency -> createAccountBalance(accountId, currency))
-                .toList();
-        
-        if (!balancesToCreate.isEmpty()) {
-            accountBalanceRepository.saveAll(balancesToCreate);
-        }
-    }
-
-    private Map<String, AccountBalance> buildBalanceMap(@NonNull Long accountId) {
-        List<AccountBalance> allBalances = accountBalanceRepository.findByAccountId(accountId);
-        return allBalances.stream()
-                .collect(Collectors.toMap(
-                        AccountBalance::getCurrency,
-                        balance -> balance,
-                        (existing, _) -> existing
-                ));
-    }
-
-    private void removeOldBalancesForAccount(@NonNull Long accountId, @NonNull Set<String> oldCurrencies, @NonNull Set<String> newCurrencies) {
-        Map<String, AccountBalance> balanceMap = buildBalanceMap(accountId);
-
-        List<AccountBalance> balancesToDelete = oldCurrencies.stream()
-                .filter(currency -> !newCurrencies.contains(currency))
-                .map(balanceMap::get)
-                .filter(balance -> {
-                    if (balance != null && balance.getAmount().compareTo(BigDecimal.ZERO) != 0) {
-                        throw new AccountException(ERROR_CODE_CURRENCY_NOT_REMOVABLE, 
-                                String.format("Cannot remove currency %s: account has non-zero balance", balance.getCurrency()));
-                    }
-                    return balance != null;
-                })
-                .toList();
-        
-        if (!balancesToDelete.isEmpty()) {
-            accountBalanceRepository.deleteAll(balancesToDelete);
-        }
-    }
-
-    private void validateAccountCanBeDeleted(@NonNull Long accountId) {
-        long nonZeroCount = accountBalanceRepository.countNonZeroBalances(accountId);
-        if (nonZeroCount > 0) {
-            throw new AccountException(ERROR_CODE_BALANCE_NOT_ZERO, 
-                    String.format("Cannot delete account: has %d non-zero balance(s)", nonZeroCount));
-        }
-    }
-
-    private AccountBalance createAccountBalance(@NonNull Long accountId, @NonNull String currency) {
-        if (currency.trim().isEmpty()) {
-            throw new IllegalArgumentException("Currency cannot be empty");
-        }
-        AccountBalance balance = new AccountBalance();
-        balance.setAccountId(accountId);
-        balance.setCurrency(currency.toUpperCase());
-        balance.setAmount(BigDecimal.ZERO);
-        return balance;
     }
 }

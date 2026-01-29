@@ -5,12 +5,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.userservice.exceptions.transaction.TransactionException;
 import org.example.userservice.models.transaction.Transaction;
-import org.example.userservice.models.transaction.TransactionType;
 import org.example.userservice.repositories.TransactionRepository;
 import org.example.userservice.services.impl.IAccountBalanceService;
 import org.example.userservice.services.impl.ITransactionDeletionService;
-import org.example.userservice.clients.VehicleCostApiClient;
-import org.example.userservice.models.dto.UpdateVehicleCostRequest;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,14 +20,11 @@ import java.util.Map;
 @Component
 @RequiredArgsConstructor
 public class TransactionDeletionService implements ITransactionDeletionService {
-    private static final String ERROR_CODE_UNSUPPORTED_TRANSACTION_TYPE = "UNSUPPORTED_TRANSACTION_TYPE";
-    private static final String ERROR_CODE_FAILED_TO_REVERT_VEHICLE_COST = "FAILED_TO_REVERT_VEHICLE_COST";
-    private static final String OPERATION_SUBTRACT = "subtract";
     private static final String BALANCE_KEY_SEPARATOR = "_";
 
     private final TransactionRepository transactionRepository;
     private final IAccountBalanceService accountBalanceService;
-    private final VehicleCostApiClient vehicleCostApiClient;
+    private final VehicleCostUpdateHelper vehicleCostUpdateHelper;
 
     @Override
     @Transactional
@@ -40,7 +34,8 @@ public class TransactionDeletionService implements ITransactionDeletionService {
                 .orElseThrow(() -> new TransactionException(
                         String.format("Transaction with ID %d not found", transactionId)));
 
-        revertTransactionEffects(transaction);
+        TransactionRevertCalculator.RevertPlan plan = TransactionRevertCalculator.computeRevertPlan(transaction);
+        applyPlan(plan);
 
         transactionRepository.delete(transaction);
         log.info("Transaction deleted: id={}", transactionId);
@@ -51,124 +46,44 @@ public class TransactionDeletionService implements ITransactionDeletionService {
     public void deleteTransactionsByVehicleId(@NonNull Long vehicleId) {
         List<Transaction> transactions = transactionRepository.findByVehicleIdOrderByCreatedAtDesc(vehicleId);
         log.info("Deleting {} transactions for vehicleId: {}", transactions.size(), vehicleId);
-        
+
         if (transactions.isEmpty()) {
             return;
         }
-        
-        Map<String, BigDecimal> balanceAdjustments = calculateBalanceAdjustmentsForVehicleDeletion(transactions);
-        Map<Long, BigDecimal> vehicleCostAdjustments = calculateVehicleCostAdjustmentsForVehicleDeletion(transactions);
-        
+
+        Map<String, BigDecimal> balanceAdjustments = new HashMap<>();
+        Map<Long, BigDecimal> vehicleCostAdjustments = new HashMap<>();
+
+        for (Transaction transaction : transactions) {
+            TransactionRevertCalculator.RevertPlan plan = TransactionRevertCalculator.computeRevertPlan(transaction);
+            for (TransactionRevertCalculator.BalanceAdjustment a : plan.balanceAdjustments()) {
+                String key = a.accountId() + BALANCE_KEY_SEPARATOR + a.currency();
+                balanceAdjustments.merge(key, a.amount(), BigDecimal::add);
+            }
+            for (TransactionRevertCalculator.VehicleCostRevert v : plan.vehicleCostReverts()) {
+                vehicleCostAdjustments.merge(v.vehicleId(), v.amountToSubtract().negate(), BigDecimal::add);
+            }
+        }
+
         applyBalanceAdjustments(balanceAdjustments);
         applyVehicleCostAdjustments(vehicleCostAdjustments);
-        
+
         transactionRepository.deleteAll(transactions);
-        
+
         log.info("Successfully deleted all transactions for vehicleId: {}", vehicleId);
     }
 
-    private void revertTransactionEffects(@NonNull Transaction transaction) {
-        TransactionType type = transaction.getType();
-        BigDecimal amount = transaction.getAmount();
-        BigDecimal convertedAmount = transaction.getConvertedAmount();
-
-        switch (type) {
-            case INTERNAL_TRANSFER:
-                BigDecimal commission = transaction.getCommission();
-                BigDecimal transferAmount = commission != null ? amount.subtract(commission) : amount;
-                accountBalanceService.addAmount(transaction.getFromAccountId(), transaction.getCurrency(), amount);
-                accountBalanceService.subtractAmount(transaction.getToAccountId(), transaction.getCurrency(), transferAmount);
-                break;
-            case EXTERNAL_INCOME:
-                accountBalanceService.subtractAmount(transaction.getToAccountId(), transaction.getCurrency(), amount);
-                break;
-            case EXTERNAL_EXPENSE:
-                accountBalanceService.addAmount(transaction.getFromAccountId(), transaction.getCurrency(), amount);
-                break;
-            case CLIENT_PAYMENT:
-                accountBalanceService.addAmount(transaction.getFromAccountId(), transaction.getCurrency(), amount);
-                break;
-            case CURRENCY_CONVERSION:
-                accountBalanceService.addAmount(transaction.getFromAccountId(), transaction.getCurrency(), amount);
-                if (convertedAmount != null && transaction.getConvertedCurrency() != null) {
-                    accountBalanceService.subtractAmount(transaction.getFromAccountId(), transaction.getConvertedCurrency(), convertedAmount);
-                }
-                break;
-            case VEHICLE_EXPENSE:
-                accountBalanceService.addAmount(transaction.getFromAccountId(), transaction.getCurrency(), amount);
-                if (convertedAmount != null && convertedAmount.compareTo(BigDecimal.ZERO) > 0 && transaction.getVehicleId() != null) {
-                    revertVehicleCost(transaction.getVehicleId(), convertedAmount);
-                }
-                break;
-            default:
-                throw new TransactionException(ERROR_CODE_UNSUPPORTED_TRANSACTION_TYPE, String.format("Unsupported transaction type for deletion: %s", type));
-        }
-    }
-
-    private Map<String, BigDecimal> calculateBalanceAdjustmentsForVehicleDeletion(@NonNull List<Transaction> transactions) {
-        Map<String, BigDecimal> balanceAdjustments = new HashMap<>();
-        
-        for (Transaction transaction : transactions) {
-            TransactionType type = transaction.getType();
-            BigDecimal amount = transaction.getAmount();
-            BigDecimal convertedAmount = transaction.getConvertedAmount();
-            
-            switch (type) {
-                case INTERNAL_TRANSFER:
-                    BigDecimal commission = transaction.getCommission();
-                    BigDecimal transferAmount = commission != null ? amount.subtract(commission) : amount;
-                    String fromKey = transaction.getFromAccountId() + BALANCE_KEY_SEPARATOR + transaction.getCurrency();
-                    String toKey = transaction.getToAccountId() + BALANCE_KEY_SEPARATOR + transaction.getCurrency();
-                    balanceAdjustments.merge(fromKey, amount, BigDecimal::add);
-                    balanceAdjustments.merge(toKey, transferAmount.negate(), BigDecimal::add);
-                    break;
-                case EXTERNAL_INCOME:
-                    String toAccountKey = transaction.getToAccountId() + BALANCE_KEY_SEPARATOR + transaction.getCurrency();
-                    balanceAdjustments.merge(toAccountKey, amount.negate(), BigDecimal::add);
-                    break;
-                case EXTERNAL_EXPENSE:
-                    String fromAccountKey = transaction.getFromAccountId() + BALANCE_KEY_SEPARATOR + transaction.getCurrency();
-                    balanceAdjustments.merge(fromAccountKey, amount, BigDecimal::add);
-                    break;
-                case CLIENT_PAYMENT:
-                    String clientPaymentKey = transaction.getFromAccountId() + BALANCE_KEY_SEPARATOR + transaction.getCurrency();
-                    balanceAdjustments.merge(clientPaymentKey, amount, BigDecimal::add);
-                    break;
-                case CURRENCY_CONVERSION:
-                    String currencyFromKey = transaction.getFromAccountId() + BALANCE_KEY_SEPARATOR + transaction.getCurrency();
-                    balanceAdjustments.merge(currencyFromKey, amount, BigDecimal::add);
-                    if (convertedAmount != null && transaction.getConvertedCurrency() != null) {
-                        String currencyToKey = transaction.getFromAccountId() + BALANCE_KEY_SEPARATOR + transaction.getConvertedCurrency();
-                        balanceAdjustments.merge(currencyToKey, convertedAmount.negate(), BigDecimal::add);
-                    }
-                    break;
-                case VEHICLE_EXPENSE:
-                    String vehicleExpenseKey = transaction.getFromAccountId() + BALANCE_KEY_SEPARATOR + transaction.getCurrency();
-                    balanceAdjustments.merge(vehicleExpenseKey, amount, BigDecimal::add);
-                    break;
-                case DEPOSIT:
-                case WITHDRAWAL:
-                case PURCHASE:
-                    break;
+    private void applyPlan(TransactionRevertCalculator.RevertPlan plan) {
+        for (TransactionRevertCalculator.BalanceAdjustment a : plan.balanceAdjustments()) {
+            if (a.amount().compareTo(BigDecimal.ZERO) > 0) {
+                accountBalanceService.addAmount(a.accountId(), a.currency(), a.amount());
+            } else if (a.amount().compareTo(BigDecimal.ZERO) < 0) {
+                accountBalanceService.subtractAmount(a.accountId(), a.currency(), a.amount().abs());
             }
         }
-        
-        return balanceAdjustments;
-    }
-
-    private Map<Long, BigDecimal> calculateVehicleCostAdjustmentsForVehicleDeletion(@NonNull List<Transaction> transactions) {
-        Map<Long, BigDecimal> vehicleCostAdjustments = new HashMap<>();
-        
-        for (Transaction transaction : transactions) {
-            if (transaction.getType() == TransactionType.VEHICLE_EXPENSE) {
-                BigDecimal convertedAmount = transaction.getConvertedAmount();
-                if (convertedAmount != null && convertedAmount.compareTo(BigDecimal.ZERO) > 0 && transaction.getVehicleId() != null) {
-                    vehicleCostAdjustments.merge(transaction.getVehicleId(), convertedAmount.negate(), BigDecimal::add);
-                }
-            }
+        for (TransactionRevertCalculator.VehicleCostRevert v : plan.vehicleCostReverts()) {
+            vehicleCostUpdateHelper.subtractVehicleCost(v.vehicleId(), v.amountToSubtract());
         }
-        
-        return vehicleCostAdjustments;
     }
 
     private void applyBalanceAdjustments(@NonNull Map<String, BigDecimal> balanceAdjustments) {
@@ -188,27 +103,7 @@ public class TransactionDeletionService implements ITransactionDeletionService {
 
     private void applyVehicleCostAdjustments(@NonNull Map<Long, BigDecimal> vehicleCostAdjustments) {
         for (Map.Entry<Long, BigDecimal> entry : vehicleCostAdjustments.entrySet()) {
-            try {
-                UpdateVehicleCostRequest request = new UpdateVehicleCostRequest();
-                request.setAmountEur(entry.getValue().abs());
-                request.setOperation(OPERATION_SUBTRACT);
-                vehicleCostApiClient.updateVehicleCost(entry.getKey(), request);
-            } catch (Exception e) {
-                log.error("Failed to revert vehicle cost for vehicleId {}: {}", entry.getKey(), e.getMessage());
-                throw new TransactionException(ERROR_CODE_FAILED_TO_REVERT_VEHICLE_COST, "Failed to revert vehicle cost: " + e.getMessage());
-            }
-        }
-    }
-
-    private void revertVehicleCost(@NonNull Long vehicleId, @NonNull BigDecimal convertedAmount) {
-        try {
-            UpdateVehicleCostRequest request = new UpdateVehicleCostRequest();
-            request.setAmountEur(convertedAmount);
-            request.setOperation(OPERATION_SUBTRACT);
-            vehicleCostApiClient.updateVehicleCost(vehicleId, request);
-        } catch (Exception e) {
-            log.error("Failed to revert vehicle cost for vehicleId {}: {}", vehicleId, e.getMessage());
-            throw new TransactionException(ERROR_CODE_FAILED_TO_REVERT_VEHICLE_COST, "Failed to revert vehicle cost: " + e.getMessage());
+            vehicleCostUpdateHelper.subtractVehicleCost(entry.getKey(), entry.getValue().abs());
         }
     }
 }
