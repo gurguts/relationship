@@ -11,7 +11,7 @@ import org.example.purchaseservice.models.dto.balance.WarehouseBalanceAdjustment
 import org.example.purchaseservice.models.dto.balance.WarehouseBalanceUpdateRequest;
 import org.example.purchaseservice.models.dto.balance.WarehouseProductBalanceDTO;
 import org.example.purchaseservice.mappers.WarehouseBalanceMapper;
-import org.example.purchaseservice.services.balance.IWarehouseProductBalanceService;
+import org.example.purchaseservice.services.impl.IWarehouseProductBalanceService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.example.purchaseservice.utils.SecurityUtils;

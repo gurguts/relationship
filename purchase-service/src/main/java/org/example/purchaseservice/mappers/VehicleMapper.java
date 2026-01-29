@@ -21,7 +21,7 @@ import org.example.purchaseservice.repositories.VehicleSenderRepository;
 import org.example.purchaseservice.repositories.VehicleTerminalRepository;
 import org.example.purchaseservice.repositories.VehicleDestinationCountryRepository;
 import org.example.purchaseservice.repositories.VehicleDestinationPlaceRepository;
-import org.example.purchaseservice.services.balance.IVehicleService;
+import org.example.purchaseservice.services.impl.IVehicleService;
 import org.example.purchaseservice.services.impl.IVehicleExpenseService;
 import org.example.purchaseservice.utils.StringUtils;
 import org.springframework.stereotype.Component;

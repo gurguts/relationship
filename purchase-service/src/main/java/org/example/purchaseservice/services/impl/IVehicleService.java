@@ -1,4 +1,4 @@
-package org.example.purchaseservice.services.balance;
+package org.example.purchaseservice.services.impl;
 
 import lombok.NonNull;
 import org.example.purchaseservice.models.balance.Vehicle;
@@ -47,8 +47,6 @@ public interface IVehicleService {
     BigDecimal calculateTotalExpenses(@NonNull List<VehicleProduct> products, @NonNull BigDecimal expensesTotal);
     
     BigDecimal calculateTotalIncome(@NonNull Vehicle vehicle);
-    
-    BigDecimal calculateFullReclamation(@NonNull Vehicle vehicle);
 
     BigDecimal calculateMargin(@NonNull Vehicle vehicle, @NonNull List<VehicleProduct> products, @NonNull BigDecimal expensesTotal);
     

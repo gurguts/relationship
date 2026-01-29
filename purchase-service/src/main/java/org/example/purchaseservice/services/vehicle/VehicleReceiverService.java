@@ -1,4 +1,4 @@
-package org.example.purchaseservice.services.balance;
+package org.example.purchaseservice.services.vehicle;
 
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;

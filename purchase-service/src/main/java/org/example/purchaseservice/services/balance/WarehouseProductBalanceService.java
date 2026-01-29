@@ -4,14 +4,12 @@ import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.purchaseservice.exceptions.PurchaseException;
-import org.example.purchaseservice.models.balance.AdjustmentType;
 import org.example.purchaseservice.models.balance.WarehouseBalanceAdjustment;
 import org.example.purchaseservice.models.balance.WarehouseProductBalance;
 import org.example.purchaseservice.services.balance.WarehouseBalanceUpdateRecords.AdjustmentUpdateResult;
-import org.example.purchaseservice.services.balance.WarehouseBalanceUpdateRecords.QuantityUpdateResult;
-import org.example.purchaseservice.services.balance.WarehouseBalanceUpdateRecords.TotalCostUpdateResult;
 import org.example.purchaseservice.repositories.WarehouseBalanceAdjustmentRepository;
 import org.example.purchaseservice.repositories.WarehouseProductBalanceRepository;
+import org.example.purchaseservice.services.impl.IWarehouseProductBalanceService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,11 +25,15 @@ public class WarehouseProductBalanceService implements IWarehouseProductBalanceS
     
     private static final int PRICE_SCALE = 6;
     private static final int QUANTITY_SCALE = 2;
-    private static final RoundingMode PRICE_ROUNDING_MODE = RoundingMode.CEILING;
     private static final RoundingMode QUANTITY_ROUNDING_MODE = RoundingMode.HALF_UP;
     
     private final WarehouseProductBalanceRepository warehouseProductBalanceRepository;
     private final WarehouseBalanceAdjustmentRepository warehouseBalanceAdjustmentRepository;
+    private final WarehouseProductBalanceValidator validator;
+    private final WarehouseProductBalanceCalculator calculator;
+    private final WarehouseProductBalanceHelper helper;
+    private final WarehouseBalanceAdjustmentService adjustmentService;
+    private final WarehouseBalanceUpdateProcessor updateProcessor;
     
     @Override
     @Transactional
@@ -40,17 +42,13 @@ public class WarehouseProductBalanceService implements IWarehouseProductBalanceS
         log.info("Adding product to warehouse balance: warehouseId={}, productId={}, quantity={}, totalCost={}", 
                 warehouseId, productId, quantity, totalCost);
         
-        if (quantity.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new PurchaseException("INVALID_QUANTITY", "Added quantity must be positive");
-        }
-        if (totalCost.compareTo(BigDecimal.ZERO) < 0) {
-            throw new PurchaseException("INVALID_TOTAL_COST", "Added total cost must be non-negative");
-        }
+        validator.validateQuantityPositive(quantity, "Added");
+        validator.validateTotalCostNonNegative(totalCost, "Added");
         
-        WarehouseProductBalance balance = getOrCreateBalance(warehouseId, productId);
+        WarehouseProductBalance balance = helper.getOrCreateBalance(warehouseId, productId);
         
-        BigDecimal currentTotalCost = getSafeTotalCost(balance);
-        BigDecimal currentQuantity = getSafeQuantity(balance);
+        BigDecimal currentTotalCost = helper.getSafeTotalCost(balance);
+        BigDecimal currentQuantity = helper.getSafeQuantity(balance);
         
         BigDecimal newTotalCost = currentTotalCost.add(totalCost);
         BigDecimal newQuantity = currentQuantity.add(quantity);
@@ -59,14 +57,12 @@ public class WarehouseProductBalanceService implements IWarehouseProductBalanceS
         balance.setTotalCostEur(newTotalCost);
         
         if (newQuantity.compareTo(BigDecimal.ZERO) > 0) {
-            balance.setAveragePriceEur(calculateAveragePrice(newTotalCost, newQuantity));
+            balance.setAveragePriceEur(calculator.calculateAveragePrice(newTotalCost, newQuantity));
         }
         
         WarehouseProductBalance saved = warehouseProductBalanceRepository.save(balance);
         
-        log.info("Warehouse balance updated: id={}, newQuantity={}, newTotalCost={}, newAveragePrice={}", 
-                saved.getId(), saved.getQuantity(), saved.getTotalCostEur(), saved.getAveragePriceEur());
-
+        logBalanceUpdated(saved);
     }
     
     @Override
@@ -75,9 +71,7 @@ public class WarehouseProductBalanceService implements IWarehouseProductBalanceS
         log.info("Removing product from warehouse balance: warehouseId={}, productId={}, quantity={}", 
                 warehouseId, productId, quantity);
         
-        if (quantity.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new PurchaseException("INVALID_QUANTITY", "Removed quantity must be positive");
-        }
+        validator.validateQuantityPositive(quantity, "Removed");
         
         WarehouseProductBalance balance = warehouseProductBalanceRepository
                 .findByWarehouseIdAndProductId(warehouseId, productId)
@@ -85,27 +79,26 @@ public class WarehouseProductBalanceService implements IWarehouseProductBalanceS
                         String.format("Warehouse balance not found: warehouseId=%d, productId=%d", 
                                 warehouseId, productId)));
         
-        validateSufficientQuantity(balance, quantity);
+        validator.validateSufficientQuantity(balance, quantity, helper);
         
-        BigDecimal currentAveragePrice = getSafeAveragePrice(balance);
-        BigDecimal currentQuantity = getSafeQuantity(balance);
+        BigDecimal currentAveragePrice = helper.getSafeAveragePrice(balance);
+        BigDecimal currentQuantity = helper.getSafeQuantity(balance);
         BigDecimal newQuantity = currentQuantity.subtract(quantity);
         
         balance.setQuantity(newQuantity);
         
         if (newQuantity.compareTo(BigDecimal.ZERO) == 0) {
-            resetBalanceToZero(balance);
+            helper.resetBalanceToZero(balance);
         } else {
-            BigDecimal currentTotalCost = getSafeTotalCost(balance);
-            balance.setAveragePriceEur(calculateAveragePrice(currentTotalCost, newQuantity));
+            BigDecimal currentTotalCost = helper.getSafeTotalCost(balance);
+            balance.setAveragePriceEur(calculator.calculateAveragePrice(currentTotalCost, newQuantity));
         }
         
         WarehouseProductBalance saved = warehouseProductBalanceRepository.save(balance);
-        deleteBalanceIfEmpty(saved);
+        helper.deleteBalanceIfEmpty(saved);
         
-        if (saved.getQuantity().compareTo(BigDecimal.ZERO) > 0) {
-            log.info("Warehouse balance updated: id={}, newQuantity={}, totalCost={}, averagePrice={}", 
-                    saved.getId(), saved.getQuantity(), saved.getTotalCostEur(), saved.getAveragePriceEur());
+        if (saved.getQuantity() != null && saved.getQuantity().compareTo(BigDecimal.ZERO) > 0) {
+            logBalanceUpdated(saved);
         }
         
         return currentAveragePrice;
@@ -117,25 +110,22 @@ public class WarehouseProductBalanceService implements IWarehouseProductBalanceS
         log.info("Adding product quantity only to warehouse balance: warehouseId={}, productId={}, quantity={}", 
                 warehouseId, productId, quantity);
         
-        if (quantity.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new PurchaseException("INVALID_QUANTITY", "Added quantity must be positive");
-        }
+        validator.validateQuantityPositive(quantity, "Added");
         
-        WarehouseProductBalance balance = getOrCreateBalance(warehouseId, productId);
+        WarehouseProductBalance balance = helper.getOrCreateBalance(warehouseId, productId);
         
-        BigDecimal currentQuantity = getSafeQuantity(balance);
+        BigDecimal currentQuantity = helper.getSafeQuantity(balance);
         BigDecimal newQuantity = currentQuantity.add(quantity);
         balance.setQuantity(newQuantity);
         
         if (newQuantity.compareTo(BigDecimal.ZERO) > 0) {
-            BigDecimal currentTotalCost = getSafeTotalCost(balance);
-            balance.setAveragePriceEur(calculateAveragePrice(currentTotalCost, newQuantity));
+            BigDecimal currentTotalCost = helper.getSafeTotalCost(balance);
+            balance.setAveragePriceEur(calculator.calculateAveragePrice(currentTotalCost, newQuantity));
         }
         
         WarehouseProductBalance saved = warehouseProductBalanceRepository.save(balance);
         
-        log.info("Warehouse balance updated (quantity only): id={}, newQuantity={}, totalCost={}, averagePrice={}", 
-                saved.getId(), saved.getQuantity(), saved.getTotalCostEur(), saved.getAveragePriceEur());
+        logBalanceUpdated(saved);
     }
     
     @Override
@@ -145,12 +135,8 @@ public class WarehouseProductBalanceService implements IWarehouseProductBalanceS
         log.info("Removing product with specific cost from warehouse: warehouseId={}, productId={}, quantity={}, totalCost={}", 
                 warehouseId, productId, quantity, totalCost);
         
-        if (quantity.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new PurchaseException("INVALID_QUANTITY", "Removed quantity must be positive");
-        }
-        if (totalCost.compareTo(BigDecimal.ZERO) < 0) {
-            throw new PurchaseException("INVALID_TOTAL_COST", "Removed total cost must be non-negative");
-        }
+        validator.validateQuantityPositive(quantity, "Removed");
+        validator.validateTotalCostNonNegative(totalCost, "Removed");
         
         WarehouseProductBalance balance = warehouseProductBalanceRepository
                 .findByWarehouseIdAndProductId(warehouseId, productId)
@@ -158,10 +144,10 @@ public class WarehouseProductBalanceService implements IWarehouseProductBalanceS
                         String.format("Warehouse balance not found: warehouseId=%d, productId=%d", 
                                 warehouseId, productId)));
         
-        validateSufficientQuantity(balance, quantity);
+        validator.validateSufficientQuantity(balance, quantity, helper);
         
-        BigDecimal currentQuantity = getSafeQuantity(balance);
-        BigDecimal currentTotalCost = getSafeTotalCost(balance);
+        BigDecimal currentQuantity = helper.getSafeQuantity(balance);
+        BigDecimal currentTotalCost = helper.getSafeTotalCost(balance);
         
         BigDecimal newQuantity = currentQuantity.subtract(quantity);
         BigDecimal newTotalCost = currentTotalCost.subtract(totalCost);
@@ -174,18 +160,22 @@ public class WarehouseProductBalanceService implements IWarehouseProductBalanceS
         balance.setTotalCostEur(newTotalCost);
         
         if (newQuantity.compareTo(BigDecimal.ZERO) > 0) {
-            balance.setAveragePriceEur(calculateAveragePrice(newTotalCost, newQuantity));
+            balance.setAveragePriceEur(calculator.calculateAveragePrice(newTotalCost, newQuantity));
         } else {
-            resetBalanceToZero(balance);
+            helper.resetBalanceToZero(balance);
         }
         
         WarehouseProductBalance saved = warehouseProductBalanceRepository.save(balance);
-        deleteBalanceIfEmpty(saved);
+        helper.deleteBalanceIfEmpty(saved);
         
-        if (saved.getQuantity().compareTo(BigDecimal.ZERO) > 0) {
-            log.info("Warehouse balance updated: id={}, newQuantity={}, newTotalCost={}, newAveragePrice={}", 
-                    saved.getId(), saved.getQuantity(), saved.getTotalCostEur(), saved.getAveragePriceEur());
+        if (saved.getQuantity() != null && saved.getQuantity().compareTo(BigDecimal.ZERO) > 0) {
+            logBalanceUpdated(saved);
         }
+    }
+    
+    private void logBalanceUpdated(@NonNull WarehouseProductBalance balance) {
+        log.info("Warehouse balance updated: id={}, newQuantity={}, newTotalCost={}, newAveragePrice={}", 
+                balance.getId(), balance.getQuantity(), balance.getTotalCostEur(), balance.getAveragePriceEur());
     }
     
     @Override
@@ -212,25 +202,22 @@ public class WarehouseProductBalanceService implements IWarehouseProductBalanceS
                         String.format("Warehouse balance not found: warehouseId=%d, productId=%d",
                                 warehouseId, productId)));
 
-
-        BigDecimal currentTotalCost = getSafeTotalCost(balance);
+        BigDecimal currentTotalCost = helper.getSafeTotalCost(balance);
         BigDecimal newTotalCost = currentTotalCost.add(costDelta);
-        if (newTotalCost.compareTo(BigDecimal.ZERO) < 0) {
-            throw new PurchaseException("INVALID_COST_ADJUSTMENT", "Resulting total cost cannot be negative");
-        }
+        validator.validateCostAdjustmentResult(newTotalCost);
 
-        BigDecimal currentQuantity = getSafeQuantity(balance);
+        BigDecimal currentQuantity = helper.getSafeQuantity(balance);
         if (currentQuantity.compareTo(BigDecimal.ZERO) > 0) {
             balance.setTotalCostEur(newTotalCost);
-            balance.setAveragePriceEur(calculateAveragePrice(newTotalCost, currentQuantity));
+            balance.setAveragePriceEur(calculator.calculateAveragePrice(newTotalCost, currentQuantity));
         } else {
-            resetBalanceToZero(balance);
+            helper.resetBalanceToZero(balance);
         }
 
         WarehouseProductBalance saved = warehouseProductBalanceRepository.save(balance);
-        deleteBalanceIfEmpty(saved);
+        helper.deleteBalanceIfEmpty(saved);
         
-        if (saved.getQuantity().compareTo(BigDecimal.ZERO) > 0) {
+        if (saved.getQuantity() != null && saved.getQuantity().compareTo(BigDecimal.ZERO) > 0) {
             log.info("Warehouse balance cost adjusted: id={}, totalCost={}, averagePrice={}",
                     saved.getId(), saved.getTotalCostEur(), saved.getAveragePriceEur());
         }
@@ -239,16 +226,14 @@ public class WarehouseProductBalanceService implements IWarehouseProductBalanceS
     @Override
     @Transactional(readOnly = true)
     public boolean hasEnoughProduct(@NonNull Long warehouseId, @NonNull Long productId, @NonNull BigDecimal requiredQuantity) {
-        if (requiredQuantity.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new PurchaseException("INVALID_QUANTITY", "Required quantity must be positive");
-        }
+        validator.validateQuantityPositive(requiredQuantity, "Required");
         
         WarehouseProductBalance balance = getBalance(warehouseId, productId);
         if (balance == null) {
             return false;
         }
         
-        BigDecimal availableQuantity = getSafeQuantity(balance);
+        BigDecimal availableQuantity = helper.getSafeQuantity(balance);
         return availableQuantity.compareTo(requiredQuantity) >= 0;
     }
 
@@ -259,21 +244,13 @@ public class WarehouseProductBalanceService implements IWarehouseProductBalanceS
         log.info("Setting initial warehouse balance: warehouseId={}, productId={}, quantity={}, avgPrice={}", 
                 warehouseId, productId, initialQuantity, averagePriceEur);
         
-        if (initialQuantity.compareTo(BigDecimal.ZERO) < 0) {
-            throw new PurchaseException("INVALID_QUANTITY", "Initial quantity cannot be negative");
-        }
-        if (averagePriceEur.compareTo(BigDecimal.ZERO) < 0) {
-            throw new PurchaseException("INVALID_AVERAGE_PRICE", "Average price cannot be negative");
-        }
+        validator.validateQuantityNonNegative(initialQuantity);
+        validator.validateAveragePriceNonNegative(averagePriceEur);
         
         Optional<WarehouseProductBalance> existing = warehouseProductBalanceRepository
                 .findByWarehouseIdAndProductId(warehouseId, productId);
         
-        if (existing.isPresent()) {
-            throw new PurchaseException("BALANCE_ALREADY_EXISTS", 
-                    String.format("Balance already exists for warehouse %d, product %d. Use update instead.", 
-                            warehouseId, productId));
-        }
+        validator.validateBalanceDoesNotExist(existing.isPresent(), warehouseId, productId);
         
         WarehouseProductBalance balance = new WarehouseProductBalance();
         balance.setWarehouseId(warehouseId);
@@ -310,13 +287,13 @@ public class WarehouseProductBalanceService implements IWarehouseProductBalanceS
                         String.format("Warehouse balance not found: warehouseId=%d, productId=%d",
                                 warehouseId, productId)));
 
-        BigDecimal previousQuantity = getSafeQuantity(balance).setScale(QUANTITY_SCALE, QUANTITY_ROUNDING_MODE);
-        BigDecimal previousTotalCost = getSafeTotalCost(balance).setScale(PRICE_SCALE, QUANTITY_ROUNDING_MODE);
-        BigDecimal previousAverage = getSafeAveragePrice(balance).setScale(PRICE_SCALE, QUANTITY_ROUNDING_MODE);
+        BigDecimal previousQuantity = helper.getSafeQuantity(balance).setScale(QUANTITY_SCALE, QUANTITY_ROUNDING_MODE);
+        BigDecimal previousTotalCost = helper.getSafeTotalCost(balance).setScale(PRICE_SCALE, QUANTITY_ROUNDING_MODE);
+        BigDecimal previousAverage = helper.getSafeAveragePrice(balance).setScale(PRICE_SCALE, QUANTITY_ROUNDING_MODE);
 
-        BigDecimal unitPrice = resolveUnitPrice(previousQuantity, previousTotalCost);
+        BigDecimal unitPrice = calculator.resolveUnitPrice(previousQuantity, previousTotalCost);
 
-        AdjustmentUpdateResult updateResult = processAdjustmentUpdates(
+        AdjustmentUpdateResult updateResult = updateProcessor.processAdjustmentUpdates(
                 newQuantity, newTotalCost, previousQuantity, previousTotalCost, unitPrice);
         
         balance.setQuantity(updateResult.updatedQuantity());
@@ -324,9 +301,9 @@ public class WarehouseProductBalanceService implements IWarehouseProductBalanceS
         balance.setAveragePriceEur(updateResult.updatedAverage());
 
         WarehouseProductBalance savedBalance = warehouseProductBalanceRepository.save(balance);
-        createBalanceAdjustment(warehouseId, productId, userId, description, previousQuantity, 
+        adjustmentService.createBalanceAdjustment(warehouseId, productId, userId, description, previousQuantity, 
                 previousTotalCost, previousAverage, updateResult);
-        deleteBalanceIfEmpty(savedBalance);
+        helper.deleteBalanceIfEmpty(savedBalance);
 
         log.info("Warehouse balance updated: warehouseId={}, productId={}, quantity {} -> {}, totalCost {} -> {}",
                 warehouseId, productId, previousQuantity, updateResult.updatedQuantity(), 
@@ -341,179 +318,4 @@ public class WarehouseProductBalanceService implements IWarehouseProductBalanceS
         return warehouseBalanceAdjustmentRepository
                 .findByWarehouseIdAndProductIdOrderByCreatedAtDesc(warehouseId, productId);
     }
-
-    private WarehouseProductBalance getOrCreateBalance(Long warehouseId, Long productId) {
-        return warehouseProductBalanceRepository
-                .findByWarehouseIdAndProductId(warehouseId, productId)
-                .orElseGet(() -> createNewBalance(warehouseId, productId));
-    }
-    
-    private WarehouseProductBalance createNewBalance(Long warehouseId, Long productId) {
-        WarehouseProductBalance newBalance = new WarehouseProductBalance();
-        newBalance.setWarehouseId(warehouseId);
-        newBalance.setProductId(productId);
-        newBalance.setQuantity(BigDecimal.ZERO);
-        newBalance.setTotalCostEur(BigDecimal.ZERO);
-        newBalance.setAveragePriceEur(BigDecimal.ZERO);
-        return newBalance;
-    }
-    
-    private BigDecimal calculateAveragePrice(BigDecimal totalCost, BigDecimal quantity) {
-        if (quantity == null || quantity.compareTo(BigDecimal.ZERO) <= 0) {
-            return BigDecimal.ZERO;
-        }
-        if (totalCost == null) {
-            return BigDecimal.ZERO;
-        }
-        return totalCost.divide(quantity, PRICE_SCALE, PRICE_ROUNDING_MODE);
-    }
-    
-    private void deleteBalanceIfEmpty(WarehouseProductBalance balance) {
-        BigDecimal quantity = getSafeQuantity(balance);
-        BigDecimal totalCost = getSafeTotalCost(balance);
-        if (quantity.compareTo(BigDecimal.ZERO) == 0 && totalCost.compareTo(BigDecimal.ZERO) == 0) {
-            warehouseProductBalanceRepository.delete(balance);
-            log.info("Warehouse balance deleted (quantity=0 and totalCost=0): id={}", balance.getId());
-        }
-    }
-    
-    private AdjustmentUpdateResult processAdjustmentUpdates(BigDecimal newQuantity, BigDecimal newTotalCost,
-                                                           BigDecimal previousQuantity, BigDecimal previousTotalCost,
-                                                           BigDecimal unitPrice) {
-        QuantityUpdateResult quantityResult = processQuantityUpdate(
-                newQuantity, newTotalCost, previousQuantity, previousTotalCost, unitPrice);
-        
-        TotalCostUpdateResult totalCostResult = processTotalCostUpdate(
-                newTotalCost, quantityResult.updatedQuantity(), quantityResult.updatedTotalCost());
-        
-        AdjustmentType adjustmentType = determineAdjustmentType(newQuantity, newTotalCost);
-        
-        BigDecimal[] averageAndTotalCost = calculateUpdatedAverageAndTotalCost(
-                totalCostResult.updatedQuantity(), totalCostResult.updatedTotalCost());
-        
-        return new AdjustmentUpdateResult(
-                totalCostResult.updatedQuantity(),
-                averageAndTotalCost[1],
-                averageAndTotalCost[0],
-                adjustmentType);
-    }
-    
-    private QuantityUpdateResult processQuantityUpdate(BigDecimal newQuantity, BigDecimal newTotalCost,
-                                                      BigDecimal previousQuantity, BigDecimal previousTotalCost,
-                                                      BigDecimal unitPrice) {
-        BigDecimal updatedQuantity = previousQuantity;
-        BigDecimal updatedTotalCost = previousTotalCost;
-        
-        if (newQuantity != null) {
-            updatedQuantity = newQuantity.setScale(QUANTITY_SCALE, QUANTITY_ROUNDING_MODE);
-            if (updatedQuantity.compareTo(BigDecimal.ZERO) < 0) {
-                throw new PurchaseException("INVALID_QUANTITY", "Quantity cannot be negative");
-            }
-            if (newTotalCost == null) {
-                if (updatedQuantity.compareTo(BigDecimal.ZERO) == 0) {
-                    updatedTotalCost = BigDecimal.ZERO.setScale(PRICE_SCALE, QUANTITY_ROUNDING_MODE);
-                } else {
-                    updatedTotalCost = unitPrice.multiply(updatedQuantity).setScale(PRICE_SCALE, QUANTITY_ROUNDING_MODE);
-                }
-            }
-        }
-        
-        return new QuantityUpdateResult(updatedQuantity, updatedTotalCost);
-    }
-    
-    private TotalCostUpdateResult processTotalCostUpdate(BigDecimal newTotalCost, BigDecimal updatedQuantity,
-                                                        BigDecimal calculatedTotalCost) {
-        BigDecimal updatedTotalCost = calculatedTotalCost;
-        
-        if (newTotalCost != null) {
-            BigDecimal total = newTotalCost.setScale(PRICE_SCALE, QUANTITY_ROUNDING_MODE);
-            if (total.compareTo(BigDecimal.ZERO) < 0) {
-                throw new PurchaseException("INVALID_TOTAL_COST", "Total cost cannot be negative");
-            }
-            updatedTotalCost = total;
-        }
-        
-        return new TotalCostUpdateResult(updatedQuantity, updatedTotalCost);
-    }
-    
-    private AdjustmentType determineAdjustmentType(BigDecimal newQuantity, BigDecimal newTotalCost) {
-        if (newQuantity == null && newTotalCost == null) {
-            throw new PurchaseException("NO_CHANGES", "No changes were provided");
-        }
-        if (newQuantity != null && newTotalCost != null) {
-            return AdjustmentType.BOTH;
-        }
-        return newQuantity != null ? AdjustmentType.QUANTITY : AdjustmentType.TOTAL_COST;
-    }
-    
-    private BigDecimal[] calculateUpdatedAverageAndTotalCost(BigDecimal updatedQuantity, BigDecimal updatedTotalCost) {
-        BigDecimal updatedAverage;
-        BigDecimal finalTotalCost = updatedTotalCost;
-        
-        if (updatedQuantity.compareTo(BigDecimal.ZERO) > 0) {
-            updatedAverage = calculateAveragePrice(updatedTotalCost, updatedQuantity);
-        } else {
-            updatedAverage = BigDecimal.ZERO.setScale(PRICE_SCALE, QUANTITY_ROUNDING_MODE);
-            finalTotalCost = BigDecimal.ZERO.setScale(PRICE_SCALE, QUANTITY_ROUNDING_MODE);
-        }
-        
-        return new BigDecimal[]{updatedAverage, finalTotalCost};
-    }
-    
-    private void createBalanceAdjustment(Long warehouseId, Long productId, Long userId, String description,
-                                        BigDecimal previousQuantity, BigDecimal previousTotalCost, BigDecimal previousAverage,
-                                        AdjustmentUpdateResult updateResult) {
-        WarehouseBalanceAdjustment adjustment = new WarehouseBalanceAdjustment();
-        adjustment.setWarehouseId(warehouseId);
-        adjustment.setProductId(productId);
-        adjustment.setPreviousQuantity(previousQuantity);
-        adjustment.setNewQuantity(updateResult.updatedQuantity());
-        adjustment.setPreviousTotalCostEur(previousTotalCost);
-        adjustment.setNewTotalCostEur(updateResult.updatedTotalCost());
-        adjustment.setPreviousAveragePriceEur(previousAverage);
-        adjustment.setNewAveragePriceEur(updateResult.updatedAverage());
-        adjustment.setAdjustmentType(updateResult.adjustmentType());
-        adjustment.setDescription(description);
-        adjustment.setUserId(userId);
-        warehouseBalanceAdjustmentRepository.save(adjustment);
-    }
-    
-    private BigDecimal getSafeTotalCost(WarehouseProductBalance balance) {
-        return balance.getTotalCostEur() != null ? balance.getTotalCostEur() : BigDecimal.ZERO;
-    }
-    
-    private BigDecimal getSafeQuantity(WarehouseProductBalance balance) {
-        return balance.getQuantity() != null ? balance.getQuantity() : BigDecimal.ZERO;
-    }
-    
-    private BigDecimal getSafeAveragePrice(WarehouseProductBalance balance) {
-        return balance.getAveragePriceEur() != null ? balance.getAveragePriceEur() : BigDecimal.ZERO;
-    }
-    
-    private void resetBalanceToZero(WarehouseProductBalance balance) {
-        balance.setAveragePriceEur(BigDecimal.ZERO);
-        balance.setTotalCostEur(BigDecimal.ZERO);
-    }
-    
-    private void validateSufficientQuantity(WarehouseProductBalance balance, BigDecimal requiredQuantity) {
-        BigDecimal availableQuantity = getSafeQuantity(balance);
-        if (requiredQuantity.compareTo(availableQuantity) > 0) {
-            throw new PurchaseException("INSUFFICIENT_QUANTITY", 
-                    String.format("Cannot remove more than available quantity. Available: %s, trying to remove: %s", 
-                            availableQuantity, requiredQuantity));
-        }
-    }
-    
-    private BigDecimal resolveUnitPrice(BigDecimal quantity, BigDecimal totalCost) {
-        if (quantity == null || quantity.compareTo(BigDecimal.ZERO) <= 0) {
-            return BigDecimal.ZERO.setScale(PRICE_SCALE, QUANTITY_ROUNDING_MODE);
-        }
-        if (totalCost == null) {
-            return BigDecimal.ZERO.setScale(PRICE_SCALE, QUANTITY_ROUNDING_MODE);
-        }
-        return totalCost.divide(quantity, PRICE_SCALE, PRICE_ROUNDING_MODE);
-    }
-    
 }
-
-

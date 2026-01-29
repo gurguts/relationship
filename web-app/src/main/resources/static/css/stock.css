@@ -163,9 +163,14 @@ h1 {
     overflow: hidden;
 }
 
-.modal.open, .filter-modal.open {
+.modal.open, .filter-modal.open,
+.modal.show {
     display: flex;
     opacity: 1;
+}
+
+.modal.show {
+    z-index: 21;
 }
 
 body.modal-open {
@@ -197,7 +202,8 @@ body.modal-open {
     height: 0;
 }
 
-.modal.open .modal-content, .filter-modal.open .modal-content {
+.modal.open .modal-content, .filter-modal.open .modal-content,
+.modal.show .modal-content {
     transform: scale(1) translateY(0);
     opacity: 1;
 }

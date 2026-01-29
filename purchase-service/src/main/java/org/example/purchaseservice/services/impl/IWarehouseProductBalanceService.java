@@ -1,4 +1,4 @@
-package org.example.purchaseservice.services.balance;
+package org.example.purchaseservice.services.impl;
 
 import lombok.NonNull;
 import org.example.purchaseservice.models.balance.WarehouseBalanceAdjustment;

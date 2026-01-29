@@ -43,8 +43,10 @@ public class WarehouseReceiptMapper {
         warehouseReceiptDTO.setProductId(warehouseReceipt.getProductId());
         warehouseReceiptDTO.setWarehouseId(warehouseReceipt.getWarehouseId());
         warehouseReceiptDTO.setQuantity(warehouseReceipt.getQuantity());
+        warehouseReceiptDTO.setDriverBalanceQuantity(warehouseReceipt.getDriverBalanceQuantity());
         warehouseReceiptDTO.setEntryDate(warehouseReceipt.getEntryDate());
         warehouseReceiptDTO.setType(warehouseReceipt.getType());
+        warehouseReceiptDTO.setPurchasedQuantity(warehouseReceipt.getDriverBalanceQuantity());
         warehouseReceiptDTO.setUnitPriceEur(warehouseReceipt.getUnitPriceEur());
         warehouseReceiptDTO.setTotalCostEur(warehouseReceipt.getTotalCostEur());
         return warehouseReceiptDTO;

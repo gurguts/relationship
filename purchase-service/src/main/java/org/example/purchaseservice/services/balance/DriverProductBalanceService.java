@@ -3,7 +3,6 @@ package org.example.purchaseservice.services.balance;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.example.purchaseservice.exceptions.PurchaseException;
 import org.example.purchaseservice.models.balance.DriverProductBalance;
 import org.example.purchaseservice.repositories.DriverProductBalanceRepository;
 import org.example.purchaseservice.services.impl.IDriverProductBalanceService;
@@ -11,8 +10,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.List;
+import java.util.Optional;
 
 @Slf4j
 @Service
@@ -20,6 +19,9 @@ import java.util.List;
 public class DriverProductBalanceService implements IDriverProductBalanceService {
     
     private final DriverProductBalanceRepository driverProductBalanceRepository;
+    private final DriverProductBalanceValidator validator;
+    private final DriverProductBalanceCalculator calculator;
+    private final DriverProductBalanceHelper helper;
     
     @Override
     @Transactional
@@ -28,37 +30,18 @@ public class DriverProductBalanceService implements IDriverProductBalanceService
         log.info("Adding product to driver balance: driverId={}, productId={}, quantity={}, totalPriceEur={}",
                 driverId, productId, quantity, totalPriceEur);
 
-        if (quantity.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new PurchaseException("INVALID_QUANTITY", "Added quantity must be positive");
-        }
-        if (totalPriceEur.compareTo(BigDecimal.ZERO) < 0) {
-            throw new PurchaseException("INVALID_TOTAL_PRICE", "Total price must be non-negative");
-        }
+        validator.validateQuantity(quantity, "Added");
+        validator.validateTotalPrice(totalPriceEur, "Total price");
 
-        DriverProductBalance balance = driverProductBalanceRepository
-                .findByDriverIdAndProductId(driverId, productId)
-                .orElseGet(() -> {
-                    DriverProductBalance newBalance = new DriverProductBalance();
-                    newBalance.setDriverId(driverId);
-                    newBalance.setProductId(productId);
-                    newBalance.setQuantity(BigDecimal.ZERO);
-                    newBalance.setTotalCostEur(BigDecimal.ZERO);
-                    newBalance.setAveragePriceEur(BigDecimal.ZERO);
-                    return newBalance;
-                });
+        DriverProductBalance balance = helper.getOrCreateBalance(driverId, productId);
 
         BigDecimal newTotalCost = balance.getTotalCostEur().add(totalPriceEur);
         BigDecimal newQuantity = balance.getQuantity().add(quantity);
 
-        balance.setQuantity(newQuantity);
-        balance.setTotalCostEur(newTotalCost);
-        balance.setAveragePriceEur(calculateAveragePrice(newTotalCost, newQuantity));
+        calculator.updateBalanceValues(balance, newQuantity, newTotalCost);
 
         DriverProductBalance saved = driverProductBalanceRepository.save(balance);
-
-        log.info("Driver balance updated: id={}, newQuantity={}, newAveragePrice={}, totalCost={}",
-                saved.getId(), saved.getQuantity(), saved.getAveragePriceEur(), saved.getTotalCostEur());
-
+        logBalanceUpdated(saved);
     }
     
     @Override
@@ -68,46 +51,25 @@ public class DriverProductBalanceService implements IDriverProductBalanceService
         log.info("Removing product from driver balance: driverId={}, productId={}, quantity={}, totalPrice={}",
                 driverId, productId, quantity, totalPriceEur);
 
-        if (quantity.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new PurchaseException("INVALID_QUANTITY", "Removed quantity must be positive");
-        }
-        if (totalPriceEur.compareTo(BigDecimal.ZERO) < 0) {
-            throw new PurchaseException("INVALID_TOTAL_PRICE", "Total price of removed purchase must be non-negative");
-        }
+        validator.validateQuantity(quantity, "Removed");
+        validator.validateTotalPrice(totalPriceEur, "Total price of removed purchase");
 
-        DriverProductBalance balance = driverProductBalanceRepository
-                .findByDriverIdAndProductId(driverId, productId)
-                .orElseThrow(() -> new PurchaseException("BALANCE_NOT_FOUND",
-                        String.format("Driver balance not found: driverId=%d, productId=%d", driverId, productId)));
-
-        if (quantity.compareTo(balance.getQuantity()) > 0) {
-            throw new PurchaseException("INSUFFICIENT_QUANTITY",
-                    String.format("Cannot remove more than available quantity. Available: %s, trying to remove: %s",
-                            balance.getQuantity(), quantity));
-        }
+        DriverProductBalance balance = helper.getBalanceOrThrow(driverId, productId);
+        validator.validateSufficientQuantity(balance.getQuantity(), quantity);
 
         BigDecimal newQuantity = balance.getQuantity().subtract(quantity);
-        BigDecimal newTotalCost = balance.getTotalCostEur().subtract(totalPriceEur);
+        BigDecimal newTotalCost = calculator.ensureNonNegative(balance.getTotalCostEur().subtract(totalPriceEur));
 
-        if (newTotalCost.compareTo(BigDecimal.ZERO) < 0) {
-            newTotalCost = BigDecimal.ZERO;
-        }
-
-        balance.setQuantity(newQuantity);
-        balance.setTotalCostEur(newTotalCost);
-        balance.setAveragePriceEur(calculateAveragePrice(newTotalCost, newQuantity));
+        calculator.updateBalanceValues(balance, newQuantity, newTotalCost);
 
         DriverProductBalance saved = driverProductBalanceRepository.save(balance);
+        Optional<DriverProductBalance> result = helper.deleteIfEmpty(saved);
 
-        if (saved.getQuantity().compareTo(BigDecimal.ZERO) == 0) {
-            driverProductBalanceRepository.delete(saved);
-            log.info("Driver balance deleted (quantity=0): id={}", saved.getId());
+        if (result.isEmpty()) {
             return;
         }
 
-        log.info("Driver balance updated: id={}, newQuantity={}, newAveragePrice={}, totalCost={}",
-                saved.getId(), saved.getQuantity(), saved.getAveragePriceEur(), saved.getTotalCostEur());
-
+        logBalanceUpdated(saved);
     }
     
     @Override
@@ -117,41 +79,16 @@ public class DriverProductBalanceService implements IDriverProductBalanceService
                                          BigDecimal newQuantity, BigDecimal newTotalPrice) {
         log.info("Updating driver balance from purchase change: driverId={}, productId={}", driverId, productId);
 
-        if (oldQuantity != null && oldQuantity.compareTo(BigDecimal.ZERO) < 0) {
-            throw new PurchaseException("INVALID_QUANTITY", "Old quantity must be non-negative");
-        }
-        if (oldTotalPrice != null && oldTotalPrice.compareTo(BigDecimal.ZERO) < 0) {
-            throw new PurchaseException("INVALID_TOTAL_PRICE", "Old total price must be non-negative");
-        }
-        if (newQuantity != null && newQuantity.compareTo(BigDecimal.ZERO) < 0) {
-            throw new PurchaseException("INVALID_QUANTITY", "New quantity must be non-negative");
-        }
-        if (newTotalPrice != null && newTotalPrice.compareTo(BigDecimal.ZERO) < 0) {
-            throw new PurchaseException("INVALID_TOTAL_PRICE", "New total price must be non-negative");
-        }
+        validator.validateQuantityNonNegative(oldQuantity, "Old quantity");
+        validator.validateTotalPriceNonNegative(oldTotalPrice, "Old total price");
+        validator.validateQuantityNonNegative(newQuantity, "New quantity");
+        validator.validateTotalPriceNonNegative(newTotalPrice, "New total price");
 
-        DriverProductBalance balance = driverProductBalanceRepository
-                .findByDriverIdAndProductId(driverId, productId)
-                .orElseGet(() -> {
-                    DriverProductBalance newBalance = new DriverProductBalance();
-                    newBalance.setDriverId(driverId);
-                    newBalance.setProductId(productId);
-                    newBalance.setQuantity(BigDecimal.ZERO);
-                    newBalance.setTotalCostEur(BigDecimal.ZERO);
-                    newBalance.setAveragePriceEur(BigDecimal.ZERO);
-                    return newBalance;
-                });
+        DriverProductBalance balance = helper.getOrCreateBalance(driverId, productId);
 
         if (oldQuantity != null && oldQuantity.compareTo(BigDecimal.ZERO) > 0 && oldTotalPrice != null) {
-            BigDecimal currentTotalCost = balance.getTotalCostEur().subtract(oldTotalPrice);
-            BigDecimal currentQuantity = balance.getQuantity().subtract(oldQuantity);
-
-            if (currentTotalCost.compareTo(BigDecimal.ZERO) < 0) {
-                currentTotalCost = BigDecimal.ZERO;
-            }
-            if (currentQuantity.compareTo(BigDecimal.ZERO) < 0) {
-                currentQuantity = BigDecimal.ZERO;
-            }
+            BigDecimal currentTotalCost = calculator.ensureNonNegative(balance.getTotalCostEur().subtract(oldTotalPrice));
+            BigDecimal currentQuantity = calculator.ensureNonNegative(balance.getQuantity().subtract(oldQuantity));
 
             balance.setTotalCostEur(currentTotalCost);
             balance.setQuantity(currentQuantity);
@@ -161,11 +98,9 @@ public class DriverProductBalanceService implements IDriverProductBalanceService
             BigDecimal newTotalCost = balance.getTotalCostEur().add(newTotalPrice);
             BigDecimal newQty = balance.getQuantity().add(newQuantity);
 
-            balance.setQuantity(newQty);
-            balance.setTotalCostEur(newTotalCost);
-            balance.setAveragePriceEur(calculateAveragePrice(newTotalCost, newQty));
+            calculator.updateBalanceValues(balance, newQty, newTotalCost);
         } else if (balance.getQuantity().compareTo(BigDecimal.ZERO) > 0) {
-            balance.setAveragePriceEur(calculateAveragePrice(balance.getTotalCostEur(), balance.getQuantity()));
+            balance.setAveragePriceEur(calculator.calculateAveragePrice(balance.getTotalCostEur(), balance.getQuantity()));
         } else {
             balance.setQuantity(BigDecimal.ZERO);
             balance.setAveragePriceEur(BigDecimal.ZERO);
@@ -173,16 +108,13 @@ public class DriverProductBalanceService implements IDriverProductBalanceService
         }
 
         DriverProductBalance saved = driverProductBalanceRepository.save(balance);
+        Optional<DriverProductBalance> result = helper.deleteIfEmpty(saved);
 
-        if (saved.getQuantity().compareTo(BigDecimal.ZERO) == 0) {
-            driverProductBalanceRepository.delete(saved);
-            log.info("Driver balance deleted after update (quantity=0): id={}", saved.getId());
+        if (result.isEmpty()) {
             return;
         }
 
-        log.info("Driver balance updated: id={}, newQuantity={}, newAveragePrice={}, totalCost={}",
-                saved.getId(), saved.getQuantity(), saved.getAveragePriceEur(), saved.getTotalCostEur());
-
+        logBalanceUpdated(saved);
     }
     
     @Override
@@ -216,17 +148,12 @@ public class DriverProductBalanceService implements IDriverProductBalanceService
         log.info("Updating total cost EUR: driverId={}, productId={}, newTotalCostEur={}",
                 driverId, productId, newTotalCostEur);
 
-        if (newTotalCostEur.compareTo(BigDecimal.ZERO) < 0) {
-            throw new PurchaseException("INVALID_TOTAL_COST", "Total cost must be non-negative");
-        }
+        validator.validateTotalPrice(newTotalCostEur, "Total cost");
 
-        DriverProductBalance balance = driverProductBalanceRepository
-                .findByDriverIdAndProductId(driverId, productId)
-                .orElseThrow(() -> new PurchaseException("BALANCE_NOT_FOUND",
-                        String.format("Driver balance not found: driverId=%d, productId=%d", driverId, productId)));
+        DriverProductBalance balance = helper.getBalanceOrThrow(driverId, productId);
 
         balance.setTotalCostEur(newTotalCostEur);
-        balance.setAveragePriceEur(calculateAveragePrice(newTotalCostEur, balance.getQuantity()));
+        balance.setAveragePriceEur(calculator.calculateAveragePrice(newTotalCostEur, balance.getQuantity()));
 
         DriverProductBalance saved = driverProductBalanceRepository.save(balance);
 
@@ -236,11 +163,9 @@ public class DriverProductBalanceService implements IDriverProductBalanceService
         return saved;
     }
 
-    private BigDecimal calculateAveragePrice(@NonNull BigDecimal totalCost, @NonNull BigDecimal quantity) {
-        if (quantity.compareTo(BigDecimal.ZERO) > 0) {
-            return totalCost.divide(quantity, 6, RoundingMode.CEILING);
-        }
-        return BigDecimal.ZERO;
+    private void logBalanceUpdated(@NonNull DriverProductBalance balance) {
+        log.info("Driver balance updated: id={}, newQuantity={}, newAveragePrice={}, totalCost={}",
+                balance.getId(), balance.getQuantity(), balance.getAveragePriceEur(), balance.getTotalCostEur());
     }
 }
 

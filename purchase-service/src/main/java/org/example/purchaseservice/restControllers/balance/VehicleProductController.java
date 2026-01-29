@@ -9,7 +9,7 @@ import org.example.purchaseservice.models.dto.balance.AddProductToVehicleDTO;
 import org.example.purchaseservice.models.dto.balance.VehicleDetailsDTO;
 import org.example.purchaseservice.models.dto.balance.VehicleProductUpdateDTO;
 import org.example.purchaseservice.mappers.VehicleMapper;
-import org.example.purchaseservice.services.balance.IVehicleService;
+import org.example.purchaseservice.services.impl.IVehicleService;
 import org.example.purchaseservice.utils.SecurityUtils;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
