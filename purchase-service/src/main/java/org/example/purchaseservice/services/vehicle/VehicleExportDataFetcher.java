@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.purchaseservice.models.Product;
 import org.example.purchaseservice.models.balance.Vehicle;
+import org.example.purchaseservice.models.balance.VehicleExpense;
 import org.example.purchaseservice.repositories.ProductRepository;
 import org.example.purchaseservice.services.impl.IVehicleExpenseService;
 import org.example.purchaseservice.services.impl.IVehicleService;
@@ -23,13 +24,11 @@ public class VehicleExportDataFetcher {
     private final ProductRepository productRepository;
     private final org.example.purchaseservice.clients.TransactionCategoryClient transactionCategoryClient;
     private final org.example.purchaseservice.clients.AccountClient accountClient;
-    
-    private static final String CATEGORY_PREFIX = "Категорія #";
 
     public record VehicleData(
             List<Vehicle> vehicles,
             Map<Long, Product> productMap,
-            Map<Long, List<org.example.purchaseservice.models.balance.VehicleExpense>> expensesMap,
+            Map<Long, List<VehicleExpense>> expensesMap,
             Map<Long, String> accountNameMap,
             Map<Long, String> categoryNameMap,
             List<Long> sortedCategoryIds
@@ -123,6 +122,7 @@ public class VehicleExportDataFetcher {
     }
     
     private Map<Long, String> loadCategoryNames(Set<Long> categoryIds) {
+        System.out.println("categoryIds = "+categoryIds);
         if (isEmpty(categoryIds)) {
             return Collections.emptyMap();
         }
@@ -131,19 +131,19 @@ public class VehicleExportDataFetcher {
         List<CompletableFuture<Void>> futures = categoryIds.stream()
                 .map(categoryId -> CompletableFuture.runAsync(() -> {
                     try {
+                        System.out.println("Map<String, Object> category = transactionCategoryClient.getCategoryById(categoryId).getBody();");
                         Map<String, Object> category = transactionCategoryClient.getCategoryById(categoryId).getBody();
-                        String name;
-                        if (category != null && category.containsKey("name")) {
+                        String name = "";
+                        System.out.println("category = "+ category);
+                        if (category != null && category.containsKey("name") && category.get("name") != null) {
                             name = (String) category.get("name");
-                        } else {
-                            name = CATEGORY_PREFIX + categoryId;
                         }
                         synchronized (categoryNameMap) {
                             categoryNameMap.put(categoryId, name);
                         }
                     } catch (Exception e) {
                         synchronized (categoryNameMap) {
-                            categoryNameMap.put(categoryId, CATEGORY_PREFIX + categoryId);
+                            categoryNameMap.put(categoryId, "");
                         }
                     }
                 }))
@@ -153,7 +153,9 @@ public class VehicleExportDataFetcher {
             CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
         } catch (Exception _) {
         }
-        
+
+        System.out.println("categoryNameMap = "+categoryNameMap);
+
         return categoryNameMap;
     }
     

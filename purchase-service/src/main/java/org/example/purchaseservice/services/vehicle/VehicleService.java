@@ -14,6 +14,7 @@ import org.example.purchaseservice.services.impl.IVehicleService;
 import org.example.purchaseservice.spec.VehicleFilterBuilder;
 import org.example.purchaseservice.spec.VehicleSearchPredicateBuilder;
 import org.example.purchaseservice.spec.VehicleSpecification;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -163,8 +164,25 @@ public class VehicleService implements IVehicleService {
     @Override
     @Transactional(readOnly = true)
     public Page<Vehicle> searchVehicles(String query, @NonNull Pageable pageable, Map<String, List<String>> filterParams) {
-        VehicleSpecification spec = new VehicleSpecification(query, filterParams, filterBuilder, searchPredicateBuilder);
-        return vehicleRepository.findAll(spec, pageable);
+        String sortField = null;
+        org.springframework.data.domain.Sort.Direction sortDirection = null;
+        if (pageable.getSort().isSorted()) {
+            org.springframework.data.domain.Sort.Order order = pageable.getSort().iterator().next();
+            sortField = order.getProperty();
+            sortDirection = order.getDirection();
+        }
+
+        VehicleSpecification spec = new VehicleSpecification(
+                query,
+                filterParams,
+                filterBuilder,
+                searchPredicateBuilder,
+                sortField,
+                sortDirection
+        );
+
+        Pageable pageableWithoutSort = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
+        return vehicleRepository.findAll(spec, pageableWithoutSort);
     }
 
     @Transactional(readOnly = true)

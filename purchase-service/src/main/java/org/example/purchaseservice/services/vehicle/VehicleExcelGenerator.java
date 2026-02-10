@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -208,7 +209,14 @@ public class VehicleExcelGenerator {
         for (Long categoryId : vehicleData.sortedCategoryIds()) {
             List<org.example.purchaseservice.models.balance.VehicleExpense> categoryExpenses = 
                     expensesByCategoryMap.getOrDefault(categoryId, Collections.emptyList());
+            BigDecimal totalConverted = BigDecimal.ZERO;
+            for (org.example.purchaseservice.models.balance.VehicleExpense expense : categoryExpenses) {
+                if (expense.getConvertedAmount() != null) {
+                    totalConverted = totalConverted.add(expense.getConvertedAmount());
+                }
+            }
             String expenseDetails = formatter.formatExpenseDetails(categoryExpenses, vehicleData.accountNameMap());
+            setCellValue(row, columnIndex++, totalConverted, styles.numberStyle());
             setCellValue(row, columnIndex++, expenseDetails, styles.dataStyle());
         }
         

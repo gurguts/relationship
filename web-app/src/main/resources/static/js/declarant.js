@@ -320,7 +320,7 @@ async function loadVehicles(page = 0) {
     const filtersJson = Object.keys(filters).length > 0 ? JSON.stringify(filters) : '';
     
     try {
-        const data = await DeclarantDataLoader.loadVehicles(page, pageSize, 'id', 'DESC', searchTerm, filtersJson);
+        const data = await DeclarantDataLoader.loadVehicles(page, pageSize, 'customsDate', 'DESC', searchTerm, filtersJson);
         vehiclesCache = data.content || [];
         totalPages = data.totalPages || 0;
         totalElements = data.totalElements || 0;
@@ -1275,6 +1275,8 @@ if (createVehicleExpenseForm) {
     });
 }
 
+let editExpenseInitialCurrency = null;
+
 window.openEditVehicleExpenseModal = async function openEditVehicleExpenseModal(expense) {
     if (!currentVehicleId) {
         showMessage('Не вдалося визначити машину', 'error');
@@ -1282,6 +1284,7 @@ window.openEditVehicleExpenseModal = async function openEditVehicleExpenseModal(
     }
     
     currentExpenseId = expense.id;
+    editExpenseInitialCurrency = expense.currency || '';
     
     if (accountsCache.length === 0) {
         await loadAccounts();
@@ -1295,7 +1298,7 @@ window.openEditVehicleExpenseModal = async function openEditVehicleExpenseModal(
     if (vehicleExpenseCustomSelects['edit-expense-from-account'] && expense.fromAccountId) {
         vehicleExpenseCustomSelects['edit-expense-from-account'].setValue([expense.fromAccountId.toString()]);
         setTimeout(() => {
-            updateEditExpenseCurrencies();
+            updateEditExpenseCurrencies(true);
         }, 100);
     } else if (editExpenseFromAccount) {
         editExpenseFromAccount.value = expense.fromAccountId || '';
@@ -1320,7 +1323,7 @@ window.openEditVehicleExpenseModal = async function openEditVehicleExpenseModal(
             editExpenseFromAccount.removeEventListener('change', existingHandler);
         }
         const changeHandler = function(e) {
-            updateEditExpenseCurrencies();
+            updateEditExpenseCurrencies(false);
         };
         editExpenseFromAccount.addEventListener('change', changeHandler);
         editExpenseFromAccount._changeHandler = changeHandler;
@@ -1336,7 +1339,7 @@ window.openEditVehicleExpenseModal = async function openEditVehicleExpenseModal(
     openModal('edit-vehicle-expense-modal');
 }
 
-const updateEditExpenseCurrencies = () => {
+const updateEditExpenseCurrencies = (preserveInitialCurrency = false) => {
     let accountId = '';
     if (vehicleExpenseCustomSelects['edit-expense-from-account']) {
         const values = vehicleExpenseCustomSelects['edit-expense-from-account'].getValue();
@@ -1344,15 +1347,27 @@ const updateEditExpenseCurrencies = () => {
     } else if (editExpenseFromAccount) {
         accountId = editExpenseFromAccount.value;
     }
-    if (accountId) {
-        populateCurrencies('edit-expense-currency', accountId);
+    if (!accountId) {
+        return;
+    }
+
+    const previousCurrency = editExpenseCurrency ? editExpenseCurrency.value : '';
+    populateCurrencies('edit-expense-currency', accountId);
+
+    if (editExpenseCurrency) {
+        const currencyToRestore = preserveInitialCurrency && editExpenseInitialCurrency
+            ? editExpenseInitialCurrency
+            : previousCurrency;
+        if (currencyToRestore) {
+            editExpenseInitialCurrency = null;
+            editExpenseCurrency.value = currencyToRestore;
+        }
     }
 };
 
 if (editExpenseFromAccount) {
     editExpenseFromAccount.addEventListener('change', (e) => {
-        const accountId = e.target.value;
-        populateCurrencies('edit-expense-currency', accountId);
+        updateEditExpenseCurrencies(false);
     });
 }
 

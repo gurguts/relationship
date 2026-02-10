@@ -244,6 +244,7 @@ const DeclarantRenderer = (function() {
             const marginValue = vehicle.margin != null ? parseFloat(vehicle.margin) : 0;
             row.appendChild(createCell(`${DeclarantUtils.formatNumber(vehicle.margin, 2)} EUR`, 'Маржа', { fontWeight: '600', color: marginValue >= 0 ? 'var(--success)' : 'var(--danger)' }));
             row.appendChild(createCell(DeclarantUtils.formatDate(vehicle.shipmentDate), 'Дата відвантаження'));
+            row.appendChild(createCell(DeclarantUtils.formatDate(vehicle.customsDate), 'Дата замитнення'));
             row.appendChild(createCell(vehicle.invoiceUa || '-', 'Інвойс УА'));
             row.appendChild(createCell(vehicle.invoiceEu || '-', 'Інвойс ЄС'));
             row.appendChild(createCell(vehicle.senderName || '-', 'Відправник'));
@@ -259,7 +260,6 @@ const DeclarantRenderer = (function() {
             row.appendChild(createCell(vehicle.driverFullName || '-', 'Водій (ПІБ)'));
             row.appendChild(createCell(DeclarantUtils.formatBoolean(vehicle.eur1), 'EUR1'));
             row.appendChild(createCell(DeclarantUtils.formatBoolean(vehicle.fito), 'FITO'));
-            row.appendChild(createCell(DeclarantUtils.formatDate(vehicle.customsDate), 'Дата замитнення'));
             row.appendChild(createCell(DeclarantUtils.formatDate(vehicle.customsClearanceDate), 'Дата розмитнення'));
             row.appendChild(createCell(DeclarantUtils.formatDate(vehicle.unloadingDate), 'Дата вивантаження'));
             row.appendChild(createCell(formatCarrier(vehicle.carrier), 'Перевізник'));

@@ -415,11 +415,20 @@ const DeclarantDataLoader = (function() {
     
     async function getExchangeRate(fromCurrency, toCurrency) {
         try {
-            const response = await fetch(`${API_BASE}/exchange-rates/${fromCurrency}/${toCurrency}`);
+            // Поточний бекенд підтримує лише курс до EUR:
+            // GET /api/v1/exchange-rates/{currency}/rate -> BigDecimal
+            if (toCurrency !== 'EUR') {
+                console.warn('getExchangeRate currently supports only conversion to EUR');
+                return null;
+            }
+
+            const response = await fetch(`${API_BASE}/exchange-rates/${fromCurrency}/rate`);
             if (!response.ok) {
                 return null;
             }
-            return await response.json();
+            const rate = await response.json();
+            // Повертаємо у форматі { rate }, щоб не ламати існуючий код
+            return { rate };
         } catch (error) {
             console.error('Error getting exchange rate:', error);
             return null;

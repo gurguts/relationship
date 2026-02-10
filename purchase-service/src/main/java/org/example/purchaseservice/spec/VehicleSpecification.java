@@ -18,6 +18,8 @@ public class VehicleSpecification implements Specification<Vehicle> {
     
     private final String query;
     private final Map<String, List<String>> filterParams;
+    private final String sortField;
+    private final org.springframework.data.domain.Sort.Direction sortDirection;
     
     private final VehicleFilterBuilder filterBuilder;
     private final VehicleSearchPredicateBuilder searchPredicateBuilder;
@@ -27,10 +29,22 @@ public class VehicleSpecification implements Specification<Vehicle> {
             Map<String, List<String>> filterParams,
             VehicleFilterBuilder filterBuilder,
             VehicleSearchPredicateBuilder searchPredicateBuilder) {
+        this(query, filterParams, filterBuilder, searchPredicateBuilder, null, null);
+    }
+
+    public VehicleSpecification(
+            String query,
+            Map<String, List<String>> filterParams,
+            VehicleFilterBuilder filterBuilder,
+            VehicleSearchPredicateBuilder searchPredicateBuilder,
+            String sortField,
+            org.springframework.data.domain.Sort.Direction sortDirection) {
         this.query = query;
         this.filterParams = filterParams != null ? filterParams : Collections.emptyMap();
         this.filterBuilder = filterBuilder;
         this.searchPredicateBuilder = searchPredicateBuilder;
+        this.sortField = sortField;
+        this.sortDirection = sortDirection;
     }
 
     @Override
@@ -47,6 +61,22 @@ public class VehicleSpecification implements Specification<Vehicle> {
                     this.query, root, criteriaBuilder);
             Predicate searchPredicate = criteriaBuilder.or(searchPredicates.toArray(new Predicate[0]));
             predicates.add(searchPredicate);
+        }
+
+        if (sortField != null
+                && sortDirection != null
+                && criteriaQuery.getResultType() != Long.class
+                && criteriaQuery.getResultType() != long.class) {
+            if ("customsDate".equals(sortField)) {
+                var customsDatePath = root.get("customsDate");
+                var nullRank = criteriaBuilder.selectCase()
+                        .when(criteriaBuilder.isNull(customsDatePath), 0)
+                        .otherwise(1);
+                var customsDateOrder = sortDirection.isAscending()
+                        ? criteriaBuilder.asc(customsDatePath)
+                        : criteriaBuilder.desc(customsDatePath);
+                criteriaQuery.orderBy(criteriaBuilder.asc(nullRank), customsDateOrder);
+            }
         }
 
         return criteriaBuilder.and(predicates.toArray(new Predicate[0]));

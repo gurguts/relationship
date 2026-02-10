@@ -10,8 +10,6 @@ import java.util.Map;
 @Service
 public class VehicleExportHeaderBuilder {
     
-    private static final String EXPENSE_PREFIX = "Витрата: ";
-    
     public List<String> buildHeaderList(@NonNull List<Long> sortedCategoryIds, 
                                         @NonNull Map<Long, String> categoryNameMap) {
         List<String> headerList = new ArrayList<>();
@@ -36,7 +34,8 @@ public class VehicleExportHeaderBuilder {
         
         for (Long categoryId : sortedCategoryIds) {
             String categoryName = categoryNameMap.get(categoryId);
-            headerList.add(EXPENSE_PREFIX + categoryName);
+            headerList.add(categoryName + " (EUR)");
+            headerList.add(categoryName + " (деталі)");
         }
         
         headerList.add("ID");
