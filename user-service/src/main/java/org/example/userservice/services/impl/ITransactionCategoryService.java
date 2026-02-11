@@ -4,7 +4,9 @@ import lombok.NonNull;
 import org.example.userservice.models.transaction.TransactionCategory;
 import org.example.userservice.models.transaction.TransactionType;
 
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 public interface ITransactionCategoryService {
     @NonNull List<TransactionCategory> getCategoriesByType(@NonNull TransactionType type);
@@ -18,4 +20,6 @@ public interface ITransactionCategoryService {
     void deleteCategory(@NonNull Long id);
     
     void deactivateCategory(@NonNull Long id);
+
+    Map<Long, String> findCategoryNamesByIds(Collection<Long> ids);
 }

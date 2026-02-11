@@ -12,7 +12,8 @@ import org.example.userservice.services.impl.ITransactionCategoryService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -102,6 +103,23 @@ public class TransactionCategoryService implements ITransactionCategoryService {
         categoryRepository.save(category);
         log.info("Deactivated transaction category: id={}, type={}, name={}", 
                 category.getId(), category.getType(), category.getName());
+    }
+
+    @Override
+    public Map<Long, String> findCategoryNamesByIds(Collection<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        List<Object[]> rows = categoryRepository.findIdAndNameByIdIn(ids);
+
+        return rows.stream()
+                .collect(Collectors.toMap(
+                        row -> (Long) row[0],
+                        row -> (String) row[1],
+                        (oldVal, _) -> oldVal,
+                        LinkedHashMap::new
+                ));
     }
 
     private void validateCategory(@NonNull TransactionCategory category) {

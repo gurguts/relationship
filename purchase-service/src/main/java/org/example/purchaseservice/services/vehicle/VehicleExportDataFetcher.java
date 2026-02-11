@@ -9,10 +9,10 @@ import org.example.purchaseservice.models.balance.VehicleExpense;
 import org.example.purchaseservice.repositories.ProductRepository;
 import org.example.purchaseservice.services.impl.IVehicleExpenseService;
 import org.example.purchaseservice.services.impl.IVehicleService;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
 
 @Slf4j
 @Service
@@ -120,43 +120,34 @@ public class VehicleExportDataFetcher {
         }
         return accountNameMap;
     }
-    
+
     private Map<Long, String> loadCategoryNames(Set<Long> categoryIds) {
-        System.out.println("categoryIds = "+categoryIds);
-        if (isEmpty(categoryIds)) {
+        if (categoryIds == null || categoryIds.isEmpty()) {
             return Collections.emptyMap();
         }
-        
-        Map<Long, String> categoryNameMap = new HashMap<>();
-        List<CompletableFuture<Void>> futures = categoryIds.stream()
-                .map(categoryId -> CompletableFuture.runAsync(() -> {
-                    try {
-                        System.out.println("Map<String, Object> category = transactionCategoryClient.getCategoryById(categoryId).getBody();");
-                        Map<String, Object> category = transactionCategoryClient.getCategoryById(categoryId).getBody();
-                        String name = "";
-                        System.out.println("category = "+ category);
-                        if (category != null && category.containsKey("name") && category.get("name") != null) {
-                            name = (String) category.get("name");
-                        }
-                        synchronized (categoryNameMap) {
-                            categoryNameMap.put(categoryId, name);
-                        }
-                    } catch (Exception e) {
-                        synchronized (categoryNameMap) {
-                            categoryNameMap.put(categoryId, "");
-                        }
-                    }
-                }))
-                .toList();
-        
+
         try {
-            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
-        } catch (Exception _) {
+            ResponseEntity<Map<Long, String>> response =
+                    transactionCategoryClient.getCategoryNamesByIds(categoryIds);
+
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                return response.getBody();
+            } else {
+                log.warn("Failed to load names of categories, statuses: {}", response.getStatusCode());
+                return emptyNamesMap(categoryIds);
+            }
+        } catch (Exception e) {
+            log.error("Error while batch loading category names", e);
+            return emptyNamesMap(categoryIds);
         }
+    }
 
-        System.out.println("categoryNameMap = "+categoryNameMap);
-
-        return categoryNameMap;
+    private Map<Long, String> emptyNamesMap(Set<Long> categoryIds) {
+        Map<Long, String> result = new HashMap<>();
+        for (Long id : categoryIds) {
+            result.put(id, "");
+        }
+        return result;
     }
     
     private List<Long> sortCategoryIds(Set<Long> categoryIds, Map<Long, String> categoryNameMap) {

@@ -13,6 +13,7 @@ public class VehicleExportHeaderBuilder {
     public List<String> buildHeaderList(@NonNull List<Long> sortedCategoryIds, 
                                         @NonNull Map<Long, String> categoryNameMap) {
         List<String> headerList = new ArrayList<>();
+
         headerList.add("Сума товарів зі складу (EUR)");
         headerList.add("Сума витрат на машину (EUR)");
         headerList.add("Товар");

@@ -18,6 +18,8 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import static org.springframework.http.HttpStatus.CREATED;
 
@@ -38,6 +40,14 @@ public class TransactionCategoryController {
                 .map(transactionCategoryMapper::transactionCategoryToTransactionCategoryDTO)
                 .toList();
         return ResponseEntity.ok(dtos);
+    }
+
+    @GetMapping("/batch")
+    public ResponseEntity<Map<Long, String>> getNamesByIds(
+            @RequestParam("ids") Set<Long> ids) {
+
+        Map<Long, String> names = categoryService.findCategoryNamesByIds(ids);
+        return ResponseEntity.ok(names);
     }
 
     @GetMapping("/{id}")
