@@ -47,8 +47,9 @@ public class VehicleExportService implements IVehicleExportService {
 
     private List<Vehicle> loadVehicles(String query, Map<String, List<String>> filterParams) {
         VehicleSpecification spec = new VehicleSpecification(query, filterParams, filterBuilder, searchPredicateBuilder);
-        Sort sortBy = Sort.by(Sort.Direction.DESC, "createdAt");
+
+        Sort sortBy = Sort.by(Sort.Direction.DESC, "customsDate");
+
         return vehicleRepository.findAll(spec, sortBy);
     }
-    
 }

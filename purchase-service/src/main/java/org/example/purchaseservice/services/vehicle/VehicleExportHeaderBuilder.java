@@ -12,56 +12,55 @@ public class VehicleExportHeaderBuilder {
     
     public List<String> buildHeaderList(@NonNull List<Long> sortedCategoryIds, 
                                         @NonNull Map<Long, String> categoryNameMap) {
-        List<String> headerList = new ArrayList<>();
+        List<String> headers = new ArrayList<>();
 
-        headerList.add("Сума товарів зі складу (EUR)");
-        headerList.add("Сума витрат на машину (EUR)");
-        headerList.add("Товар");
-        headerList.add("Кількість товару");
-        headerList.add("Інвойс UA");
-        headerList.add("Дата інвойсу UA");
-        headerList.add("Ціна за тонну інвойсу UA");
-        headerList.add("Повна ціна інвойсу UA");
-        headerList.add("Інвойс EU");
-        headerList.add("Дата інвойсу EU");
-        headerList.add("Ціна за тонну інвойсу EU");
-        headerList.add("Повна ціна інвойсу EU");
-        headerList.add("Рекламація за т");
-        headerList.add("Повна рекламація");
-        headerList.add("Загальні витрати (EUR)");
-        headerList.add("Загальний дохід (EUR)");
-        headerList.add("Маржа");
-        headerList.add("Товари зі складу");
+        headers.add("Відправник");
+        headers.add("Отримувач");
+        headers.add("Номер машини");
+        headers.add("Дата інвойсу EU");
+        headers.add("Інвойс EU");
+        headers.add("Кількість товару");
+        headers.add("Ціна за тонну інвойсу EU");
+        headers.add("Повна ціна інвойсу EU");
+        headers.add("Рекламація за т");
+        headers.add("Повна рекламація");
+        headers.add("Загальний дохід (EUR)");
+        headers.add("Сума товарів зі складу (EUR)");
         
         for (Long categoryId : sortedCategoryIds) {
             String categoryName = categoryNameMap.get(categoryId);
-            headerList.add(categoryName + " (EUR)");
-            headerList.add(categoryName + " (деталі)");
+            headers.add(categoryName + " (EUR)");
+            headers.add(categoryName + " (деталі)");
         }
+
+        headers.add("Загальні витрати (EUR)");
+        headers.add("Маржа");
+        headers.add("Інвойс UA");
+        headers.add("Дата інвойсу UA");
+        headers.add("Ціна за тонну інвойсу UA");
+        headers.add("Повна ціна інвойсу UA");
+
+        headers.add("ID");
+        headers.add("Дата відвантаження");
+        headers.add("Опис");
+        headers.add("Наше завантаження");
+        headers.add("Товар");
+        headers.add("Країна призначення");
+        headers.add("Місце призначення");
+        headers.add("Номер декларації");
+        headers.add("Термінал");
+        headers.add("Водій (ПІБ)");
+        headers.add("EUR1");
+        headers.add("FITO");
+        headers.add("Дата замитнення");
+        headers.add("Дата розмитнення");
+        headers.add("Дата вивантаження");
+        headers.add("Перевізник (назва)");
+        headers.add("Перевізник (адреса)");
+        headers.add("Перевізник (телефон)");
+        headers.add("Перевізник (код)");
+        headers.add("Перевізник (рахунок)");
         
-        headerList.add("ID");
-        headerList.add("Дата відвантаження");
-        headerList.add("Номер машини");
-        headerList.add("Опис");
-        headerList.add("Наше завантаження");
-        headerList.add("Відправник");
-        headerList.add("Отримувач");
-        headerList.add("Країна призначення");
-        headerList.add("Місце призначення");
-        headerList.add("Номер декларації");
-        headerList.add("Термінал");
-        headerList.add("Водій (ПІБ)");
-        headerList.add("EUR1");
-        headerList.add("FITO");
-        headerList.add("Дата замитнення");
-        headerList.add("Дата розмитнення");
-        headerList.add("Дата вивантаження");
-        headerList.add("Перевізник (назва)");
-        headerList.add("Перевізник (адреса)");
-        headerList.add("Перевізник (телефон)");
-        headerList.add("Перевізник (код)");
-        headerList.add("Перевізник (рахунок)");
-        
-        return headerList;
+        return headers;
     }
 }
