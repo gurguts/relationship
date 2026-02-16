@@ -7,28 +7,28 @@ const FinanceFilters = (function() {
             filters.type = [type];
         }
 
-        let accountId = '';
         if (customSelects && customSelects['transaction-account-filter']) {
             const values = customSelects['transaction-account-filter'].getValue();
-            accountId = values.length > 0 ? values[0] : '';
+            if (values.length > 0) {
+                filters.account_id = values;
+            }
         } else {
             const accountFilter = document.getElementById('transaction-account-filter');
-            accountId = accountFilter ? accountFilter.value : '';
-        }
-        if (accountId) {
-            filters.account_id = [accountId];
+            if (accountFilter && accountFilter.selectedOptions.length > 0) {
+                filters.account_id = Array.from(accountFilter.selectedOptions).map(opt => opt.value);
+            }
         }
 
-        let categoryId = '';
         if (customSelects && customSelects['transaction-category-filter']) {
             const values = customSelects['transaction-category-filter'].getValue();
-            categoryId = values.length > 0 ? values[0] : '';
+            if (values.length > 0) {
+                filters.category_id = values;
+            }
         } else {
             const categoryFilter = document.getElementById('transaction-category-filter');
-            categoryId = categoryFilter ? categoryFilter.value : '';
-        }
-        if (categoryId) {
-            filters.category_id = [categoryId];
+            if (categoryFilter && categoryFilter.selectedOptions.length > 0) {
+                filters.category_id = Array.from(categoryFilter.selectedOptions).map(opt => opt.value);
+            }
         }
 
         const dateFrom = document.getElementById('transaction-date-from')?.value;
@@ -51,26 +51,19 @@ const FinanceFilters = (function() {
         
         const accountFilter = document.getElementById('transaction-account-filter');
         if (accountFilter) {
+            const previousIds = customSelects[accountFilter.id] ? customSelects[accountFilter.id].getValue() : [];
             accountFilter.textContent = '';
-            const defaultOption = document.createElement('option');
-            defaultOption.value = '';
-            defaultOption.textContent = 'Всі рахунки';
-            accountFilter.appendChild(defaultOption);
-            accountsCache.forEach(account => {
-                const option = document.createElement('option');
-                option.value = account.id;
-                option.textContent = account.name || '';
-                accountFilter.appendChild(option);
-            });
-            
             if (typeof createCustomSelect === 'function') {
                 const selectId = accountFilter.id;
                 if (!customSelects[selectId]) {
                     customSelects[selectId] = createCustomSelect(accountFilter, true);
                 }
                 const accountData = accountsCache.map(account => ({ id: account.id, name: account.name || '' }));
-                if (customSelects[selectId]) {
+                if (accountData.length > 0 && customSelects[selectId]) {
                     customSelects[selectId].populate(accountData);
+                    if (previousIds.length > 0) {
+                        customSelects[selectId].setValue(previousIds.map(String));
+                    }
                 }
             }
         }
@@ -80,20 +73,8 @@ const FinanceFilters = (function() {
 
             const categoryFilter = document.getElementById('transaction-category-filter');
             if (categoryFilter) {
+                const previousIds = customSelects[categoryFilter.id] ? customSelects[categoryFilter.id].getValue() : [];
                 categoryFilter.textContent = '';
-                const defaultOption = document.createElement('option');
-                defaultOption.value = '';
-                defaultOption.textContent = 'Всі категорії';
-                categoryFilter.appendChild(defaultOption);
-                allCategories.forEach(category => {
-                    const option = document.createElement('option');
-                    option.value = category.id;
-                    const typeName = FinanceUtils.getTransactionTypeName(category.type);
-                    const categoryName = category.name || '';
-                    option.textContent = `${typeName} - ${categoryName}`;
-                    categoryFilter.appendChild(option);
-                });
-                
                 if (typeof createCustomSelect === 'function') {
                     const selectId = categoryFilter.id;
                     if (!customSelects[selectId]) {
@@ -104,8 +85,11 @@ const FinanceFilters = (function() {
                         const categoryName = category.name || '';
                         return { id: category.id, name: `${typeName} - ${categoryName}` };
                     });
-                    if (customSelects[selectId]) {
+                    if (categoryData.length > 0 && customSelects[selectId]) {
                         customSelects[selectId].populate(categoryData);
+                        if (previousIds.length > 0) {
+                            customSelects[selectId].setValue(previousIds.map(String));
+                        }
                     }
                 }
             }

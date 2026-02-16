@@ -21,7 +21,7 @@ public class VehicleUpdateDTO {
     private String declarationNumber;
     private Long terminalId;
     private String driverFullName;
-    private Boolean isOurVehicle;
+    private Long managerId;
     private Boolean eur1;
     private Boolean fito;
     private LocalDate customsDate;

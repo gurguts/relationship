@@ -20,9 +20,25 @@ public class VehicleFilterPredicateFactory {
     public static final String FIELD_CUSTOMS_DATE = "customsDate";
     public static final String FIELD_CUSTOMS_CLEARANCE_DATE = "customsClearanceDate";
     public static final String FIELD_UNLOADING_DATE = "unloadingDate";
-    public static final String FIELD_IS_OUR_VEHICLE = "isOurVehicle";
+    private static final String FIELD_MANAGER_ID = "managerId";
     
     private final AbstractFilterPredicateFactory abstractFactory;
+    
+    public Predicate addManagerIdFilter(
+            Predicate predicate,
+            @NonNull Root<Vehicle> root,
+            @NonNull CriteriaBuilder criteriaBuilder,
+            @NonNull List<String> values) {
+        if (abstractFactory.isEmpty(values)) {
+            return predicate;
+        }
+        Predicate idPredicate = abstractFactory.parseAndCreateIdPredicate(
+                values, Long::parseLong, root, FIELD_MANAGER_ID, "Error parsing managerId filter");
+        if (idPredicate != null) {
+            predicate = criteriaBuilder.and(predicate, idPredicate);
+        }
+        return predicate;
+    }
     
     public Predicate addDateFilter(
             Predicate predicate,
@@ -39,35 +55,6 @@ public class VehicleFilterPredicateFactory {
         Predicate datePredicate = abstractFactory.addDateFilterWithField(root, criteriaBuilder, values, field, isFrom);
         if (datePredicate != null) {
             predicate = criteriaBuilder.and(predicate, datePredicate);
-        }
-        
-        return predicate;
-    }
-    
-    public Predicate addBooleanFilter(
-            Predicate predicate,
-            @NonNull Root<Vehicle> root,
-            @NonNull CriteriaBuilder criteriaBuilder,
-            @NonNull List<String> values) {
-        
-        if (abstractFactory.isEmpty(values)) {
-            return predicate;
-        }
-        
-        try {
-            String valueString = abstractFactory.getFirstNonEmptyValue(values);
-            if (valueString == null) {
-                return predicate;
-            }
-            
-            String trimmedValue = valueString.trim();
-            if ("true".equalsIgnoreCase(trimmedValue)) {
-                predicate = criteriaBuilder.and(predicate, criteriaBuilder.isTrue(root.get(FIELD_IS_OUR_VEHICLE)));
-            } else if ("false".equalsIgnoreCase(trimmedValue)) {
-                predicate = criteriaBuilder.and(predicate, criteriaBuilder.isFalse(root.get(FIELD_IS_OUR_VEHICLE)));
-            }
-        } catch (Exception e) {
-            log.error("Error adding boolean filter: field={}, values={}", FIELD_IS_OUR_VEHICLE, values, e);
         }
         
         return predicate;

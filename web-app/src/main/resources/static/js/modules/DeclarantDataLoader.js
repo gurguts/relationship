@@ -113,6 +113,20 @@ const DeclarantDataLoader = (function() {
         }
     }
     
+    async function fetchUsers() {
+        try {
+            const response = await fetch(`${API_BASE}/user`);
+            if (!response.ok) {
+                const error = await parseErrorResponse(response);
+                throw error;
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error fetching users:', error);
+            throw error;
+        }
+    }
+    
     async function loadVehicles(page, size, sort, direction, searchTerm, filtersJson) {
         try {
             let url = `${API_BASE}/vehicles/search?page=${page}&size=${size}&sort=${sort}&direction=${direction}`;
@@ -550,6 +564,7 @@ const DeclarantDataLoader = (function() {
         fetchVehicleTerminals,
         fetchVehicleDestinationCountries,
         fetchVehicleDestinationPlaces,
+        fetchUsers,
         loadVehicles,
         loadVehicleDetails,
         createVehicle,

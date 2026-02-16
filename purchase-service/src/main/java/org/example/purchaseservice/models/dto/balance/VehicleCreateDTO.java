@@ -20,7 +20,7 @@ public class VehicleCreateDTO {
     
     private String description;
     
-    private Boolean isOurVehicle;
+    private Long managerId;
     
     private Long senderId;
     

@@ -11,6 +11,7 @@ import org.example.purchaseservice.repositories.VehicleProductRepository;
 import org.example.purchaseservice.repositories.VehicleRepository;
 import org.example.purchaseservice.services.impl.IVehicleExpenseService;
 import org.example.purchaseservice.services.impl.IVehicleService;
+import org.example.purchaseservice.spec.StockVehicleSpecification;
 import org.example.purchaseservice.spec.VehicleFilterBuilder;
 import org.example.purchaseservice.spec.VehicleSearchPredicateBuilder;
 import org.example.purchaseservice.spec.VehicleSpecification;
@@ -45,9 +46,9 @@ public class VehicleService implements IVehicleService {
 
     @Transactional
     public Vehicle createVehicle(@NonNull Vehicle vehicle) {
-        log.info("Creating new vehicle: date={}, vehicle={}, invoiceUa={}, invoiceEu={}, isOurVehicle={}",
+        log.info("Creating new vehicle: date={}, vehicle={}, invoiceUa={}, invoiceEu={}, managerId={}",
                 vehicle.getShipmentDate(), vehicle.getVehicleNumber(), vehicle.getInvoiceUa(),
-                vehicle.getInvoiceEu(), vehicle.getIsOurVehicle());
+                vehicle.getInvoiceEu(), vehicle.getManagerId());
         Vehicle saved = vehicleRepository.save(vehicle);
         log.info("Vehicle created: id={}", saved.getId());
         return saved;
@@ -103,6 +104,13 @@ public class VehicleService implements IVehicleService {
     @Transactional(readOnly = true)
     public List<Vehicle> getOurVehiclesByDateRange(@NonNull LocalDate fromDate, @NonNull LocalDate toDate) {
         return vehicleRepository.findOurVehiclesByDateRange(fromDate, toDate);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<Vehicle> findOurVehiclesPaged(String query, LocalDate fromDate, LocalDate toDate, List<Long> managerIds, @NonNull Pageable pageable) {
+        StockVehicleSpecification spec = new StockVehicleSpecification(query, fromDate, toDate, managerIds);
+        return vehicleRepository.findAll(spec, pageable);
     }
     
     @Transactional(readOnly = true)

@@ -283,6 +283,10 @@ const StockModal = (function() {
         if (detailVehicleVehicleInput) {
             detailVehicleVehicleInput.value = vehicle.vehicleNumber || '';
         }
+        const detailVehicleManagerSelect = document.getElementById('detail-vehicle-manager-id');
+        if (detailVehicleManagerSelect) {
+            detailVehicleManagerSelect.value = vehicle.managerId != null ? String(vehicle.managerId) : '';
+        }
         if (detailVehicleDescriptionInput) {
             detailVehicleDescriptionInput.value = vehicle.description || '';
         }
@@ -291,6 +295,7 @@ const StockModal = (function() {
     function setVehicleFormEditable(isEditable) {
         const detailVehicleDateInput = document.getElementById('detail-vehicle-date');
         const detailVehicleVehicleInput = document.getElementById('detail-vehicle-vehicle-number');
+        const detailVehicleManagerSelect = document.getElementById('detail-vehicle-manager-id');
         const detailVehicleDescriptionInput = document.getElementById('detail-vehicle-description');
         const saveVehicleBtn = document.getElementById('save-vehicle-btn');
         const editVehicleBtn = document.getElementById('edit-vehicle-btn');
@@ -298,6 +303,7 @@ const StockModal = (function() {
         const fields = [
             detailVehicleDateInput,
             detailVehicleVehicleInput,
+            detailVehicleManagerSelect,
             detailVehicleDescriptionInput
         ];
         

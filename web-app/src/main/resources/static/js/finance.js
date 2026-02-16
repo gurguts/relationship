@@ -262,7 +262,7 @@ async function loadTransactions() {
 
 async function exportTransactionsToExcel() {
     try {
-        const filters = FinanceFilters.buildTransactionFilters();
+        const filters = FinanceFilters.buildTransactionFilters(transactionFiltersCustomSelects);
         const blob = await FinanceDataLoader.exportTransactions(filters);
         
         const url = window.URL.createObjectURL(blob);

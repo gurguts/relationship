@@ -418,7 +418,7 @@ const StockRenderer = (function() {
         });
     }
     
-    function renderVehicles(vehicles, onVehicleClick) {
+    function renderVehicles(vehicles, userMap, onVehicleClick) {
         const tbody = document.getElementById('vehicles-tbody');
         
         if (!tbody) {
@@ -430,7 +430,7 @@ const StockRenderer = (function() {
         if (!vehicles || vehicles.length === 0) {
             const emptyRow = document.createElement('tr');
             const emptyCell = document.createElement('td');
-            emptyCell.setAttribute('colspan', '4');
+            emptyCell.setAttribute('colspan', '5');
             emptyCell.style.textAlign = 'center';
             emptyCell.textContent = CLIENT_MESSAGES.NO_DATA || 'Немає даних';
             emptyRow.appendChild(emptyCell);
@@ -462,7 +462,7 @@ const StockRenderer = (function() {
             const totalCostCell = document.createElement('td');
             totalCostCell.setAttribute('data-label', 'Загальна вартість');
             totalCostCell.style.fontWeight = 'bold';
-            totalCostCell.style.color = '#FF6F00';
+            totalCostCell.style.color = 'var(--bright-blue, #1976d2)';
             totalCostCell.textContent = `${StockUtils.formatNumber(vehicle.totalCostEur, 2)} EUR`;
             row.appendChild(totalCostCell);
             
@@ -470,6 +470,11 @@ const StockRenderer = (function() {
             descriptionCell.setAttribute('data-label', 'Коментар');
             descriptionCell.textContent = vehicle.description || '-';
             row.appendChild(descriptionCell);
+            
+            const managerCell = document.createElement('td');
+            managerCell.setAttribute('data-label', 'Менеджер');
+            managerCell.textContent = userMap ? (StockUtils.findNameByIdFromMap(userMap, vehicle.managerId) || '-') : '-';
+            row.appendChild(managerCell);
             
             tbody.appendChild(row);
         });
@@ -935,6 +940,27 @@ const StockRenderer = (function() {
         }
     }
     
+    function updateVehiclesPagination(data) {
+        const totalPages = data.totalPages || 1;
+        const currentPage = data.page ?? 0;
+        
+        const infoSpan = document.getElementById('vehicles-page-info');
+        if (infoSpan) {
+            infoSpan.textContent = `Сторінка ${currentPage + 1} з ${totalPages}`;
+        }
+        
+        const prevBtn = document.getElementById('vehicles-prev-page');
+        const nextBtn = document.getElementById('vehicles-next-page');
+        
+        if (prevBtn) {
+            prevBtn.disabled = currentPage === 0;
+        }
+        
+        if (nextBtn) {
+            nextBtn.disabled = currentPage >= totalPages - 1;
+        }
+    }
+    
     function exportTableToExcel(tableId, filename = 'withdrawal_data') {
         const table = document.getElementById(tableId);
         if (!table) return;
@@ -970,6 +996,7 @@ const StockRenderer = (function() {
         updatePagination,
         updateDiscrepanciesPagination,
         updateTransfersPagination,
+        updateVehiclesPagination,
         exportTableToExcel
     };
 })();

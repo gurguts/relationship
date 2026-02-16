@@ -181,7 +181,7 @@ const DeclarantRenderer = (function() {
         return carrier?.companyName || '-';
     }
     
-    async function renderVehicles(vehicles, currentPage, pageSize, totalElements, totalPages, productMap, warehouseMap, carrierMap, onVehicleClick) {
+    async function renderVehicles(vehicles, currentPage, pageSize, totalElements, totalPages, productMap, warehouseMap, carrierMap, userMap, onVehicleClick) {
         const vehiclesTbody = document.getElementById('vehicles-tbody');
         const vehiclesCount = document.getElementById('vehicles-count');
         
@@ -264,7 +264,8 @@ const DeclarantRenderer = (function() {
             row.appendChild(createCell(DeclarantUtils.formatDate(vehicle.unloadingDate), 'Дата вивантаження'));
             row.appendChild(createCell(formatCarrier(vehicle.carrier), 'Перевізник'));
             row.appendChild(createCell(vehicle.description || '-', 'Коментар'));
-            row.appendChild(createCell(DeclarantUtils.formatBoolean(vehicle.isOurVehicle), 'Наше завантаження'));
+            const managerName = userMap && vehicle.managerId != null ? (DeclarantUtils.findNameByIdFromMap(userMap, vehicle.managerId) || '-') : '-';
+            row.appendChild(createCell(managerName, 'Менеджер'));
             
             vehiclesTbody.appendChild(row);
         });

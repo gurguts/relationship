@@ -79,6 +79,7 @@ public class VehicleMapper {
                 .description(vehicle.getDescription())
                 .totalCostEur(vehicle.getTotalCostEur())
                 .userId(vehicle.getUserId())
+                .managerId(vehicle.getManagerId())
                 .createdAt(vehicle.getCreatedAt())
                 .senderId(vehicle.getSender() != null ? vehicle.getSender().getId() : null)
                 .senderName(vehicle.getSender() != null ? vehicle.getSender().getName() : null)
@@ -94,7 +95,6 @@ public class VehicleMapper {
                 .terminalId(vehicle.getTerminal() != null ? vehicle.getTerminal().getId() : null)
                 .terminalName(vehicle.getTerminal() != null ? vehicle.getTerminal().getName() : null)
                 .driverFullName(vehicle.getDriverFullName())
-                .isOurVehicle(vehicle.getIsOurVehicle())
                 .eur1(vehicle.getEur1())
                 .fito(vehicle.getFito())
                 .customsDate(vehicle.getCustomsDate())
@@ -123,7 +123,7 @@ public class VehicleMapper {
         vehicle.setInvoiceEu(dto.getInvoiceEu());
         vehicle.setDescription(dto.getDescription());
         vehicle.setUserId(userId);
-        vehicle.setIsOurVehicle(dto.getIsOurVehicle() != null ? dto.getIsOurVehicle() : false);
+        vehicle.setManagerId(dto.getManagerId());
         vehicle.setTotalCostEur(BigDecimal.ZERO);
         if (dto.getSenderId() != null) {
             VehicleSender sender = vehicleSenderRepository.findById(dto.getSenderId())

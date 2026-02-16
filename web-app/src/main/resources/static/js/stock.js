@@ -1330,6 +1330,8 @@ initializeModalClickHandlers();
 
 let currentVehicleId = null;
 let vehiclesCache = [];
+let currentVehiclesPage = 0;
+const vehiclesPageSize = 50;
 let currentVehicleDetails = null;
 let currentVehicleItems = new Map();
 let currentVehicleItemId = null;
@@ -1367,7 +1369,7 @@ if (vehiclesBtn) {
             if (discrepanciesContainer) discrepanciesContainer.style.display = 'none';
             
             vehiclesContainer.style.display = 'block';
-            await loadVehicles();
+            await loadVehicles(0);
         }
     });
 }
@@ -1375,6 +1377,20 @@ if (vehiclesBtn) {
 if (createVehicleBtn) {
     createVehicleBtn.addEventListener('click', () => {
         document.getElementById('vehicle-date').valueAsDate = new Date();
+        const managerSelect = document.getElementById('vehicle-manager-id');
+        if (managerSelect) {
+            managerSelect.textContent = '';
+            const emptyOpt = document.createElement('option');
+            emptyOpt.value = '';
+            emptyOpt.textContent = 'Не обрано';
+            managerSelect.appendChild(emptyOpt);
+            for (const [id, name] of userMap.entries()) {
+                const opt = document.createElement('option');
+                opt.value = id;
+                opt.textContent = name || '';
+                managerSelect.appendChild(opt);
+            }
+        }
         StockModal.openModal('create-vehicle-modal');
     });
 }
@@ -1383,11 +1399,12 @@ if (createVehicleForm) {
     createVehicleForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         
+        const managerIdEl = document.getElementById('vehicle-manager-id');
         const vehicleData = {
             shipmentDate: document.getElementById('vehicle-date').value,
             vehicleNumber: document.getElementById('vehicle-vehicle-number').value,
             description: document.getElementById('vehicle-description').value,
-            isOurVehicle: true
+            managerId: managerIdEl && managerIdEl.value ? Number(managerIdEl.value) : null
         };
         
         try {
@@ -1397,7 +1414,7 @@ if (createVehicleForm) {
             }
             closeModal('create-vehicle-modal');
             createVehicleForm.reset();
-            await loadVehicles();
+            await loadVehicles(0);
         } catch (error) {
             console.error('Error creating vehicle:', error);
             if (typeof showMessage === 'function') {
@@ -1408,15 +1425,30 @@ if (createVehicleForm) {
     });
 }
 
-async function loadVehicles() {
+let vehiclesManagerCustomSelect = null;
+
+function getSelectedManagerIds() {
+    if (vehiclesManagerCustomSelect) {
+        return vehiclesManagerCustomSelect.getValue().map(v => Number(v)).filter(n => Number.isFinite(n));
+    }
+    const select = document.getElementById('vehicles-manager-filter');
+    if (!select) return [];
+    return Array.from(select.selectedOptions).map(opt => Number(opt.value)).filter(n => Number.isFinite(n));
+}
+
+async function loadVehicles(page) {
     try {
-        const dateFrom = document.getElementById('vehicles-date-from')?.value;
-        const dateTo = document.getElementById('vehicles-date-to')?.value;
-        
-        vehiclesCache = await StockDataLoader.loadVehicles(dateFrom, dateTo);
-        StockRenderer.renderVehicles(vehiclesCache, (vehicleId) => {
+        const dateFrom = document.getElementById('vehicles-date-from')?.value || '';
+        const dateTo = document.getElementById('vehicles-date-to')?.value || '';
+        const searchQuery = document.getElementById('vehicles-search-input')?.value || '';
+        const managerIds = getSelectedManagerIds();
+        const data = await StockDataLoader.loadVehicles(page, vehiclesPageSize, dateFrom, dateTo, searchQuery, managerIds);
+        vehiclesCache = data.content || [];
+        currentVehiclesPage = data.page ?? 0;
+        StockRenderer.renderVehicles(vehiclesCache, userMap, (vehicleId) => {
             viewVehicleDetails(vehicleId);
         });
+        StockRenderer.updateVehiclesPagination(data);
     } catch (error) {
         console.error('Error loading vehicles:', error);
         if (typeof showMessage === 'function') {
@@ -1435,6 +1467,21 @@ async function viewVehicleDetails(vehicleId) {
         currentVehicleItems = new Map();
         
         StockModal.populateVehicleForm(vehicle);
+        const detailManagerSelect = document.getElementById('detail-vehicle-manager-id');
+        if (detailManagerSelect) {
+            detailManagerSelect.textContent = '';
+            const emptyOpt = document.createElement('option');
+            emptyOpt.value = '';
+            emptyOpt.textContent = 'Не обрано';
+            detailManagerSelect.appendChild(emptyOpt);
+            for (const [id, name] of userMap.entries()) {
+                const opt = document.createElement('option');
+                opt.value = id;
+                opt.textContent = name || '';
+                detailManagerSelect.appendChild(opt);
+            }
+            detailManagerSelect.value = vehicle.managerId != null ? String(vehicle.managerId) : '';
+        }
         StockModal.setVehicleFormEditable(false);
         
         StockRenderer.renderVehicleDetails(vehicle, productMap, warehouseMap);
@@ -1490,7 +1537,7 @@ if (addProductToVehicleForm) {
             StockModal.populateVehicleForm(updatedVehicle);
             StockModal.setVehicleFormEditable(false);
             StockRenderer.renderVehicleDetails(updatedVehicle, productMap, warehouseMap);
-            await loadVehicles();
+            await loadVehicles(currentVehiclesPage);
             await loadBalance();
         } catch (error) {
             console.error('Error adding product to vehicle:', error);
@@ -1511,7 +1558,7 @@ document.getElementById('delete-vehicle-btn')?.addEventListener('click', () => {
                 await StockDataLoader.deleteVehicle(currentVehicleId);
                 showMessage('Машину успішно видалено', 'success');
                 closeModal('vehicle-details-modal');
-                await loadVehicles();
+                await loadVehicles(currentVehiclesPage);
                 await loadBalance();
             } catch (error) {
                 console.error('Error deleting vehicle:', error);
@@ -1523,8 +1570,83 @@ document.getElementById('delete-vehicle-btn')?.addEventListener('click', () => {
     );
 });
 
-document.getElementById('apply-vehicles-filters')?.addEventListener('click', async () => {
-    await loadVehicles();
+function populateVehiclesManagerFilter() {
+    const select = document.getElementById('vehicles-manager-filter');
+    if (!select || !userMap) return;
+    const previousIds = getSelectedManagerIds();
+    const managerData = Array.from(userMap.entries()).map(([id, name]) => ({ id, name: name || '' }));
+    if (managerData.length === 0) return;
+    select.textContent = '';
+    managerData.forEach(item => {
+        const opt = document.createElement('option');
+        opt.value = String(item.id);
+        opt.textContent = item.name;
+        select.appendChild(opt);
+    });
+    if (!vehiclesManagerCustomSelect) {
+        vehiclesManagerCustomSelect = createCustomSelect(select);
+        setupVehiclesFilterModalExpandOnDropdown();
+    }
+    if (vehiclesManagerCustomSelect) {
+        vehiclesManagerCustomSelect.populate(managerData);
+        if (previousIds.length > 0) {
+            vehiclesManagerCustomSelect.setValue(previousIds.map(String));
+        }
+    }
+}
+
+function setupVehiclesFilterModalExpandOnDropdown() {
+    const modal = document.getElementById('vehicles-filter-modal');
+    const dropdown = modal?.querySelector('.custom-select-dropdown');
+    const modalContent = modal?.querySelector('.modal-content');
+    if (!dropdown || !modalContent) return;
+    const observer = new MutationObserver(() => {
+        if (dropdown.classList.contains('open')) {
+            modalContent.classList.add('vehicles-filter-modal-expanded');
+        } else {
+            modalContent.classList.remove('vehicles-filter-modal-expanded');
+        }
+    });
+    observer.observe(dropdown, { attributes: true, attributeFilter: ['class'] });
+}
+
+document.getElementById('vehicles-open-filters-btn')?.addEventListener('click', () => {
+    populateVehiclesManagerFilter();
+    StockModal.openModal('vehicles-filter-modal');
+});
+document.querySelector('.vehicles-filter-modal-close')?.addEventListener('click', () => {
+    StockModal.closeModal('vehicles-filter-modal');
+});
+document.getElementById('vehicles-apply-filters-btn')?.addEventListener('click', async () => {
+    StockModal.closeModal('vehicles-filter-modal');
+    await loadVehicles(0);
+});
+document.getElementById('vehicles-clear-filters-btn')?.addEventListener('click', () => {
+    const fromInput = document.getElementById('vehicles-date-from');
+    const toInput = document.getElementById('vehicles-date-to');
+    if (fromInput) fromInput.value = '';
+    if (toInput) toInput.value = '';
+    if (vehiclesManagerCustomSelect) vehiclesManagerCustomSelect.reset();
+});
+StockModal.setupModalClickHandlers('vehicles-filter-modal');
+
+const vehiclesSearchInput = document.getElementById('vehicles-search-input');
+if (vehiclesSearchInput) {
+    let vehiclesSearchTimeout = null;
+    vehiclesSearchInput.addEventListener('input', () => {
+        if (vehiclesSearchTimeout) clearTimeout(vehiclesSearchTimeout);
+        vehiclesSearchTimeout = setTimeout(() => loadVehicles(0), 300);
+    });
+}
+
+document.getElementById('vehicles-prev-page')?.addEventListener('click', async () => {
+    if (currentVehiclesPage > 0) {
+        await loadVehicles(currentVehiclesPage - 1);
+    }
+});
+
+document.getElementById('vehicles-next-page')?.addEventListener('click', async () => {
+    await loadVehicles(currentVehiclesPage + 1);
 });
 
 const exportTableToExcel = StockRenderer.exportTableToExcel;
@@ -1747,10 +1869,13 @@ if (updateVehicleForm) {
             return;
         }
         
+        const detailManagerSelect = document.getElementById('detail-vehicle-manager-id');
+        const managerIdVal = detailManagerSelect?.value;
         const payload = {
             shipmentDate: detailVehicleDateInput?.value || null,
             vehicleNumber: detailVehicleVehicleInput?.value ?? null,
-            description: detailVehicleDescriptionInput?.value ?? null
+            description: detailVehicleDescriptionInput?.value ?? null,
+            managerId: managerIdVal ? Number(managerIdVal) : null
         };
         
         Object.keys(payload).forEach(key => {
@@ -1775,7 +1900,7 @@ if (updateVehicleForm) {
             StockModal.populateVehicleForm(updatedVehicle);
             StockModal.setVehicleFormEditable(false);
             StockRenderer.renderVehicleDetails(updatedVehicle, productMap, warehouseMap);
-            await loadVehicles();
+            await loadVehicles(currentVehiclesPage);
             await loadBalance();
             closeModal('edit-vehicle-item-modal');
         } catch (error) {
@@ -1992,7 +2117,7 @@ if (editVehicleItemForm) {
                     StockModal.populateVehicleForm(updatedVehicle);
                     StockModal.setVehicleFormEditable(false);
                     StockRenderer.renderVehicleDetails(updatedVehicle, productMap, warehouseMap);
-                    await loadVehicles();
+                    await loadVehicles(currentVehiclesPage);
                     closeModal('edit-vehicle-item-modal');
                     await loadBalance();
                 } catch (error) {
@@ -2038,7 +2163,7 @@ if (editVehicleItemForm) {
                 StockModal.populateVehicleForm(updatedVehicle);
                 StockModal.setVehicleFormEditable(false);
                 StockRenderer.renderVehicleDetails(updatedVehicle, productMap, warehouseMap);
-                await loadVehicles();
+                await loadVehicles(currentVehiclesPage);
                 closeModal('edit-vehicle-item-modal');
                 await loadBalance();
             } catch (error) {

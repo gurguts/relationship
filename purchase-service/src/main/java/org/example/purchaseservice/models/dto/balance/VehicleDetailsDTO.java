@@ -19,6 +19,7 @@ public class VehicleDetailsDTO {
     private String description;
     private BigDecimal totalCostEur;
     private Long userId;
+    private Long managerId;
     private LocalDateTime createdAt;
     private Long senderId;
     private String senderName;
@@ -34,7 +35,6 @@ public class VehicleDetailsDTO {
     private Long terminalId;
     private String terminalName;
     private String driverFullName;
-    private Boolean isOurVehicle;
     private Boolean eur1;
     private Boolean fito;
     private LocalDate customsDate;

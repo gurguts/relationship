@@ -745,14 +745,9 @@
         <div class="vehicles-header">
             <h3>Відвантаження машин</h3>
             <div class="vehicles-controls">
-                <button class="button" id="create-vehicle-btn">Створити машину</button>
-                <div class="vehicles-filters">
-                    <label>Дата від:</label>
-                    <input type="date" id="vehicles-date-from">
-                    <label>Дата до:</label>
-                    <input type="date" id="vehicles-date-to">
-                    <button class="button" id="apply-vehicles-filters">Застосувати</button>
-                </div>
+                <button type="button" class="button button-primary" id="create-vehicle-btn">Створити машину</button>
+                <input type="text" id="vehicles-search-input" class="vehicles-search-input" placeholder="Пошук за номером машини, коментарем">
+                <button type="button" class="button button-secondary" id="vehicles-open-filters-btn">Фільтри</button>
             </div>
         </div>
         
@@ -763,12 +758,46 @@
                     <th>Номер машини</th>
                     <th>Загальна вартість</th>
                     <th>Коментар</th>
+                    <th>Менеджер</th>
                 </tr>
             </thead>
             <tbody id="vehicles-tbody">
-                <!-- Will be filled dynamically -->
             </tbody>
         </table>
+        <div class="pagination vehicles-pagination">
+            <button id="vehicles-prev-page" class="button" disabled>Попередня</button>
+            <span id="vehicles-page-info">Сторінка 1 з 1</span>
+            <button id="vehicles-next-page" class="button" disabled>Наступна</button>
+        </div>
+    </div>
+</div>
+
+<div id="vehicles-filter-modal" class="modal vehicles-filter-modal">
+    <div class="modal-content">
+        <span class="close vehicles-filter-modal-close">×</span>
+        <h3>Фільтри машин</h3>
+        <form id="vehicles-filter-form" class="vehicles-filter-form">
+            <div class="vehicles-filter-form-body">
+                <div class="form-row">
+                    <label for="vehicles-date-from">Дата відвантаження від:</label>
+                    <input type="date" id="vehicles-date-from" name="fromDate">
+                </div>
+                <div class="form-row">
+                    <label for="vehicles-date-to">Дата відвантаження до:</label>
+                    <input type="date" id="vehicles-date-to" name="toDate">
+                </div>
+                <div class="form-row vehicles-manager-filter-row">
+                    <label for="vehicles-manager-filter">Менеджер (можна обрати кількох):</label>
+                    <select id="vehicles-manager-filter" name="vehicles-manager-id" multiple>
+                        <!-- options filled by JS from userMap -->
+                    </select>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="button button-primary" id="vehicles-apply-filters-btn">Застосувати</button>
+                <button type="button" class="button button-secondary" id="vehicles-clear-filters-btn">Очистити</button>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -783,6 +812,11 @@
             
             <label for="vehicle-vehicle-number">Номер машини:</label>
             <input type="text" id="vehicle-vehicle-number">
+            
+            <label for="vehicle-manager-id">Менеджер:</label>
+            <select id="vehicle-manager-id">
+                <option value="">Не обрано</option>
+            </select>
             
             <label for="vehicle-description">Коментар:</label>
             <textarea id="vehicle-description" rows="3"></textarea>
@@ -807,6 +841,12 @@
                 <div class="form-row">
                     <label for="detail-vehicle-vehicle-number">Номер машини:</label>
                     <input type="text" id="detail-vehicle-vehicle-number" disabled>
+                </div>
+                <div class="form-row">
+                    <label for="detail-vehicle-manager-id">Менеджер:</label>
+                    <select id="detail-vehicle-manager-id" disabled>
+                        <option value="">Не обрано</option>
+                    </select>
                 </div>
                 <div class="form-row">
                     <label for="detail-vehicle-description">Коментар:</label>

@@ -108,7 +108,7 @@ public class VehicleExcelGenerator {
         col = writeExpenseCategories(row, col, vehicleData, expensesByCategory, styles);
         col = writeTotalExpensesAndMargin(row, col, financialMetrics, styles);
         col = writeUaInvoice(row, col, vehicleDTO, styles);
-        col = writeAdditionalVehicleInfo(row, col, vehicleDTO, styles);
+        col = writeAdditionalVehicleInfo(row, col, vehicleDTO, vehicleData, styles);
         writeCarrierInfo(row, col, vehicleDTO, styles);
     }
 
@@ -181,12 +181,17 @@ public class VehicleExcelGenerator {
         return col;
     }
 
-    private int writeAdditionalVehicleInfo(Row row, int col, VehicleDetailsDTO dto, ExcelStyles styles) {
+    private int writeAdditionalVehicleInfo(Row row, int col, VehicleDetailsDTO dto,
+                                           VehicleExportDataFetcher.VehicleData vehicleData,
+                                           ExcelStyles styles) {
         setCellValue(row, col++, dto.getId(), styles.dataStyle());
         setCellValue(row, col++, dto.getShipmentDate(), styles.dateStyle());
         setCellValue(row, col++, dto.getDescription(), styles.dataStyle());
-        setCellValue(row, col++, formatter.formatBoolean(dto.getIsOurVehicle()), styles.dataStyle());
-        setCellValue(row, col++, dto.getProduct(), styles.dataStyle());           // Товар
+        String managerName = vehicleData.managerNameMap() != null && dto.getManagerId() != null
+                ? vehicleData.managerNameMap().getOrDefault(dto.getManagerId(), "")
+                : "";
+        setCellValue(row, col++, managerName, styles.dataStyle());
+        setCellValue(row, col++, dto.getProduct(), styles.dataStyle());
         setCellValue(row, col++, dto.getDestinationCountryName(), styles.dataStyle());
         setCellValue(row, col++, dto.getDestinationPlaceName(), styles.dataStyle());
         setCellValue(row, col++, dto.getDeclarationNumber(), styles.dataStyle());

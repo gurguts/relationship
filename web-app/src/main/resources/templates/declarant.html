@@ -162,7 +162,7 @@
                             <th data-column="unloadingDate" class="resizable-header">Дата вивантаження</th>
                             <th data-column="carrier" class="resizable-header">Перевізник</th>
                             <th data-column="description" class="resizable-header">Коментар</th>
-                            <th data-column="isOurVehicle" class="resizable-header">Наше завантаження</th>
+                            <th data-column="managerId" class="resizable-header">Менеджер</th>
             </tr>
         </thead>
         <tbody id="vehicles-tbody">
@@ -243,16 +243,15 @@
                 </div>
                 
                 <div class="form-section">
-                    <h4 class="section-title">Інші фільтри</h4>
-                    <div class="form-grid">
-                        <div class="form-group checkbox-group">
-                            <label class="checkbox-label">
-                                <input type="checkbox" id="vehicles-is-our-vehicle-filter">
-                                <span>Наше завантаження</span>
-                            </label>
-                        </div>
+                    <h4 class="section-title">Менеджер</h4>
+                    <div class="form-group">
+                        <label for="vehicles-manager-filter">Менеджер (можна обрати кількох):</label>
+                        <select id="vehicles-manager-filter" name="managerId" multiple>
+                            <!-- options filled by JS from userMap -->
+                        </select>
+                    </div>
                 </div>
-            </div>
+                
         </form>
         </div>
         <div class="modal-footer">
@@ -288,11 +287,11 @@
                                 <option value="">Оберіть термінал</option>
                             </select>
                         </div>
-                        <div class="form-group checkbox-group">
-                            <label class="checkbox-label">
-                                <input type="checkbox" id="vehicle-is-our-vehicle">
-                                <span>Наше завантаження</span>
-                            </label>
+                        <div class="form-group">
+                            <label for="vehicle-manager-id">Менеджер:</label>
+                            <select id="vehicle-manager-id" class="form-input">
+                                <option value="">Не обрано</option>
+                            </select>
                         </div>
                     </div>
                 </div>
@@ -614,11 +613,11 @@
                                     <option value="">Оберіть перевізника</option>
                                 </select>
                             </div>
-                            <div class="form-group checkbox-group">
-                                <label class="checkbox-label">
-                                    <input type="checkbox" id="detail-vehicle-is-our-vehicle" disabled>
-                                    <span>Наше завантаження</span>
-                                </label>
+                            <div class="form-group">
+                                <label for="detail-vehicle-manager-id">Менеджер:</label>
+                                <select id="detail-vehicle-manager-id" class="form-input" disabled>
+                                    <option value="">Не обрано</option>
+                                </select>
                             </div>
                             <div class="form-group checkbox-group">
                                 <label class="checkbox-label">

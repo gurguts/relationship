@@ -23,7 +23,7 @@ public class VehicleFilterBuilder {
     private static final String FILTER_CUSTOMS_CLEARANCE_DATE_TO = "customsClearanceDateTo";
     private static final String FILTER_UNLOADING_DATE_FROM = "unloadingDateFrom";
     private static final String FILTER_UNLOADING_DATE_TO = "unloadingDateTo";
-    private static final String FILTER_IS_OUR_VEHICLE = "isOurVehicle";
+    private static final String FILTER_MANAGER_ID = "managerId";
     
     private final VehicleFilterPredicateFactory predicateFactory;
     private final AbstractFilterBuilder abstractFilterBuilder;
@@ -65,7 +65,7 @@ public class VehicleFilterBuilder {
                     VehicleFilterPredicateFactory.FIELD_UNLOADING_DATE, true);
             case FILTER_UNLOADING_DATE_TO -> predicateFactory.addDateFilter(predicate, root, criteriaBuilder, values,
                     VehicleFilterPredicateFactory.FIELD_UNLOADING_DATE, false);
-            case FILTER_IS_OUR_VEHICLE -> predicateFactory.addBooleanFilter(predicate, root, criteriaBuilder, values);
+            case FILTER_MANAGER_ID -> predicateFactory.addManagerIdFilter(predicate, root, criteriaBuilder, values);
             default -> predicate;
         };
     }

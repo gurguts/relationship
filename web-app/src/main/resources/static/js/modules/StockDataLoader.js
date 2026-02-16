@@ -163,20 +163,18 @@ const StockDataLoader = (function() {
         }
     }
     
-    async function loadVehicles(dateFrom, dateTo) {
+    async function loadVehicles(page, size, dateFrom, dateTo, searchQuery, managerIds) {
         try {
-            let url = `${API_BASE}/vehicles/by-date-range?`;
-            
-            if (dateFrom && dateTo) {
-                url += `fromDate=${dateFrom}&toDate=${dateTo}`;
-            } else {
-                const today = new Date();
-                const last30Days = new Date();
-                last30Days.setDate(today.getDate() - 30);
-                url += `fromDate=${last30Days.toISOString().split('T')[0]}&toDate=${today.toISOString().split('T')[0]}`;
+            const params = new URLSearchParams();
+            params.append('page', String(page));
+            params.append('size', String(size));
+            if (dateFrom) params.append('fromDate', dateFrom);
+            if (dateTo) params.append('toDate', dateTo);
+            if (searchQuery && searchQuery.trim()) params.append('q', searchQuery.trim());
+            if (managerIds && managerIds.length > 0) {
+                managerIds.forEach(id => params.append('managerId', String(id)));
             }
-            
-            const response = await fetch(url);
+            const response = await fetch(`${API_BASE}/vehicles/our/paged?${params}`);
             if (!response.ok) {
                 const error = await parseErrorResponse(response);
                 throw error;

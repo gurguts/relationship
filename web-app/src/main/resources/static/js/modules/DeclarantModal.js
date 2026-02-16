@@ -92,7 +92,7 @@ const DeclarantModal = (function() {
         const detailVehicleProductQuantityInput = document.getElementById('detail-vehicle-product-quantity');
         const detailVehicleDeclarationNumberInput = document.getElementById('detail-vehicle-declaration-number');
         const detailVehicleDriverFullNameInput = document.getElementById('detail-vehicle-driver-full-name');
-        const detailVehicleIsOurVehicleInput = document.getElementById('detail-vehicle-is-our-vehicle');
+        const detailVehicleManagerIdSelect = document.getElementById('detail-vehicle-manager-id');
         const detailVehicleEur1Input = document.getElementById('detail-vehicle-eur1');
         const detailVehicleFitoInput = document.getElementById('detail-vehicle-fito');
         const detailVehicleCustomsDateInput = document.getElementById('detail-vehicle-customs-date');
@@ -123,7 +123,7 @@ const DeclarantModal = (function() {
             if (detailVehicleDeclarationNumberInput) detailVehicleDeclarationNumberInput.value = '';
             if (detailVehicleTerminalInput) detailVehicleTerminalInput.value = '';
             if (detailVehicleDriverFullNameInput) detailVehicleDriverFullNameInput.value = '';
-            if (detailVehicleIsOurVehicleInput) detailVehicleIsOurVehicleInput.checked = false;
+            if (detailVehicleManagerIdSelect) detailVehicleManagerIdSelect.value = '';
             if (detailVehicleEur1Input) detailVehicleEur1Input.checked = false;
             if (detailVehicleFitoInput) detailVehicleFitoInput.checked = false;
             if (detailVehicleCustomsDateInput) detailVehicleCustomsDateInput.value = '';
@@ -155,7 +155,7 @@ const DeclarantModal = (function() {
         if (detailVehicleProductQuantityInput) detailVehicleProductQuantityInput.value = vehicle.productQuantity || '';
         if (detailVehicleDeclarationNumberInput) detailVehicleDeclarationNumberInput.value = vehicle.declarationNumber || '';
         if (detailVehicleDriverFullNameInput) detailVehicleDriverFullNameInput.value = vehicle.driverFullName || '';
-        if (detailVehicleIsOurVehicleInput) detailVehicleIsOurVehicleInput.checked = vehicle.isOurVehicle || false;
+        if (detailVehicleManagerIdSelect) detailVehicleManagerIdSelect.value = vehicle.managerId != null ? String(vehicle.managerId) : '';
         if (detailVehicleEur1Input) detailVehicleEur1Input.checked = vehicle.eur1 || false;
         if (detailVehicleFitoInput) detailVehicleFitoInput.checked = vehicle.fito || false;
         if (detailVehicleCustomsDateInput) detailVehicleCustomsDateInput.value = vehicle.customsDate || '';
@@ -197,7 +197,7 @@ const DeclarantModal = (function() {
             document.getElementById('detail-vehicle-product-quantity'),
             document.getElementById('detail-vehicle-declaration-number'),
             document.getElementById('detail-vehicle-driver-full-name'),
-            document.getElementById('detail-vehicle-is-our-vehicle'),
+            document.getElementById('detail-vehicle-manager-id'),
             document.getElementById('detail-vehicle-eur1'),
             document.getElementById('detail-vehicle-fito'),
             document.getElementById('detail-vehicle-customs-date'),

@@ -28,6 +28,8 @@ public interface IVehicleService {
     
     List<Vehicle> getOurVehiclesByDateRange(@NonNull LocalDate fromDate, @NonNull LocalDate toDate);
     
+    Page<Vehicle> findOurVehiclesPaged(String query, LocalDate fromDate, LocalDate toDate, List<Long> managerIds, @NonNull Pageable pageable);
+    
     List<Vehicle> getAllVehiclesByDateRange(@NonNull LocalDate fromDate, @NonNull LocalDate toDate);
     
     Vehicle updateVehicleProduct(@NonNull Long vehicleId, @NonNull Long vehicleProductId,

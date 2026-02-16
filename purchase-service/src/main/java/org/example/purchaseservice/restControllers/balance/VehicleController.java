@@ -124,6 +124,48 @@ public class VehicleController {
                 .toList();
         return ResponseEntity.ok(dtos);
     }
+
+    @PreAuthorize("hasAuthority('warehouse:view')")
+    @GetMapping("/our/paged")
+    public ResponseEntity<PageResponse<VehicleDetailsDTO>> getOurVehiclesPaged(
+            @RequestParam(name = "q", required = false) String query,
+            @RequestParam(name = "page", defaultValue = "0") @Min(0) int page,
+            @RequestParam(name = "size", defaultValue = "50") @Min(1) int size,
+            @RequestParam(name = "fromDate", required = false) LocalDate fromDate,
+            @RequestParam(name = "toDate", required = false) LocalDate toDate,
+            @RequestParam(name = "managerId", required = false) List<Long> managerIds) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Vehicle> vehiclePage = vehicleService.findOurVehiclesPaged(query, fromDate, toDate, managerIds, pageable);
+        List<Vehicle> vehicles = vehiclePage.getContent();
+        if (vehicles.isEmpty()) {
+            return ResponseEntity.ok(new PageResponse<>(
+                    vehiclePage.getNumber(),
+                    vehiclePage.getSize(),
+                    vehiclePage.getTotalElements(),
+                    vehiclePage.getTotalPages(),
+                    Collections.emptyList()
+            ));
+        }
+        List<Long> vehicleIds = vehicles.stream()
+                .map(Vehicle::getId)
+                .toList();
+        Map<Long, List<VehicleProduct>> vehicleProductsMap = vehicleService.getVehicleProductsByVehicleIds(vehicleIds);
+        Map<Long, BigDecimal> expensesTotalMap = vehicleService.getExpensesTotalsByVehicleIds(vehicleIds);
+        List<VehicleDetailsDTO> dtos = vehicles.stream()
+                .map(vehicle -> {
+                    BigDecimal expensesTotal = expensesTotalMap.getOrDefault(vehicle.getId(), BigDecimal.ZERO);
+                    List<VehicleProduct> products = vehicleProductsMap.getOrDefault(vehicle.getId(), Collections.emptyList());
+                    return vehicleMapper.vehicleToVehicleDetailsDTO(vehicle, products, expensesTotal);
+                })
+                .toList();
+        return ResponseEntity.ok(new PageResponse<>(
+                vehiclePage.getNumber(),
+                vehiclePage.getSize(),
+                vehiclePage.getTotalElements(),
+                vehiclePage.getTotalPages(),
+                dtos
+        ));
+    }
     
     @PreAuthorize("hasAuthority('declarant:view')")
     @GetMapping("/all/by-date-range")

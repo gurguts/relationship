@@ -6,9 +6,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.purchaseservice.models.Product;
 import org.example.purchaseservice.models.balance.Vehicle;
 import org.example.purchaseservice.models.balance.VehicleExpense;
+import org.example.purchaseservice.models.dto.user.UserDTO;
 import org.example.purchaseservice.repositories.ProductRepository;
 import org.example.purchaseservice.services.impl.IVehicleExpenseService;
 import org.example.purchaseservice.services.impl.IVehicleService;
+import org.example.purchaseservice.services.impl.IUserService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
@@ -22,6 +24,7 @@ public class VehicleExportDataFetcher {
     private final IVehicleExpenseService vehicleExpenseService;
     private final IVehicleService vehicleService;
     private final ProductRepository productRepository;
+    private final IUserService userService;
     private final org.example.purchaseservice.clients.TransactionCategoryClient transactionCategoryClient;
     private final org.example.purchaseservice.clients.AccountClient accountClient;
 
@@ -31,7 +34,8 @@ public class VehicleExportDataFetcher {
             Map<Long, List<VehicleExpense>> expensesMap,
             Map<Long, String> accountNameMap,
             Map<Long, String> categoryNameMap,
-            List<Long> sortedCategoryIds
+            List<Long> sortedCategoryIds,
+            Map<Long, String> managerNameMap
     ) {}
     
     public VehicleData loadVehicleData(@NonNull List<Vehicle> vehicles) {
@@ -50,8 +54,35 @@ public class VehicleExportDataFetcher {
         Map<Long, String> accountNameMap = loadAccountNames(accountIds);
         Map<Long, String> categoryNameMap = loadCategoryNames(categoryIds);
         List<Long> sortedCategoryIds = sortCategoryIds(categoryIds, categoryNameMap);
+        Map<Long, String> managerNameMap = loadManagerNames(vehicles);
         
-        return new VehicleData(vehicles, productMap, expensesMap, accountNameMap, categoryNameMap, sortedCategoryIds);
+        return new VehicleData(vehicles, productMap, expensesMap, accountNameMap, categoryNameMap, sortedCategoryIds, managerNameMap);
+    }
+    
+    private Map<Long, String> loadManagerNames(List<Vehicle> vehicles) {
+        Set<Long> managerIds = vehicles.stream()
+                .map(Vehicle::getManagerId)
+                .filter(Objects::nonNull)
+                .collect(java.util.stream.Collectors.toSet());
+        if (managerIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        try {
+            List<UserDTO> users = userService.getAllUsers();
+            if (users == null) {
+                return Collections.emptyMap();
+            }
+            Map<Long, String> map = new HashMap<>();
+            for (UserDTO user : users) {
+                if (user != null && user.getId() != null && managerIds.contains(user.getId())) {
+                    map.put(user.getId(), user.getName() != null ? user.getName() : "");
+                }
+            }
+            return map;
+        } catch (Exception e) {
+            log.warn("Failed to load manager names for export", e);
+            return Collections.emptyMap();
+        }
     }
     
     private Map<Long, Product> loadProductMap(List<Long> vehicleIds) {

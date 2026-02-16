@@ -728,10 +728,16 @@ const AdministrationDataLoader = (function() {
 
     async function createClientTypePermission(clientTypeId, userId) {
         try {
-            const response = await fetch(`${API_BASE}/client-type/${clientTypeId}/permission/${userId}`, {
+            const response = await fetch(`${API_BASE}/client-type/${clientTypeId}/permission`, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ canView: true, canCreate: false, canEdit: false, canDelete: false })
+                body: JSON.stringify({
+                    userId,
+                    canView: true,
+                    canCreate: false,
+                    canEdit: false,
+                    canDelete: false
+                })
             });
             if (!response.ok) {
                 const error = await parseErrorResponse(response);

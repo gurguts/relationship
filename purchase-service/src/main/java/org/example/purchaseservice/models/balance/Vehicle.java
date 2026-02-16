@@ -41,8 +41,8 @@ public class Vehicle {
     @Column(name = "user_id")
     private Long userId;
     
-    @Column(name = "is_our_vehicle", nullable = false)
-    private Boolean isOurVehicle = true;
+    @Column(name = "manager_id")
+    private Long managerId;
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "sender_id")

@@ -533,6 +533,7 @@ body.modal-open {
     justify-content: flex-end;
     gap: 1rem;
     background: var(--bg-secondary);
+    flex-shrink: 0;
 }
 
 .form-section {
@@ -897,7 +898,6 @@ body.modal-open {
         padding: 0.4em 0.8em;
     }
 
-    /* Table to card conversion for mobile */
     .modern-table thead {
         display: none;
     }
@@ -981,7 +981,6 @@ body.modal-open {
         text-align: left;
     }
 
-    /* Override inline styles for mobile */
     .resizable-table th,
     .resizable-table td,
     #vehicles-table th,
@@ -991,7 +990,6 @@ body.modal-open {
         max-width: none !important;
     }
 
-    /* Search and filter section */
     .table-card > div:first-of-type + div {
         padding: 1em !important;
     }
@@ -1088,7 +1086,6 @@ body.modal-open {
         font-size: 0.95em;
     }
 
-    /* Tabs */
     .vehicle-details-tabs {
         flex-wrap: wrap;
         gap: 0.5em;
@@ -1102,7 +1099,6 @@ body.modal-open {
         min-width: calc(50% - 0.25em);
     }
 
-    /* Vehicle total card */
     .vehicle-total-card {
         flex-direction: column;
         align-items: flex-start;
@@ -1115,7 +1111,6 @@ body.modal-open {
         font-size: 1.5rem;
     }
 
-    /* Form actions */
     .form-actions {
         flex-direction: column;
         gap: 0.8em;
@@ -1128,7 +1123,6 @@ body.modal-open {
         justify-content: center;
     }
 
-    /* Edit mode selector */
     .edit-mode-selector {
         flex-direction: column;
         gap: 0.8em;
@@ -1140,7 +1134,6 @@ body.modal-open {
         padding: 0.8em 1em;
     }
 
-    /* Pagination */
     .pagination {
         padding: 1em;
         gap: 0.5em;
@@ -1152,7 +1145,6 @@ body.modal-open {
         font-size: 0.9em;
     }
 
-    /* Tables inside modals */
     #tab-products .modern-table thead,
     #tab-expenses .modern-table thead,
     #manage-carriers-modal .modern-table thead {
@@ -1246,7 +1238,6 @@ body.modal-open {
         text-align: left;
     }
 
-    /* Action buttons in cards */
     .action-buttons {
         flex-direction: column;
         gap: 0.5em;
@@ -1258,7 +1249,6 @@ body.modal-open {
         justify-content: center;
     }
 
-    /* Products and expenses sections */
     .products-section,
     .expenses-section {
         padding: 0;
@@ -1282,13 +1272,11 @@ body.modal-open {
         justify-content: center;
     }
 
-    /* Large modals */
     .modal-large,
     .modal-extra-large {
         max-width: 90%;
     }
 
-    /* Search input wrapper */
     .table-card > div:first-of-type + div > div {
         flex-direction: column;
         gap: 0.8em;
@@ -1401,11 +1389,8 @@ body.modal-open {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    background-color: var(--bg-primary);
-    border-radius: var(--border-radius);
     cursor: pointer;
     transition: var(--transition);
-    min-height: 2.75rem;
 }
 
 .custom-select-trigger:hover {
@@ -1419,12 +1404,13 @@ body.modal-open {
 }
 
 .custom-select-placeholder {
-    border: none;
+    border-radius: var(--border-radius);
+    border: 2px solid var(--border-color);
     background: transparent;
     width: 100%;
-    padding: 0;
     font-size: 0.875rem;
     font-family: inherit;
+    padding: 5px
 }
 
 input.custom-select-placeholder {

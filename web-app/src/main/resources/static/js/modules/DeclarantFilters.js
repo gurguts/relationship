@@ -4,7 +4,6 @@ const DeclarantFilters = (function() {
         
         const vehiclesDateFromFilter = document.getElementById('vehicles-date-from-filter');
         const vehiclesDateToFilter = document.getElementById('vehicles-date-to-filter');
-        const vehiclesIsOurVehicleFilter = document.getElementById('vehicles-is-our-vehicle-filter');
         const vehiclesCustomsDateFromFilter = document.getElementById('vehicles-customs-date-from-filter');
         const vehiclesCustomsDateToFilter = document.getElementById('vehicles-customs-date-to-filter');
         const vehiclesCustomsClearanceDateFromFilter = document.getElementById('vehicles-customs-clearance-date-from-filter');
@@ -19,11 +18,6 @@ const DeclarantFilters = (function() {
         }
         if (dateTo) {
             filters.shipmentDateTo = [dateTo];
-        }
-        
-        const isOurVehicleFilter = vehiclesIsOurVehicleFilter?.checked;
-        if (isOurVehicleFilter !== undefined && isOurVehicleFilter) {
-            filters.isOurVehicle = ['true'];
         }
         
         const customsDateFrom = vehiclesCustomsDateFromFilter?.value;
@@ -51,6 +45,11 @@ const DeclarantFilters = (function() {
         }
         if (unloadingDateTo) {
             filters.unloadingDateTo = [unloadingDateTo];
+        }
+        
+        const managerIdsInput = document.getElementById('hidden-vehicles-manager-filter');
+        if (managerIdsInput && managerIdsInput.value.trim()) {
+            filters.managerId = managerIdsInput.value.split(',').map(s => s.trim()).filter(Boolean);
         }
         
         return filters;

@@ -58,17 +58,13 @@ public class VehicleUpdateService {
         vehicle.setProductQuantity(normalizeString(dto.getProductQuantity()));
         vehicle.setDeclarationNumber(normalizeString(dto.getDeclarationNumber()));
         vehicle.setDriverFullName(normalizeString(dto.getDriverFullName()));
+        vehicle.setManagerId(dto.getManagerId());
     }
     
     private void updateBooleanFields(Vehicle vehicle, VehicleUpdateDTO dto) {
         if (dto.getEur1() != null) {
             vehicle.setEur1(dto.getEur1());
         }
-        
-        if (dto.getIsOurVehicle() != null) {
-            vehicle.setIsOurVehicle(dto.getIsOurVehicle());
-        }
-        
         if (dto.getFito() != null) {
             vehicle.setFito(dto.getFito());
         }

@@ -43,7 +43,7 @@ public class VehicleExportHeaderBuilder {
         headers.add("ID");
         headers.add("Дата відвантаження");
         headers.add("Опис");
-        headers.add("Наше завантаження");
+        headers.add("Менеджер");
         headers.add("Товар");
         headers.add("Країна призначення");
         headers.add("Місце призначення");

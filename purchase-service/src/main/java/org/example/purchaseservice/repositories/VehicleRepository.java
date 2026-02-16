@@ -37,7 +37,7 @@ public interface VehicleRepository extends JpaRepository<Vehicle, Long>, JpaSpec
     List<Vehicle> findByShipmentDate(@NonNull LocalDate shipmentDate);
 
     @EntityGraph(attributePaths = {"carrier", "sender", "receiver"})
-    @Query("SELECT v FROM Vehicle v WHERE v.shipmentDate BETWEEN :fromDate AND :toDate AND v.isOurVehicle = true ORDER BY v.shipmentDate DESC")
+    @Query("SELECT v FROM Vehicle v WHERE v.shipmentDate BETWEEN :fromDate AND :toDate ORDER BY v.shipmentDate DESC")
     @NonNull
     List<Vehicle> findOurVehiclesByDateRange(@Param("fromDate") @NonNull LocalDate fromDate, @Param("toDate") @NonNull LocalDate toDate);
 

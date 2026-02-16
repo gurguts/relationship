@@ -12,6 +12,7 @@ let vehicleReceiverMap = new Map();
 let vehicleTerminalMap = new Map();
 let vehicleDestinationCountryMap = new Map();
 let vehicleDestinationPlaceMap = new Map();
+let userMap = new Map();
 
 async function fetchProducts() {
     try {
@@ -105,6 +106,18 @@ async function fetchVehicleDestinationPlaces() {
     }
 }
 
+async function fetchUsers() {
+    try {
+        const users = await DeclarantDataLoader.fetchUsers();
+        userMap = new Map(users.map(user => [user.id, user.name]));
+        return users;
+    } catch (error) {
+        console.error('Error fetching users:', error);
+        handleError(error);
+        return [];
+    }
+}
+
 const populateCarriers = (selectId) => DeclarantRenderer.populateCarriers(selectId, carrierMap);
 const populateVehicleSenders = (selectId) => DeclarantRenderer.populateVehicleSenders(selectId, vehicleSenderMap);
 const populateVehicleReceivers = (selectId) => DeclarantRenderer.populateVehicleReceivers(selectId, vehicleReceiverMap);
@@ -135,7 +148,7 @@ const detailVehicleProductQuantityInput = document.getElementById('detail-vehicl
 const detailVehicleDeclarationNumberInput = document.getElementById('detail-vehicle-declaration-number');
 const detailVehicleTerminalInput = document.getElementById('detail-vehicle-terminal');
 const detailVehicleDriverFullNameInput = document.getElementById('detail-vehicle-driver-full-name');
-const detailVehicleIsOurVehicleInput = document.getElementById('detail-vehicle-is-our-vehicle');
+const detailVehicleManagerIdSelect = document.getElementById('detail-vehicle-manager-id');
 const detailVehicleEur1Input = document.getElementById('detail-vehicle-eur1');
 const detailVehicleFitoInput = document.getElementById('detail-vehicle-fito');
 const detailVehicleCustomsDateInput = document.getElementById('detail-vehicle-customs-date');
@@ -183,7 +196,7 @@ const vehicleFito = document.getElementById('vehicle-fito');
 const vehicleCustomsDate = document.getElementById('vehicle-customs-date');
 const vehicleCustomsClearanceDate = document.getElementById('vehicle-customs-clearance-date');
 const vehicleUnloadingDate = document.getElementById('vehicle-unloading-date');
-const vehicleIsOurVehicle = document.getElementById('vehicle-is-our-vehicle');
+const vehicleManagerIdSelect = document.getElementById('vehicle-manager-id');
 const vehicleCarrierId = document.getElementById('vehicle-carrier-id');
 
 const vehiclesDateFromFilter = document.getElementById('vehicles-date-from-filter');
@@ -194,7 +207,6 @@ const vehiclesCustomsClearanceDateFromFilter = document.getElementById('vehicles
 const vehiclesCustomsClearanceDateToFilter = document.getElementById('vehicles-customs-clearance-date-to-filter');
 const vehiclesUnloadingDateFromFilter = document.getElementById('vehicles-unloading-date-from-filter');
 const vehiclesUnloadingDateToFilter = document.getElementById('vehicles-unloading-date-to-filter');
-const vehiclesIsOurVehicleFilter = document.getElementById('vehicles-is-our-vehicle-filter');
 
 const vehicleItemsTbody = document.getElementById('vehicle-items-tbody');
 const vehicleTotalCost = document.getElementById('vehicle-total-cost');
@@ -223,6 +235,7 @@ const vehicleExpensesTbody = document.getElementById('vehicle-expenses-tbody');
 let currentVehicleId = null;
 let vehiclesCache = [];
 let currentVehicleDetails = null;
+let vehiclesManagerCustomSelect = null;
 let currentPage = 0;
 const pageSize = CLIENT_CONSTANTS.DEFAULT_PAGE_SIZE;
 let totalPages = 0;
@@ -249,6 +262,23 @@ if (editVehicleBtn) {
     });
 }
 
+function populateManagerSelect(selectId, selectedManagerId) {
+    const select = document.getElementById(selectId);
+    if (!select) return;
+    select.textContent = '';
+    const emptyOpt = document.createElement('option');
+    emptyOpt.value = '';
+    emptyOpt.textContent = 'Не обрано';
+    select.appendChild(emptyOpt);
+    for (const [id, name] of userMap.entries()) {
+        const opt = document.createElement('option');
+        opt.value = id;
+        opt.textContent = name || '';
+        select.appendChild(opt);
+    }
+    select.value = selectedManagerId != null ? String(selectedManagerId) : '';
+}
+
 if (createVehicleBtn) {
     createVehicleBtn.addEventListener('click', () => {
         populateCarriers('vehicle-carrier-id');
@@ -257,6 +287,7 @@ if (createVehicleBtn) {
         populateVehicleTerminals('vehicle-terminal');
         populateVehicleDestinationCountries('vehicle-destination-country');
         populateVehicleDestinationPlaces('vehicle-destination-place');
+        populateManagerSelect('vehicle-manager-id', null);
         openModal('create-vehicle-modal');
     });
 }
@@ -291,7 +322,7 @@ if (createVehicleForm) {
             customsClearanceDate: vehicleCustomsClearanceDate?.value || null,
             unloadingDate: vehicleUnloadingDate?.value || null,
             carrierId: carrierIdValue ? Number(carrierIdValue) : null,
-            isOurVehicle: vehicleIsOurVehicle?.checked || false
+            managerId: vehicleManagerIdSelect?.value ? Number(vehicleManagerIdSelect.value) : null
         };
         
         try {
@@ -325,7 +356,7 @@ async function loadVehicles(page = 0) {
         totalPages = data.totalPages || 0;
         totalElements = data.totalElements || 0;
         
-        await renderVehicles(vehiclesCache, currentPage, pageSize, totalElements, totalPages, productMap, warehouseMap, carrierMap, viewVehicleDetails);
+        await renderVehicles(vehiclesCache, currentPage, pageSize, totalElements, totalPages, productMap, warehouseMap, carrierMap, userMap, viewVehicleDetails);
         renderPagination();
     } catch (error) {
         console.error('Error loading vehicles:', error);
@@ -353,8 +384,8 @@ function renderPagination() {
 
 const formatCarrier = DeclarantRenderer.formatCarrier;
 
-async function renderVehicles(vehicles, currentPage, pageSize, totalElements, totalPages, productMap, warehouseMap, carrierMap, onVehicleClick) {
-    await DeclarantRenderer.renderVehicles(vehicles, currentPage, pageSize, totalElements, totalPages, productMap, warehouseMap, carrierMap, onVehicleClick);
+async function renderVehicles(vehicles, currentPage, pageSize, totalElements, totalPages, productMap, warehouseMap, carrierMap, userMap, onVehicleClick) {
+    await DeclarantRenderer.renderVehicles(vehicles, currentPage, pageSize, totalElements, totalPages, productMap, warehouseMap, carrierMap, userMap, onVehicleClick);
     applySavedColumnWidths();
     initializeColumnResize();
 }
@@ -444,6 +475,7 @@ function renderVehicleDetails(vehicle) {
     currentVehicleDetails = vehicle;
     currentVehicleItems = new Map();
     populateVehicleForm(vehicle);
+    populateManagerSelect('detail-vehicle-manager-id', vehicle.managerId);
     setVehicleFormEditable(false);
     
     DeclarantRenderer.renderVehicleDetails(vehicle, productMap, warehouseMap, currentVehicleItems);
@@ -529,7 +561,7 @@ document.getElementById('clear-vehicles-filters')?.addEventListener('click', () 
     if (vehiclesCustomsClearanceDateToFilter) vehiclesCustomsClearanceDateToFilter.value = '';
     if (vehiclesUnloadingDateFromFilter) vehiclesUnloadingDateFromFilter.value = '';
     if (vehiclesUnloadingDateToFilter) vehiclesUnloadingDateToFilter.value = '';
-    if (vehiclesIsOurVehicleFilter) vehiclesIsOurVehicleFilter.checked = false;
+    if (vehiclesManagerCustomSelect) vehiclesManagerCustomSelect.reset();
     if (vehiclesSearchInput) {
         vehiclesSearchInput.value = '';
     }
@@ -547,7 +579,27 @@ if (vehiclesSearchInput) {
     });
 }
 
+function populateVehiclesManagerFilter() {
+    const select = document.getElementById('vehicles-manager-filter');
+    if (!select) return;
+    const previousIds = vehiclesManagerCustomSelect ? vehiclesManagerCustomSelect.getValue() : [];
+    const managerData = Array.from(userMap.entries()).map(([id, name]) => ({ id, name: name || '' }));
+    select.textContent = '';
+    if (!vehiclesManagerCustomSelect) {
+        vehiclesManagerCustomSelect = createCustomSelect(select, true);
+    }
+    if (vehiclesManagerCustomSelect) {
+        if (managerData.length > 0) {
+            vehiclesManagerCustomSelect.populate(managerData);
+        }
+        if (previousIds.length > 0) {
+            vehiclesManagerCustomSelect.setValue(previousIds.map(String));
+        }
+    }
+}
+
 document.getElementById('open-vehicles-filter-modal')?.addEventListener('click', () => {
+    populateVehiclesManagerFilter();
     openModal('vehicles-filter-modal');
 });
 
@@ -584,7 +636,7 @@ if (updateVehicleForm) {
             declarationNumber: detailVehicleDeclarationNumberInput?.value ?? null,
             terminalId: detailVehicleTerminalInput?.value ? parseInt(detailVehicleTerminalInput.value) : null,
             driverFullName: detailVehicleDriverFullNameInput?.value ?? null,
-            isOurVehicle: detailVehicleIsOurVehicleInput?.checked || false,
+            managerId: detailVehicleManagerIdSelect?.value ? Number(detailVehicleManagerIdSelect.value) : null,
             eur1: detailVehicleEur1Input?.checked || false,
             fito: detailVehicleFitoInput?.checked || false,
             customsDate: detailVehicleCustomsDateInput?.value || null,
@@ -1009,6 +1061,7 @@ async function initialize() {
     await fetchProducts();
     await fetchWarehouses();
     await fetchCarriers();
+    await fetchUsers();
     await fetchVehicleSenders();
     await fetchVehicleReceivers();
     await fetchVehicleTerminals();
