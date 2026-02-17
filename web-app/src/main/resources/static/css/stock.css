@@ -697,7 +697,7 @@ body.modal-open {
 }
 
 .excel-export {
-    padding: 12px;
+    padding: 6px 8px;
     background: linear-gradient(135deg, #4CAF50, #2E7D32, #4CAF50);
     background-size: 200% 200%;
     color: white;

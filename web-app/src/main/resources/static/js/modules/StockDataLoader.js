@@ -591,6 +591,27 @@ const StockDataLoader = (function() {
             throw error;
         }
     }
+
+    async function exportVehicleProductsToExcel(dateFrom, dateTo, searchQuery, managerIds) {
+        try {
+            const params = new URLSearchParams();
+            if (dateFrom) params.append('fromDate', dateFrom);
+            if (dateTo) params.append('toDate', dateTo);
+            if (searchQuery && searchQuery.trim()) params.append('q', searchQuery.trim());
+            if (managerIds && managerIds.length > 0) {
+                managerIds.forEach(id => params.append('managerId', String(id)));
+            }
+            const response = await fetch(`${API_BASE}/vehicles/our/export-products?${params}`);
+            if (!response.ok) {
+                const error = await parseErrorResponse(response);
+                throw error;
+            }
+            return await response.blob();
+        } catch (error) {
+            console.error('Error exporting vehicle products to Excel:', error);
+            throw error;
+        }
+    }
     
     return {
         fetchProducts,
@@ -609,6 +630,7 @@ const StockDataLoader = (function() {
         loadDiscrepancies,
         exportDiscrepancies,
         exportTransfers,
+        exportVehicleProductsToExcel,
         loadTransfers,
         loadBalanceHistory,
         createWithdrawal,

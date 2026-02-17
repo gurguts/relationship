@@ -18,6 +18,7 @@ import org.example.purchaseservice.models.dto.balance.VehicleUpdateDTO;
 import org.example.purchaseservice.mappers.VehicleMapper;
 import org.example.purchaseservice.services.impl.IVehicleService;
 import org.example.purchaseservice.services.impl.IVehicleExportService;
+import org.example.purchaseservice.services.impl.IVehicleProductsExportService;
 import org.example.purchaseservice.utils.SecurityUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -46,6 +47,7 @@ public class VehicleController {
     private final IVehicleService vehicleService;
     private final ObjectMapper objectMapper;
     private final IVehicleExportService vehicleExportService;
+    private final IVehicleProductsExportService vehicleProductsExportService;
     private final VehicleMapper vehicleMapper;
     
     @PreAuthorize("hasAuthority('warehouse:create') or hasAuthority('declarant:create')")
@@ -71,6 +73,26 @@ public class VehicleController {
         return ResponseEntity.ok(detailsDTO);
     }
     
+    @PreAuthorize("hasAuthority('warehouse:view')")
+    @GetMapping("/our/export-products")
+    public ResponseEntity<byte[]> exportVehicleProductsToExcel(
+            @RequestParam(name = "q", required = false) String query,
+            @RequestParam(name = "fromDate", required = false) LocalDate fromDate,
+            @RequestParam(name = "toDate", required = false) LocalDate toDate,
+            @RequestParam(name = "managerId", required = false) List<Long> managerIds) {
+        try {
+            List<Long> ids = managerIds != null ? managerIds : Collections.emptyList();
+            byte[] excelData = vehicleProductsExportService.exportVehicleProductsToExcel(query, fromDate, toDate, ids);
+            return ResponseEntity.ok()
+                    .header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                    .header("Content-Disposition", "attachment; filename=vehicle_products.xlsx")
+                    .body(excelData);
+        } catch (IOException e) {
+            log.error("Error exporting vehicle products to Excel", e);
+            throw new PurchaseException("EXPORT_FAILED", "Failed to export vehicle products to Excel: " + e.getMessage());
+        }
+    }
+
     @PreAuthorize("hasAuthority('warehouse:view') or hasAuthority('declarant:view')")
     @PostMapping("/ids")
     public ResponseEntity<List<Map<Long, String>>> getVehiclesByIds(@RequestBody @NonNull List<Long> ids) {

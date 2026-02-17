@@ -1639,6 +1639,33 @@ if (vehiclesSearchInput) {
     });
 }
 
+document.getElementById('export-excel-vehicles-products')?.addEventListener('click', async () => {
+    try {
+        const dateFrom = document.getElementById('vehicles-date-from')?.value || '';
+        const dateTo = document.getElementById('vehicles-date-to')?.value || '';
+        const searchQuery = document.getElementById('vehicles-search-input')?.value || '';
+        const managerIds = getSelectedManagerIds();
+        const blob = await StockDataLoader.exportVehicleProductsToExcel(dateFrom, dateTo, searchQuery, managerIds);
+        const downloadUrl = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        a.download = 'vehicle_products.xlsx';
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(downloadUrl);
+        document.body.removeChild(a);
+        if (typeof showMessage === 'function') {
+            showMessage('Excel файл успішно завантажено', 'success');
+        }
+    } catch (error) {
+        console.error('Error exporting vehicle products to Excel:', error);
+        if (typeof showMessage === 'function') {
+            showMessage('Помилка при експорті в Excel', 'error');
+        }
+        handleError(error);
+    }
+});
+
 document.getElementById('vehicles-prev-page')?.addEventListener('click', async () => {
     if (currentVehiclesPage > 0) {
         await loadVehicles(currentVehiclesPage - 1);
