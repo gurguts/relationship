@@ -1436,6 +1436,29 @@ function getSelectedManagerIds() {
     return Array.from(select.selectedOptions).map(opt => Number(opt.value)).filter(n => Number.isFinite(n));
 }
 
+function formatVehiclesStatsQuantity(value) {
+    if (value == null || value === '') return '0';
+    const n = Number(value);
+    if (!Number.isFinite(n)) return '0';
+    return n % 1 === 0 ? String(n) : n.toFixed(2);
+}
+
+function formatVehiclesStatsCost(value) {
+    if (value == null || value === '') return '0';
+    const n = Number(value);
+    if (!Number.isFinite(n)) return '0';
+    return n.toFixed(2);
+}
+
+function updateVehiclesStatsDisplay(stats) {
+    const countEl = document.getElementById('vehicles-stats-count');
+    const quantityEl = document.getElementById('vehicles-stats-quantity');
+    const costEl = document.getElementById('vehicles-stats-cost');
+    if (countEl) countEl.textContent = stats && typeof stats.vehicleCount === 'number' ? String(stats.vehicleCount) : '0';
+    if (quantityEl) quantityEl.textContent = stats && stats.totalQuantityKg != null ? formatVehiclesStatsQuantity(stats.totalQuantityKg) : '0';
+    if (costEl) costEl.textContent = stats && stats.totalCostEur != null ? formatVehiclesStatsCost(stats.totalCostEur) : '0';
+}
+
 async function loadVehicles(page) {
     try {
         const dateFrom = document.getElementById('vehicles-date-from')?.value || '';
@@ -1449,6 +1472,13 @@ async function loadVehicles(page) {
             viewVehicleDetails(vehicleId);
         });
         StockRenderer.updateVehiclesPagination(data);
+        try {
+            const stats = await StockDataLoader.loadVehiclesStats(dateFrom, dateTo, searchQuery, managerIds);
+            updateVehiclesStatsDisplay(stats);
+        } catch (statsErr) {
+            console.error('Error loading vehicles stats:', statsErr);
+            updateVehiclesStatsDisplay(null);
+        }
     } catch (error) {
         console.error('Error loading vehicles:', error);
         if (typeof showMessage === 'function') {

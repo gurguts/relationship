@@ -185,6 +185,27 @@ const StockDataLoader = (function() {
             throw error;
         }
     }
+
+    async function loadVehiclesStats(dateFrom, dateTo, searchQuery, managerIds) {
+        try {
+            const params = new URLSearchParams();
+            if (dateFrom) params.append('fromDate', dateFrom);
+            if (dateTo) params.append('toDate', dateTo);
+            if (searchQuery && searchQuery.trim()) params.append('q', searchQuery.trim());
+            if (managerIds && managerIds.length > 0) {
+                managerIds.forEach(id => params.append('managerId', String(id)));
+            }
+            const response = await fetch(`${API_BASE}/vehicles/our/stats?${params}`);
+            if (!response.ok) {
+                const error = await parseErrorResponse(response);
+                throw error;
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error loading vehicles stats:', error);
+            throw error;
+        }
+    }
     
     async function loadVehicleDetails(vehicleId) {
         try {
@@ -625,6 +646,7 @@ const StockDataLoader = (function() {
         loadDriverBalances,
         loadWarehouseBalance,
         loadVehicles,
+        loadVehiclesStats,
         loadVehicleDetails,
         loadDiscrepanciesStatistics,
         loadDiscrepancies,

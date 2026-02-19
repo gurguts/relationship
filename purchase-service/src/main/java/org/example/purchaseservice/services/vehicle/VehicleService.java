@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.purchaseservice.models.balance.Vehicle;
 import org.example.purchaseservice.models.balance.VehicleProduct;
+import org.example.purchaseservice.models.dto.balance.OurVehiclesStatsDTO;
 import org.example.purchaseservice.models.dto.balance.VehicleUpdateDTO;
 import org.example.purchaseservice.repositories.VehicleProductRepository;
 import org.example.purchaseservice.repositories.VehicleRepository;
@@ -15,9 +16,10 @@ import org.example.purchaseservice.spec.StockVehicleSpecification;
 import org.example.purchaseservice.spec.VehicleFilterBuilder;
 import org.example.purchaseservice.spec.VehicleSearchPredicateBuilder;
 import org.example.purchaseservice.spec.VehicleSpecification;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -111,6 +113,29 @@ public class VehicleService implements IVehicleService {
     public Page<Vehicle> findOurVehiclesPaged(String query, LocalDate fromDate, LocalDate toDate, List<Long> managerIds, @NonNull Pageable pageable) {
         StockVehicleSpecification spec = new StockVehicleSpecification(query, fromDate, toDate, managerIds);
         return vehicleRepository.findAll(spec, pageable);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public OurVehiclesStatsDTO getOurVehiclesStats(String query, LocalDate fromDate, LocalDate toDate, List<Long> managerIds) {
+        List<Long> managerIdsList = managerIds != null ? managerIds : Collections.emptyList();
+        StockVehicleSpecification spec = new StockVehicleSpecification(query, fromDate, toDate, managerIdsList);
+        Sort sort = Sort.by(Sort.Direction.DESC, "shipmentDate");
+        List<Vehicle> vehicles = vehicleRepository.findAll(spec, sort);
+        if (vehicles.isEmpty()) {
+            return new OurVehiclesStatsDTO(0L, BigDecimal.ZERO, BigDecimal.ZERO);
+        }
+        List<Long> vehicleIds = vehicles.stream().map(Vehicle::getId).toList();
+        Map<Long, List<VehicleProduct>> productsByVehicle = getVehicleProductsByVehicleIds(vehicleIds);
+        BigDecimal totalQuantity = BigDecimal.ZERO;
+        BigDecimal totalCost = BigDecimal.ZERO;
+        for (List<VehicleProduct> products : productsByVehicle.values()) {
+            for (VehicleProduct vp : products) {
+                if (vp.getQuantity() != null) totalQuantity = totalQuantity.add(vp.getQuantity());
+                if (vp.getTotalCostEur() != null) totalCost = totalCost.add(vp.getTotalCostEur());
+            }
+        }
+        return new OurVehiclesStatsDTO(vehicles.size(), totalQuantity, totalCost);
     }
     
     @Transactional(readOnly = true)

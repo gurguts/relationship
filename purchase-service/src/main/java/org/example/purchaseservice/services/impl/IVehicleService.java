@@ -7,6 +7,8 @@ import org.example.purchaseservice.models.dto.balance.VehicleUpdateDTO;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import org.example.purchaseservice.models.dto.balance.OurVehiclesStatsDTO;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
@@ -29,6 +31,8 @@ public interface IVehicleService {
     List<Vehicle> getOurVehiclesByDateRange(@NonNull LocalDate fromDate, @NonNull LocalDate toDate);
     
     Page<Vehicle> findOurVehiclesPaged(String query, LocalDate fromDate, LocalDate toDate, List<Long> managerIds, @NonNull Pageable pageable);
+
+    OurVehiclesStatsDTO getOurVehiclesStats(String query, LocalDate fromDate, LocalDate toDate, List<Long> managerIds);
     
     List<Vehicle> getAllVehiclesByDateRange(@NonNull LocalDate fromDate, @NonNull LocalDate toDate);
     

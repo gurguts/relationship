@@ -12,6 +12,7 @@ import org.example.purchaseservice.models.PageResponse;
 import org.example.purchaseservice.models.balance.Vehicle;
 import org.example.purchaseservice.models.balance.VehicleProduct;
 import org.example.purchaseservice.models.dto.balance.UpdateVehicleCostRequest;
+import org.example.purchaseservice.models.dto.balance.OurVehiclesStatsDTO;
 import org.example.purchaseservice.models.dto.balance.VehicleCreateDTO;
 import org.example.purchaseservice.models.dto.balance.VehicleDetailsDTO;
 import org.example.purchaseservice.models.dto.balance.VehicleUpdateDTO;
@@ -145,6 +146,18 @@ public class VehicleController {
                 .map(vehicleMapper::vehicleToVehicleDetailsDTO)
                 .toList();
         return ResponseEntity.ok(dtos);
+    }
+
+    @PreAuthorize("hasAuthority('warehouse:view')")
+    @GetMapping("/our/stats")
+    public ResponseEntity<OurVehiclesStatsDTO> getOurVehiclesStats(
+            @RequestParam(name = "q", required = false) String query,
+            @RequestParam(name = "fromDate", required = false) LocalDate fromDate,
+            @RequestParam(name = "toDate", required = false) LocalDate toDate,
+            @RequestParam(name = "managerId", required = false) List<Long> managerIds) {
+        List<Long> ids = managerIds != null ? managerIds : Collections.emptyList();
+        OurVehiclesStatsDTO stats = vehicleService.getOurVehiclesStats(query, fromDate, toDate, ids);
+        return ResponseEntity.ok(stats);
     }
 
     @PreAuthorize("hasAuthority('warehouse:view')")

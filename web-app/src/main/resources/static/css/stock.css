@@ -2863,6 +2863,26 @@ tr:hover {
     letter-spacing: 1px;
 }
 
+.vehicles-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.25rem;
+    align-items: center;
+    font-size: 0.95rem;
+    color: #495057;
+}
+
+.vehicles-stats-item {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.35rem;
+}
+
+.vehicles-stats-label {
+    font-weight: 500;
+    color: #6c757d;
+}
+
 .vehicles-controls {
     display: flex;
     gap: 0.75rem;
