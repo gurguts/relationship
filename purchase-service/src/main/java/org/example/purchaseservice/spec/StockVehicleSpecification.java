@@ -12,6 +12,7 @@ import org.springframework.util.StringUtils;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 public class StockVehicleSpecification implements Specification<Vehicle> {
 
@@ -47,12 +48,19 @@ public class StockVehicleSpecification implements Specification<Vehicle> {
             predicates.add(root.get(MANAGER_ID).in(managerIds));
         }
         if (StringUtils.hasText(query)) {
-            String pattern = "%" + query.toLowerCase() + "%";
-            Predicate vehicleNumberLike = criteriaBuilder.like(
-                    criteriaBuilder.lower(criteriaBuilder.coalesce(root.get(VEHICLE_NUMBER), "")), pattern);
-            Predicate descriptionLike = criteriaBuilder.like(
-                    criteriaBuilder.lower(criteriaBuilder.coalesce(root.get(DESCRIPTION), "")), pattern);
-            predicates.add(criteriaBuilder.or(vehicleNumberLike, descriptionLike));
+            Set<String> searchVariants = VehicleSearchTextNormalizer.buildSearchVariants(query);
+            List<Predicate> searchPredicates = new ArrayList<>();
+            for (String searchVariant : searchVariants) {
+                String pattern = "%" + searchVariant + "%";
+                Predicate vehicleNumberLike = criteriaBuilder.like(
+                        criteriaBuilder.lower(criteriaBuilder.coalesce(root.get(VEHICLE_NUMBER), "")), pattern);
+                Predicate descriptionLike = criteriaBuilder.like(
+                        criteriaBuilder.lower(criteriaBuilder.coalesce(root.get(DESCRIPTION), "")), pattern);
+                searchPredicates.add(criteriaBuilder.or(vehicleNumberLike, descriptionLike));
+            }
+            if (!searchPredicates.isEmpty()) {
+                predicates.add(criteriaBuilder.or(searchPredicates.toArray(new Predicate[0])));
+            }
         }
 
         if (criteriaQuery.getResultType() != Long.class && criteriaQuery.getResultType() != long.class) {

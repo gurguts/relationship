@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 @Component
 @RequiredArgsConstructor
@@ -47,24 +48,26 @@ public class VehicleSearchPredicateBuilder {
             @NonNull CriteriaBuilder criteriaBuilder) {
         
         List<Predicate> searchPredicates = new ArrayList<>();
-        String searchTerm = String.format("%%%s%%", query.toLowerCase());
-        
-        addIdSearchPredicate(searchPredicates, query, root, criteriaBuilder, searchTerm);
-        addStringFieldSearchPredicate(searchPredicates, root, criteriaBuilder, FIELD_VEHICLE_NUMBER, searchTerm);
-        addStringFieldSearchPredicate(searchPredicates, root, criteriaBuilder, FIELD_INVOICE_UA, searchTerm);
-        addStringFieldSearchPredicate(searchPredicates, root, criteriaBuilder, FIELD_INVOICE_EU, searchTerm);
-        addStringFieldSearchPredicate(searchPredicates, root, criteriaBuilder, FIELD_PRODUCT, searchTerm);
-        addStringFieldSearchPredicate(searchPredicates, root, criteriaBuilder, FIELD_PRODUCT_QUANTITY, searchTerm);
-        addStringFieldSearchPredicate(searchPredicates, root, criteriaBuilder, FIELD_DECLARATION_NUMBER, searchTerm);
-        addStringFieldSearchPredicate(searchPredicates, root, criteriaBuilder, FIELD_DRIVER_FULL_NAME, searchTerm);
-        addStringFieldSearchPredicate(searchPredicates, root, criteriaBuilder, FIELD_DESCRIPTION, searchTerm);
-        
-        addJoinFieldSearchPredicate(searchPredicates, root, criteriaBuilder, FIELD_SENDER, FIELD_SENDER_NAME, searchTerm);
-        addJoinFieldSearchPredicate(searchPredicates, root, criteriaBuilder, FIELD_RECEIVER, FIELD_RECEIVER_NAME, searchTerm);
-        addJoinFieldSearchPredicate(searchPredicates, root, criteriaBuilder, FIELD_CARRIER, FIELD_CARRIER_COMPANY_NAME, searchTerm);
-        addJoinFieldSearchPredicate(searchPredicates, root, criteriaBuilder, FIELD_TERMINAL, FIELD_TERMINAL_NAME, searchTerm);
-        addJoinFieldSearchPredicate(searchPredicates, root, criteriaBuilder, FIELD_DESTINATION_COUNTRY, FIELD_DESTINATION_COUNTRY_NAME, searchTerm);
-        addJoinFieldSearchPredicate(searchPredicates, root, criteriaBuilder, FIELD_DESTINATION_PLACE, FIELD_DESTINATION_PLACE_NAME, searchTerm);
+        Set<String> searchVariants = VehicleSearchTextNormalizer.buildSearchVariants(query);
+        for (String searchVariant : searchVariants) {
+            String searchTerm = String.format("%%%s%%", searchVariant);
+            addIdSearchPredicate(searchPredicates, searchVariant, root, criteriaBuilder, searchTerm);
+            addStringFieldSearchPredicate(searchPredicates, root, criteriaBuilder, FIELD_VEHICLE_NUMBER, searchTerm);
+            addStringFieldSearchPredicate(searchPredicates, root, criteriaBuilder, FIELD_INVOICE_UA, searchTerm);
+            addStringFieldSearchPredicate(searchPredicates, root, criteriaBuilder, FIELD_INVOICE_EU, searchTerm);
+            addStringFieldSearchPredicate(searchPredicates, root, criteriaBuilder, FIELD_PRODUCT, searchTerm);
+            addStringFieldSearchPredicate(searchPredicates, root, criteriaBuilder, FIELD_PRODUCT_QUANTITY, searchTerm);
+            addStringFieldSearchPredicate(searchPredicates, root, criteriaBuilder, FIELD_DECLARATION_NUMBER, searchTerm);
+            addStringFieldSearchPredicate(searchPredicates, root, criteriaBuilder, FIELD_DRIVER_FULL_NAME, searchTerm);
+            addStringFieldSearchPredicate(searchPredicates, root, criteriaBuilder, FIELD_DESCRIPTION, searchTerm);
+
+            addJoinFieldSearchPredicate(searchPredicates, root, criteriaBuilder, FIELD_SENDER, FIELD_SENDER_NAME, searchTerm);
+            addJoinFieldSearchPredicate(searchPredicates, root, criteriaBuilder, FIELD_RECEIVER, FIELD_RECEIVER_NAME, searchTerm);
+            addJoinFieldSearchPredicate(searchPredicates, root, criteriaBuilder, FIELD_CARRIER, FIELD_CARRIER_COMPANY_NAME, searchTerm);
+            addJoinFieldSearchPredicate(searchPredicates, root, criteriaBuilder, FIELD_TERMINAL, FIELD_TERMINAL_NAME, searchTerm);
+            addJoinFieldSearchPredicate(searchPredicates, root, criteriaBuilder, FIELD_DESTINATION_COUNTRY, FIELD_DESTINATION_COUNTRY_NAME, searchTerm);
+            addJoinFieldSearchPredicate(searchPredicates, root, criteriaBuilder, FIELD_DESTINATION_PLACE, FIELD_DESTINATION_PLACE_NAME, searchTerm);
+        }
         
         return searchPredicates;
     }
