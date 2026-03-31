@@ -13,6 +13,7 @@ import org.example.purchaseservice.models.balance.Vehicle;
 import org.example.purchaseservice.models.balance.VehicleProduct;
 import org.example.purchaseservice.models.dto.balance.UpdateVehicleCostRequest;
 import org.example.purchaseservice.models.dto.balance.OurVehiclesStatsDTO;
+import org.example.purchaseservice.models.dto.balance.VehiclesStatsDTO;
 import org.example.purchaseservice.models.dto.balance.VehicleCreateDTO;
 import org.example.purchaseservice.models.dto.balance.VehicleDetailsDTO;
 import org.example.purchaseservice.models.dto.balance.VehicleUpdateDTO;
@@ -157,6 +158,16 @@ public class VehicleController {
             @RequestParam(name = "managerId", required = false) List<Long> managerIds) {
         List<Long> ids = managerIds != null ? managerIds : Collections.emptyList();
         OurVehiclesStatsDTO stats = vehicleService.getOurVehiclesStats(query, fromDate, toDate, ids);
+        return ResponseEntity.ok(stats);
+    }
+
+    @PreAuthorize("hasAuthority('declarant:view')")
+    @GetMapping("/stats")
+    public ResponseEntity<VehiclesStatsDTO> getVehiclesStats(
+            @RequestParam(name = "q", required = false) String query,
+            @RequestParam(name = "filters", required = false) String filters) {
+        Map<String, List<String>> filterParams = parseFilters(filters);
+        VehiclesStatsDTO stats = vehicleService.getVehiclesStats(query, filterParams);
         return ResponseEntity.ok(stats);
     }
 

@@ -150,6 +150,33 @@ const DeclarantDataLoader = (function() {
             throw error;
         }
     }
+
+    async function loadVehiclesStats(searchTerm, filtersJson) {
+        try {
+            let url = `${API_BASE}/vehicles/stats`;
+
+            const queryParams = [];
+            if (searchTerm) {
+                queryParams.push(`q=${encodeURIComponent(searchTerm)}`);
+            }
+            if (filtersJson) {
+                queryParams.push(`filters=${encodeURIComponent(filtersJson)}`);
+            }
+            if (queryParams.length > 0) {
+                url += `?${queryParams.join('&')}`;
+            }
+
+            const response = await fetch(url);
+            if (!response.ok) {
+                const error = await parseErrorResponse(response);
+                throw error;
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error loading vehicles stats:', error);
+            throw error;
+        }
+    }
     
     async function loadVehicleDetails(vehicleId) {
         try {
@@ -566,6 +593,7 @@ const DeclarantDataLoader = (function() {
         fetchVehicleDestinationPlaces,
         fetchUsers,
         loadVehicles,
+        loadVehiclesStats,
         loadVehicleDetails,
         createVehicle,
         updateVehicle,

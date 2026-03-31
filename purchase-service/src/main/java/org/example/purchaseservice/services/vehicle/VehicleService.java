@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.purchaseservice.models.balance.Vehicle;
 import org.example.purchaseservice.models.balance.VehicleProduct;
 import org.example.purchaseservice.models.dto.balance.OurVehiclesStatsDTO;
+import org.example.purchaseservice.models.dto.balance.VehiclesStatsDTO;
 import org.example.purchaseservice.models.dto.balance.VehicleUpdateDTO;
 import org.example.purchaseservice.repositories.VehicleProductRepository;
 import org.example.purchaseservice.repositories.VehicleRepository;
@@ -136,6 +137,37 @@ public class VehicleService implements IVehicleService {
             }
         }
         return new OurVehiclesStatsDTO(vehicles.size(), totalQuantity, totalCost);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public VehiclesStatsDTO getVehiclesStats(String query, Map<String, List<String>> filterParams) {
+        VehicleSpecification spec = new VehicleSpecification(
+                query,
+                filterParams != null ? filterParams : Collections.emptyMap(),
+                filterBuilder,
+                searchPredicateBuilder,
+                null,
+                null
+        );
+
+        List<Vehicle> vehicles = vehicleRepository.findAll(spec);
+        if (vehicles.isEmpty()) {
+            return new VehiclesStatsDTO(BigDecimal.ZERO, BigDecimal.ZERO);
+        }
+
+        List<Long> vehicleIds = vehicles.stream().map(Vehicle::getId).toList();
+        Map<Long, List<VehicleProduct>> productsByVehicle = getVehicleProductsByVehicleIds(vehicleIds);
+
+        BigDecimal totalQuantity = BigDecimal.ZERO;
+        BigDecimal totalCost = BigDecimal.ZERO;
+        for (List<VehicleProduct> products : productsByVehicle.values()) {
+            for (VehicleProduct vp : products) {
+                if (vp.getQuantity() != null) totalQuantity = totalQuantity.add(vp.getQuantity());
+                if (vp.getTotalCostEur() != null) totalCost = totalCost.add(vp.getTotalCostEur());
+            }
+        }
+        return new VehiclesStatsDTO(totalQuantity, totalCost);
     }
     
     @Transactional(readOnly = true)

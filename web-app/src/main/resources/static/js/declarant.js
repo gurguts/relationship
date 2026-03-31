@@ -342,6 +342,13 @@ if (createVehicleForm) {
 
 const buildFilters = DeclarantFilters.buildFilters;
 
+function updateVehiclesStatsDisplay(stats) {
+    const quantityEl = document.getElementById('vehicles-stats-quantity');
+    const costEl = document.getElementById('vehicles-stats-cost');
+    if (quantityEl) quantityEl.textContent = stats && stats.totalQuantityKg != null ? Number(stats.totalQuantityKg).toFixed(2) : '0';
+    if (costEl) costEl.textContent = stats && stats.totalCostEur != null ? Number(stats.totalCostEur).toFixed(2) : '0';
+}
+
 async function loadVehicles(page = 0) {
     currentPage = page;
     
@@ -358,9 +365,17 @@ async function loadVehicles(page = 0) {
         
         await renderVehicles(vehiclesCache, currentPage, pageSize, totalElements, totalPages, productMap, warehouseMap, carrierMap, userMap, viewVehicleDetails);
         renderPagination();
+        try {
+            const stats = await DeclarantDataLoader.loadVehiclesStats(searchTerm, filtersJson);
+            updateVehiclesStatsDisplay(stats);
+        } catch (statsErr) {
+            console.error('Error loading vehicles stats:', statsErr);
+            updateVehiclesStatsDisplay(null);
+        }
     } catch (error) {
         console.error('Error loading vehicles:', error);
         showMessage('Помилка завантаження машин', 'error');
+        updateVehiclesStatsDisplay(null);
         
         const vehiclesTbody = document.getElementById('vehicles-tbody');
         if (vehiclesTbody) {
@@ -565,7 +580,6 @@ document.getElementById('clear-vehicles-filters')?.addEventListener('click', () 
     if (vehiclesSearchInput) {
         vehiclesSearchInput.value = '';
     }
-    setDefaultVehicleDates();
     loadVehicles(0);
 });
 
@@ -1080,7 +1094,6 @@ async function initialize() {
     populateVehicleDestinationPlaces('vehicle-destination-place');
     populateVehicleDestinationPlaces('detail-vehicle-destination-place');
     await loadAccounts();
-    setDefaultVehicleDates();
     await loadVehicles(0);
     initializeColumnResize();
     initializeModalClickHandlers();
