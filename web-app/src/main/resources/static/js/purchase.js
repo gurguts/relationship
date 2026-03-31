@@ -262,13 +262,50 @@ function renderPurchaseReport(report, purchaseReportContent) {
     
     if (!report || ((!report.drivers || report.drivers.length === 0) && 
         (!report.sources || report.sources.length === 0) && 
-        (!report.totals || report.totals.length === 0))) {
+        (!report.totals || report.totals.length === 0) &&
+        (!report.summary || (report.summary.totalQuantity == null && report.summary.totalSpentEur == null)))) {
         const emptyMessage = document.createElement('p');
         emptyMessage.textContent = 'Немає даних для відображення';
         emptyMessage.style.textAlign = 'center';
         emptyMessage.style.padding = '20px';
         purchaseReportContent.appendChild(emptyMessage);
         return;
+    }
+
+    if (report.summary && (report.summary.totalQuantity != null || report.summary.totalSpentEur != null)) {
+        const summarySection = document.createElement('div');
+        summarySection.className = 'report-section';
+
+        const summaryTitle = document.createElement('h3');
+        summaryTitle.textContent = 'Підсумок';
+        summaryTitle.className = 'report-section-title';
+        summarySection.appendChild(summaryTitle);
+
+        const summaryList = document.createElement('div');
+        summaryList.className = 'report-products-list report-totals-list';
+
+        const summaryItem = document.createElement('div');
+        summaryItem.className = 'report-product-item report-total-item';
+
+        const summaryName = document.createElement('span');
+        summaryName.className = 'report-product-name';
+        summaryName.textContent = 'Всього';
+
+        const summaryQuantity = document.createElement('span');
+        summaryQuantity.className = 'report-product-quantity';
+        summaryQuantity.textContent = report.summary.totalQuantity != null ? parseFloat(report.summary.totalQuantity).toFixed(2) : '0.00';
+
+        const summaryPrice = document.createElement('span');
+        summaryPrice.className = 'report-product-price';
+        summaryPrice.textContent = report.summary.totalSpentEur != null ? parseFloat(report.summary.totalSpentEur).toFixed(2) + ' EUR' : '0.00 EUR';
+
+        summaryItem.appendChild(summaryName);
+        summaryItem.appendChild(summaryQuantity);
+        summaryItem.appendChild(summaryPrice);
+        summaryList.appendChild(summaryItem);
+
+        summarySection.appendChild(summaryList);
+        purchaseReportContent.appendChild(summarySection);
     }
     
     if (report.drivers && report.drivers.length > 0) {
@@ -603,8 +640,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const purchaseReportBtn = document.getElementById('purchase-report-btn');
     const purchaseReportModal = document.getElementById('purchase-report-modal');
     const closePurchaseReportModal = document.getElementById('close-purchase-report-modal');
-    const purchaseReportContent = document.getElementById('purchase-report-content');
-    
+    document.getElementById('purchase-report-content');
     if (purchaseReportBtn) {
         purchaseReportBtn.addEventListener('click', async (e) => {
             e.preventDefault();

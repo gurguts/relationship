@@ -52,13 +52,34 @@ public class PurchaseReportGenerator {
         List<PurchaseReportDTO.DriverReport> driverReports = buildDriverReports(purchases, userNamesMap, productNamesMap);
         List<PurchaseReportDTO.SourceReport> sourceReports = buildSourceReports(purchases, sourceNamesMap, productNamesMap);
         List<PurchaseReportDTO.ProductTotal> totals = buildProductTotals(purchases, productNamesMap);
+        PurchaseReportDTO.Summary summary = buildSummary(purchases);
         
         PurchaseReportDTO report = new PurchaseReportDTO();
         report.setDrivers(driverReports);
         report.setSources(sourceReports);
         report.setTotals(totals);
+        report.setSummary(summary);
         
         return report;
+    }
+
+    private PurchaseReportDTO.Summary buildSummary(@NonNull List<Purchase> purchases) {
+        BigDecimal totalQuantity = BigDecimal.ZERO;
+        BigDecimal totalSpentEur = BigDecimal.ZERO;
+
+        for (Purchase purchase : purchases) {
+            if (purchase.getQuantity() != null) {
+                totalQuantity = totalQuantity.add(purchase.getQuantity());
+            }
+            if (purchase.getTotalPriceEur() != null) {
+                totalSpentEur = totalSpentEur.add(purchase.getTotalPriceEur());
+            }
+        }
+
+        PurchaseReportDTO.Summary summary = new PurchaseReportDTO.Summary();
+        summary.setTotalQuantity(totalQuantity);
+        summary.setTotalSpentEur(totalSpentEur);
+        return summary;
     }
     
     private Map<Long, String> loadUserNames(@NonNull Set<Long> userIds) {

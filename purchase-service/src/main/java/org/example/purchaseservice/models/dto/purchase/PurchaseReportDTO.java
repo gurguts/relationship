@@ -10,6 +10,13 @@ public class PurchaseReportDTO {
     private List<DriverReport> drivers;
     private List<SourceReport> sources;
     private List<ProductTotal> totals;
+    private Summary summary;
+
+    @Data
+    public static class Summary {
+        private BigDecimal totalQuantity;
+        private BigDecimal totalSpentEur;
+    }
 
     @Data
     public static class DriverReport {
