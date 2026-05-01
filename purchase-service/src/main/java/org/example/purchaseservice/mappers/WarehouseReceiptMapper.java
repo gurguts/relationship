@@ -21,6 +21,7 @@ public class WarehouseReceiptMapper {
         warehouseReceipt.setProductId(dto.getProductId());
         warehouseReceipt.setWarehouseId(dto.getWarehouseId());
         warehouseReceipt.setQuantity(dto.getQuantity());
+        warehouseReceipt.setPartialUnload(Boolean.TRUE.equals(dto.getPartialUnload()));
 
         if (dto.getTypeId() != null) {
             WithdrawalReason type = withdrawalReasonRepository.findById(dto.getTypeId()).orElse(null);
@@ -49,6 +50,7 @@ public class WarehouseReceiptMapper {
         warehouseReceiptDTO.setPurchasedQuantity(warehouseReceipt.getDriverBalanceQuantity());
         warehouseReceiptDTO.setUnitPriceEur(warehouseReceipt.getUnitPriceEur());
         warehouseReceiptDTO.setTotalCostEur(warehouseReceipt.getTotalCostEur());
+        warehouseReceiptDTO.setPartialUnload(warehouseReceipt.isPartialUnload());
         return warehouseReceiptDTO;
     }
 }

@@ -18,7 +18,7 @@ public class WarehouseReceiptBalanceHandler {
     private final IDriverProductBalanceService driverProductBalanceService;
     private final IWarehouseProductBalanceService warehouseProductBalanceService;
     
-    public void updateBalances(
+    public void updateBalancesFull(
             @NonNull WarehouseReceipt warehouseReceipt,
             @NonNull BigDecimal purchasedQuantity,
             @NonNull BigDecimal receivedQuantity,
@@ -36,6 +36,26 @@ public class WarehouseReceiptBalanceHandler {
                 warehouseReceipt.getProductId(),
                 receivedQuantity,
                 totalDriverCost
+        );
+    }
+
+    public void updateBalancesPartial(
+            @NonNull WarehouseReceipt warehouseReceipt,
+            @NonNull BigDecimal receivedQuantity,
+            @NonNull BigDecimal movedCost) {
+        
+        driverProductBalanceService.removeProduct(
+                warehouseReceipt.getUserId(),
+                warehouseReceipt.getProductId(),
+                receivedQuantity,
+                movedCost
+        );
+
+        warehouseProductBalanceService.addProduct(
+                warehouseReceipt.getWarehouseId(),
+                warehouseReceipt.getProductId(),
+                receivedQuantity,
+                movedCost
         );
     }
 }

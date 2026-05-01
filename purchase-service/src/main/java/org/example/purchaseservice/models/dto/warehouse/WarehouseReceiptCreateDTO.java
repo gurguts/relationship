@@ -18,5 +18,7 @@ public class WarehouseReceiptCreateDTO {
     private Long typeId;
 
     private BigDecimal purchasedQuantity;
+
+    private Boolean partialUnload;
 }
 

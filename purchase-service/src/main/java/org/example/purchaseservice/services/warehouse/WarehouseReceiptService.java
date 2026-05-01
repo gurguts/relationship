@@ -23,6 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -32,6 +33,8 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class WarehouseReceiptService implements IWarehouseReceiptService {
+    private static final int COST_SCALE = 6;
+    private static final RoundingMode COST_ROUNDING_MODE = RoundingMode.HALF_UP;
     
     private final WarehouseReceiptRepository warehouseReceiptRepository;
     private final IDriverProductBalanceService driverProductBalanceService;
@@ -95,6 +98,27 @@ public class WarehouseReceiptService implements IWarehouseReceiptService {
         BigDecimal receivedQuantity = warehouseReceipt.getQuantity();
         BigDecimal totalDriverCost = driverBalance.getTotalCostEur();
 
+        if (warehouseReceipt.isPartialUnload()) {
+            if (receivedQuantity.compareTo(purchasedQuantity) > 0) {
+                throw new WarehouseException(
+                        "INSUFFICIENT_DRIVER_BALANCE",
+                        String.format("Partial unload: received quantity %s exceeds driver balance %s", receivedQuantity, purchasedQuantity)
+                );
+            }
+
+            BigDecimal unitPrice = driverBalance.getAveragePriceEur();
+            BigDecimal movedCost = unitPrice.multiply(receivedQuantity).setScale(COST_SCALE, COST_ROUNDING_MODE);
+
+            calculator.prepareWarehouseReceipt(warehouseReceipt, purchasedQuantity, unitPrice, movedCost, executorUserId);
+
+            WarehouseReceipt savedReceipt = warehouseReceiptRepository.save(warehouseReceipt);
+
+            balanceHandler.updateBalancesPartial(warehouseReceipt, receivedQuantity, movedCost);
+
+            log.info("Warehouse receipt created (partial unload): id={}", savedReceipt.getId());
+            return savedReceipt;
+        }
+
         BigDecimal warehouseUnitPrice = calculator.calculateWarehouseUnitPrice(totalDriverCost, receivedQuantity);
         
         calculator.prepareWarehouseReceipt(warehouseReceipt, purchasedQuantity, warehouseUnitPrice, totalDriverCost, executorUserId);
@@ -107,7 +131,7 @@ public class WarehouseReceiptService implements IWarehouseReceiptService {
             createDiscrepancyIfNeeded(savedReceipt, driverBalance, receivedQuantity, executorUserId, receiptDate);
         }
 
-        balanceHandler.updateBalances(warehouseReceipt, purchasedQuantity, receivedQuantity, totalDriverCost);
+        balanceHandler.updateBalancesFull(warehouseReceipt, purchasedQuantity, receivedQuantity, totalDriverCost);
         
         log.info("Warehouse receipt created: id={}", savedReceipt.getId());
         return savedReceipt;

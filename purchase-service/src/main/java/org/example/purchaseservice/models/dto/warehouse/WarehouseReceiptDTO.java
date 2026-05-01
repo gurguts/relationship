@@ -31,5 +31,7 @@ public class WarehouseReceiptDTO {
     private BigDecimal unitPriceEur;
     
     private BigDecimal totalCostEur;
+
+    private Boolean partialUnload;
 }
 

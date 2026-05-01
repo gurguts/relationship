@@ -44,6 +44,9 @@ public class WarehouseReceipt {
     @Column(name = "total_cost_eur", precision = 20, scale = 6)
     private BigDecimal totalCostEur;
 
+    @Column(name = "partial_unload", nullable = false)
+    private boolean partialUnload;
+
     @Column(name = "entry_date")
     private LocalDate entryDate;
 

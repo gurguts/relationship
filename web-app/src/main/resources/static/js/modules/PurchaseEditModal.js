@@ -3,6 +3,14 @@ const PurchaseEditModal = (function() {
     let form = null;
     let sourceMap = null;
     let onSaveSuccess = null;
+    let currentPurchaseId = null;
+    
+    let quantityInput = null;
+    let totalPriceInput = null;
+    let createdAtInput = null;
+    let exchangeRateInput = null;
+    let sourceSelect = null;
+    let commentTextarea = null;
     
     function generateSourceOptions(selectedId) {
         if (!sourceMap || !sourceMap.size) {
@@ -33,18 +41,13 @@ const PurchaseEditModal = (function() {
         if (!modal || !form) return;
         
         const header = modal.querySelector('h3');
-        const quantityInput = form.querySelector('input[name="quantity"]');
-        const totalPriceInput = form.querySelector('input[name="totalPrice"]');
-        const createdAtInput = form.querySelector('input[name="createdAt"]');
-        const exchangeRateInput = form.querySelector('input[name="exchangeRate"]');
-        const sourceSelect = form.querySelector('select[name="sourceId"]');
-        const commentTextarea = form.querySelector('textarea[name="comment"]');
-        
+
         if (!header || !quantityInput || !totalPriceInput || !createdAtInput || !exchangeRateInput || !sourceSelect || !commentTextarea) {
             console.error('Required form elements not found');
             return;
         }
         
+        currentPurchaseId = purchase.id;
         header.textContent = `ID: ${purchase.id}`;
         quantityInput.value = purchase.quantity || 0;
         totalPriceInput.value = purchase.totalPrice || 0;
@@ -59,9 +62,34 @@ const PurchaseEditModal = (function() {
         
         modal.style.display = 'flex';
         setTimeout(() => modal.classList.add('active'), 10);
+    }
+    
+    function init(config) {
+        modal = document.getElementById(config.modalId || 'edit-modal');
+        form = document.getElementById(config.formId || 'edit-form');
+        sourceMap = config.sourceMap;
+        onSaveSuccess = config.onSaveSuccess;
+        
+        if (!modal || !form) {
+            console.error('Modal or form not found');
+            return;
+        }
+        
+        quantityInput = form.querySelector('input[name="quantity"]');
+        totalPriceInput = form.querySelector('input[name="totalPrice"]');
+        createdAtInput = form.querySelector('input[name="createdAt"]');
+        exchangeRateInput = form.querySelector('input[name="exchangeRate"]');
+        sourceSelect = form.querySelector('select[name="sourceId"]');
+        commentTextarea = form.querySelector('textarea[name="comment"]');
         
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
+            
+            if (!currentPurchaseId) {
+                console.error('No current purchase id set for editing');
+                return;
+            }
+            
             const updatedData = {
                 quantity: parseFloat(quantityInput.value),
                 totalPrice: parseFloat(totalPriceInput.value),
@@ -72,7 +100,7 @@ const PurchaseEditModal = (function() {
             };
             
             try {
-                await PurchaseDataLoader.updatePurchase(purchase.id, updatedData);
+                await PurchaseDataLoader.updatePurchase(currentPurchaseId, updatedData);
                 modal.classList.remove('active');
                 setTimeout(() => {
                     modal.style.display = 'none';
@@ -89,18 +117,6 @@ const PurchaseEditModal = (function() {
                 }
             }
         });
-    }
-    
-    function init(config) {
-        modal = document.getElementById(config.modalId || 'edit-modal');
-        form = document.getElementById(config.formId || 'edit-form');
-        sourceMap = config.sourceMap;
-        onSaveSuccess = config.onSaveSuccess;
-        
-        if (!modal || !form) {
-            console.error('Modal or form not found');
-            return;
-        }
         
         const closeButton = document.getElementById('close-edit-modal');
         if (closeButton) {

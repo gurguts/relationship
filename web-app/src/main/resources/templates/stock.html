@@ -218,6 +218,7 @@
                 <th>Водій</th>
                 <th>Товар</th>
                 <th>Тип</th>
+                <th>Неповна</th>
                 <th>Привезено</th>
                 <th>Закуплено</th>
                 <th>Різниця</th>
@@ -513,6 +514,11 @@
 
             <label for="entry-quantity">Кількість (кг):</label>
             <input type="number" id="entry-quantity" name="quantity" step="0.01" min="0" required>
+
+            <label style="display:flex; align-items:center; gap:10px; text-transform:none; letter-spacing:0; margin-top:10px;">
+                <input type="checkbox" id="entry-partial-unload" name="partial_unload" style="width:auto; margin:0;">
+                Неповна вигрузка
+            </label>
 
             <button type="submit" class="button">Додати</button>
         </form>

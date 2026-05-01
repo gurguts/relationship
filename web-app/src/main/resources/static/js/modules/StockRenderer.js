@@ -253,7 +253,7 @@ const StockRenderer = (function() {
         if (!entries || entries.length === 0) {
             const emptyRow = document.createElement('tr');
             const emptyCell = document.createElement('td');
-            emptyCell.setAttribute('colspan', '9');
+            emptyCell.setAttribute('colspan', '10');
             emptyCell.style.textAlign = 'center';
             emptyCell.textContent = CLIENT_MESSAGES.NO_DATA || 'Немає даних';
             emptyRow.appendChild(emptyCell);
@@ -298,6 +298,12 @@ const StockRenderer = (function() {
             typeCell.setAttribute('data-label', 'Тип');
             typeCell.textContent = typeName;
             row.appendChild(typeCell);
+
+            const partialCell = document.createElement('td');
+            partialCell.setAttribute('data-label', 'Неповна');
+            partialCell.style.textAlign = 'center';
+            partialCell.textContent = entry.partialUnload ? 'Так' : 'Ні';
+            row.appendChild(partialCell);
             
             const receivedCell = document.createElement('td');
             receivedCell.setAttribute('data-label', 'Привезено');

@@ -38,6 +38,7 @@ let entriesFilters = {
 let currentWithdrawalItem = null;
 
 let transfersCache = [];
+let currentEntryDriverBalance = null;
 
 const escapeHtml = StockUtils.escapeHtml;
 const formatNumber = StockUtils.formatNumber;
@@ -372,12 +373,25 @@ document.getElementById('entry-form').addEventListener('submit',
         e.preventDefault();
         const formData = new FormData(e.target);
 
+        const partialUnload = Boolean(document.getElementById('entry-partial-unload')?.checked);
+        if (partialUnload) {
+            const maxQty = currentEntryDriverBalance && currentEntryDriverBalance.quantity != null
+                ? Number(currentEntryDriverBalance.quantity)
+                : null;
+            const qty = Number(formData.get('quantity'));
+            if (Number.isFinite(maxQty) && Number.isFinite(qty) && qty > maxQty + 0.0001) {
+                showMessage('Неможливо прийняти більше ніж є на балансі водія', 'error');
+                return;
+            }
+        }
+
         const entry = {
             warehouseId: Number(formData.get('warehouse_id')),
             productId: Number(formData.get('product_id')),
             quantity: Number(formData.get('quantity')),
             typeId: Number(formData.get('type_id')),
-            userId: Number(formData.get('user_id'))
+            userId: Number(formData.get('user_id')),
+            partialUnload
         };
 
         try {
@@ -901,6 +915,10 @@ addEntryBtn.addEventListener('click', () => {
     populateSelect('entry-user-id', Array.from(userMap.entries()).map(([id, name]) => ({id, name})));
     populateEntryTypes();
     StockModal.hideDriverBalanceInfo();
+    currentEntryDriverBalance = null;
+    const partialEl = document.getElementById('entry-partial-unload');
+    if (partialEl) partialEl.checked = false;
+    applyPartialUnloadConstraints();
     StockModal.openModal('entry-modal');
 });
 
@@ -909,6 +927,9 @@ if (entryForm) {
     entryForm.addEventListener('change', (e) => {
         if (e.target.id === 'entry-user-id' || e.target.id === 'entry-product-id') {
             loadDriverBalanceForEntry();
+        }
+        if (e.target.id === 'entry-partial-unload') {
+            applyPartialUnloadConstraints();
         }
     });
 }
@@ -960,6 +981,10 @@ function closeModal(modalId) {
         } else if (modalId === 'entry-modal') {
             document.getElementById('entry-form')?.reset();
             StockModal.hideDriverBalanceInfo();
+            currentEntryDriverBalance = null;
+            const partialEl = document.getElementById('entry-partial-unload');
+            if (partialEl) partialEl.checked = false;
+            applyPartialUnloadConstraints();
         } else if (modalId === 'create-vehicle-modal') {
             document.getElementById('create-vehicle-form')?.reset();
         } else if (modalId === 'add-product-to-vehicle-modal') {
@@ -1249,16 +1274,47 @@ async function loadDriverBalanceForEntry() {
     const productId = document.getElementById('entry-product-id')?.value;
     
     if (!driverId || !productId) {
+        currentEntryDriverBalance = null;
         StockModal.hideDriverBalanceInfo();
+        applyPartialUnloadConstraints();
         return;
     }
     
     try {
         const balance = await StockDataLoader.loadDriverBalance(driverId, productId);
+        currentEntryDriverBalance = balance;
         StockModal.showDriverBalanceInfo(balance);
+        applyPartialUnloadConstraints();
     } catch (error) {
         console.error('Error loading driver balance:', error);
+        currentEntryDriverBalance = null;
         StockModal.hideDriverBalanceInfo();
+        applyPartialUnloadConstraints();
+    }
+}
+
+function applyPartialUnloadConstraints() {
+    const checkbox = document.getElementById('entry-partial-unload');
+    const qtyInput = document.getElementById('entry-quantity');
+    if (!checkbox || !qtyInput) return;
+
+    if (!checkbox.checked) {
+        qtyInput.removeAttribute('max');
+        return;
+    }
+
+    const maxQty = currentEntryDriverBalance && currentEntryDriverBalance.quantity != null
+        ? Number(currentEntryDriverBalance.quantity)
+        : null;
+
+    if (Number.isFinite(maxQty)) {
+        qtyInput.setAttribute('max', String(maxQty));
+        const currentVal = Number(qtyInput.value);
+        if (Number.isFinite(currentVal) && currentVal > maxQty) {
+            qtyInput.value = String(maxQty);
+        }
+    } else {
+        qtyInput.removeAttribute('max');
     }
 }
 
