@@ -166,12 +166,13 @@
                             <th data-column="unloadingDate" class="resizable-header">Дата вивантаження</th>
                             <th data-column="carrier" class="resizable-header">Перевізник</th>
                             <th data-column="description" class="resizable-header">Коментар</th>
+                            <th data-column="additionalDescription" class="resizable-header">Додатковий опис</th>
                             <th data-column="managerId" class="resizable-header">Менеджер</th>
             </tr>
         </thead>
         <tbody id="vehicles-tbody">
                         <tr class="loading-row">
-                            <td colspan="26">Завантаження...</td>
+                            <td colspan="27">Завантаження...</td>
                         </tr>
         </tbody>
     </table>
@@ -439,6 +440,10 @@
                             <label for="vehicle-description">Коментар</label>
                             <textarea id="vehicle-description" rows="3" class="form-input"></textarea>
                         </div>
+                        <div class="form-group">
+                            <label for="vehicle-additional-description">Додатковий опис</label>
+                            <textarea id="vehicle-additional-description" rows="3" class="form-input"></textarea>
+                        </div>
                     </div>
                 </div>
             </form>
@@ -638,6 +643,10 @@
                             <div class="form-group">
                                 <label for="detail-vehicle-description">Коментар</label>
                                 <textarea id="detail-vehicle-description" rows="3" class="form-input" disabled></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="detail-vehicle-additional-description">Додатковий опис</label>
+                                <textarea id="detail-vehicle-additional-description" rows="3" class="form-input" disabled></textarea>
                             </div>
                         </div>
                     </div>

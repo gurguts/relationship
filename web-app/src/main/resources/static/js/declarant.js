@@ -141,6 +141,7 @@ const detailVehicleInvoiceEuTotalPriceInput = document.getElementById('detail-ve
 const detailVehicleReclamationInput = document.getElementById('detail-vehicle-reclamation');
 const detailVehicleFullReclamationInput = document.getElementById('detail-vehicle-full-reclamation');
 const detailVehicleDescriptionInput = document.getElementById('detail-vehicle-description');
+const detailVehicleAdditionalDescriptionInput = document.getElementById('detail-vehicle-additional-description');
 const detailVehicleDestinationCountryInput = document.getElementById('detail-vehicle-destination-country');
 const detailVehicleDestinationPlaceInput = document.getElementById('detail-vehicle-destination-place');
 const detailVehicleProductInput = document.getElementById('detail-vehicle-product');
@@ -182,6 +183,7 @@ const vehicleInvoiceEuPricePerTon = document.getElementById('vehicle-invoice-eu-
 const vehicleInvoiceEuTotalPrice = document.getElementById('vehicle-invoice-eu-total-price');
 const vehicleReclamation = document.getElementById('vehicle-reclamation');
 const vehicleDescription = document.getElementById('vehicle-description');
+const vehicleAdditionalDescription = document.getElementById('vehicle-additional-description');
 const vehicleSenderSelect = document.getElementById('vehicle-sender');
 const vehicleReceiverSelect = document.getElementById('vehicle-receiver');
 const vehicleDestinationCountrySelect = document.getElementById('vehicle-destination-country');
@@ -307,6 +309,7 @@ if (createVehicleForm) {
             invoiceEuPricePerTon: vehicleInvoiceEuPricePerTon?.value ? parseFloat(vehicleInvoiceEuPricePerTon.value) : null,
             reclamation: vehicleReclamation?.value ? parseFloat(vehicleReclamation.value) : null,
             description: vehicleDescription?.value || '',
+            additionalDescription: vehicleAdditionalDescription?.value || '',
             senderId: vehicleSenderSelect?.value ? parseInt(vehicleSenderSelect.value) : null,
             receiverId: vehicleReceiverSelect?.value ? parseInt(vehicleReceiverSelect.value) : null,
             destinationCountryId: vehicleDestinationCountrySelect?.value ? parseInt(vehicleDestinationCountrySelect.value) : null,
@@ -641,6 +644,7 @@ if (updateVehicleForm) {
             invoiceEuPricePerTon: detailVehicleInvoiceEuPricePerTonInput?.value ? parseFloat(detailVehicleInvoiceEuPricePerTonInput.value) : null,
             reclamation: detailVehicleReclamationInput?.value ? parseFloat(detailVehicleReclamationInput.value) : null,
             description: detailVehicleDescriptionInput?.value ?? null,
+            additionalDescription: detailVehicleAdditionalDescriptionInput?.value ?? null,
             senderId: detailVehicleSenderSelect?.value ? parseInt(detailVehicleSenderSelect.value) : null,
             receiverId: detailVehicleReceiverSelect?.value ? parseInt(detailVehicleReceiverSelect.value) : null,
             destinationCountryId: detailVehicleDestinationCountryInput?.value ? parseInt(detailVehicleDestinationCountryInput.value) : null,

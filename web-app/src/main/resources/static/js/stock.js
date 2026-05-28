@@ -1374,6 +1374,7 @@ const updateVehicleForm = document.getElementById('update-vehicle-form');
 const detailVehicleDateInput = document.getElementById('detail-vehicle-date');
 const detailVehicleVehicleInput = document.getElementById('detail-vehicle-vehicle-number');
 const detailVehicleDescriptionInput = document.getElementById('detail-vehicle-description');
+const detailVehicleAdditionalDescriptionInput = document.getElementById('detail-vehicle-additional-description');
 const editVehicleBtn = document.getElementById('edit-vehicle-btn');
 const saveVehicleBtn = document.getElementById('save-vehicle-btn');
 const editVehicleItemModal = document.getElementById('edit-vehicle-item-modal');
@@ -1460,6 +1461,7 @@ if (createVehicleForm) {
             shipmentDate: document.getElementById('vehicle-date').value,
             vehicleNumber: document.getElementById('vehicle-vehicle-number').value,
             description: document.getElementById('vehicle-description').value,
+            additionalDescription: document.getElementById('vehicle-additional-description')?.value || '',
             managerId: managerIdEl && managerIdEl.value ? Number(managerIdEl.value) : null
         };
         
@@ -1988,6 +1990,7 @@ if (updateVehicleForm) {
             shipmentDate: detailVehicleDateInput?.value || null,
             vehicleNumber: detailVehicleVehicleInput?.value ?? null,
             description: detailVehicleDescriptionInput?.value ?? null,
+            additionalDescription: detailVehicleAdditionalDescriptionInput?.value ?? null,
             managerId: managerIdVal ? Number(managerIdVal) : null
         };
         

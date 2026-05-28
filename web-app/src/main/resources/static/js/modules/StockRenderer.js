@@ -436,7 +436,7 @@ const StockRenderer = (function() {
         if (!vehicles || vehicles.length === 0) {
             const emptyRow = document.createElement('tr');
             const emptyCell = document.createElement('td');
-            emptyCell.setAttribute('colspan', '5');
+            emptyCell.setAttribute('colspan', '6');
             emptyCell.style.textAlign = 'center';
             emptyCell.textContent = CLIENT_MESSAGES.NO_DATA || 'Немає даних';
             emptyRow.appendChild(emptyCell);
@@ -476,6 +476,11 @@ const StockRenderer = (function() {
             descriptionCell.setAttribute('data-label', 'Коментар');
             descriptionCell.textContent = vehicle.description || '-';
             row.appendChild(descriptionCell);
+
+            const additionalDescriptionCell = document.createElement('td');
+            additionalDescriptionCell.setAttribute('data-label', 'Додатковий опис');
+            additionalDescriptionCell.textContent = vehicle.additionalDescription || '-';
+            row.appendChild(additionalDescriptionCell);
             
             const managerCell = document.createElement('td');
             managerCell.setAttribute('data-label', 'Менеджер');

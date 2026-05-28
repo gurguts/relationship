@@ -12,6 +12,7 @@ public class VehicleUpdateDTO {
     private String invoiceUa;
     private String invoiceEu;
     private String description;
+    private String additionalDescription;
     private Long senderId;
     private Long receiverId;
     private Long destinationCountryId;

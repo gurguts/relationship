@@ -187,6 +187,7 @@ public class VehicleExcelGenerator {
         setCellValue(row, col++, dto.getId(), styles.dataStyle());
         setCellValue(row, col++, dto.getShipmentDate(), styles.dateStyle());
         setCellValue(row, col++, dto.getDescription(), styles.dataStyle());
+        setCellValue(row, col++, dto.getAdditionalDescription(), styles.dataStyle());
         String managerName = vehicleData.managerNameMap() != null && dto.getManagerId() != null
                 ? vehicleData.managerNameMap().getOrDefault(dto.getManagerId(), "")
                 : "";

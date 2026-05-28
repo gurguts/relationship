@@ -35,6 +35,9 @@ public class Vehicle {
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
     
+    @Column(name = "additional_description", columnDefinition = "TEXT")
+    private String additionalDescription;
+    
     @Column(name = "total_cost_eur", nullable = false, precision = 20, scale = 6)
     private BigDecimal totalCostEur = BigDecimal.ZERO;
     

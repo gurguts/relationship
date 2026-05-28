@@ -83,6 +83,7 @@ public class VehicleProductsExportService implements IVehicleProductsExportServi
             LocalDate withdrawalDate = vehicle.getShipmentDate();
             Long id = vehicle.getId();
             String vehicleComment = vehicle.getDescription() != null ? vehicle.getDescription() : "";
+            String vehicleAdditionalDescription = vehicle.getAdditionalDescription() != null ? vehicle.getAdditionalDescription() : "";
             String managerName = vehicle.getManagerId() != null ? managerNameMap.getOrDefault(vehicle.getManagerId(), "") : "";
             for (VehicleProduct vp : products) {
                 String warehouseName = warehouseNameMap.getOrDefault(vp.getWarehouseId(), "");
@@ -100,7 +101,8 @@ public class VehicleProductsExportService implements IVehicleProductsExportServi
                         totalCost,
                         withdrawalDate,
                         managerName,
-                        vehicleComment
+                        vehicleComment,
+                        vehicleAdditionalDescription
                 ));
             }
         }

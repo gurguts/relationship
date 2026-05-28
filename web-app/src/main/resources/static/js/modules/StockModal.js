@@ -269,11 +269,13 @@ const StockModal = (function() {
         const detailVehicleDateInput = document.getElementById('detail-vehicle-date');
         const detailVehicleVehicleInput = document.getElementById('detail-vehicle-vehicle-number');
         const detailVehicleDescriptionInput = document.getElementById('detail-vehicle-description');
+        const detailVehicleAdditionalDescriptionInput = document.getElementById('detail-vehicle-additional-description');
         
         if (!vehicle) {
             if (detailVehicleDateInput) detailVehicleDateInput.value = '';
             if (detailVehicleVehicleInput) detailVehicleVehicleInput.value = '';
             if (detailVehicleDescriptionInput) detailVehicleDescriptionInput.value = '';
+            if (detailVehicleAdditionalDescriptionInput) detailVehicleAdditionalDescriptionInput.value = '';
             return;
         }
         
@@ -290,6 +292,9 @@ const StockModal = (function() {
         if (detailVehicleDescriptionInput) {
             detailVehicleDescriptionInput.value = vehicle.description || '';
         }
+        if (detailVehicleAdditionalDescriptionInput) {
+            detailVehicleAdditionalDescriptionInput.value = vehicle.additionalDescription || '';
+        }
     }
     
     function setVehicleFormEditable(isEditable) {
@@ -297,6 +302,7 @@ const StockModal = (function() {
         const detailVehicleVehicleInput = document.getElementById('detail-vehicle-vehicle-number');
         const detailVehicleManagerSelect = document.getElementById('detail-vehicle-manager-id');
         const detailVehicleDescriptionInput = document.getElementById('detail-vehicle-description');
+        const detailVehicleAdditionalDescriptionInput = document.getElementById('detail-vehicle-additional-description');
         const saveVehicleBtn = document.getElementById('save-vehicle-btn');
         const editVehicleBtn = document.getElementById('edit-vehicle-btn');
         
@@ -304,7 +310,8 @@ const StockModal = (function() {
             detailVehicleDateInput,
             detailVehicleVehicleInput,
             detailVehicleManagerSelect,
-            detailVehicleDescriptionInput
+            detailVehicleDescriptionInput,
+            detailVehicleAdditionalDescriptionInput
         ];
         
         fields.forEach(field => {

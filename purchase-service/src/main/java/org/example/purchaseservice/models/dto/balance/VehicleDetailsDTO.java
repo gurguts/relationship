@@ -17,6 +17,7 @@ public class VehicleDetailsDTO {
     private String invoiceUa;
     private String invoiceEu;
     private String description;
+    private String additionalDescription;
     private BigDecimal totalCostEur;
     private Long userId;
     private Long managerId;

@@ -83,6 +83,7 @@ const DeclarantModal = (function() {
         const detailVehicleInvoiceUaInput = document.getElementById('detail-vehicle-invoice-ua');
         const detailVehicleInvoiceEuInput = document.getElementById('detail-vehicle-invoice-eu');
         const detailVehicleDescriptionInput = document.getElementById('detail-vehicle-description');
+        const detailVehicleAdditionalDescriptionInput = document.getElementById('detail-vehicle-additional-description');
         const detailVehicleSenderSelect = document.getElementById('detail-vehicle-sender');
         const detailVehicleReceiverSelect = document.getElementById('detail-vehicle-receiver');
         const detailVehicleTerminalSelect = document.getElementById('detail-vehicle-terminal');
@@ -114,6 +115,7 @@ const DeclarantModal = (function() {
             if (detailVehicleInvoiceUaInput) detailVehicleInvoiceUaInput.value = '';
             if (detailVehicleInvoiceEuInput) detailVehicleInvoiceEuInput.value = '';
             if (detailVehicleDescriptionInput) detailVehicleDescriptionInput.value = '';
+            if (detailVehicleAdditionalDescriptionInput) detailVehicleAdditionalDescriptionInput.value = '';
             if (detailVehicleSenderSelect) detailVehicleSenderSelect.value = '';
             if (detailVehicleReceiverSelect) detailVehicleReceiverSelect.value = '';
             if (detailVehicleDestinationCountryInput) detailVehicleDestinationCountryInput.value = '';
@@ -146,6 +148,7 @@ const DeclarantModal = (function() {
         if (detailVehicleInvoiceUaInput) detailVehicleInvoiceUaInput.value = vehicle.invoiceUa || '';
         if (detailVehicleInvoiceEuInput) detailVehicleInvoiceEuInput.value = vehicle.invoiceEu || '';
         if (detailVehicleDescriptionInput) detailVehicleDescriptionInput.value = vehicle.description || '';
+        if (detailVehicleAdditionalDescriptionInput) detailVehicleAdditionalDescriptionInput.value = vehicle.additionalDescription || '';
         if (detailVehicleSenderSelect) detailVehicleSenderSelect.value = vehicle.senderId || '';
         if (detailVehicleReceiverSelect) detailVehicleReceiverSelect.value = vehicle.receiverId || '';
         if (detailVehicleTerminalSelect) detailVehicleTerminalSelect.value = vehicle.terminalId || '';
@@ -188,6 +191,7 @@ const DeclarantModal = (function() {
             document.getElementById('detail-vehicle-invoice-eu-price-per-ton'),
             document.getElementById('detail-vehicle-reclamation'),
             document.getElementById('detail-vehicle-description'),
+            document.getElementById('detail-vehicle-additional-description'),
             document.getElementById('detail-vehicle-sender'),
             document.getElementById('detail-vehicle-receiver'),
             document.getElementById('detail-vehicle-terminal'),

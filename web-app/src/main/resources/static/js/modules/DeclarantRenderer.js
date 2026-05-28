@@ -264,6 +264,7 @@ const DeclarantRenderer = (function() {
             row.appendChild(createCell(DeclarantUtils.formatDate(vehicle.unloadingDate), 'Дата вивантаження'));
             row.appendChild(createCell(formatCarrier(vehicle.carrier), 'Перевізник'));
             row.appendChild(createCell(vehicle.description || '-', 'Коментар'));
+            row.appendChild(createCell(vehicle.additionalDescription || '-', 'Додатковий опис'));
             const managerName = userMap && vehicle.managerId != null ? (DeclarantUtils.findNameByIdFromMap(userMap, vehicle.managerId) || '-') : '-';
             row.appendChild(createCell(managerName, 'Менеджер'));
             

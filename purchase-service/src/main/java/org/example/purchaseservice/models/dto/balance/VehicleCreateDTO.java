@@ -20,6 +20,8 @@ public class VehicleCreateDTO {
     
     private String description;
     
+    private String additionalDescription;
+    
     private Long managerId;
     
     private Long senderId;

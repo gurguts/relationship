@@ -27,6 +27,7 @@ public class VehicleSearchPredicateBuilder {
     private static final String FIELD_DECLARATION_NUMBER = "declarationNumber";
     private static final String FIELD_DRIVER_FULL_NAME = "driverFullName";
     private static final String FIELD_DESCRIPTION = "description";
+    private static final String FIELD_ADDITIONAL_DESCRIPTION = "additionalDescription";
     private static final String FIELD_SENDER = "sender";
     private static final String FIELD_RECEIVER = "receiver";
     private static final String FIELD_CARRIER = "carrier";
@@ -60,6 +61,7 @@ public class VehicleSearchPredicateBuilder {
             addStringFieldSearchPredicate(searchPredicates, root, criteriaBuilder, FIELD_DECLARATION_NUMBER, searchTerm);
             addStringFieldSearchPredicate(searchPredicates, root, criteriaBuilder, FIELD_DRIVER_FULL_NAME, searchTerm);
             addStringFieldSearchPredicate(searchPredicates, root, criteriaBuilder, FIELD_DESCRIPTION, searchTerm);
+            addStringFieldSearchPredicate(searchPredicates, root, criteriaBuilder, FIELD_ADDITIONAL_DESCRIPTION, searchTerm);
 
             addJoinFieldSearchPredicate(searchPredicates, root, criteriaBuilder, FIELD_SENDER, FIELD_SENDER_NAME, searchTerm);
             addJoinFieldSearchPredicate(searchPredicates, root, criteriaBuilder, FIELD_RECEIVER, FIELD_RECEIVER_NAME, searchTerm);

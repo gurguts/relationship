@@ -19,6 +19,7 @@ public class StockVehicleSpecification implements Specification<Vehicle> {
     private static final String SHIPMENT_DATE = "shipmentDate";
     private static final String VEHICLE_NUMBER = "vehicleNumber";
     private static final String DESCRIPTION = "description";
+    private static final String ADDITIONAL_DESCRIPTION = "additionalDescription";
     private static final String MANAGER_ID = "managerId";
 
     private final String query;
@@ -56,7 +57,9 @@ public class StockVehicleSpecification implements Specification<Vehicle> {
                         criteriaBuilder.lower(criteriaBuilder.coalesce(root.get(VEHICLE_NUMBER), "")), pattern);
                 Predicate descriptionLike = criteriaBuilder.like(
                         criteriaBuilder.lower(criteriaBuilder.coalesce(root.get(DESCRIPTION), "")), pattern);
-                searchPredicates.add(criteriaBuilder.or(vehicleNumberLike, descriptionLike));
+                Predicate additionalDescriptionLike = criteriaBuilder.like(
+                        criteriaBuilder.lower(criteriaBuilder.coalesce(root.get(ADDITIONAL_DESCRIPTION), "")), pattern);
+                searchPredicates.add(criteriaBuilder.or(vehicleNumberLike, descriptionLike, additionalDescriptionLike));
             }
             if (!searchPredicates.isEmpty()) {
                 predicates.add(criteriaBuilder.or(searchPredicates.toArray(new Predicate[0])));

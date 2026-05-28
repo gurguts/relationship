@@ -33,7 +33,8 @@ public class VehicleProductsExcelGenerator {
             "Загальна вартість",
             "Дата списання",
             "Менеджер",
-            "Коментар"
+            "Коментар",
+            "Додатковий опис"
     };
 
     public byte[] generate(@NonNull List<VehicleProductExcelRow> rows) throws IOException {
@@ -61,6 +62,7 @@ public class VehicleProductsExcelGenerator {
                 setCellValue(dataRow, 7, row.withdrawalDate(), styles.dateStyle());
                 setCellValue(dataRow, 8, row.managerName(), styles.dataStyle());
                 setCellValue(dataRow, 9, row.vehicleComment(), styles.dataStyle());
+                setCellValue(dataRow, 10, row.vehicleAdditionalDescription(), styles.dataStyle());
             }
 
             for (int i = 0; i < HEADERS.length; i++) {
@@ -120,6 +122,7 @@ public class VehicleProductsExcelGenerator {
             BigDecimal totalCost,
             LocalDate withdrawalDate,
             String managerName,
-            String vehicleComment
+            String vehicleComment,
+            String vehicleAdditionalDescription
     ) {}
 }

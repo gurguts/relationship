@@ -54,6 +54,7 @@ public class VehicleUpdateService {
         vehicle.setInvoiceUa(normalizeString(dto.getInvoiceUa()));
         vehicle.setInvoiceEu(normalizeString(dto.getInvoiceEu()));
         vehicle.setDescription(normalizeString(dto.getDescription()));
+        vehicle.setAdditionalDescription(normalizeString(dto.getAdditionalDescription()));
         vehicle.setProduct(normalizeString(dto.getProduct()));
         vehicle.setProductQuantity(normalizeString(dto.getProductQuantity()));
         vehicle.setDeclarationNumber(normalizeString(dto.getDeclarationNumber()));

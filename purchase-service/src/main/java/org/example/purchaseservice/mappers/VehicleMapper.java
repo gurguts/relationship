@@ -77,6 +77,7 @@ public class VehicleMapper {
                 .invoiceUa(vehicle.getInvoiceUa())
                 .invoiceEu(vehicle.getInvoiceEu())
                 .description(vehicle.getDescription())
+                .additionalDescription(vehicle.getAdditionalDescription())
                 .totalCostEur(vehicle.getTotalCostEur())
                 .userId(vehicle.getUserId())
                 .managerId(vehicle.getManagerId())
@@ -122,6 +123,7 @@ public class VehicleMapper {
         vehicle.setInvoiceUa(dto.getInvoiceUa());
         vehicle.setInvoiceEu(dto.getInvoiceEu());
         vehicle.setDescription(dto.getDescription());
+        vehicle.setAdditionalDescription(dto.getAdditionalDescription());
         vehicle.setUserId(userId);
         vehicle.setManagerId(dto.getManagerId());
         vehicle.setTotalCostEur(BigDecimal.ZERO);
