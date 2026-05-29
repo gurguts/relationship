@@ -349,14 +349,14 @@
                 <option value="">Оберіть причину</option>
             </select>
 
+            <label for="warehouse-id">Склад:</label>
+            <select id="warehouse-id" required>
+                <option value="">Оберіть склад</option>
+            </select>
+
             <label for="product-id">Товар:</label>
             <select id="product-id" required>
                 <option value="">Оберіть товар</option>
-            </select>
-
-            <label for="warehouse-id">Склад:</label>
-            <select id="warehouse-id" required>
-                <option value="">Оберіть cклад</option>
             </select>
 
             <label for="quantity">Кількість (кг):</label>
@@ -513,14 +513,21 @@
             <select id="entry-type-id" name="type_id" required></select>
 
             <label for="entry-quantity">Кількість (кг):</label>
-            <input type="number" id="entry-quantity" name="quantity" step="0.01" min="0" required>
+            <input type="number" id="entry-quantity" name="quantity" step="0.01" min="0.01" required>
+
+            <p id="entry-unload-mode-hint" class="entry-form-hint">
+                <strong>Повна вигрузка</strong> (за замовчуванням): з балансу водія списується вся кількість товару.
+                <strong>Неповна вигрузка</strong>: списується лише вказана кількість за середньою ціною.
+            </p>
+
+            <div id="entry-full-unload-warning" class="entry-form-warning" style="display: none;"></div>
 
             <label style="display:flex; align-items:center; gap:10px; text-transform:none; letter-spacing:0; margin-top:10px;">
                 <input type="checkbox" id="entry-partial-unload" name="partial_unload" style="width:auto; margin:0;">
                 Неповна вигрузка
             </label>
 
-            <button type="submit" class="button">Додати</button>
+            <button type="submit" class="button" id="entry-submit-btn">Додати</button>
         </form>
     </div>
 </div>

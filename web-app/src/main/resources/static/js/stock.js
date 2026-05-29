@@ -39,6 +39,8 @@ let currentWithdrawalItem = null;
 
 let transfersCache = [];
 let currentEntryDriverBalance = null;
+let activeDriverBalancesCache = [];
+let activeWarehouseBalancesCache = [];
 
 const escapeHtml = StockUtils.escapeHtml;
 const formatNumber = StockUtils.formatNumber;
@@ -49,7 +51,6 @@ async function fetchProducts() {
         const products = await StockDataLoader.fetchProducts();
         productMap = new Map(products.map(product => [product.id, product.name]));
         populateSelect('product-id-filter', products);
-        populateSelect('product-id', products);
     } catch (error) {
         console.error('Error fetching products:', error);
         handleError(error);
@@ -61,7 +62,6 @@ async function fetchWarehouses() {
         const warehouses = await StockDataLoader.fetchWarehouses();
         warehouseMap = new Map(warehouses.map(warehouse => [warehouse.id, warehouse.name]));
         populateSelect('warehouse-id-filter', warehouses);
-        populateSelect('warehouse-id', warehouses);
     } catch (error) {
         console.error('Error fetching warehouses:', error);
         handleError(error);
@@ -253,6 +253,320 @@ function populateProducts(selectId) {
     }
 }
 
+function hasPositiveBalanceQuantity(balance) {
+    return balance && balance.quantity != null && parseFloat(balance.quantity) > 0;
+}
+
+function getDriversWithActiveBalance(balances) {
+    const driverIds = new Set();
+    balances.forEach(balance => {
+        if (hasPositiveBalanceQuantity(balance) && balance.driverId != null) {
+            driverIds.add(String(balance.driverId));
+        }
+    });
+    return Array.from(driverIds)
+        .map(id => ({
+            id: Number(id),
+            name: findNameByIdFromMap(userMap, id) || `Водій #${id}`
+        }))
+        .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'uk'));
+}
+
+function getWarehousesWithActiveBalance(balances) {
+    const warehouseIds = new Set();
+    balances.forEach(balance => {
+        if (hasPositiveBalanceQuantity(balance) && balance.warehouseId != null) {
+            warehouseIds.add(String(balance.warehouseId));
+        }
+    });
+    return Array.from(warehouseIds)
+        .map(id => ({
+            id: Number(id),
+            name: findNameByIdFromMap(warehouseMap, id) || `Склад #${id}`
+        }))
+        .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'uk'));
+}
+
+function getProductsForWarehouseFromBalances(balances, warehouseId) {
+    if (!warehouseId) {
+        return [];
+    }
+    const productIds = new Set();
+    balances.forEach(balance => {
+        if (String(balance.warehouseId) === String(warehouseId) && hasPositiveBalanceQuantity(balance) && balance.productId != null) {
+            productIds.add(String(balance.productId));
+        }
+    });
+    return Array.from(productIds)
+        .map(id => ({
+            id: Number(id),
+            name: findNameByIdFromMap(productMap, id) || `Товар #${id}`
+        }))
+        .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'uk'));
+}
+
+function populateWarehouseBalanceWarehouseSelect(selectId, warehouses) {
+    const select = document.getElementById(selectId);
+    if (!select) return;
+    select.textContent = '';
+    const defaultOption = document.createElement('option');
+    defaultOption.value = '';
+    defaultOption.textContent = 'Оберіть склад';
+    select.appendChild(defaultOption);
+    warehouses.forEach(item => {
+        const option = document.createElement('option');
+        option.value = String(item.id);
+        option.text = item.name || '';
+        select.appendChild(option);
+    });
+}
+
+function populateWarehouseBalanceProductSelect(selectId, warehouseId) {
+    const select = document.getElementById(selectId);
+    if (!select) return;
+    select.textContent = '';
+    const defaultOption = document.createElement('option');
+    defaultOption.value = '';
+    defaultOption.textContent = 'Оберіть товар';
+    select.appendChild(defaultOption);
+    if (!warehouseId) {
+        return;
+    }
+    const products = getProductsForWarehouseFromBalances(activeWarehouseBalancesCache, warehouseId);
+    products.forEach(item => {
+        const option = document.createElement('option');
+        option.value = String(item.id);
+        option.textContent = item.name || '';
+        select.appendChild(option);
+    });
+}
+
+function findWarehouseBalanceInCache(warehouseId, productId) {
+    if (!warehouseId || !productId) {
+        return null;
+    }
+    return activeWarehouseBalancesCache.find(balance =>
+        String(balance.warehouseId) === String(warehouseId) &&
+        String(balance.productId) === String(productId) &&
+        hasPositiveBalanceQuantity(balance)
+    ) || null;
+}
+
+function getProductsForDriverFromBalances(balances, driverId) {
+    if (!driverId) {
+        return [];
+    }
+    const productIds = new Set();
+    balances.forEach(balance => {
+        if (String(balance.driverId) === String(driverId) && hasPositiveBalanceQuantity(balance) && balance.productId != null) {
+            productIds.add(String(balance.productId));
+        }
+    });
+    return Array.from(productIds)
+        .map(id => ({
+            id: Number(id),
+            name: findNameByIdFromMap(productMap, id) || `Товар #${id}`
+        }))
+        .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'uk'));
+}
+
+function populateEntryUserSelect(drivers) {
+    const select = document.getElementById('entry-user-id');
+    if (!select) return;
+    select.textContent = '';
+    const defaultOption = document.createElement('option');
+    defaultOption.value = '';
+    defaultOption.textContent = 'Оберіть водія';
+    select.appendChild(defaultOption);
+    drivers.forEach(item => {
+        const option = document.createElement('option');
+        option.value = String(item.id);
+        option.text = item.name || '';
+        select.appendChild(option);
+    });
+}
+
+function populateEntryProductSelect(driverId) {
+    const select = document.getElementById('entry-product-id');
+    if (!select) return;
+    select.textContent = '';
+    const defaultOption = document.createElement('option');
+    defaultOption.value = '';
+    defaultOption.textContent = 'Оберіть продукт';
+    select.appendChild(defaultOption);
+    if (!driverId) {
+        return;
+    }
+    const products = getProductsForDriverFromBalances(activeDriverBalancesCache, driverId);
+    products.forEach(item => {
+        const option = document.createElement('option');
+        option.value = String(item.id);
+        option.textContent = item.name || '';
+        select.appendChild(option);
+    });
+}
+
+function findDriverBalanceInCache(driverId, productId) {
+    if (!driverId || !productId) {
+        return null;
+    }
+    return activeDriverBalancesCache.find(balance =>
+        String(balance.driverId) === String(driverId) &&
+        String(balance.productId) === String(productId) &&
+        hasPositiveBalanceQuantity(balance)
+    ) || null;
+}
+
+function setEntryModalLoading(isLoading) {
+    const loaderBackdrop = document.getElementById('loader-backdrop');
+    if (loaderBackdrop) {
+        loaderBackdrop.style.display = isLoading ? 'flex' : 'none';
+    }
+}
+
+function setEntryFormBusy(isLoading) {
+    const form = document.getElementById('entry-form');
+    const submitBtn = document.getElementById('entry-submit-btn');
+    const loaderBackdrop = document.getElementById('loader-backdrop');
+
+    if (submitBtn) {
+        submitBtn.disabled = isLoading;
+        submitBtn.textContent = isLoading ? 'Збереження...' : 'Додати';
+    }
+    if (form) {
+        Array.from(form.elements).forEach(el => {
+            el.disabled = isLoading;
+        });
+    }
+    if (loaderBackdrop) {
+        loaderBackdrop.style.display = isLoading ? 'flex' : 'none';
+    }
+}
+
+function resetEntryFormUiState() {
+    setEntryFormBusy(false);
+    const fullUnloadWarning = document.getElementById('entry-full-unload-warning');
+    if (fullUnloadWarning) {
+        fullUnloadWarning.style.display = 'none';
+        fullUnloadWarning.textContent = '';
+    }
+}
+
+function updateEntryFullUnloadHint() {
+    const hintEl = document.getElementById('entry-full-unload-warning');
+    const partialEl = document.getElementById('entry-partial-unload');
+    const qtyInput = document.getElementById('entry-quantity');
+    if (!hintEl || !partialEl || !qtyInput) {
+        return;
+    }
+
+    if (partialEl.checked) {
+        hintEl.style.display = 'none';
+        return;
+    }
+
+    const balanceQty = currentEntryDriverBalance && currentEntryDriverBalance.quantity != null
+        ? Number(currentEntryDriverBalance.quantity)
+        : null;
+    const qty = Number(qtyInput.value);
+
+    if (Number.isFinite(balanceQty) && Number.isFinite(qty) && qty > 0 && qty < balanceQty - 0.0001) {
+        const diff = balanceQty - qty;
+        hintEl.textContent =
+            `Увага: без «Неповної вигрузки» буде списано ${formatNumber(balanceQty, 2)} кг з балансу водія ` +
+            `і створено розбіжність ${formatNumber(diff, 2)} кг. Увімкніть «Неповна вигрузка», якщо потрібно списати лише вказану кількість.`;
+        hintEl.style.display = 'block';
+    } else {
+        hintEl.style.display = 'none';
+    }
+}
+
+function syncDriverBalanceForEntry() {
+    const driverId = document.getElementById('entry-user-id')?.value;
+    const productId = document.getElementById('entry-product-id')?.value;
+
+    if (!driverId || !productId) {
+        currentEntryDriverBalance = null;
+        StockModal.hideDriverBalanceInfo();
+        applyPartialUnloadConstraints();
+        updateEntryFullUnloadHint();
+        return;
+    }
+
+    const balance = findDriverBalanceInCache(driverId, productId);
+    currentEntryDriverBalance = balance;
+    if (balance) {
+        StockModal.showDriverBalanceInfo(balance);
+    } else {
+        currentEntryDriverBalance = null;
+        StockModal.hideDriverBalanceInfo();
+        const warning = document.getElementById('driver-no-balance-warning');
+        if (warning) {
+            warning.style.display = 'block';
+        }
+    }
+    applyPartialUnloadConstraints();
+    updateEntryFullUnloadHint();
+}
+
+function buildEntryFromForm(formData) {
+    return {
+        warehouseId: Number(formData.get('warehouse_id')),
+        productId: Number(formData.get('product_id')),
+        quantity: Number(formData.get('quantity')),
+        typeId: Number(formData.get('type_id')),
+        userId: Number(formData.get('user_id')),
+        partialUnload: Boolean(document.getElementById('entry-partial-unload')?.checked)
+    };
+}
+
+async function performEntrySubmit(entry) {
+    setEntryFormBusy(true);
+    let succeeded = false;
+    try {
+        await StockDataLoader.createEntry(entry);
+        succeeded = true;
+        if (typeof showMessage === 'function') {
+            showMessage('Надходження успішно створено', 'info');
+        }
+        closeModal('entry-modal');
+        await loadBalance();
+        if (entriesContainer && entriesContainer.style.display === 'block') {
+            loadWarehouseEntries(0);
+        }
+    } catch (error) {
+        console.error('Error creating entry:', error);
+        handleError(error);
+    } finally {
+        if (!succeeded) {
+            setEntryFormBusy(false);
+        }
+    }
+}
+
+function shouldConfirmFullUnloadMismatch(entry) {
+    if (entry.partialUnload) {
+        return false;
+    }
+    const balanceQty = currentEntryDriverBalance && currentEntryDriverBalance.quantity != null
+        ? Number(currentEntryDriverBalance.quantity)
+        : null;
+    const qty = Number(entry.quantity);
+    return Number.isFinite(balanceQty) && Number.isFinite(qty) && qty > 0 && qty < balanceQty - 0.0001;
+}
+
+function getFullUnloadConfirmMessage(entry) {
+    const balanceQty = Number(currentEntryDriverBalance.quantity);
+    const qty = Number(entry.quantity);
+    const diff = balanceQty - qty;
+    return (
+        `Ви вказали ${formatNumber(qty, 2)} кг, а на балансі водія ${formatNumber(balanceQty, 2)} кг. ` +
+        `Без «Неповної вигрузки» з балансу буде списано всю кількість (${formatNumber(balanceQty, 2)} кг), ` +
+        `на склад надійде ${formatNumber(qty, 2)} кг, і буде створено розбіжність ${formatNumber(diff, 2)} кг. ` +
+        `Увімкніть «Неповна вигрузка», якщо потрібно списати лише вказану кількість. Продовжити?`
+    );
+}
+
 function populateWarehouses(selectId) {
     const select = document.getElementById(selectId);
     if (!select) return;
@@ -372,42 +686,29 @@ document.getElementById('entry-form').addEventListener('submit',
     async (e) => {
         e.preventDefault();
         const formData = new FormData(e.target);
+        const entry = buildEntryFromForm(formData);
 
-        const partialUnload = Boolean(document.getElementById('entry-partial-unload')?.checked);
-        if (partialUnload) {
+        if (entry.partialUnload) {
             const maxQty = currentEntryDriverBalance && currentEntryDriverBalance.quantity != null
                 ? Number(currentEntryDriverBalance.quantity)
                 : null;
-            const qty = Number(formData.get('quantity'));
-            if (Number.isFinite(maxQty) && Number.isFinite(qty) && qty > maxQty + 0.0001) {
+            if (Number.isFinite(maxQty) && Number.isFinite(entry.quantity) && entry.quantity > maxQty + 0.0001) {
                 showMessage('Неможливо прийняти більше ніж є на балансі водія', 'error');
                 return;
             }
         }
 
-        const entry = {
-            warehouseId: Number(formData.get('warehouse_id')),
-            productId: Number(formData.get('product_id')),
-            quantity: Number(formData.get('quantity')),
-            typeId: Number(formData.get('type_id')),
-            userId: Number(formData.get('user_id')),
-            partialUnload
-        };
-
-        try {
-            await StockDataLoader.createEntry(entry);
-            if (typeof showMessage === 'function') {
-                showMessage('Надходження успішно створено', 'info');
-            }
-            closeModal('entry-modal');
-            await loadBalance();
-            if (entriesContainer && entriesContainer.style.display === 'block') {
-                loadWarehouseEntries(0);
-            }
-        } catch (error) {
-            console.error('Error creating entry:', error);
-            handleError(error);
+        if (shouldConfirmFullUnloadMismatch(entry)) {
+            ConfirmationModal.show(
+                getFullUnloadConfirmMessage(entry),
+                'Підтвердження надходження',
+                () => performEntrySubmit(entry),
+                () => {}
+            );
+            return;
         }
+
+        await performEntrySubmit(entry);
     });
 
 function openEditModal(id, withdrawals) {
@@ -873,12 +1174,48 @@ let currentTransfersPage = 0;
 let transfersPageSize = 20;
 let transfersFilters = {};
 
-withdrawBtn.addEventListener('click', () => {
-    populateProducts('product-id');
-    populateWarehouses('warehouse-id');
+withdrawBtn.addEventListener('click', async () => {
+    if (withdrawBtn.disabled) {
+        return;
+    }
+
+    withdrawBtn.disabled = true;
+    setEntryModalLoading(true);
+
+    try {
+        activeWarehouseBalancesCache = await StockDataLoader.loadBalance();
+    } catch (error) {
+        console.error('Error loading warehouse balances for withdraw modal:', error);
+        activeWarehouseBalancesCache = [];
+        handleError(error);
+        return;
+    } finally {
+        setEntryModalLoading(false);
+        withdrawBtn.disabled = false;
+    }
+
+    const warehouses = getWarehousesWithActiveBalance(activeWarehouseBalancesCache);
+    if (warehouses.length === 0) {
+        if (typeof showMessage === 'function') {
+            showMessage('Немає складів з товаром на балансі. Списання неможливе.', 'error');
+        }
+        return;
+    }
+
     populateWithdrawalReasonsForWithdrawal();
+    populateWarehouseBalanceWarehouseSelect('warehouse-id', warehouses);
+    populateWarehouseBalanceProductSelect('product-id', null);
     StockModal.openModal('withdraw-modal');
 });
+
+const withdrawForm = document.getElementById('withdraw-form');
+if (withdrawForm) {
+    withdrawForm.addEventListener('change', (e) => {
+        if (e.target.id === 'warehouse-id') {
+            populateWarehouseBalanceProductSelect('product-id', e.target.value);
+        }
+    });
+}
 
 moveBtn.addEventListener('click', () => {
     populateProducts('move-from-product-id');
@@ -909,27 +1246,64 @@ entriesBtn.addEventListener('click', async () => {
     }
 });
 
-addEntryBtn.addEventListener('click', () => {
-    populateProducts('entry-product-id');
+addEntryBtn.addEventListener('click', async () => {
+    if (addEntryBtn.disabled) {
+        return;
+    }
+
+    addEntryBtn.disabled = true;
+    setEntryModalLoading(true);
+
+    try {
+        activeDriverBalancesCache = await StockDataLoader.loadDriverBalances();
+    } catch (error) {
+        console.error('Error loading driver balances for entry modal:', error);
+        activeDriverBalancesCache = [];
+        handleError(error);
+        return;
+    } finally {
+        setEntryModalLoading(false);
+        addEntryBtn.disabled = false;
+    }
+
+    const drivers = getDriversWithActiveBalance(activeDriverBalancesCache);
+    if (drivers.length === 0) {
+        if (typeof showMessage === 'function') {
+            showMessage('Немає водіїв з товаром на балансі. Надходження неможливо створити.', 'error');
+        }
+        return;
+    }
+
     populateWarehouses('entry-warehouse-id');
-    populateSelect('entry-user-id', Array.from(userMap.entries()).map(([id, name]) => ({id, name})));
     populateEntryTypes();
+    populateEntryUserSelect(drivers);
+    populateEntryProductSelect(null);
     StockModal.hideDriverBalanceInfo();
     currentEntryDriverBalance = null;
     const partialEl = document.getElementById('entry-partial-unload');
     if (partialEl) partialEl.checked = false;
     applyPartialUnloadConstraints();
+    resetEntryFormUiState();
     StockModal.openModal('entry-modal');
 });
 
 const entryForm = document.getElementById('entry-form');
 if (entryForm) {
     entryForm.addEventListener('change', (e) => {
+        if (e.target.id === 'entry-user-id') {
+            populateEntryProductSelect(e.target.value);
+        }
         if (e.target.id === 'entry-user-id' || e.target.id === 'entry-product-id') {
-            loadDriverBalanceForEntry();
+            syncDriverBalanceForEntry();
         }
         if (e.target.id === 'entry-partial-unload') {
             applyPartialUnloadConstraints();
+            updateEntryFullUnloadHint();
+        }
+    });
+    entryForm.addEventListener('input', (e) => {
+        if (e.target.id === 'entry-quantity') {
+            updateEntryFullUnloadHint();
         }
     });
 }
@@ -973,6 +1347,7 @@ function closeModal(modalId) {
     const onClose = () => {
         if (modalId === 'withdraw-modal') {
             document.getElementById('withdraw-form')?.reset();
+            activeWarehouseBalancesCache = [];
         } else if (modalId === 'edit-modal') {
             document.getElementById('edit-form')?.reset();
             currentWithdrawalItem = null;
@@ -980,15 +1355,18 @@ function closeModal(modalId) {
             document.getElementById('move-form')?.reset();
         } else if (modalId === 'entry-modal') {
             document.getElementById('entry-form')?.reset();
+            activeDriverBalancesCache = [];
             StockModal.hideDriverBalanceInfo();
             currentEntryDriverBalance = null;
             const partialEl = document.getElementById('entry-partial-unload');
             if (partialEl) partialEl.checked = false;
             applyPartialUnloadConstraints();
+            resetEntryFormUiState();
         } else if (modalId === 'create-vehicle-modal') {
             document.getElementById('create-vehicle-form')?.reset();
         } else if (modalId === 'add-product-to-vehicle-modal') {
             document.getElementById('add-product-to-vehicle-form')?.reset();
+            activeWarehouseBalancesCache = [];
             StockModal.hideWarehouseBalanceInfo();
         } else if (modalId === 'vehicle-details-modal') {
             StockModal.resetVehicleFormState(currentVehicleDetails);
@@ -1269,30 +1647,6 @@ async function initializeEntriesFilters() {
     updateEntriesSelectedFilters();
 }
 
-async function loadDriverBalanceForEntry() {
-    const driverId = document.getElementById('entry-user-id')?.value;
-    const productId = document.getElementById('entry-product-id')?.value;
-    
-    if (!driverId || !productId) {
-        currentEntryDriverBalance = null;
-        StockModal.hideDriverBalanceInfo();
-        applyPartialUnloadConstraints();
-        return;
-    }
-    
-    try {
-        const balance = await StockDataLoader.loadDriverBalance(driverId, productId);
-        currentEntryDriverBalance = balance;
-        StockModal.showDriverBalanceInfo(balance);
-        applyPartialUnloadConstraints();
-    } catch (error) {
-        console.error('Error loading driver balance:', error);
-        currentEntryDriverBalance = null;
-        StockModal.hideDriverBalanceInfo();
-        applyPartialUnloadConstraints();
-    }
-}
-
 function applyPartialUnloadConstraints() {
     const checkbox = document.getElementById('entry-partial-unload');
     const qtyInput = document.getElementById('entry-quantity');
@@ -1318,21 +1672,24 @@ function applyPartialUnloadConstraints() {
     }
 }
 
-async function loadWarehouseBalanceForVehicle() {
+function syncWarehouseBalanceForVehicle() {
     const warehouseId = document.getElementById('vehicle-warehouse-id')?.value;
     const productId = document.getElementById('vehicle-product-id')?.value;
-    
+
     if (!warehouseId || !productId) {
         StockModal.hideWarehouseBalanceInfo();
         return;
     }
-    
-    try {
-        const balance = await StockDataLoader.loadWarehouseBalance(warehouseId, productId);
+
+    const balance = findWarehouseBalanceInCache(warehouseId, productId);
+    if (balance) {
         StockModal.showWarehouseBalanceInfo(balance);
-    } catch (error) {
-        console.error('Error loading warehouse balance:', error);
+    } else {
         StockModal.hideWarehouseBalanceInfo();
+        const warning = document.getElementById('warehouse-no-balance-warning');
+        if (warning) {
+            warning.style.display = 'block';
+        }
     }
 }
 
@@ -1587,18 +1944,48 @@ async function viewVehicleDetails(vehicleId) {
     }
 }
 
-document.getElementById('add-product-to-vehicle-btn')?.addEventListener('click', () => {
-    
-    populateWarehouses('vehicle-warehouse-id');
-    populateProducts('vehicle-product-id');
+document.getElementById('add-product-to-vehicle-btn')?.addEventListener('click', async () => {
+    const addProductBtn = document.getElementById('add-product-to-vehicle-btn');
+    if (!addProductBtn || addProductBtn.disabled) {
+        return;
+    }
+
+    addProductBtn.disabled = true;
+    setEntryModalLoading(true);
+
+    try {
+        activeWarehouseBalancesCache = await StockDataLoader.loadBalance();
+    } catch (error) {
+        console.error('Error loading warehouse balances for vehicle modal:', error);
+        activeWarehouseBalancesCache = [];
+        handleError(error);
+        return;
+    } finally {
+        setEntryModalLoading(false);
+        addProductBtn.disabled = false;
+    }
+
+    const warehouses = getWarehousesWithActiveBalance(activeWarehouseBalancesCache);
+    if (warehouses.length === 0) {
+        if (typeof showMessage === 'function') {
+            showMessage('Немає складів з товаром на балансі. Додавання товару неможливе.', 'error');
+        }
+        return;
+    }
+
+    populateWarehouseBalanceWarehouseSelect('vehicle-warehouse-id', warehouses);
+    populateWarehouseBalanceProductSelect('vehicle-product-id', null);
     StockModal.hideWarehouseBalanceInfo();
     StockModal.openModal('add-product-to-vehicle-modal');
 });
 
 if (addProductToVehicleForm) {
     addProductToVehicleForm.addEventListener('change', (e) => {
+        if (e.target.id === 'vehicle-warehouse-id') {
+            populateWarehouseBalanceProductSelect('vehicle-product-id', e.target.value);
+        }
         if (e.target.id === 'vehicle-warehouse-id' || e.target.id === 'vehicle-product-id') {
-            loadWarehouseBalanceForVehicle();
+            syncWarehouseBalanceForVehicle();
         }
     });
 }
@@ -1685,16 +2072,29 @@ function populateVehiclesManagerFilter() {
 
 function setupVehiclesFilterModalExpandOnDropdown() {
     const modal = document.getElementById('vehicles-filter-modal');
-    const dropdown = modal?.querySelector('.custom-select-dropdown');
+    const dropdown = modal?.querySelector('.vehicles-manager-filter-row .custom-select-dropdown');
     const modalContent = modal?.querySelector('.modal-content');
-    if (!dropdown || !modalContent) return;
-    const observer = new MutationObserver(() => {
-        if (dropdown.classList.contains('open')) {
-            modalContent.classList.add('vehicles-filter-modal-expanded');
-        } else {
-            modalContent.classList.remove('vehicles-filter-modal-expanded');
+    if (!modal || !dropdown || !modalContent) {
+        return;
+    }
+    if (modal._vehiclesFilterDropdownSetup) {
+        return;
+    }
+    modal._vehiclesFilterDropdownSetup = true;
+
+    let lastOpenState = dropdown.classList.contains('open');
+
+    const syncDropdownUiState = () => {
+        const isOpen = dropdown.classList.contains('open');
+        if (isOpen === lastOpenState) {
+            return;
         }
-    });
+        lastOpenState = isOpen;
+        modal.classList.toggle('vehicles-filter-dropdown-open', isOpen);
+        modalContent.classList.toggle('vehicles-filter-modal-expanded', isOpen);
+    };
+
+    const observer = new MutationObserver(syncDropdownUiState);
     observer.observe(dropdown, { attributes: true, attributeFilter: ['class'] });
 }
 
