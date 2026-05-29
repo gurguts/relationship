@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.apigateway.config.SecurityConstants;
 import org.example.apigateway.models.dto.UserDTO;
+import org.example.apigateway.services.HomeRedirectService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.security.access.AccessDeniedException;
@@ -31,7 +32,10 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class JwtReactiveFilter implements WebFilter {
 
+    private static final String ROOT_PATH = "/";
+
     private final ReactiveJwtTokenProvider reactiveJwtTokenProvider;
+    private final HomeRedirectService homeRedirectService;
     private static final AntPathMatcher pathMatcher = new AntPathMatcher();
 
     @NonNull
@@ -55,9 +59,15 @@ public class JwtReactiveFilter implements WebFilter {
             return redirectToLogin(exchange);
         }
 
-        return validateAndAuthenticateToken(token)
-                .flatMap(authentication -> chain.filter(exchange)
-                        .contextWrite(ReactiveSecurityContextHolder.withAuthentication(authentication)))
+        return reactiveJwtTokenProvider.validateToken(token)
+                .flatMap(userDto -> {
+                    if (ROOT_PATH.equals(path)) {
+                        return redirect(exchange, homeRedirectService.resolveHomePath(userDto));
+                    }
+                    return createAuthentication(userDto)
+                            .flatMap(authentication -> chain.filter(exchange)
+                                    .contextWrite(ReactiveSecurityContextHolder.withAuthentication(authentication)));
+                })
                 .onErrorResume(AuthenticationException.class, ex -> {
                     log.debug("Authentication failed: {}", ex.getMessage());
                     return handleAuthenticationException(exchange);
@@ -82,17 +92,16 @@ public class JwtReactiveFilter implements WebFilter {
     }
 
     private Mono<Void> redirectToLogin(@NonNull ServerWebExchange exchange) {
+        return redirect(exchange, "/login");
+    }
+
+    private Mono<Void> redirect(@NonNull ServerWebExchange exchange, @NonNull String location) {
         ServerHttpResponse response = exchange.getResponse();
         if (!response.isCommitted()) {
             response.setStatusCode(HttpStatus.FOUND);
-            response.getHeaders().setLocation(URI.create("/login"));
+            response.getHeaders().setLocation(URI.create(location));
         }
         return response.setComplete();
-    }
-
-    private Mono<Authentication> validateAndAuthenticateToken(@NonNull String token) {
-        return reactiveJwtTokenProvider.validateToken(token)
-                .flatMap(this::createAuthentication);
     }
 
     private Mono<Authentication> createAuthentication(@NonNull UserDTO userDto) {

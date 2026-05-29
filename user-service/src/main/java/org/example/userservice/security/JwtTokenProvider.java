@@ -109,13 +109,15 @@ public class JwtTokenProvider {
         return authorities;
     }
 
-    public String createToken(@NonNull Long userId, @NonNull String login, @NonNull List<String> authorities) {
+    public String createToken(@NonNull Long userId, @NonNull String login, @NonNull List<String> authorities,
+                              @NonNull String role) {
         SecretKey key = getSigningKey();
 
         Claims claims = Jwts.claims()
                 .subject(login)
                 .add(SecurityConstants.CLAIM_AUTHORITIES, authorities)
                 .add(SecurityConstants.CLAIM_USER_ID, userId)
+                .add(SecurityConstants.CLAIM_ROLE, role)
                 .build();
 
         Date now = new Date();

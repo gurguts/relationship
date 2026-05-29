@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.userservice.exceptions.user.UserException;
 import org.example.userservice.models.user.Permission;
+import org.example.userservice.models.user.Role;
 import org.example.userservice.models.user.User;
 import org.example.userservice.repositories.UserRepository;
 import org.example.userservice.security.JwtTokenProvider;
@@ -58,7 +59,8 @@ public class AuthService implements IAuthService {
 
     private String createTokenForUser(@NonNull User user) {
         List<String> permissions = extractPermissions(user);
-        return jwtTokenProvider.createToken(user.getId(), user.getLogin(), permissions);
+        Role role = user.getRole() != null ? user.getRole() : Role.MANAGER;
+        return jwtTokenProvider.createToken(user.getId(), user.getLogin(), permissions, role.name());
     }
 
     private List<String> extractPermissions(@NonNull User user) {

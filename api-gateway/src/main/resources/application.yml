@@ -17,7 +17,7 @@ spring:
             - Path=/.well-known/**
           order: -1
 
-        # 📌 Web App (Frontend)
+        # 📌 Web App (Frontend) — GET / is handled by JwtReactiveFilter (relative redirect, no proxy to web-app)
         - id: web-app
           uri: ${WEB_APP_URL:http://localhost:8081}
           predicates:

@@ -7,6 +7,7 @@ final class SecurityConstants {
     static final String AUTHORIZATION_HEADER = "Authorization";
     static final String CLAIM_USER_ID = "userId";
     static final String CLAIM_AUTHORITIES = "authorities";
+    static final String CLAIM_ROLE = "role";
 
     private SecurityConstants() {
         throw new UnsupportedOperationException("Utility class");

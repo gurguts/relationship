@@ -43,8 +43,9 @@ public class ReactiveJwtTokenProvider {
             }
 
             List<String> authorities = extractAuthorities(claims);
+            String role = claims.get("role", String.class);
 
-            return Mono.just(new UserDTO(username, authorities));
+            return Mono.just(new UserDTO(username, authorities, role));
         } catch (ExpiredJwtException e) {
             return Mono.error(new JwtAuthenticationException("Token has expired"));
         } catch (JwtException e) {
